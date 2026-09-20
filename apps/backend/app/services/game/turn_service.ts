@@ -48,6 +48,11 @@ export const DEFAULT_LANGUAGE: GameLanguage = 'en'
 
 export type TurnRequest = {
   sessionId: string
+  /**
+   * Whose session it is. The lookup is scoped to it rather than checked
+   * afterwards, so someone else's session reads as one that does not exist.
+   */
+  userId: string
   playerInput: string
   language?: GameLanguage
 }
@@ -76,7 +81,7 @@ export class TurnService {
 
   async play(request: TurnRequest): Promise<TurnResult> {
     const language = request.language ?? DEFAULT_LANGUAGE
-    const scene = await this.#loadScene(request.sessionId)
+    const scene = await this.#loadScene(request.sessionId, request.userId)
     const turnNumber = scene.lastTurnNumber + 1
 
     /**
@@ -178,9 +183,10 @@ export class TurnService {
     }
   }
 
-  async #loadScene(sessionId: string): Promise<LoadedScene> {
+  async #loadScene(sessionId: string, userId: string): Promise<LoadedScene> {
     const session = await Session.query()
       .where('id', sessionId)
+      .where('userId', userId)
       .preload('characters')
       .preload('worldState')
       .firstOrFail()

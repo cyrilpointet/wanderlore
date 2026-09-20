@@ -55,4 +55,16 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/access_tokens_controller').default['destroy']>>>
     }
   }
+  'game.turns.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/sessions/:id/turns'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/turn').playTurnValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/turn').playTurnValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/turns_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/turns_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
 }

@@ -44,7 +44,8 @@ const NARRATED = {
 }
 
 async function arrangeScene() {
-  const sessionId = await createSession(await createUser())
+  const userId = await createUser()
+  const sessionId = await createSession(userId)
 
   const character = await Character.create({
     sessionId,
@@ -65,7 +66,7 @@ async function arrangeScene() {
     worldObjects: [],
   })
 
-  return { sessionId, character, worldState }
+  return { userId, sessionId, character, worldState }
 }
 
 /**
@@ -86,10 +87,10 @@ test.group('TurnService | a settled turn', (group) => {
   useTransaction(group)
 
   test('resolves in a single call and applies its effects', async ({ assert }) => {
-    const { sessionId, worldState } = await arrangeScene()
+    const { sessionId, userId, worldState } = await arrangeScene()
     const { provider, service } = buildService([SETTLED])
 
-    const result = await service.play({ sessionId, playerInput: 'I look around.' })
+    const result = await service.play({ sessionId, userId, playerInput: 'I look around.' })
 
     assert.lengthOf(provider.requests, 1)
     assert.equal(result.turnNumber, 1)
@@ -101,10 +102,10 @@ test.group('TurnService | a settled turn', (group) => {
   })
 
   test('logs the turn with its language and token usage', async ({ assert }) => {
-    const { sessionId } = await arrangeScene()
+    const { sessionId, userId } = await arrangeScene()
     const { service } = buildService([SETTLED])
 
-    await service.play({ sessionId, playerInput: 'I look around.' })
+    await service.play({ sessionId, userId, playerInput: 'I look around.' })
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
 
@@ -115,11 +116,12 @@ test.group('TurnService | a settled turn', (group) => {
   })
 
   test('numbers turns in sequence', async ({ assert }) => {
-    const { sessionId } = await arrangeScene()
+    const { sessionId, userId } = await arrangeScene()
 
-    await buildService([SETTLED]).service.play({ sessionId, playerInput: 'I look around.' })
+    await buildService([SETTLED]).service.play({ sessionId, userId, playerInput: 'I look around.' })
     const second = await buildService([SETTLED]).service.play({
       sessionId,
+      userId,
       playerInput: 'I look again.',
     })
 
@@ -131,10 +133,14 @@ test.group('TurnService | a turn with a roll', (group) => {
   useTransaction(group)
 
   test('calls the model twice and resolves the roll in between', async ({ assert }) => {
-    const { sessionId } = await arrangeScene()
+    const { sessionId, userId } = await arrangeScene()
     const { provider, service } = buildService([NEEDS_ROLL, NARRATED])
 
-    const result = await service.play({ sessionId, playerInput: 'I ask him to let me pass.' })
+    const result = await service.play({
+      sessionId,
+      userId,
+      playerInput: 'I ask him to let me pass.',
+    })
 
     assert.lengthOf(provider.requests, 2)
     assert.equal(result.narration, NARRATED.narration)
@@ -142,10 +148,10 @@ test.group('TurnService | a turn with a roll', (group) => {
   })
 
   test('never sends the mechanics to the narrator', async ({ assert }) => {
-    const { sessionId } = await arrangeScene()
+    const { sessionId, userId } = await arrangeScene()
     const { provider, service } = buildService([NEEDS_ROLL, NARRATED])
 
-    await service.play({ sessionId, playerInput: 'I ask him to let me pass.' })
+    await service.play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
 
     /**
      * The invariant the whole two-call split exists to protect, asserted on
@@ -157,10 +163,11 @@ test.group('TurnService | a turn with a roll', (group) => {
   })
 
   test('logs both calls and the dice that were rolled', async ({ assert }) => {
-    const { sessionId } = await arrangeScene()
+    const { sessionId, userId } = await arrangeScene()
 
     await buildService([NEEDS_ROLL, NARRATED]).service.play({
       sessionId,
+      userId,
       playerInput: 'I ask him to let me pass.',
     })
 
@@ -175,10 +182,11 @@ test.group('TurnService | a turn with a roll', (group) => {
   })
 
   test('applies the hit point loss the narration described', async ({ assert }) => {
-    const { sessionId, character } = await arrangeScene()
+    const { sessionId, userId, character } = await arrangeScene()
 
     await buildService([NEEDS_ROLL, NARRATED]).service.play({
       sessionId,
+      userId,
       playerInput: 'I ask him to let me pass.',
     })
 
@@ -191,13 +199,13 @@ test.group('TurnService | a turn that fails', (group) => {
   useTransaction(group)
 
   test('rejects a skill the character does not have', async ({ assert }) => {
-    const { sessionId } = await arrangeScene()
+    const { sessionId, userId } = await arrangeScene()
     const { service } = buildService([
       { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
     ])
 
     const error = await service
-      .play({ sessionId, playerInput: 'I brew a potion.' })
+      .play({ sessionId, userId, playerInput: 'I brew a potion.' })
       .then(() => null)
       .catch((caught) => caught)
 
@@ -205,12 +213,12 @@ test.group('TurnService | a turn that fails', (group) => {
   })
 
   test('still logs the turn it could not finish', async ({ assert }) => {
-    const { sessionId, worldState } = await arrangeScene()
+    const { sessionId, userId, worldState } = await arrangeScene()
     const { service } = buildService([
       { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
     ])
 
-    await service.play({ sessionId, playerInput: 'I brew a potion.' }).catch(() => {})
+    await service.play({ sessionId, userId, playerInput: 'I brew a potion.' }).catch(() => {})
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
 
@@ -227,10 +235,12 @@ test.group('TurnService | a turn that fails', (group) => {
   })
 
   test('leaves the state untouched when the narration call fails', async ({ assert }) => {
-    const { sessionId, character } = await arrangeScene()
+    const { sessionId, userId, character } = await arrangeScene()
     const { service } = buildService([NEEDS_ROLL, { narration: '', effects: NARRATED.effects }])
 
-    await service.play({ sessionId, playerInput: 'I ask him to let me pass.' }).catch(() => {})
+    await service
+      .play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
+      .catch(() => {})
 
     await character.refresh()
     assert.equal(character.hitPoints, 10)

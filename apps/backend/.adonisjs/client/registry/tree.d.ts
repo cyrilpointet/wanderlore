@@ -18,4 +18,9 @@ export interface ApiDefinition {
       destroy: typeof routes['profile.access_tokens.destroy']
     }
   }
+  game: {
+    turns: {
+      store: typeof routes['game.turns.store']
+    }
+  }
 }

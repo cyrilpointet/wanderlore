@@ -33,5 +33,12 @@ router
       .prefix('account')
       .as('profile')
       .use(middleware.auth())
+
+    router
+      .group(() => {
+        router.post('sessions/:id/turns', [controllers.Turns, 'store'])
+      })
+      .as('game')
+      .use(middleware.auth())
   })
   .prefix('/api/v1')
