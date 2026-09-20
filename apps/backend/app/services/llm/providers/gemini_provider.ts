@@ -90,7 +90,7 @@ export class GeminiProvider implements LlmProvider {
       return await this.#client.models.generateContent({
         model: this.model,
         contents: request.userMessage,
-        config: this.#buildConfig(request),
+        config: buildGeminiConfig(request),
       })
     } catch (error) {
       throw this.#toLlmError(error, request)
@@ -102,33 +102,11 @@ export class GeminiProvider implements LlmProvider {
       return await this.#client.models.generateContentStream({
         model: this.model,
         contents: request.userMessage,
-        config: this.#buildConfig(request),
+        config: buildGeminiConfig(request),
       })
     } catch (error) {
       throw this.#toLlmError(error, request)
     }
-  }
-
-  #buildConfig(request: LlmProviderRequest): GenerateContentConfig {
-    const config: GenerateContentConfig = {
-      systemInstruction: request.systemPrompt,
-      abortSignal: request.signal,
-      temperature: request.temperature,
-      maxOutputTokens: request.maxOutputTokens,
-
-      /**
-       * Reasoning tokens are billed and never surface as content. Off unless the
-       * caller asks for them.
-       */
-      thinkingConfig: { thinkingBudget: request.reasoning ? -1 : 0 },
-    }
-
-    if (request.jsonSchema) {
-      config.responseMimeType = 'application/json'
-      config.responseJsonSchema = request.jsonSchema
-    }
-
-    return config
   }
 
   #buildMetadata(
@@ -140,19 +118,8 @@ export class GeminiProvider implements LlmProvider {
       provider: this.name,
       model: this.model,
       step: request.step,
-      usage: this.#buildUsage(response),
+      usage: buildUsage(response),
       durationMs: Date.now() - startedAt,
-    }
-  }
-
-  #buildUsage(response: GenerateContentResponse | undefined): LlmUsage {
-    const usage = response?.usageMetadata
-
-    return {
-      inputTokens: usage?.promptTokenCount ?? 0,
-      outputTokens: usage?.candidatesTokenCount ?? 0,
-      reasoningTokens: usage?.thoughtsTokenCount ?? 0,
-      totalTokens: usage?.totalTokenCount ?? 0,
     }
   }
 
@@ -178,6 +145,53 @@ export class GeminiProvider implements LlmProvider {
     return new LlmError('provider_unreachable', `Gemini could not be reached: ${describe(error)}`, {
       ...context,
     })
+  }
+}
+
+/**
+ * Translates the neutral request into the vendor payload.
+ *
+ * Module-level and exported so the cost-bearing decisions it encodes can be
+ * asserted directly.
+ *
+ * @internal exported for testing
+ */
+export function buildGeminiConfig(request: LlmProviderRequest): GenerateContentConfig {
+  const config: GenerateContentConfig = {
+    systemInstruction: request.systemPrompt,
+    abortSignal: request.signal,
+    temperature: request.temperature,
+    maxOutputTokens: request.maxOutputTokens,
+
+    /**
+     * Reasoning tokens are billed and never surface as content. Off unless the
+     * caller asks for them.
+     */
+    thinkingConfig: { thinkingBudget: request.reasoning ? -1 : 0 },
+  }
+
+  if (request.jsonSchema) {
+    config.responseMimeType = 'application/json'
+    config.responseJsonSchema = request.jsonSchema
+  }
+
+  return config
+}
+
+/**
+ * Maps vendor token accounting onto the neutral shape. Missing counters read as
+ * zero rather than `undefined`, so a turn always records a usable number.
+ *
+ * @internal exported for testing
+ */
+export function buildUsage(response: GenerateContentResponse | undefined): LlmUsage {
+  const usage = response?.usageMetadata
+
+  return {
+    inputTokens: usage?.promptTokenCount ?? 0,
+    outputTokens: usage?.candidatesTokenCount ?? 0,
+    reasoningTokens: usage?.thoughtsTokenCount ?? 0,
+    totalTokens: usage?.totalTokenCount ?? 0,
   }
 }
 

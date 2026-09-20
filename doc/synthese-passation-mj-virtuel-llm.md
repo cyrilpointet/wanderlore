@@ -29,7 +29,7 @@ Ce document sert de point d'entrée unique pour reprendre ce projet dans une nou
 
 **Rôle du LLM** : le LLM n'est jamais seul décisionnaire sur l'état du jeu. Il est découpé en plusieurs appels à responsabilité unique (interprétation, validation, narration, extraction), chacun recevant un contexte minimal et produisant une sortie structurée (sauf la narration, en texte libre). Le calcul déterministe (dés, seuils, formules) reste toujours côté backend.
 
-**Support multi-langue** : la langue par défaut de l'application (interface et narration) est l'**anglais**. Un support multi-langue pour le joueur vient s'ajouter par-dessus cette base par défaut. Modalités précises non encore définies (voir points ouverts) — impact notamment sur la langue de sortie demandée au LLM à l'étape de narration, et sur la traduction éventuelle du contenu de lore/scénario.
+**Support multi-langue** : la langue par défaut de l'application (interface et narration) est l'**anglais**. Un support multi-langue pour le joueur vient s'ajouter par-dessus cette base par défaut. Le principe d'architecture est acté : **tout reste en anglais en interne, la traduction n'intervient qu'à l'étape de narration** (voir section 7 pour le détail des décisions, et le document d'architecture pour leur mise en œuvre). Ce choix est d'abord un choix de coût : la tokenisation de l'anglais est plus dense que celle des autres langues, et le contexte réinjecté à chaque tour est le poste où cet écart se compose.
 
 ### Positionnement concurrentiel
 
@@ -127,7 +127,7 @@ Ce document de synthèse s'appuie sur quatre documents détaillés, à fournir e
 | **architecture-mj-virtuel-llm.md** | Pipeline complet du tour de jeu (5 étapes), modèle de données conceptuel, gestion du contexte (lore/state/mémoire), exemple de flow complet avec prompts LLM détaillés, principes de sécurité anti prompt-injection, architecture applicative AdonisJS |
 | **base-de-donnees-mj-virtuel-postgresql.md** | Structure complète des tables PostgreSQL, types de colonnes, exemples de contenu JSONB, schéma relationnel, recommandations spécifiques PostgreSQL (JSONB/GIN, pgvector, partitionnement) |
 | **systeme-regles-jeu-mj-virtuel.md** | Système de règles générique (formule 2d6 + compétence + modificateurs), attributs/compétences paramétrables par univers, échelle de difficulté, gestion des modificateurs contextuels (LLM) vs modificateurs d'objets (backend), points de vie et dégâts, modélisation du combat |
-| **roadmap-mj-virtuel-llm.md** | Roadmap détaillée en phases (0 à 9 + 5bis), contenu et critères de sortie de chaque phase, intégration de la gestion de comptes (`player` / `game_master` / `superadmin`), synthèse et points ouverts |
+| **roadmap-mj-virtuel-llm.md** | Roadmap détaillée en phases (0 à 9 + 5bis), contenu et critères de sortie de chaque phase, intégration de la gestion de comptes (`player` / `game_master` / `superadmin`), **stratégie de test transverse**, synthèse et points ouverts |
 
 **Ordre de lecture conseillé** : ce document de synthèse en premier, puis architecture, puis base de données, puis système de règles, puis roadmap — chaque document référence les précédents sans les répéter intégralement.
 
@@ -151,6 +151,67 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - Dégâts dérivés directement de la marge de réussite du jet d'attaque — pas de second jet séparé.
 - Combat modélisé comme une simple répétition du pipeline standard (pas de sous-système dédié).
 
+### Multi-langue
+
+Le principe directeur est économique autant qu'architectural : le multi-langue ne coûte pas
+là où on l'attend. La narration elle-même est un poste marginal ; le poste dominant est le
+**contexte réinjecté à chaque tour**, où la surtaxe de tokenisation des langues non anglaises
+(de l'ordre de 15 à 30 % pour le français, davantage pour les écritures non latines) se paie
+en boucle sur toute la durée d'une partie.
+
+- **Tout reste en anglais en interne.** Lore, scénario, state, system prompts : jamais
+  traduits, jamais dupliqués par langue.
+- **La traduction n'intervient qu'à l'étape de narration (D)**, seule étape produisant du
+  texte destiné à l'œil humain. L'arbitrage (A+B+C) reçoit du contexte anglais et l'entrée
+  brute du joueur, et produit du JSON anglais.
+- **Pas de second appel de traduction.** La narration est demandée directement dans la langue
+  cible via le paramètre `language`. Générer en anglais puis traduire coûterait environ le
+  double pour une qualité moindre — le traducteur perdrait le contexte de scène.
+- **Pas de duplication du lore par langue.** Le coût de création et de maintenance du contenu
+  serait multiplié par le nombre de langues, pour un gain runtime nul.
+- **Le résumé narratif est stocké en anglais**, quelle que soit la langue de la partie. Le job
+  de résumé est asynchrone : il peut condenser une narration française en résumé anglais.
+  C'est la décision qui produit la plus grosse économie, puisque le résumé est réinjecté à
+  chaque tour.
+- **Le buffer récent reste dans la langue du joueur**, mais n'est injecté qu'à l'étape de
+  narration, où il sert la continuité de ton. L'arbitrage se contente du résumé anglais et
+  des faits structurés.
+- **Glossaire de noms propres par langue**, compact, limité aux entités présentes dans la
+  scène, injecté à la seule étape de narration. Il règle le problème d'incohérence des noms
+  d'un tour à l'autre — qui est la vraie raison pour laquelle on serait tenté de traduire
+  tout le lore — pour quelques dizaines de jetons.
+- **Si le joueur écrit dans une autre langue que celle de la partie** : ni détection, ni
+  traduction préalable. L'entrée est transmise telle quelle à l'arbitrage, qui produit du
+  JSON anglais de toute façon. Coût supplémentaire nul.
+- **La langue de la partie est enregistrée dans `turn_log`**, à côté de la consommation de
+  jetons : le coût réel par tour varie selon la langue, et un modèle de prix calibré sur des
+  parties anglaises sous-estimerait mécaniquement les autres.
+- **L'internationalisation du front ne relève pas du LLM** : fichiers de traduction
+  classiques. Deux problèmes distincts, à ne pas confondre.
+
+### Inventaire et objets
+
+L'inventaire se scinde exactement sur la ligne « le LLM propose, le backend décide » :
+
+- **La mécanique n'atteint jamais le LLM.** `target_skill`, `value`, `condition`, `state`,
+  `quantity` sont lus par le backend au moment du jet. Aucune question de langue, aucun coût
+  en jetons.
+- **Identifiant stable ≠ nom affiché.** Chaque objet porte un identifiant anglais invariable
+  (ex. `recommendation_letter`), manipulé par le code, la base et le LLM, et des noms
+  d'affichage par langue, vus par le joueur et employés par le narrateur. Sans cette
+  séparation, rien n'empêche le modèle de renvoyer « the letter » puis « sealed letter », ou
+  le nom d'affichage traduit.
+- **L'étape d'extraction reçoit une liste fermée d'identifiants autorisés.** Tout ce qui en
+  sort est rejeté — même mécanisme de réconciliation que pour `skill_used` et `action_type`.
+- **Catalogue fermé d'objets par scénario.** Le LLM ne peut pas créer d'entrée d'inventaire :
+  un objet inventé n'aurait ni effets mécaniques, ni identifiant stable, ni traduction. Le
+  narrateur reste libre de décrire ce qu'il veut, il ne peut simplement pas faire apparaître
+  quelque chose qui a des conséquences mécaniques.
+- **Seule la langue de la partie est injectée**, jamais la table complète des traductions :
+  le coût reste identique que le produit supporte deux langues ou dix.
+- **La `description` interne d'un modificateur d'objet reste en anglais** — elle sert
+  l'audit et le debug. Le texte destiné au joueur est la description de l'objet lui-même.
+
 ### Base de données et infrastructure
 - PostgreSQL choisi comme moteur de base de données.
 - RAG choisi pour la recherche de lore, avec pgvector comme option native envisageable.
@@ -164,6 +225,25 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - Trois rôles distincts : `player`, `game_master`, `superadmin`.
 - Un compte = un rôle unique pour l'instant, pas de cumul.
 - Champ `role` posé dès la Phase 0 dans la table `users`, même si un seul rôle est utilisé au départ.
+
+### Tests
+
+- **Séparation stricte entre tests et evals.** Le déterministe (moteur de règles, validation,
+  catégories d'erreur, contraintes de schéma) se teste par assertion binaire à chaque commit.
+  Le probabiliste (qualité de narration, détection d'injection) se mesure par un score sur un
+  corpus, au changement de prompt ou de modèle. On n'asserte jamais sur le texte narré.
+- **Un faux provider LLM est écrit en même temps que le vrai** — il rend tout le pipeline
+  testable sans réseau ni coût.
+- **Aucun appel à l'API LLM réelle dans la suite de tests** ; une commande dédiée le fait à la
+  demande.
+- **Le jet de dés et l'horloge sont injectables** dès leur première implémentation : sans cela
+  le moteur de règles n'est pas testable.
+- **Sur la sécurité, le confinement se teste, la détection s'évalue** : même quand la détection
+  d'injection échoue, aucun état ne doit avoir été modifié.
+- **Le corpus d'évaluation s'accumule depuis `turn_log` dès la Phase 1**, bien avant que les
+  evals eux-mêmes soient outillés en Phase 9.
+
+Voir le document de roadmap, section « Stratégie de test », pour le détail par phase.
 
 ### Gestion des erreurs
 - **Pas de retry automatique** dans un premier temps.
@@ -179,7 +259,7 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 ## 8. Points ouverts (non tranchés à date)
 
 - Choix définitif du provider LLM externe et du modèle par étape du pipeline.
-- Mécanisme exact de réconciliation si le LLM propose une compétence ou un `action_type` inexistant dans la définition de l'univers.
+- Mécanisme exact de réconciliation si le LLM propose une compétence, un `action_type` ou un **identifiant d'objet** inexistant (rejet strict, fallback, ou nouvelle tentative). Le principe de la liste fermée est acté, la stratégie de rattrapage ne l'est pas.
 - Gestion des objets à usage limité (consommables, dégradation) — non couverte par le mécanisme actuel de modificateurs d'objets.
 - Décision entre pgvector intégré et vector store externe pour le RAG, à trancher selon le volume de lore réellement atteint.
 - Modalités précises de l'inscription self-service (validation d'email, mot de passe oublié, authentification tierce).
@@ -193,7 +273,7 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - Hébergement et canal de distribution définitifs (au-delà des solutions légères envisagées pour la phase de test — voir section 4) — non abordés pour une éventuelle montée en charge.
 - **Choix du modèle de monétisation** — la démarche pour y parvenir est actée (voir section 4 : mesure du coût réel puis validation de l'appétence en beta test), mais aucune piste n'est encore sélectionnée.
 - Modalités d'une éventuelle ouverture future du rôle "maître du jeu" à des utilisateurs tiers (aujourd'hui strictement technique/interne) — non planifiée, envisagée comme possibilité à long terme.
-- Modalités précises du support multi-langue : langues cibles, gestion de la langue de sortie du LLM à l'étape de narration, traduction ou non du contenu de lore/scénario selon la langue du joueur, stratégie d'internationalisation de l'interface front.
+- Support multi-langue : l'architecture est actée (voir section 7), mais **la liste des langues cibles** et le choix de la bibliothèque d'internationalisation du front restent ouverts. Reste également à décider du niveau de granularité du glossaire de noms propres (par scénario, par univers) et de son outillage de saisie dans le back-office.
 - Granularité exacte des événements SSE et gestion de la reconnexion en cas de coupure réseau côté client (voir document d'architecture, section 8bis).
 
 ---

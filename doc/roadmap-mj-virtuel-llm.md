@@ -41,10 +41,13 @@
 
 Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 0 évite une migration de schéma désagréable une fois que plusieurs types de comptes existeront réellement (Phase 5 et au-delà).
 
+- **Harnais de test** : suites unitaire (sans base) et fonctionnelle (PostgreSQL), cycle de vie de la base, isolation transactionnelle par test, et faux provider LLM réutilisable par toutes les phases suivantes. Voir la section « Stratégie de test » pour le périmètre couvert.
+
 ### Critère de sortie de phase
 
 - L'application démarre, se connecte à la base et au LLM externe.
 - Un utilisateur de test existe en base avec un rôle défini.
+- La suite de tests s'exécute et passe, sans appel à l'API LLM réelle.
 
 ---
 
@@ -65,6 +68,9 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 - Un seul appel LLM par tour, avec sortie structurée contenant narration + effets.
 - Écriture systématique dans `turn_log` dès cette phase, même sous forme minimale — indispensable pour déboguer les tours suivants.
 - **Tracking minimal de consommation LLM** : enregistrement du volume de tokens consommés par appel (et donc par tour), même sous forme brute dans `turn_log` ou une table dédiée simple. Cet ajout est mineur techniquement mais conditionne la capacité à chiffrer plus tard un coût réel par tour/par partie — donnée indispensable à toute réflexion future sur un modèle de monétisation (voir document de synthèse, section budget).
+- **Colonne `turn_log.language` posée dès cette phase**, à côté du tracking de consommation. Le coût par tour varie sensiblement selon la langue, et un coût moyen toutes langues confondues fausserait la réflexion sur le modèle de revenu. La partie est en anglais à ce stade — la colonne est posée pour que la mesure soit exploitable plus tard, pas parce qu'elle sert déjà.
+- **Paramètre `language` présent dans le contexte transmis au LLM dès le premier appel**, même s'il vaut toujours `en` à ce stade. Le document d'architecture (section 4bis) impose qu'il soit explicite et jamais supposé fixe : l'introduire maintenant coûte une ligne, le rétro-ajouter obligerait à reprendre tous les prompts.
+- **Jet de dés injectable dès sa première implémentation** : le tirage aléatoire doit passer par un service substituable, faute de quoi le moteur de règles n'est pas testable. C'est une contrainte de conception à respecter tout de suite — la rattraper une fois le moteur appelé de partout est nettement plus coûteux. Même principe pour l'horloge, dès qu'une logique dépend du temps. Voir la section « Stratégie de test ».
 - Gestion d'erreur conforme à la décision prise pour le projet : **pas de retry automatique**. Une erreur est renvoyée avec un message spécifique selon le type détecté (timeout, sortie hors schéma, erreur HTTP de l'API externe, échec de validation backend). Un système de log d'erreurs structuré est explicitement différé (voir Phase 9 / todolist).
 - Pas encore de front : validation du pipeline via des requêtes directes (Postman, curl, ou équivalent).
 
@@ -123,13 +129,18 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 ### Contenu
 
 - Table `inventory_items`, avec le champ `mechanical_effects` structuré tel que défini dans le document de base de données (modificateurs avec `target_skill`, `value`, `condition` — `owned` ou `equipped`).
-- Calcul des modificateurs d'objets **exclusivement côté backend**, au moment du calcul du jet — jamais proposés ou chiffrés par le LLM.
+- **Séparation `item_reference` / `display_names` dès la création de la table.** La référence stable anglaise est l'identité de l'objet pour le code et le LLM ; les noms d'affichage par langue sont ce que voit le joueur. C'est le point à ne pas différer : le rattraper plus tard voudrait dire migrer des données de parties déjà jouées.
+- **L'étape d'extraction reçoit une liste fermée de références autorisées** et ne peut pas inventer d'objet. Un objet inventé n'aurait ni effets mécaniques, ni référence, ni traduction.
+- Calcul des modificateurs d'objets **exclusivement côté backend**, au moment du calcul du jet — jamais proposés ou chiffrés par le LLM. Le rapprochement se fait via `item_reference`, jamais via un nom d'affichage.
 - Distinction effective, dans le résultat de jet et dans `turn_log`, entre modificateurs contextuels (source : LLM) et modificateurs d'objets (source : backend).
-- Extension du front pour afficher l'inventaire du personnage (lecture seule).
+- Extension du front pour afficher l'inventaire du personnage (lecture seule), avec les noms d'affichage résolus côté backend dans la langue de la partie.
+
+> **Note de séquencement** : le catalogue d'objets par scénario (`scenarios.item_catalog`) n'arrive qu'en Phase 5, avec la table `scenarios`. En Phase 4, la liste fermée des références autorisées peut rester rudimentaire — l'important est que la séparation référence/affichage et le principe de liste fermée soient posés dès maintenant.
 
 ### Critère de sortie de phase
 
 - Un objet possédé ou équipé influence correctement un jet, avec traçabilité claire de l'origine du bonus/malus appliqué.
+- L'étape d'extraction ne peut pas faire apparaître un objet absent de la liste transmise.
 
 ---
 
@@ -140,7 +151,9 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 ### Contenu applicatif
 
 - Tables `worlds` et `scenarios` en base, avec attributs et compétences paramétrables par univers, conformément au document de référence sur le système de règles.
-- **Création du troisième package du monorepo, `back-office`** (aux côtés de `backend` et `frontend` posés en Phase 0) : formulaires CRUD basiques pour créer/éditer un univers (nom, ton narratif, attributs, compétences, règles générales) et un scénario (synopsis, structure de chapitres). Pas d'assistance LLM à la création, pas d'import de fichiers à ce stade.
+- **`scenarios.item_catalog`** : catalogue fermé des objets acquérables (référence stable, effets mécaniques, noms d'affichage par langue), qui devient la source de vérité alimentant la liste transmise à l'étape d'extraction (posée en Phase 4).
+- **`scenarios.glossary`** : noms propres (lieux, PNJ, factions) et leurs traductions, injectés à la seule étape de narration pour figer la cohérence des noms d'un tour à l'autre. Voir document d'architecture, section 4bis.
+- **Création du troisième package du monorepo, `back-office`** (aux côtés de `backend` et `frontend` posés en Phase 0) : formulaires CRUD basiques pour créer/éditer un univers (nom, ton narratif, attributs, compétences, règles générales) et un scénario (synopsis, structure de chapitres, catalogue d'objets, glossaire). Pas d'assistance LLM à la création, pas d'import de fichiers à ce stade.
 - Possibilité, à partir de cette phase, de basculer vers un univers original si une diffusion plus large est envisagée (voir point de vigilance en introduction).
 
 ### Contenu lié à la gestion de comptes
@@ -199,6 +212,8 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 
 - Table `narrative_summaries`, avec granularité hiérarchique (scene / chapter / global) telle que définie dans le document de base de données.
 - Job asynchrone de régénération périodique du résumé, hors du chemin critique de réponse au joueur.
+- **Le résumé est rédigé en anglais**, quelle que soit la langue de la partie : le job étant asynchrone, il peut condenser une narration française en résumé anglais sans coût de latence perçu. C'est la principale économie de jetons du dispositif multi-langue, puisque le résumé est réinjecté à chaque tour (voir architecture, section 4bis).
+- **Différenciation de l'injection du buffer** : le buffer récent, dans la langue du joueur, n'est transmis qu'à l'étape de narration. L'arbitrage se contente du résumé anglais et du state structuré.
 - Utile principalement lorsque les parties commencent à dépasser en pratique la fenêtre de contexte raisonnable en buffer brut — à activer selon l'usage observé, pas nécessairement dès l'ouverture de cette phase.
 
 ### Critère de sortie de phase
@@ -274,6 +289,89 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 
 ---
 
+## Stratégie de test — transverse à toutes les phases
+
+Cette section est volontairement transverse plutôt que répartie phase par phase : la ligne de
+partage décrite ci-dessous ne change jamais, seul le périmètre couvert s'étend.
+
+### La ligne de partage
+
+L'invariant central du projet — *le LLM propose, le backend décide* — est aussi la frontière de
+test. D'un côté, du déterministe qui se vérifie par assertion binaire. De l'autre, du
+probabiliste qui ne se mesure que par un score sur un corpus.
+
+| | Déterministe (backend) | Probabiliste (LLM) |
+|---|---|---|
+| Nature | Test | Eval |
+| Verdict | Succès / échec | Un taux, suivi dans le temps |
+| Fréquence | À chaque commit | Au changement de prompt ou de modèle |
+| Coût | Nul | Appels réels facturés |
+
+Confondre les deux est le piège classique : on écrit des assertions sur du texte généré, la
+suite devient instable, et on finit par la désactiver. **On n'asserte jamais sur le texte
+narré.** On asserte sur des propriétés : la sortie respecte son schéma, la narration ne
+mentionne aucune mécanique de jeu, elle ne contredit pas le résultat imposé, la langue de
+sortie suit le paramètre `language`.
+
+### Exigences de testabilité à respecter dès qu'un mécanisme apparaît
+
+Ces points sont pénibles à rattraper après coup :
+
+- **Le jet de dés doit être injectable** (générateur aléatoire remplaçable). Sans cela le
+  moteur de règles n'est pas testable — c'est une contrainte de conception, pas un détail
+  d'implémentation.
+- **L'horloge doit être injectable** pour tout ce qui dépend du temps (`last_activity_at`,
+  seuils de déclenchement du résumé).
+- **Un faux provider LLM est écrit en même temps que le vrai.** C'est la pièce la plus
+  rentable du dispositif : elle rend tout le pipeline testable sans réseau, sans coût et sans
+  instabilité.
+
+### Ce que chaque phase ajoute
+
+| Phase | Ce qui devient testable |
+|---|---|
+| 0 | Harnais : cycle de vie de la base, isolation par test, faux provider. Catégories d'erreur du LLM Gateway, cascades et contraintes du schéma, réversibilité des migrations, non-exposition du rôle |
+| 1 | Moteur de règles (formule, seuils, bornes de marge), validation du delta d'état, écriture de `turn_log` y compris sur échec |
+| 2 | Contrat d'API : authentification requise, accusé de réception, et **séquence des événements SSE** — écrire ce test force à trancher leur granularité, aujourd'hui en point ouvert |
+| 3 | Un test de contrat par étape du pipeline, filet de sécurité lors des modifications de prompt |
+| 4 | Séparation des deux familles de modificateurs, conditions `owned`/`equipped`, traçabilité de l'origine, refus d'un identifiant d'objet hors liste |
+| 5 | Contrôle d'accès par rôle, route par route — rend continu l'audit prévu en Phase 9 |
+| 6 | Qualité de récupération du lore : sur un jeu annoté, les bons fragments remontent-ils, et avec quel bruit |
+| 7 | Le résumé ne perd pas les faits critiques (eval, pas test) |
+| 9 | Evals automatisés, détection de dérive de prompt, taux d'échec de schéma |
+
+Chaque **critère de sortie de phase** fait par ailleurs un bon test d'acceptation de bout en
+bout : un par phase suffit.
+
+### Le corpus d'évaluation s'accumule dès la Phase 1
+
+`turn_log` enregistre l'entrée joueur, les sorties intermédiaires et la narration finale : c'est
+déjà le jeu de données d'évaluation. Les evals sont prévus en Phase 9, mais le **corpus** se
+constitue dès la Phase 1, en sélectionnant au fil de l'eau les tours intéressants — cas limites,
+échecs, comportements aberrants. Sans cette accumulation, la Phase 9 commencerait par plusieurs
+jours de collecte.
+
+Même logique pour le coût : faire tourner ce corpus donne le nombre de jetons par tour, qui est
+la mesure de l'étape 1 de la démarche de monétisation. Ce n'est pas un test qui passe ou échoue,
+c'est un chiffre à suivre — et une alerte si une modification de prompt le fait doubler.
+
+### Sécurité : tester le confinement, évaluer la détection
+
+Sur le prompt injection, la distinction est essentielle. La **détection**
+(`alert.prompt_injection_suspected`) est probabiliste : elle s'évalue. Le **confinement** est
+déterministe et se teste durement, avec un corpus d'entrées adversariales : *même quand la
+détection échoue, aucun état ne doit avoir été modifié*. La sécurité ne repose pas sur le fait
+que le modèle repère l'attaque, mais sur le fait que le backend ne lui fait pas confiance.
+
+### Ce qu'on ne teste pas, délibérément
+
+Le comportement du framework (routes AdonisJS, génération d'uuid, middleware
+d'authentification), et **aucun appel à l'API LLM réelle dans la suite** — une commande dédiée
+couvre cela à la demande. Un appel facturé et instable dans une suite lancée à chaque commit
+finit toujours par être ignoré.
+
+---
+
 ## Décisions déjà actées (rappel)
 
 - **Multi-joueur** : explicitement hors scope, à traiter dans un projet distinct avec ses propres réflexions d'architecture (concurrence d'accès au state, infrastructure temps réel, visibilité narrative différenciée par joueur).
@@ -283,6 +381,8 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 - **Budget de développement** : hébergement léger (ex. Vercel, Supabase, Railway) et LLM économique (ex. Gemini) pour la phase de test, budget cadré à 15-20€ mensuels — voir Phase 0.
 - **Démarche de monétisation** : aucun modèle choisi à ce stade, mais une démarche en deux temps est actée — mesure du coût réel par tour/partie dès la Phase 3, puis validation de l'appétence des joueurs lors du beta test fermé prévu en Phase 9 — avant toute sélection de modèle économique.
 - **Convention de nommage** : tables, colonnes, enums et code exclusivement en anglais ; langue par défaut de l'application en anglais, support multi-langue en complément.
+- **Architecture multi-langue** : « tout en anglais en interne, traduction au dernier moment ». Le lore, le scénario, le state, les system prompts et le résumé narratif restent en anglais et ne sont jamais dupliqués par langue ; seule l'étape de narration produit du texte dans la langue du joueur. Pas de second appel de traduction, pas de détection si le joueur écrit dans une autre langue. Un glossaire compact de noms propres assure la cohérence des noms. Voir document d'architecture, section 4bis.
+- **Objets** : séparation entre référence stable anglaise (`item_reference`) et noms d'affichage par langue ; catalogue fermé par scénario ; l'étape d'extraction ne peut accorder qu'un objet figurant dans la liste transmise. Voir document d'architecture, section 6bis.
 - **Exécution asynchrone et contrat d'API front/backend** : pipeline exécuté en tâche de fond via BullMQ (Redis), retour progressif au front via AdonisJS Transmit (SSE) — introduit dès la Phase 2, pas différé à la Phase 9. Voir document d'architecture, section 8bis, pour le détail des événements.
 - **Environnement technique** : dev et tests locaux sous Docker (PostgreSQL + Redis), repo structuré en monorepo AdonisJS (`--kit=api`, Turborepo) avec packages `backend` et `frontend` dès la Phase 0, et `back-office` ajouté en Phase 5.
 - **Authentification** : le scaffolding register/login inclus par défaut dans un projet AdonisJS est réutilisé comme base pour l'authentification joueur (Phase 2), plutôt que de construire ce système from scratch — seul le champ `role` (enum `player`/`game_master`/`superadmin`) est une extension propre au projet.
@@ -295,5 +395,5 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 - Décision sur la nécessité future d'un cumul de rôles (un MJ qui voudrait aussi jouer).
 - Choix définitif entre pgvector intégré et vector store externe si la Phase 6 est activée (dépend du volume de lore réellement atteint).
 - Réintroduction éventuelle d'un retry automatique limité (Phase 9), une fois le comportement réel des erreurs observé en usage — probablement restreint aux erreurs transitoires (timeout, 5xx), jamais aux erreurs de schéma qui indiquent un problème de prompt à corriger plutôt qu'à retenter.
-- Modalités du support multi-langue (langues cibles, paramétrage de la langue de sortie du LLM à l'étape de narration, internationalisation du front, traduction éventuelle du lore) — non intégré à ce jour dans le séquencement des phases.
+- Support multi-langue : l'architecture est actée et répercutée dans les phases ci-dessus (paramètre `language` et colonne `turn_log.language` en Phase 1, séparation référence/affichage en Phase 4, catalogue et glossaire en Phase 5, résumé anglais en Phase 7). **Restent ouverts** : la liste des langues cibles, le choix de la bibliothèque d'internationalisation du front, et la phase à laquelle une seconde langue est effectivement activée — probablement pas avant que la Phase 5 rende le contenu paramétrable.
 - Granularité exacte des événements SSE (un événement par étape du pipeline vs uniquement les jalons significatifs pour le joueur) et gestion de la reconnexion en cas de coupure réseau côté client pendant un tour en cours.

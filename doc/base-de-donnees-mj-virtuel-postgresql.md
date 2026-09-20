@@ -76,7 +76,19 @@ Trame narrative type, rattachée à un univers.
 | `synopsis` | text | résumé général |
 | `chapter_structure` | jsonb | liste ordonnée de chapitres/beats, objectifs, conditions de progression |
 | `planned_npcs` | jsonb | PNJ types définis pour ce scénario (références, pas instances jouées) |
+| `item_catalog` | jsonb | **catalogue fermé** des objets acquérables : référence stable, effets mécaniques, noms d'affichage par langue |
+| `glossary` | jsonb | noms propres (lieux, PNJ, factions) et leurs traductions par langue |
 | `branch_points` | jsonb | points de bascule / choix narratifs possibles |
+
+**`item_catalog`** est la source de vérité des objets que l'étape d'extraction peut accorder.
+Le LLM ne peut pas créer d'entrée d'inventaire : un objet inventé n'aurait ni effets
+mécaniques, ni référence stable, ni traduction. Le narrateur reste libre de décrire ce qu'il
+veut — il ne peut simplement pas faire apparaître quelque chose de mécaniquement actif.
+
+**`glossary`** fige la traduction des noms propres, pour éviter qu'un même lieu soit nommé
+différemment d'un tour à l'autre. Il est injecté à la seule étape de narration, limité aux
+entités présentes dans la scène — quelques dizaines de jetons, contre des milliers si l'on
+dupliquait tout le lore par langue.
 | `created_at` / `updated_at` | timestamp | — |
 
 ### `resolution_rules`
@@ -162,13 +174,28 @@ Objets possédés par le personnage.
 
 | Colonne | Type | Contenu |
 |---|---|---|
-| `id` | uuid | identifiant |
+| `id` | uuid | identifiant technique de la ligne |
 | `character_id` | FK → characters | personnage parent |
-| `item_name` | text | nom de l'objet |
-| `description` | text | description |
+| `item_reference` | text | **référence stable en anglais** (ex. `recommendation_letter`) — c'est elle que manipulent le code et le LLM |
+| `display_names` | jsonb | noms d'affichage par langue, vus par le joueur et employés par le narrateur |
+| `descriptions` | jsonb | descriptions par langue |
 | `mechanical_effects` | jsonb | bonus/malus liés à l'objet, appliqués à des compétences précises |
 | `quantity` | int | quantité |
 | `state` | text | `equipped` / `carried` / `other` |
+
+**Pourquoi séparer `item_reference` et `display_names`** : sans référence stable, rien
+n'empêche le LLM de désigner le même objet par « the letter », puis « recommendation letter »,
+puis — en partie non anglophone — par son nom traduit. La référence est l'identité de l'objet
+pour le code ; les noms d'affichage sont ce que voit l'humain. Voir le document d'architecture,
+section 6bis.
+
+**Exemple de contenu `display_names`** :
+```json
+{ "en": "Recommendation letter", "fr": "Lettre de recommandation" }
+```
+
+À l'étape de narration, **seule la langue de la partie est injectée**, jamais la table
+complète : le coût en jetons reste identique que le produit supporte deux langues ou dix.
 
 **Structure de `mechanical_effects`** : liste de modificateurs fixes, chacun ciblant une compétence, avec une condition d'activation.
 
@@ -184,6 +211,7 @@ Objets possédés par le personnage.
 
 - `condition: "owned"` — le bonus s'applique dès que l'objet est en inventaire, sans besoin d'être activement porté (ex: un document, une lettre).
 - `condition: "equipped"` — le bonus ne s'applique que si `state = "equipped"` pour cette ligne d'inventaire (ex: une arme, une armure).
+- Le champ `description` **interne à un modificateur reste en anglais** et n'est jamais traduit : il sert l'audit et le debug (« pourquoi ce bonus s'applique-t-il ? »). Le texte destiné au joueur est celui de `descriptions`, sur l'objet lui-même. Sans cette distinction, on finit par traduire des données de debug.
 - Ces valeurs sont **exclusivement calculées par le backend** au moment du jet (jointure entre la compétence utilisée et les objets du personnage qui la ciblent) — elles ne transitent jamais par un appel LLM et ne sont jamais proposées ou réinterprétées par le modèle.
 
 ### `world_states`
@@ -232,7 +260,16 @@ Log complet de chaque tour, table à plus forte volumétrie du système. Indispe
 | `narrated_text` | text | sortie de l'étape D |
 | `applied_effects` | jsonb | delta réellement appliqué au state après validation (étape E) |
 | `alerts` | jsonb | prompt injection suspectée, hors cadre, etc. |
+| `llm_usage` | jsonb | jetons consommés par appel du tour (entrée, sortie, raisonnement) |
+| `language` | text | langue de la partie pour ce tour |
 | `created_at` | timestamp | — |
+
+**Pourquoi tracer `language` à côté de `llm_usage`** : le coût réel d'un tour varie
+sensiblement selon la langue (la tokenisation de l'anglais est plus dense — de l'ordre de 15 à
+30 % d'écart pour le français, davantage pour les écritures non latines). Un coût moyen calculé
+toutes langues confondues sous-estimerait mécaniquement les parties non anglophones, et
+fausserait la réflexion sur le modèle de revenu. Cette colonne est à poser dès la Phase 1,
+avec le tracking de consommation.
 
 **Exemple de contenu `roll_result`**, avec traçabilité de l'origine de chaque modificateur :
 ```json
@@ -261,7 +298,7 @@ Résumés hiérarchiques générés par le job asynchrone.
 | `id` | uuid | identifiant |
 | `session_id` | FK → sessions | partie parente |
 | `level` | text | `scene` / `chapter` / `global` |
-| `content` | text | résumé condensé |
+| `content` | text | résumé condensé, **toujours en anglais** quelle que soit la langue de la partie |
 | `turn_start` / `turn_end` | int | plage de tours couverte |
 | `created_at` | timestamp | — |
 
@@ -324,5 +361,7 @@ users ──── usage_quotas (optionnel)
 
 - Choix définitif du mécanisme RAG : pgvector intégré vs vector store externe (Pinecone, Qdrant, etc.).
 - Politique de rétention/archivage de `turn_log` pour les parties terminées anciennes.
-- Mécanisme de réconciliation entre `action_type` proposé librement par le LLM et les valeurs exactes existantes dans `resolution_rules` (validation stricte, fuzzy matching, ou liste fermée imposée au LLM).
+- Mécanisme de réconciliation entre `action_type` proposé librement par le LLM et les valeurs exactes existantes dans `resolution_rules` (validation stricte, fuzzy matching, ou liste fermée imposée au LLM). Pour les **identifiants d'objets**, le principe de la liste fermée est acté ; reste à décider du comportement en cas de proposition hors liste.
+- Emplacement définitif du glossaire de noms propres : `scenarios.glossary` comme proposé ici, ou au niveau de `worlds` pour ce qui est commun à tous les scénarios d'un univers.
+- Faut-il indexer `inventory_items.item_reference` — dépend du volume d'objets par personnage, probablement inutile avant la Phase 8.
 - Stratégie de migration de schéma pour les colonnes jsonb (versionnement de structure interne si le format évolue avec de nouveaux univers).

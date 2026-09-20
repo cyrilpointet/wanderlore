@@ -18,7 +18,9 @@ Un seul appel LLM géant ("voici tout, décide de tout") produit des résultats 
 
 **Principe directeur** : découper le tour de jeu en un **pipeline d'étapes à responsabilité unique**. Chaque étape LLM reçoit une entrée minimale et produit une sortie structurée (JSON), à l'exception de l'étape de narration qui produit du texte libre. Tout calcul déterministe (dés, seuils, formules) est effectué par le backend, jamais délégué au LLM.
 
-**Point d'architecture à trancher (multi-langue)** : le produit vise un support multi-langue pour le joueur, avec l'anglais comme langue par défaut. Ceci impacte directement l'étape de narration (D) — la langue de sortie attendue du LLM doit être un paramètre explicite du contexte transmis à chaque appel, pas supposée fixe. Impact potentiel également sur le contenu de lore si celui-ci doit être disponible en plusieurs langues. Modalités précises non tranchées à ce stade (voir document de synthèse, points ouverts).
+**Principe multi-langue (acté)** : le produit vise un support multi-langue pour le joueur, avec l'anglais comme langue par défaut. La règle est **« tout en anglais en interne, traduction au dernier moment »** : la langue cible n'intervient qu'à l'étape de narration (D), seule étape produisant du texte destiné à l'œil humain. Elle est transmise via le paramètre explicite `language` du contexte, jamais supposée fixe.
+
+Le lore, le scénario, le state et les system prompts restent **exclusivement en anglais** et ne sont jamais dupliqués par langue. Ce n'est pas qu'une commodité : le contexte réinjecté à chaque tour est le poste où le surcoût de tokenisation des langues non anglaises se compose, tour après tour, sur toute la durée d'une partie. Voir la section 4bis pour la mise en œuvre détaillée, et le document de synthèse (section 7) pour la liste des décisions.
 
 ---
 
@@ -81,6 +83,8 @@ Seul appel produisant du texte libre. Reçoit le résultat déjà déterminé (s
 **E — Extraction des effets**
 Lit le texte narré et en extrait les changements d'état (PV, objets, PNJ, flags de scénario) selon un schéma strict de champs autorisés. Cette sortie est **toujours validée par le backend** (bornes, cohérence, existence des identifiants) avant application au state réel.
 
+Les identifiants manipulés à cette étape (objets, PNJ, flags) sont des **références stables en anglais**, jamais des noms d'affichage. Pour les objets, la liste des identifiants autorisés dans la scène est transmise explicitement et le modèle ne peut que piocher dedans : un objet inventé n'aurait ni effets mécaniques, ni traduction, ni référence exploitable par le code (voir section 6bis).
+
 ---
 
 ## 4. Gestion du contexte : trois natures de données, trois mécanismes
@@ -116,13 +120,65 @@ Pertinent seulement pour des lores massifs (corpus de type encyclopédie) où le
 
 ---
 
+## 4bis. Multi-langue — mise en œuvre par étape
+
+Le multi-langue ne coûte pas là où l'intuition le suggère. La narration, deux à cinq phrases,
+est un poste marginal. Le poste dominant est le contexte réinjecté **à chaque tour**.
+
+### Ce que chaque étape voit
+
+| Étape | Langue de l'entrée | Langue de la sortie |
+|---|---|---|
+| A+B+C (arbitrage) | Contexte anglais + input joueur **brut**, quelle que soit sa langue | JSON anglais |
+| D (narration) | Contexte anglais + buffer récent (langue du joueur) + glossaire | Texte dans `language`, `ambiance_flags` en anglais |
+| E (extraction) | Texte narré (langue du joueur) + schéma | JSON anglais, identifiants issus d'une liste fermée |
+| Job résumé | Tours bruts (langue du joueur) | **Résumé en anglais** |
+
+### Les quatre règles
+
+**1. Le résumé narratif est stocké en anglais.** C'est la décision qui produit la plus grosse
+économie : le résumé est réinjecté à chaque tour, sur toute la durée de la partie. Le job étant
+asynchrone et hors du chemin critique, il peut condenser une narration française en un résumé
+anglais sans pénaliser la latence perçue.
+
+**2. Le buffer récent reste dans la langue du joueur, mais n'est injecté qu'à l'étape D.** Il
+ne sert qu'à la continuité de ton et de dialogue. L'arbitrage n'a besoin que de faits : le
+résumé anglais et le state structuré lui suffisent. C'est une précision par rapport au tableau
+de la section 4, où le buffer court apparaissait aussi en entrée de A+B+C.
+
+**3. Un glossaire de noms propres par langue est injecté à l'étape D.** Table compacte figeant
+la traduction des lieux, PNJ, objets et factions **présents dans la scène**. Elle règle
+l'incohérence d'un tour à l'autre (« la porte de la zone noble » devenant « la porte du
+quartier noble ») pour quelques dizaines de jetons — alors que dupliquer tout le lore en
+coûterait des milliers et multiplierait le travail éditorial par le nombre de langues.
+
+**4. Aucun appel de traduction séparé.** La narration est demandée directement dans la langue
+cible. Générer en anglais puis traduire dans un second appel coûterait environ le double
+(sortie anglaise, puis entrée et sortie traduites) pour une qualité inférieure : le traducteur
+n'aurait pas le contexte de scène dont dispose le générateur.
+
+### Cas du joueur écrivant dans une autre langue que celle de la partie
+
+Ni détection, ni traduction préalable. L'entrée est transmise telle quelle à l'arbitrage, qui
+gère nativement une entrée dans une langue et une sortie structurée dans une autre. Coût
+supplémentaire nul.
+
+### Conséquence sur le suivi des coûts
+
+La langue de la partie est enregistrée dans `turn_log` à côté de la consommation de jetons. Le
+coût réel par tour varie sensiblement d'une langue à l'autre, et un modèle de prix calibré sur
+des parties anglaises sous-estimerait mécaniquement les autres (voir document de synthèse,
+démarche de monétisation).
+
+---
+
 ## 5. Gestion de la mémoire long terme
 
 Trois niveaux, pour éviter de charger l'historique complet à chaque appel :
 
 1. **Faits permanents structurés** (state) — toujours injecté, compact, jamais résumé (c'est déjà une donnée structurée).
-2. **Résumé narratif glissant** — condensé régénéré périodiquement (job asynchrone, après chaque scène ou tous les N tours) par un appel LLM dédié qui absorbe les tours anciens.
-3. **Buffer récent** — derniers tours en clair (2–4), pour la continuité immédiate de ton et de dialogue.
+2. **Résumé narratif glissant** — condensé régénéré périodiquement (job asynchrone, après chaque scène ou tous les N tours) par un appel LLM dédié qui absorbe les tours anciens. **Toujours rédigé en anglais**, quelle que soit la langue de la partie (voir section 4bis).
+3. **Buffer récent** — derniers tours en clair (2–4), dans la langue de la partie, pour la continuité immédiate de ton et de dialogue. Injecté à la seule étape de narration.
 
 Le résumé n'est jamais recalculé en synchrone dans le chemin critique de réponse au joueur : il tourne en tant que job BullMQ différé pour ne pas ajouter de latence perçue.
 
@@ -423,6 +479,45 @@ Si le nombre de tours depuis le dernier résumé dépasse un seuil défini, un j
 
 ---
 
+## 6bis. Inventaire et objets dans le pipeline
+
+L'inventaire se scinde exactement sur le principe fondateur du projet.
+
+**La mécanique n'atteint jamais le LLM.** `target_skill`, `value`, `condition`, `state`,
+`quantity` sont lus par le backend au moment du calcul du jet. Le modèle ne les voit pas, ne
+les propose pas, ne les chiffre pas. C'est à la fois une garantie de cohérence et une économie
+de jetons : le gros du volume d'une ligne d'inventaire ne quitte jamais le backend.
+
+**Identifiant stable ≠ nom affiché.** Chaque objet porte deux choses distinctes :
+
+- une **référence** anglaise invariable (ex. `recommendation_letter`), manipulée par le code,
+  la base et le LLM à l'étape d'extraction ;
+- des **noms d'affichage par langue**, vus par le joueur et employés par le narrateur.
+
+Sans cette séparation, rien n'empêche le modèle de renvoyer « the letter », puis
+« recommendation letter », puis « sealed letter » — et, en multi-langue, le nom traduit.
+
+**Ce que chaque étape reçoit :**
+
+| Étape | Ce qu'elle voit de l'inventaire |
+|---|---|
+| A+B+C | Références et noms canoniques **anglais**, pour juger la possession et la plausibilité factuelle de l'usage. Jamais les valeurs mécaniques. |
+| Calcul du jet (backend) | L'inventaire complet, effets mécaniques inclus. Aucun LLM. |
+| D | Le **nom d'affichage dans la langue de la partie**, pour les seuls objets présents en scène. Jamais la table complète des traductions. |
+| E | La **liste fermée des références autorisées** dans la scène. Tout identifiant hors liste est rejeté. |
+
+Le rapprochement entre le texte libre du joueur (« je montre ma lettre ») et une référence
+anglaise ne pose pas de difficulté : les modèles effectuent ce rapprochement inter-langue
+nativement.
+
+**Catalogue fermé par scénario.** Les objets qu'un joueur peut acquérir sont déclarés à
+l'avance, avec leur référence, leurs effets mécaniques et leurs noms d'affichage. Le narrateur
+reste libre de décrire une bourse, une inscription ou une odeur — il ne peut simplement pas
+faire apparaître une entrée d'inventaire ayant des conséquences mécaniques. Même frontière que
+partout ailleurs : le modèle raconte, le backend décide de ce qui existe.
+
+---
+
 ## 7. Principes de sécurité et de robustesse des prompts
 
 - **Séparation stricte system prompt / user message.** Le system prompt porte le rôle, les contraintes et le schéma de sortie — statique, stocké une fois par étape, jamais reconstruit dynamiquement. Le user message porte uniquement les données du tour.
@@ -519,4 +614,6 @@ Tour de jeu
 - Gestion narrative des échecs (comment raconter un échec de façon crédible sans punir injustement le joueur).
 - Seuils de déclenchement du job de résumé (nombre de tours, changement de scène, ou les deux).
 - Choix définitif du provider LLM externe et impact sur le format exact du function calling / structured output utilisé par le LLM Gateway.
-- Modalités précises du paramètre `language` (liste des langues supportées, comportement si le joueur écrit dans une langue différente de celle configurée pour la partie).
+- Liste des langues supportées (l'architecture multi-langue est actée en section 4bis, le périmètre linguistique ne l'est pas).
+- Granularité du glossaire de noms propres : par univers, par scénario, ou par scène — et son outillage de saisie dans le back-office.
+- Stratégie de rattrapage si le LLM propose un identifiant d'objet hors de la liste fermée transmise (rejet silencieux, nouvelle tentative, ou remontée d'erreur).

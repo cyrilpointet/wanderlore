@@ -19,6 +19,8 @@ Les invariants non négociables sont dans `CLAUDE.md` (déjà chargé). Ce skill
 |---|---|---|
 | Vue d'ensemble, décisions actées, points ouverts, budget, cible | `doc/synthese-passation-mj-virtuel-llm.md` | 7 (actées), 8 (ouverts) |
 | Étapes du pipeline, ce qui est injecté à chaque étape | `doc/architecture-mj-virtuel-llm.md` | 3, 4 |
+| Multi-langue : quelle étape voit quelle langue, glossaire, résumé | `doc/architecture-mj-virtuel-llm.md` | 4bis |
+| Inventaire dans le pipeline, références vs noms affichés | `doc/architecture-mj-virtuel-llm.md` | 6bis |
 | Exemple complet de tour avec system prompts réels | `doc/architecture-mj-virtuel-llm.md` | 6 |
 | Sécurité des prompts, anti prompt-injection | `doc/architecture-mj-virtuel-llm.md` | 7 |
 | Découpage applicatif AdonisJS (services, jobs) | `doc/architecture-mj-virtuel-llm.md` | 8 |
@@ -29,6 +31,7 @@ Les invariants non négociables sont dans `CLAUDE.md` (déjà chargé). Ce skill
 | Modificateurs contextuels vs objets | `doc/systeme-regles-jeu-mj-virtuel.md` | 5 |
 | Contraintes à inscrire dans le prompt d'arbitrage | `doc/systeme-regles-jeu-mj-virtuel.md` | 10 |
 | Contenu et critère de sortie d'une phase | `doc/roadmap-mj-virtuel-llm.md` | Phase concernée |
+| Stratégie de test, tests vs evals, corpus d'évaluation | `doc/roadmap-mj-virtuel-llm.md` | Stratégie de test |
 
 **Une question de conception qui ressurgit est probablement déjà tranchée.** Consulter
 avant de rouvrir un arbitrage déjà motivé.
@@ -139,3 +142,11 @@ sortie explicite dans le document de roadmap : le vérifier avant de déclarer u
   `narrative_summaries` sont isolés dès la conception (profils d'accès différents).
 - **Ne pas faire passer une règle mécanique par une recherche sémantique.** Barèmes, seuils
   et formules se récupèrent en SQL déterministe ; seul le lore narratif relève du RAG.
+- **Ne pas traduire le lore, le state ni le résumé narratif.** Tout reste en anglais en
+  interne ; seule l'étape de narration produit du texte dans la langue du joueur. Dupliquer
+  le lore par langue coûte cher en contenu pour un gain runtime nul — le glossaire de noms
+  propres règle le vrai problème (cohérence des noms) pour quelques dizaines de jetons.
+- **Ne pas ajouter un appel de traduction après la narration.** Coût doublé, qualité moindre.
+- **Ne pas laisser le LLM désigner un objet par son nom.** Références stables uniquement, et
+  liste fermée à l'étape d'extraction — sinon le même objet devient « the letter » puis
+  « sealed letter », et un objet inventé arrive sans effets mécaniques ni traduction.

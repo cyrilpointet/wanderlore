@@ -18,6 +18,15 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
   `language` explicite dans le contexte transmis au LLM — jamais supposé fixe.
 - Dans une sortie LLM structurée : le texte narratif suit `language`, mais **toutes les
   clés et valeurs d'enum restent en anglais** (c'est cette sortie qui alimente la base).
+- **« Tout en anglais en interne, traduction au dernier moment. »** Lore, scénario, state,
+  system prompts et résumé narratif restent en anglais et ne sont **jamais dupliqués par
+  langue**. Seule l'étape de narration (D) produit du texte dans la langue du joueur.
+  Motivation : le contexte réinjecté à chaque tour est le poste de coût dominant, et la
+  tokenisation de l'anglais est la plus dense.
+- **Jamais de second appel de traduction** — la narration est demandée directement dans la
+  langue cible. Traduire après coup coûterait le double pour une qualité moindre.
+- Si le joueur écrit dans une autre langue que celle de la partie : **ni détection, ni
+  traduction**. L'entrée passe telle quelle à l'arbitrage, qui sort du JSON anglais.
 
 ## Invariants d'architecture (non négociables)
 
@@ -39,6 +48,10 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
    instructions (défense anti prompt-injection).
 7. **Le front ne calcule rien.** Il affiche ce que le backend lui transmet.
 8. **Multi-joueur : hors scope.** Ne pas introduire de concurrence d'accès au state.
+9. **Identifiant stable ≠ nom affiché.** Objets, PNJ, lieux et flags sont désignés par une
+   référence anglaise invariable, jamais par un nom d'affichage. Le LLM ne manipule que des
+   références, choisies dans une **liste fermée** transmise dans le contexte — il ne peut
+   pas inventer une entité ayant des conséquences mécaniques.
 
 ## Stack
 
@@ -88,6 +101,10 @@ Acquis :
   catégories d'erreur, parsing JSON, comptage des tokens, streaming pour la narration.
 - Seeder `test_user`, restreint aux environnements locaux :
   `player@wanderlore.test` / `password`, rôle `player`.
+- **Harnais de test** : suites `unit` (sans base, ~70 ms) et `functional` (PostgreSQL),
+  faux provider LLM réutilisable, helpers de base. 45 tests couvrent les catégories
+  d'erreur du gateway, les cascades, les contraintes, la réversibilité des migrations et
+  la non-exposition du rôle.
 
 **Prochaine étape : Phase 1** — boucle de jeu minimale. Rappel des simplifications
 volontaires de cette phase : **un seul appel LLM fusionné A+B+C+D**, univers et règles en
@@ -105,6 +122,9 @@ Supabase, Railway…).
   Lucid) — ne jamais l'éditer à la main, ni le reformater : il est réécrit à chaque
   migration. Il est exclu de Prettier via `apps/backend/.prettierignore`. Les modèles de
   `app/models/` étendent les classes qu'il expose et y ajoutent la logique métier.
+- **Les classes de `database/schema.ts` ne sont pas des modèles** : elles n'ont pas de
+  `static table`, donc Lucid chercherait `session_schemas`. Tant qu'une table n'a pas son
+  modèle dans `app/models/`, y accéder par le query builder (`db.table('sessions')`).
 - **Une nouvelle table** = une migration avec `table.uuid('id').notNullable().primary()
   .defaultTo(this.raw('gen_random_uuid()'))` et des timestamps `{ useTz: true }`.
 - **Enums natifs PostgreSQL** pour les valeurs fermées. `migration:fresh` ne supprimant pas
@@ -123,6 +143,25 @@ Supabase, Railway…).
 - Le raisonnement provider (`thinking`) est **désactivé par défaut** — facturé et inutile
   aux étapes déterministes. L'activer au cas par cas via `reasoning: true`.
 
+### Tests
+
+- **Deux suites** : `unit` ne touche pas la base et doit rester sous la seconde ;
+  `functional` boote l'app et PostgreSQL. Le cycle de vie de la base est câblé dans
+  `tests/bootstrap.ts`, pour la seule suite fonctionnelle.
+- **Isolation opt-in par groupe** : `useTransaction(group)` (`#tests/helpers/database`).
+  Un groupe qui fait du DDL s'en passe volontairement.
+- **Une violation de contrainte attendue passe par `expectDbError()`** : en PostgreSQL elle
+  avorterait sinon la transaction du test. Asserter sur le SQLSTATE, pas sur le message.
+- **Les migrations lancées depuis un test passent toujours par `testUtils.db()`**, jamais
+  par `node ace migration:run` ni `migration:fresh` (qui réécrivent `database/schema.ts` —
+  `fresh` n'accepte même pas `--no-schema-generate`).
+- **Les tests importent `#services/llm/gateway`**, jamais `#services/llm`, qui construirait
+  un vrai client Gemini. `FakeLlmProvider` (`#tests/helpers/fake_llm_provider`) sert de
+  double : il **doit** honorer `AbortSignal`, sinon les tests de timeout pendent.
+- **Aucun appel à l'API LLM réelle dans la suite.** `node ace llm:ping` couvre ça à la
+  demande.
+- On ne teste pas le framework (routes AdonisJS, génération d'uuid, middleware d'auth).
+
 ## Commandes
 
 ```bash
@@ -136,4 +175,8 @@ node ace migration:rollback
 node ace migration:fresh          # repart d'une base vide
 node ace db:seed                  # crée l'utilisateur de test
 node ace llm:ping                 # vérifie que le provider LLM répond
+
+node ace test                     # suite complète
+node ace test unit                # suite unitaire seule (suite en positionnel)
+node ace test functional
 ```

@@ -135,6 +135,8 @@ Le backend calcule ces modificateurs lui-même au moment du jet, en interrogeant
 
 **Pas de plafond arbitraire** sur les modificateurs d'objets : ils sont naturellement bornés par ce que le personnage possède et peut équiper simultanément, contrairement aux modificateurs contextuels qui doivent être explicitement limités côté prompt.
 
+**Identification des objets.** Le backend fait le rapprochement entre la compétence utilisée et les objets de l'inventaire via la **référence stable** de l'objet (`item_reference`, en anglais, invariable), jamais via son nom d'affichage — qui varie selon la langue de la partie. Le champ `description` d'un modificateur reste lui aussi en anglais : il sert l'audit (« pourquoi ce bonus s'applique-t-il ? »), pas l'affichage joueur. Voir le document de base de données pour la structure, et le document d'architecture (section 6bis) pour ce que chaque étape du pipeline voit de l'inventaire.
+
 ### 5.3 Traçabilité
 
 Le résultat final du jet doit conserver l'origine de chaque modificateur appliqué, pour permettre l'audit ("pourquoi ce jet a-t-il obtenu ce total ?") sans ambiguïté entre ce qui vient du jugement du LLM et ce qui vient d'une donnée fixe :
@@ -218,6 +220,7 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
 - Le LLM ne doit jamais proposer plus de 2 à 3 modificateurs **contextuels** cumulés pour une même action.
 - Le LLM ne doit **jamais** chiffrer ou proposer de modificateur lié à un objet possédé ou équipé par le joueur — ces valeurs sont calculées séparément par le backend à partir de l'inventaire (voir section 5.2). Le rôle du LLM se limite à juger la plausibilité factuelle de l'usage de l'objet, jamais son effet mécanique.
 - Le LLM ne manipule que des labels qualitatifs (`easy`/`medium`/`hard`/`very_hard`, noms de compétences en anglais) — jamais de valeurs numériques de règles, qui restent entièrement du ressort du backend.
+- Les objets sont désignés par leur **référence stable anglaise**, transmise au modèle dans le contexte. Le joueur peut parfaitement écrire « je montre ma lettre » dans sa langue : le rapprochement inter-langue entre son texte libre et la référence anglaise est fait nativement par le modèle, sans traitement préalable.
 
 ---
 
@@ -227,4 +230,4 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
 - Décision sur l'opportunité de barèmes de difficulté alternatifs par univers (garder le standard partout pour la cohérence entre univers, ou permettre une personnalisation).
 - Modélisation précise des adversaires multiples en combat (ordre d'initiative, gestion de plusieurs PNJ hostiles simultanés dans un même round).
 - Éventuelle notion de statuts temporaires (blessé, effrayé, avantagé) et leur traduction en modificateurs automatiques plutôt que proposés au cas par cas par le LLM.
-- Gestion des objets à usage limité (consommables perdant leur effet après utilisation, objets qui se dégradent avec le temps ou l'usage) — actuellement le mécanisme de modificateurs d'objets (section 5.2) suppose un effet stable tant que l'objet est possédé/équipé, sans notion d'épuisement.
+- Gestion des objets à usage limité (consommables perdant leur effet après utilisation, objets qui se dégradent avec le temps ou l'usage) — actuellement le mécanisme de modificateurs d'objets (section 5.2) suppose un effet stable tant que l'objet est possédé/équipé, sans notion d'épuisement. À noter : le catalogue fermé d'objets par scénario (voir architecture, section 6bis) facilitera ce traitement, puisque chaque objet acquérable est déjà déclaré à l'avance avec ses caractéristiques.

@@ -51,6 +51,22 @@ export const runnerHooks: Required<Pick<Config, 'setup' | 'teardown'>> = {
  */
 export const configureSuite: Config['configureSuite'] = (suite) => {
   if (['browser', 'functional', 'e2e'].includes(suite.name)) {
-    return suite.setup(() => testUtils.httpServer().start())
+    /**
+     * The database is wired here rather than in `runnerHooks` so the `unit`
+     * suite never touches PostgreSQL and stays fast.
+     *
+     * `truncate()` runs the migrations once and empties the tables afterwards.
+     * `migrate()` would instead tear the schema down with a full
+     * `migration:reset` after every run — slower, and it would paper over the
+     * orphan-enum-type regression that `database/migrations.spec.ts` asserts.
+     *
+     * Migrations must always be driven through `testUtils.db()`: it passes
+     * `--no-schema-generate`, which keeps the committed `database/schema.ts`
+     * from being rewritten by a test run.
+     *
+     * No global `seed()`: a seeded row would become an implicit fixture every
+     * test silently depends on. Each test creates what it needs.
+     */
+    return suite.setup(() => testUtils.db().truncate()).setup(() => testUtils.httpServer().start())
   }
 }
