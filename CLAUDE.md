@@ -158,6 +158,14 @@ Supabase, Railway…).
   colonne (`22P02`). Le `prepare` doit laisser passer `null` intact, sinon un NULL SQL
   devient un `null` JSON. Il se déclare dans `schema_rules.ts` (clé `args`), comme le
   typage.
+- **Un service substituable** = un port (interface), une implémentation réelle reçue **par
+  le constructeur**, et un singleton de module exporté par défaut — le cache de modules ESM
+  suffit. **Jamais le conteneur IoC** : le projet n'en utilise aucun pour ses services, et
+  un `container.swap()` ferait de la substitution un état global à restaurer après chaque
+  test. Un test construit sa propre instance avec un double. Voir `app/services/llm.ts` et
+  `app/services/dice.ts`.
+- **Tout tirage aléatoire passe par `import dice from '#services/dice'`** — jamais
+  `Math.random()` dans le code métier, sinon le moteur de règles n'est plus testable.
 - **Tout appel LLM passe par `import llm from '#services/llm'`** — jamais un provider ni un
   SDK directement. `generateJson()` pour les étapes structurées (A+B+C, E),
   `generateText()` / `streamText()` pour la narration (D).
