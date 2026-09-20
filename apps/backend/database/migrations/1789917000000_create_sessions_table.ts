@@ -1,7 +1,7 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
 
 export default class extends BaseSchema {
-  protected tableName = 'users'
+  protected tableName = 'sessions'
 
   async up() {
     /**
@@ -10,32 +10,37 @@ export default class extends BaseSchema {
      */
     this.schema.raw(`
       DO $$ BEGIN
-        CREATE TYPE user_role AS ENUM ('player', 'game_master', 'superadmin');
+        CREATE TYPE session_status AS ENUM ('in_progress', 'paused', 'completed');
       EXCEPTION WHEN duplicate_object THEN null;
       END $$;
     `)
 
     this.schema.createTable(this.tableName, (table) => {
       table.uuid('id').notNullable().primary().defaultTo(this.raw('gen_random_uuid()'))
-      table.string('full_name').nullable()
-      table.string('email', 254).notNullable().unique()
-      table.string('password').notNullable()
+      table.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE')
+
       table
-        .enum('role', ['player', 'game_master', 'superadmin'], {
+        .enum('status', ['in_progress', 'paused', 'completed'], {
           useNative: true,
-          enumName: 'user_role',
+          enumName: 'session_status',
           existingType: true,
         })
         .notNullable()
-        .defaultTo('player')
+        .defaultTo('in_progress')
+
+      /**
+       * Free-form until `scenarios.chapter_structure` exists (Phase 5). The
+       * `world_id` / `scenario_id` foreign keys land with that same phase.
+       */
+      table.string('current_chapter').nullable()
 
       table.timestamp('created_at', { useTz: true }).notNullable()
-      table.timestamp('updated_at', { useTz: true }).nullable()
+      table.timestamp('last_activity_at', { useTz: true }).notNullable()
     })
   }
 
   async down() {
     this.schema.dropTable(this.tableName)
-    this.schema.raw('DROP TYPE IF EXISTS user_role')
+    this.schema.raw('DROP TYPE IF EXISTS session_status')
   }
 }

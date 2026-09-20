@@ -32,8 +32,79 @@ export class AuthAccessTokenSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class CharacterSchema extends BaseModel {
+  static $columns = ['attributes', 'createdAt', 'hitPoints', 'hitPointsMax', 'id', 'name', 'progression', 'resources', 'sessionId', 'skills', 'updatedAt'] as const
+  $columns = CharacterSchema.$columns
+  @column()
+  declare attributes: any
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare hitPoints: number
+  @column()
+  declare hitPointsMax: number
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare name: string
+  @column()
+  declare progression: any
+  @column()
+  declare resources: any
+  @column()
+  declare sessionId: string
+  @column()
+  declare skills: any
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class SessionSchema extends BaseModel {
+  static $columns = ['createdAt', 'currentChapter', 'id', 'lastActivityAt', 'status', 'userId'] as const
+  $columns = SessionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare currentChapter: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column.dateTime()
+  declare lastActivityAt: DateTime
+  @column()
+  declare status: 'in_progress' | 'paused' | 'completed'
+  @column()
+  declare userId: string
+}
+
+export class TurnLogSchema extends BaseModel {
+  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'id', 'llmUsage', 'narratedText', 'playerInput', 'rollResult', 'sessionId', 'turnNumber'] as const
+  $columns = TurnLogSchema.$columns
+  @column()
+  declare alerts: any | null
+  @column()
+  declare appliedEffects: any | null
+  @column()
+  declare arbitrationOutput: any | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare llmUsage: any | null
+  @column()
+  declare narratedText: string | null
+  @column()
+  declare playerInput: string
+  @column()
+  declare rollResult: any | null
+  @column()
+  declare sessionId: string
+  @column()
+  declare turnNumber: number
+}
+
 export class UserSchema extends BaseModel {
-  static $columns = ['createdAt', 'email', 'fullName', 'id', 'password', 'updatedAt'] as const
+  static $columns = ['createdAt', 'email', 'fullName', 'id', 'password', 'role', 'updatedAt'] as const
   $columns = UserSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -45,6 +116,29 @@ export class UserSchema extends BaseModel {
   declare id: string
   @column({ serializeAs: null })
   declare password: string
+  @column()
+  declare role: 'player' | 'game_master' | 'superadmin'
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+}
+
+export class WorldStateSchema extends BaseModel {
+  static $columns = ['activeQuests', 'createdAt', 'id', 'narrativeFlags', 'sessionId', 'updatedAt', 'visitedLocations', 'worldObjects'] as const
+  $columns = WorldStateSchema.$columns
+  @column()
+  declare activeQuests: any
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare narrativeFlags: any
+  @column()
+  declare sessionId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare visitedLocations: any
+  @column()
+  declare worldObjects: any
 }

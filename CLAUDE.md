@@ -51,7 +51,8 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
 - BullMQ (Redis) pour l'exécution du pipeline en tâche de fond et les jobs différés.
 - AdonisJS Transmit (SSE) pour le retour progressif au front pendant un tour.
 - Docker en local pour PostgreSQL + Redis (`docker compose up -d` à la racine).
-- LLM : API externe, encapsulée derrière un service **LLM Gateway** indépendant du provider.
+- LLM : **Google Gemini** (`gemini-2.5-flash`, SDK `@google/genai`), encapsulé derrière le
+  **LLM Gateway**. Aucun autre fichier de l'app n'importe un SDK de provider.
 
 ## Règles de travail
 
@@ -70,25 +71,31 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
 
 ## État d'avancement
 
-Phase 0 (socle technique) **en cours**.
+**Phase 0 (socle technique) terminée.** Les deux critères de sortie sont remplis :
+l'application démarre et se connecte à PostgreSQL comme au LLM externe, et un utilisateur
+de test existe en base avec un rôle.
 
-Fait :
-- Monorepo Turborepo, starter AdonisJS avec auth par access tokens (signup / login /
-  logout / profile).
-- **PostgreSQL** : connexion `pg` par défaut, SQLite retiré. Variables `PG_*` validées
-  dans `apps/backend/start/env.ts`.
-- **Clés primaires en `uuid`** sur `users` et `auth_access_tokens`, défaut base
-  `gen_random_uuid()`, timestamps en `timestamptz`.
-- **`docker-compose.yml`** à la racine : PostgreSQL 17 + Redis 8, volumes nommés et
-  healthchecks. Un script d'init crée la base `wanderlore_test` utilisée par `.env.test`.
+Acquis :
+- Monorepo Turborepo, starter AdonisJS avec auth par access tokens.
+- **PostgreSQL** : connexion `pg` par défaut, SQLite retiré. Clés primaires en `uuid`
+  (`gen_random_uuid()`), timestamps en `timestamptz`.
+- **`docker-compose.yml`** : PostgreSQL 17 + Redis 8, volumes nommés, healthchecks, et
+  création de la base `wanderlore_test` utilisée par `.env.test`.
+- **Tables** : `users` (avec `role`), `auth_access_tokens`, `sessions`, `characters`,
+  `world_states`, `turn_log`. Pas encore de `worlds`, `scenarios`, `resolution_rules`,
+  `inventory_items`, `lore_fragments`, `narrative_summaries` — voir roadmap.
+- **LLM Gateway** (`app/services/llm/`) : port neutre + adaptateur Gemini, timeout,
+  catégories d'erreur, parsing JSON, comptage des tokens, streaming pour la narration.
+- Seeder `test_user`, restreint aux environnements locaux :
+  `player@wanderlore.test` / `password`, rôle `player`.
 
-Restant pour clore la Phase 0 :
-- Champ `users.role` (enum `player` / `game_master` / `superadmin`).
-- Tables `sessions`, `characters`, `world_states`, `turn_log` en version minimale.
-- LLM Gateway simple, un seul provider.
-- Utilisateur de test en base.
+**Prochaine étape : Phase 1** — boucle de jeu minimale. Rappel des simplifications
+volontaires de cette phase : **un seul appel LLM fusionné A+B+C+D**, univers et règles en
+dur dans le system prompt, un seul type de jet, aucun modificateur, pas d'étape E séparée.
+Ne pas implémenter le pipeline complet ici : c'est la Phase 3.
 
-Point encore ouvert : choix du provider LLM.
+Décision non tranchée, sans urgence : hébergement léger pour la phase de test (Vercel,
+Supabase, Railway…).
 
 ---
 
@@ -100,8 +107,21 @@ Point encore ouvert : choix du provider LLM.
   `app/models/` étendent les classes qu'il expose et y ajoutent la logique métier.
 - **Une nouvelle table** = une migration avec `table.uuid('id').notNullable().primary()
   .defaultTo(this.raw('gen_random_uuid()'))` et des timestamps `{ useTz: true }`.
-- Le type TypeScript d'une colonne `jsonb` est généré en `any` : typer explicitement dans
-  le modèle ou via `database/schema_rules.ts` dès que la structure est stabilisée.
+- **Enums natifs PostgreSQL** pour les valeurs fermées. `migration:fresh` ne supprimant pas
+  les types, les créer via un bloc `DO $$ … EXCEPTION WHEN duplicate_object` puis
+  `existingType: true`, et les dropper dans `down()`. Voir la migration `users`.
+- **Typer les colonnes générées dans `database/schema_rules.ts`**, pas dans les modèles :
+  le générateur mappe les enums natifs et le `jsonb` sur `any`, et un override écrit dans
+  un modèle serait perdu à la régénération suivante.
+- **Tout appel LLM passe par `import llm from '#services/llm'`** — jamais un provider ni un
+  SDK directement. `generateJson()` pour les étapes structurées (A+B+C, E),
+  `generateText()` / `streamText()` pour la narration (D).
+- **Changer de provider** = écrire un adaptateur dans `app/services/llm/providers/` et
+  changer la ligne de `config/llm.ts`. Rien d'autre.
+- Le gateway **garantit un JSON parsable, pas un JSON valide** : la validation métier du
+  payload reste à la charge de l'appelant, avant toute écriture dans le state.
+- Le raisonnement provider (`thinking`) est **désactivé par défaut** — facturé et inutile
+  aux étapes déterministes. L'activer au cas par cas via `reasoning: true`.
 
 ## Commandes
 
@@ -113,4 +133,7 @@ npm run test / lint / typecheck   # idem
 cd apps/backend
 node ace migration:run            # migre et régénère database/schema.ts
 node ace migration:rollback
+node ace migration:fresh          # repart d'une base vide
+node ace db:seed                  # crée l'utilisateur de test
+node ace llm:ping                 # vérifie que le provider LLM répond
 ```

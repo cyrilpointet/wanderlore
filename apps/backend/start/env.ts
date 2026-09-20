@@ -35,4 +35,9 @@ export default await Env.create(new URL('../', import.meta.url), {
   // Redis (consumed by BullMQ from Phase 2 onwards)
   REDIS_HOST: Env.schema.string({ format: 'host' }),
   REDIS_PORT: Env.schema.number(),
+
+  // LLM provider (see config/llm.ts)
+  GOOGLE_AI_API_KEY: Env.schema.secret(),
+  DEFAULT_AI_MODEL: Env.schema.string(),
+  LLM_REQUEST_TIMEOUT_MS: Env.schema.number.optional(),
 })
