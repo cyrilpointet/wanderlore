@@ -36,7 +36,7 @@ export class CharacterSchema extends BaseModel {
   static $columns = ['attributes', 'createdAt', 'hitPoints', 'hitPointsMax', 'id', 'name', 'progression', 'resources', 'sessionId', 'skills', 'updatedAt'] as const
   $columns = CharacterSchema.$columns
   @column()
-  declare attributes: any
+  declare attributes: Record<string, number>
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -48,13 +48,13 @@ export class CharacterSchema extends BaseModel {
   @column()
   declare name: string
   @column()
-  declare progression: any
+  declare progression: Record<string, unknown>
   @column()
-  declare resources: any
+  declare resources: Record<string, number>
   @column()
   declare sessionId: string
   @column()
-  declare skills: any
+  declare skills: Record<string, number>
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
@@ -77,26 +77,28 @@ export class SessionSchema extends BaseModel {
 }
 
 export class TurnLogSchema extends BaseModel {
-  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'id', 'llmUsage', 'narratedText', 'playerInput', 'rollResult', 'sessionId', 'turnNumber'] as const
+  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'id', 'language', 'llmUsage', 'narratedText', 'playerInput', 'rollResult', 'sessionId', 'turnNumber'] as const
   $columns = TurnLogSchema.$columns
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare alerts: Record<string, unknown>[] | null
   @column()
-  declare alerts: any | null
+  declare appliedEffects: Record<string, unknown> | null
   @column()
-  declare appliedEffects: any | null
-  @column()
-  declare arbitrationOutput: any | null
+  declare arbitrationOutput: Record<string, unknown> | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column({ isPrimary: true })
   declare id: string
   @column()
-  declare llmUsage: any | null
+  declare language: string
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare llmUsage: Record<string, unknown>[] | null
   @column()
   declare narratedText: string | null
   @column()
   declare playerInput: string
   @column()
-  declare rollResult: any | null
+  declare rollResult: Record<string, unknown> | null
   @column()
   declare sessionId: string
   @column()
@@ -125,20 +127,20 @@ export class UserSchema extends BaseModel {
 export class WorldStateSchema extends BaseModel {
   static $columns = ['activeQuests', 'createdAt', 'id', 'narrativeFlags', 'sessionId', 'updatedAt', 'visitedLocations', 'worldObjects'] as const
   $columns = WorldStateSchema.$columns
-  @column()
-  declare activeQuests: any
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare activeQuests: Record<string, unknown>[]
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column({ isPrimary: true })
   declare id: string
   @column()
-  declare narrativeFlags: any
+  declare narrativeFlags: Record<string, unknown>
   @column()
   declare sessionId: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
-  @column()
-  declare visitedLocations: any
-  @column()
-  declare worldObjects: any
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare visitedLocations: Record<string, unknown>[]
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare worldObjects: Record<string, unknown>[]
 }

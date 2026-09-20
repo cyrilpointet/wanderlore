@@ -79,4 +79,23 @@ test.group('Migrations', (group) => {
 
     assert.includeMembers(await existingTables(), TABLES)
   })
+
+  test('turn_log.language is a non-null varchar(8) defaulting to en', async ({ assert }) => {
+    const { rows } = await db.rawQuery(
+      `select character_maximum_length, column_default, is_nullable
+       from information_schema.columns
+       where table_name = 'turn_log' and column_name = 'language'`
+    )
+
+    /**
+     * The shape is a decision of ours, not framework behaviour: the column is
+     * posted early so per-turn cost stays comparable once a game can be played
+     * in another language, and it is a varchar rather than a native enum
+     * because that set of languages is open.
+     */
+    assert.lengthOf(rows, 1)
+    assert.equal(rows[0].is_nullable, 'NO')
+    assert.equal(rows[0].character_maximum_length, 8)
+    assert.include(rows[0].column_default, "'en'")
+  })
 })

@@ -58,14 +58,19 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 ### Simplifications volontaires de cette phase
 
 - **Pas de `lore_fragments`, pas de RAG, pas de `resolution_rules` en base.** L'univers choisi (connu du LLM) et les règles de base sont écrits directement dans le system prompt, en dur.
-- **Pipeline réduit à un seul appel LLM fusionné A+B+C+D** (interprétation, validation, résolution et narration en un seul appel), plutôt que les appels séparés définis dans le document d'architecture. La séparation complète est reportée à la Phase 3.
+- **Pipeline réduit, en deux branches selon qu'un jet est requis.** Le découpage initialement prévu — un appel LLM unique fusionnant A+B+C+D — a été amendé : dans un appel unique, le modèle narrerait l'issue du jet avant que le backend ne l'ait calculé, ce qui viole l'invariant « le LLM propose, le backend décide ». Retenu à la place :
+  - **aucun jet requis** → un seul appel fusionné A+B+C+D, retournant narration + effets ;
+  - **jet requis** → un premier appel d'arbitrage (A+B+C, sans narration), puis calcul du jet par le backend, puis un second appel de narration.
+  Cela reste en deçà de la séparation complète en cinq étapes, toujours reportée à la Phase 3 : A, B et C restent fusionnés et l'étape E n'existe pas.
 - **Résolution simplifiée à un seul type de jet** : `2d6 + valeur de compétence` contre un seuil unique. Pas de distinction combat / social / autre à ce stade — uniquement "jet requis" ou "pas de jet".
 - **Pas de modificateurs**, ni contextuels ni d'objets. Ajoutés en Phase 4.
-- **Pas d'étape E séparée.** Le delta de `world_states` est extrait dans le même appel que la narration : un JSON de sortie avec un champ `narration` et un champ `effects`.
+- **Pas d'étape E séparée.** Le delta de `world_states` est extrait dans le même appel que la narration : un JSON de sortie avec un champ `narration` et un champ `effects`. Conséquence du découpage en deux branches : ce sont **toujours** les effets de l'appel de narration qui font foi, y compris dans la branche avec jet — ils dépendent de l'issue du jet et ne peuvent donc pas sortir de l'arbitrage.
 
 ### Contenu
 
-- Un seul appel LLM par tour, avec sortie structurée contenant narration + effets.
+- **Univers retenu** : *Les Trois Mousquetaires*. Connu du LLM, et dans le domaine public — le point de vigilance sur la propriété intellectuelle signalé en tête de ce document ne s'applique donc pas à cette phase.
+- Un ou deux appels LLM par tour selon la branche, le dernier retournant toujours une sortie structurée contenant narration + effets.
+- **Le narrateur ne reçoit jamais les données mécaniques du jet** — uniquement `result` et la marge qualitative. Contrainte déjà posée par le document d'architecture, mais qui devient concrète ici, l'appel de narration étant séparé dès cette phase dans la branche avec jet.
 - Écriture systématique dans `turn_log` dès cette phase, même sous forme minimale — indispensable pour déboguer les tours suivants.
 - **Tracking minimal de consommation LLM** : enregistrement du volume de tokens consommés par appel (et donc par tour), même sous forme brute dans `turn_log` ou une table dédiée simple. Cet ajout est mineur techniquement mais conditionne la capacité à chiffrer plus tard un coût réel par tour/par partie — donnée indispensable à toute réflexion future sur un modèle de monétisation (voir document de synthèse, section budget).
 - **Colonne `turn_log.language` posée dès cette phase**, à côté du tracking de consommation. Le coût par tour varie sensiblement selon la langue, et un coût moyen toutes langues confondues fausserait la réflexion sur le modèle de revenu. La partie est en anglais à ce stade — la colonne est posée pour que la mesure soit exploitable plus tard, pas parce qu'elle sert déjà.

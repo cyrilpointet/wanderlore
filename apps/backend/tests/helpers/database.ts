@@ -51,10 +51,14 @@ export async function expectDbError(run: () => Promise<unknown>): Promise<Databa
 /**
  * Row factories.
  *
- * They go through the query builder rather than Lucid models on purpose: only
- * `User` has a model so far, and the generated classes in `database/schema.ts`
- * carry no `static table`, so Lucid would look for `session_schemas`. Models
- * for these tables arrive with their use in Phase 1.
+ * They still go through the query builder now that the models exist, and on
+ * purpose: the specs they serve assert what the database enforces — SQLSTATE
+ * codes, composite uniqueness, `ON DELETE` cascades. Arranging those rows
+ * through Lucid would put the mapping under test between the spec and the
+ * constraint it is checking.
+ *
+ * For the same reason they are the right fixture for `models.spec.ts`, which
+ * proves the mapping itself and must not build its input with it.
  */
 
 let sequence = 0

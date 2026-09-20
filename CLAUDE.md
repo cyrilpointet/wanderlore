@@ -106,10 +106,21 @@ Acquis :
   d'erreur du gateway, les cascades, les contraintes, la réversibilité des migrations et
   la non-exposition du rôle.
 
-**Prochaine étape : Phase 1** — boucle de jeu minimale. Rappel des simplifications
-volontaires de cette phase : **un seul appel LLM fusionné A+B+C+D**, univers et règles en
-dur dans le system prompt, un seul type de jet, aucun modificateur, pas d'étape E séparée.
-Ne pas implémenter le pipeline complet ici : c'est la Phase 3.
+**Prochaine étape : Phase 1** — boucle de jeu minimale, suivie dans Jira (epic `KAN-4`).
+Univers retenu : **Les Trois Mousquetaires** (connu du LLM, domaine public).
+
+Rappel des simplifications volontaires de cette phase : univers et règles en dur dans le
+system prompt, un seul type de jet, aucun modificateur, pas d'étape E séparée. Ne pas
+implémenter le pipeline complet ici : c'est la Phase 3.
+
+**Découpage des appels LLM, en deux branches** (amende le « appel unique fusionné A+B+C+D »
+d'origine, qui faisait narrer l'issue du jet avant que le backend ne la calcule) :
+
+- **aucun jet requis** → un seul appel fusionné A+B+C+D, retournant narration + effets ;
+- **jet requis** → arbitrage (A+B+C, sans narration), puis calcul du jet côté backend, puis
+  second appel de narration.
+
+Les effets viennent **toujours** de l'appel de narration : ils dépendent de l'issue du jet.
 
 Décision non tranchée, sans urgence : hébergement léger pour la phase de test (Vercel,
 Supabase, Railway…).
@@ -123,16 +134,30 @@ Supabase, Railway…).
   migration. Il est exclu de Prettier via `apps/backend/.prettierignore`. Les modèles de
   `app/models/` étendent les classes qu'il expose et y ajoutent la logique métier.
 - **Les classes de `database/schema.ts` ne sont pas des modèles** : elles n'ont pas de
-  `static table`, donc Lucid chercherait `session_schemas`. Tant qu'une table n'a pas son
-  modèle dans `app/models/`, y accéder par le query builder (`db.table('sessions')`).
+  `static table`. Chaque modèle de `app/models/` le déclare donc explicitement — et c'est
+  indispensable sur `TurnLog`, la table `turn_log` étant au singulier. Tant qu'une table
+  n'a pas son modèle, y accéder par le query builder (`db.table('...')`).
+- **Les relations s'écrivent à la main dans les modèles** : le générateur ne produit que
+  des `@column`, et `schema_rules.ts` n'a pas de clé `relations`. Le cycle d'imports entre
+  modèles est sans danger tant que le modèle importé n'est lu que dans le thunk
+  `() => Model` — jamais au top level ni dans un initialiseur statique.
 - **Une nouvelle table** = une migration avec `table.uuid('id').notNullable().primary()
-  .defaultTo(this.raw('gen_random_uuid()'))` et des timestamps `{ useTz: true }`.
+  .defaultTo(this.raw('gen_random_uuid()'))` et des timestamps `{ useTz: true }`. Une
+  colonne ajoutée à une table existante = une migration `alterTable` à part, jamais une
+  retouche de la migration de création (une base déjà migrée ne la rejouerait pas).
 - **Enums natifs PostgreSQL** pour les valeurs fermées. `migration:fresh` ne supprimant pas
   les types, les créer via un bloc `DO $$ … EXCEPTION WHEN duplicate_object` puis
-  `existingType: true`, et les dropper dans `down()`. Voir la migration `users`.
+  `existingType: true`, et les dropper dans `down()`. Voir la migration `users`. Pour un
+  ensemble **ouvert** (`turn_log.language`), un `varchar` — pas d'enum.
 - **Typer les colonnes générées dans `database/schema_rules.ts`**, pas dans les modèles :
   le générateur mappe les enums natifs et le `jsonb` sur `any`, et un override écrit dans
-  un modèle serait perdu à la régénération suivante.
+  un modèle serait perdu à la régénération suivante. Tant que le schéma d'un payload n'est
+  pas tranché, un type structurel (`Record<string, unknown>`) plutôt qu'un type nommé.
+- **Un `jsonb` à valeur de tableau exige un `prepare`** qui le sérialise en JSON : `pg`
+  transformerait sinon le tableau JS en littéral de tableau PostgreSQL, rejeté par la
+  colonne (`22P02`). Le `prepare` doit laisser passer `null` intact, sinon un NULL SQL
+  devient un `null` JSON. Il se déclare dans `schema_rules.ts` (clé `args`), comme le
+  typage.
 - **Tout appel LLM passe par `import llm from '#services/llm'`** — jamais un provider ni un
   SDK directement. `generateJson()` pour les étapes structurées (A+B+C, E),
   `generateText()` / `streamText()` pour la narration (D).
