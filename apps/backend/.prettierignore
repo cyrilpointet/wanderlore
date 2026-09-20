@@ -1,0 +1,8 @@
+build
+node_modules
+tmp
+
+# Généré par `node ace migration:run` (schema generation Lucid) — jamais édité à la main,
+# et réécrit non formaté à chaque migration : inutile de le soumettre à Prettier.
+.adonisjs
+database/schema.ts

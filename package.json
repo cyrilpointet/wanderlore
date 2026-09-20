@@ -1,0 +1,35 @@
+{
+  "name": "Wanderlore",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Jeu de r\u00f4le textuel en solo, avec un ma\u00eetre du jeu pilot\u00e9 par un LLM",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "codegen": "turbo codegen",
+    "build": "turbo build",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "format": "turbo format",
+    "typecheck": "turbo typecheck"
+  },
+  "devDependencies": {
+    "@adonisjs/prettier-config": "^1.5.0",
+    "prettier": "^3.9.6",
+    "turbo": "^2.10.11"
+  },
+  "allowScripts": {
+    "@swc/core": true,
+    "esbuild": true,
+    "fsevents": true
+  },
+  "packageManager": "npm@11.19.0",
+  "prettier": "@adonisjs/prettier-config"
+}

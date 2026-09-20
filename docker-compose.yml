@@ -1,0 +1,44 @@
+# Environnement de dev et de tests locaux (Phase 0).
+# PostgreSQL : base de données du projet.
+# Redis : requis par BullMQ, introduit en Phase 2 — provisionné dès maintenant
+#         pour garder un environnement local reproductible et stable.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: wanderlore-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER:-wanderlore}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-wanderlore}
+      POSTGRES_DB: ${PG_DB_NAME:-wanderlore}
+    ports:
+      - '${PG_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Crée la base de test au premier démarrage du volume.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${PG_USER:-wanderlore} -d ${PG_DB_NAME:-wanderlore}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: wanderlore-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
