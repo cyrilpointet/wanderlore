@@ -7,6 +7,7 @@ import { DiceService } from '#services/dice'
 import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
+import { ConcurrentTurnError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
 import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
@@ -244,5 +245,58 @@ test.group('TurnService | a turn that fails', (group) => {
 
     await character.refresh()
     assert.equal(character.hitPoints, 10)
+  })
+})
+
+test.group('TurnService | two turns racing', (group) => {
+  useTransaction(group)
+
+  test('refuses the loser instead of crashing on the constraint', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+
+    /**
+     * Reproduces the real race rather than simulating it: both requests read
+     * the last turn number before either has written, which is exactly what
+     * happens when a player sends twice during the seconds a turn spends
+     * waiting on the model.
+     */
+    const [first, second] = await Promise.allSettled([
+      buildService([SETTLED]).service.play({
+        sessionId,
+        userId,
+        playerInput: 'I look around.',
+      }),
+      buildService([SETTLED]).service.play({
+        sessionId,
+        userId,
+        playerInput: 'I look around.',
+      }),
+    ])
+
+    const outcomes = [first, second]
+    assert.lengthOf(
+      outcomes.filter((outcome) => outcome.status === 'fulfilled'),
+      1
+    )
+
+    const rejected = outcomes.find((outcome) => outcome.status === 'rejected')
+    assert.instanceOf((rejected as PromiseRejectedResult).reason, ConcurrentTurnError)
+  })
+
+  test('leaves the losing turn no trace and the winner intact', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+
+    await Promise.allSettled([
+      buildService([SETTLED]).service.play({ sessionId, userId, playerInput: 'I look around.' }),
+      buildService([SETTLED]).service.play({ sessionId, userId, playerInput: 'I look around.' }),
+    ])
+
+    /**
+     * The loser writes no failure log either: that turn number belongs to the
+     * request that won.
+     */
+    const turns = await TurnLog.query().where('sessionId', sessionId)
+    assert.lengthOf(turns, 1)
+    assert.equal(turns[0].turnNumber, 1)
   })
 })

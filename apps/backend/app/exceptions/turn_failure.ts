@@ -1,4 +1,5 @@
 import { LlmError } from '#services/llm/errors'
+import { ConcurrentTurnError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
 
 /**
@@ -48,6 +49,19 @@ export function describeTurnFailure(error: unknown): TurnFailure | null {
     const failure = LLM_FAILURES[error.category]
 
     return failure ? { ...failure, step: error.step } : null
+  }
+
+  if (error instanceof ConcurrentTurnError) {
+    return {
+      status: 409,
+      code: 'turn_already_in_progress',
+      /**
+       * Says what to do about it, because the answer is genuinely "wait": the
+       * turn that won is still being written, and resending would play a
+       * second turn rather than repeat the first.
+       */
+      message: 'A turn is already being played for this game. Wait for it to finish.',
+    }
   }
 
   if (error instanceof TurnValidationError) {

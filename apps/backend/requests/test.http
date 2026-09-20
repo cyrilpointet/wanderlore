@@ -1,0 +1,21 @@
+@api = http://localhost:3333
+
+### Ping — the scaffold route, no auth, no database
+GET {{api}}/
+
+### Login
+# @name login
+POST {{api}}/api/v1/auth/login
+Content-Type: application/json
+
+{ "email": "player@wanderlore.test", "password": "password" }
+
+### Tour de jeu
+@token = {{login.response.body.data.token}}
+@sid = 505a0880-7f99-4c45-9c01-17b6ca752782
+
+POST {{api}}/api/v1/sessions/{{sid}}/turns
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "playerInput": "I go to the tavern" }

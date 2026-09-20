@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 
 import { LlmError, type LlmErrorCategory } from '#services/llm/errors'
+import { ConcurrentTurnError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
 import { describeTurnFailure } from '#exceptions/turn_failure'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
@@ -95,6 +96,18 @@ test.group('Turn failures | distinguishable categories', () => {
      * status, so the code is what the client actually tells them apart by.
      */
     assert.equal(new Set(codes.map((failure) => failure?.code)).size, categories.length)
+  })
+
+  test('maps a racing turn to 409 rather than a database error', ({ assert }) => {
+    const failure = describeTurnFailure(new ConcurrentTurnError(10))
+
+    /**
+     * Without this the unique constraint surfaces as a raw pg error in a 500,
+     * which tells the caller nothing about what to do — and here the answer is
+     * genuinely "wait", not "retry".
+     */
+    assert.equal(failure?.status, 409)
+    assert.equal(failure?.code, 'turn_already_in_progress')
   })
 
   test('leaves an unrelated error to the framework', ({ assert }) => {

@@ -11,6 +11,7 @@ import type { RulesEngine } from '#services/rules/engine'
 import { toNarrationOutcome } from '#services/rules/engine'
 import type { NarrationOutcome, RollResolution } from '#services/rules/types'
 
+import { ConcurrentTurnError, isTurnNumberConflict } from './errors.js'
 import { THREE_MUSKETEERS } from './world.js'
 import {
   ARBITRATION_SCHEMA,
@@ -107,8 +108,13 @@ export class TurnService {
        * The log of a failed turn is what makes the failure debuggable at all,
        * so it is written before the error is re-thrown — and its own failure is
        * swallowed rather than allowed to mask the real one.
+       *
+       * A collision is the exception: that turn number belongs to the request
+       * that won, and logging under it would only collide again.
        */
-      await this.#logFailure(request, scene, turnNumber, language, trace).catch(() => {})
+      if (!(error instanceof ConcurrentTurnError)) {
+        await this.#logFailure(request, scene, turnNumber, language, trace).catch(() => {})
+      }
 
       throw error
     }
@@ -224,10 +230,22 @@ export class TurnService {
     trace: TurnTrace,
     effects: TurnEffects
   ): Promise<void> {
-    await db.transaction(async (trx) => {
-      await applyEffects(scene, effects, trx)
-      await writeTurn(request, scene, turnNumber, language, trace, trx)
-    })
+    try {
+      await db.transaction(async (trx) => {
+        await applyEffects(scene, effects, trx)
+        await writeTurn(request, scene, turnNumber, language, trace, trx)
+      })
+    } catch (error) {
+      /**
+       * Another request reached this turn number first. The transaction rolled
+       * back, so nothing of this turn was applied.
+       */
+      if (isTurnNumberConflict(error)) {
+        throw new ConcurrentTurnError(turnNumber)
+      }
+
+      throw error
+    }
   }
 
   async #logFailure(
