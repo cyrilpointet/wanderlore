@@ -16,6 +16,14 @@ export type FakeLlmProviderOptions = {
   /** Serialised to JSON and returned by `generate()`. */
   json?: unknown
 
+  /**
+   * One JSON answer per call, in order — for a turn that calls the model twice.
+   * Wins over `json`. Running past the end throws rather than repeating the
+   * last answer, so a pipeline that calls more often than the spec arranged for
+   * fails loudly.
+   */
+  jsonSequence?: unknown[]
+
   /** Returned verbatim — for fenced or malformed payloads. Wins over the rest. */
   raw?: string
 
@@ -101,6 +109,22 @@ export class FakeLlmProvider implements LlmProvider {
   #content(): string {
     if (this.#options.raw !== undefined) {
       return this.#options.raw
+    }
+
+    const sequence = this.#options.jsonSequence
+
+    if (sequence !== undefined) {
+      /** `requests` was pushed before this ran, so it doubles as the call index. */
+      const index = this.requests.length - 1
+
+      if (index >= sequence.length) {
+        throw new Error(
+          `FakeLlmProvider ran out of answers after ${sequence.length} call(s). ` +
+            'Arrange as many answers as the code under test makes calls.'
+        )
+      }
+
+      return JSON.stringify(sequence[index])
     }
 
     if (this.#options.json !== undefined) {
