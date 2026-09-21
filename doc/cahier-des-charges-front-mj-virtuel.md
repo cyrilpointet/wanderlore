@@ -491,6 +491,30 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
 - Générer d'abord les écrans de la Phase 2. Les écrans des phases suivantes ne se génèrent
   qu'en exploration, clairement étiquetés comme tels.
 
+### Livrables et dépôt
+
+Les maquettes validées sont versionnées dans **`apps/frontend/design/`**, pour que
+l'intégration se fasse depuis le dépôt plutôt que depuis Stitch, auquel aucun outil de
+développement n'a accès directement.
+
+Pour chaque écran et chaque format, deux fichiers au même nom :
+- **l'export HTML de Stitch** (option *Code*) : la source de référence pour les couleurs,
+  espacements, tailles et structure ;
+- **une capture PNG** : le rendu attendu, pour vérifier l'intégration à l'œil.
+
+Nommage : identifiant de l'écran, nom court, format — `s1-login-mobile.html`,
+`s1-login-mobile.png`, `s3-game-desktop.html`… Un écran généré dans un seul format ne porte
+que celui-là. L'export Figma n'est pas un livrable : il n'est pas lisible depuis le dépôt.
+
+**Ces fichiers sont une référence visuelle, pas du code à reprendre.** Le HTML exporté est une
+page statique : sans états, sans données réelles, avec des images de remplacement et souvent
+des icônes Material Symbols. À l'intégration :
+- les couleurs et polices alimentent la configuration Tailwind du socle ;
+- chaque écran est redécoupé en composants React branchés sur les vraies données et sur la
+  machine d'état du tour (5.3.5) ;
+- les icônes sont remplacées par Lucide (section 8) ;
+- tout ce qui contredit la section 1 est retiré, même présent sur une maquette validée.
+
 ### Préambule de style (à coller en tête de chaque prompt)
 
 ```
