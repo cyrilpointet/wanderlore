@@ -18,4 +18,4 @@ POST {{api}}/api/v1/sessions/{{sid}}/turns
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "playerInput": "I go to the tavern" }
+{ "playerInput": "I look around me" }
