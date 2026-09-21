@@ -52,14 +52,14 @@ Pas de deadline formelle — projet mené sur le temps libre du porteur, sans co
 
 Axe le plus abouti du projet à date. Voir les documents de référence dédiés pour le détail complet :
 
-- **Architecture et pipeline** : pipeline LLM en étapes à responsabilité unique, séparation stricte front (affichage)/backend (calcul et autorité), sécurité anti prompt-injection, gestion différenciée du lore/state/mémoire. Exécution asynchrone via BullMQ (Redis), retour progressif au front via AdonisJS Transmit (SSE).
+- **Architecture et pipeline** : pipeline LLM en étapes à responsabilité unique, séparation stricte front (affichage)/backend (calcul et autorité), sécurité anti prompt-injection, gestion différenciée du lore/state/mémoire. Exécution asynchrone via une file de jobs (pg-boss en instance unique, BullMQ au passage à plusieurs instances), retour progressif au front via AdonisJS Transmit (SSE).
 - **Base de données** : schéma PostgreSQL complet, usage de JSONB pour les structures variables par univers.
 - **Système de règles** : formule générique `2d6 + compétence + modificateurs`, séparation modificateurs contextuels (LLM) / modificateurs d'objets (backend).
 - **Roadmap** : développement incrémental par fonctionnalités minimales, intégrant la gestion de comptes (joueur / maître du jeu / superadmin).
 
 **Gestion des erreurs** : pas de retry automatique dans un premier temps, message différencié par type d'erreur, système de log différé en Phase 9.
 
-**Environnement technique** : dev et tests locaux sous Docker (PostgreSQL + Redis), repo en monorepo AdonisJS (`--kit=api`, Turborepo) avec packages `backend`/`frontend` dès la Phase 0, `back-office` ajouté en Phase 5.
+**Environnement technique** : dev et tests locaux sous Docker (PostgreSQL ; Redis provisionné pour la bascule vers BullMQ), repo en monorepo AdonisJS (`--kit=api`, Turborepo) avec packages `backend`/`frontend` dès la Phase 0, `back-office` ajouté en Phase 5.
 
 **Convention de langue** : documents et échanges de conception en français ; nommage technique (tables, colonnes, code) et langue par défaut de l'application exclusivement en anglais, appliqué directement dans tous les documents techniques.
 

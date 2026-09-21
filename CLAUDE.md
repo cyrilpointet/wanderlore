@@ -64,9 +64,12 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
   JSONB pour toute structure variable par univers/scénario.
 - **Clés primaires : `uuid`**, générées côté base (`gen_random_uuid()`). Ne pas revenir à
   des entiers auto-incrémentés.
-- BullMQ (Redis) pour l'exécution du pipeline en tâche de fond et les jobs différés.
+- File de jobs derrière un port pour le pipeline en tâche de fond et les
+  jobs différés : **pg-boss** (PostgreSQL) en instance unique, **BullMQ** (Redis) au passage
+  à plusieurs instances.
 - AdonisJS Transmit (SSE) pour le retour progressif au front pendant un tour.
-- Docker en local pour PostgreSQL + Redis (`docker compose up -d` à la racine).
+- Docker en local pour PostgreSQL + Redis (`docker compose up -d` à la racine) — Redis n'est
+  requis qu'une fois la file basculée sur BullMQ.
 - LLM : **Google Gemini** (`gemini-2.5-flash`, SDK `@google/genai`), encapsulé derrière le
   **LLM Gateway**. Aucun autre fichier de l'app n'importe un SDK de provider.
 
@@ -117,7 +120,10 @@ séparée.
 
 **Phase actuelle : Phase 2 (front minimal)**, en préparation. Décisions de cadrage actées
 (détail : roadmap Phase 2, architecture §8bis) :
-- worker BullMQ **dans le process HTTP**, `concurrency: 1`, `attempts: 1` ; Transmit en
+- file **pg-boss** derrière un port, BullMQ à la bascule multi-instance ; idempotence,
+  sérialisation des tours et événements SSE ne dépendent **jamais** de la file (le job ne
+  porte que l'identifiant du tour) ;
+- worker **dans le process HTTP**, `concurrency: 1`, sans retry ; Transmit en
   mémoire, sans transport Redis — ne tient pas à plusieurs instances, à reprendre avant la
   beta ;
 - **clé d'idempotence** fournie par le client, une par soumission, enregistrée avant la mise

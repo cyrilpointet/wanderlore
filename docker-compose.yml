@@ -1,7 +1,8 @@
 # Environnement de dev et de tests locaux (Phase 0).
 # PostgreSQL : base de données du projet.
-# Redis : requis par BullMQ, introduit en Phase 2 — provisionné dès maintenant
-#         pour garder un environnement local reproductible et stable.
+# Redis : inutilisé tant que la file de jobs tourne sur pg-boss — requis par BullMQ,
+#         qui prendra le relais au passage à plusieurs instances. Provisionné dès
+#         maintenant pour garder un environnement local reproductible et stable.
 
 services:
   postgres:

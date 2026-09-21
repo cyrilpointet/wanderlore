@@ -4,9 +4,9 @@
 
 **Stack** : API AdonisJS + appel à une API LLM externe
 **Format** : jeu de rôle textuel type chat, le joueur interagit avec un maître du jeu (MJ) virtuel
-**Communication temps réel** : AdonisJS Transmit (SSE) pour le flux serveur→client, BullMQ (Redis) pour l'exécution du pipeline en tâche de fond et les jobs différés (résumé narratif)
+**Communication temps réel** : AdonisJS Transmit (SSE) pour le flux serveur→client, une file de jobs derrière un port — **pg-boss** (PostgreSQL) tant que l'application tourne en instance unique, **BullMQ** (Redis) au passage à plusieurs instances — pour l'exécution du pipeline en tâche de fond et les jobs différés (résumé narratif)
 **Front joueur** : Vite + React, Tailwind CSS, TanStack Router (TanStack Query envisagé pour les lectures) ; authentification par cookie de session
-**Dev et tests locaux** : Docker pour PostgreSQL et Redis
+**Dev et tests locaux** : Docker pour PostgreSQL (et Redis, requis seulement une fois la file basculée sur BullMQ)
 **Structure de repo** : monorepo AdonisJS créé avec `--kit=api`, géré par Turborepo (workspaces). Deux packages par défaut : `backend` (API AdonisJS) et `frontend` (front joueur). Un troisième package `back-office` sera ajouté en temps voulu (voir roadmap, Phase 5bis) pour l'interface superadmin — la structure en workspaces permet cet ajout sans réorganisation du repo.
 
 > **⚠️ Convention de nommage** : conformément à la convention actée pour le projet, **tout le nommage technique est en anglais** — noms de tables, champs JSON échangés avec le LLM, valeurs d'enum. Les system prompts eux-mêmes sont donnés en français dans ce document à titre d'exemple pédagogique, mais **doivent être rédigés en anglais dans l'implémentation réelle** (cohérent avec la langue par défaut de l'application — voir document de synthèse). Le texte explicatif de ce document reste en français.
@@ -181,7 +181,7 @@ Trois niveaux, pour éviter de charger l'historique complet à chaque appel :
 2. **Résumé narratif glissant** — condensé régénéré périodiquement (job asynchrone, après chaque scène ou tous les N tours) par un appel LLM dédié qui absorbe les tours anciens. **Toujours rédigé en anglais**, quelle que soit la langue de la partie (voir section 4bis).
 3. **Buffer récent** — derniers tours en clair (2–4), dans la langue de la partie, pour la continuité immédiate de ton et de dialogue. Injecté à la seule étape de narration.
 
-Le résumé n'est jamais recalculé en synchrone dans le chemin critique de réponse au joueur : il tourne en tant que job BullMQ différé pour ne pas ajouter de latence perçue.
+Le résumé n'est jamais recalculé en synchrone dans le chemin critique de réponse au joueur : il tourne en tant que job différé de la file pour ne pas ajouter de latence perçue.
 
 ---
 
@@ -541,7 +541,7 @@ partout ailleurs : le modèle raconte, le backend décide de ce qui existe.
 | **LLM Gateway (service)** | Encapsule les appels à l'API LLM externe, indépendant du provider, un template de system prompt + schéma de sortie par étape, suivi de coûts/tokens |
 | **Moteur de règles (service déterministe)** | Calcul des jets — aucune dépendance au LLM |
 | **Repositories / Models (Lucid)** | Persistance des entités (`world`, `scenario`, `session`, `character`, `world_state`, `turn_log`, `narrative_summary`) |
-| **BullMQ (Redis)** | File de jobs : exécution du pipeline en tâche de fond pour un tour de jeu, jobs différés (génération de résumé narratif périodique) |
+| **File de jobs (pg-boss, puis BullMQ)** | Service substituable (port + adaptateur) : exécution du pipeline en tâche de fond pour un tour de jeu, jobs différés (génération de résumé narratif périodique). pg-boss (PostgreSQL) en instance unique, BullMQ (Redis) au passage à plusieurs instances |
 | **AdonisJS Transmit (SSE)** | Flux d'événements serveur→client pendant l'exécution du pipeline : progression par étape, chunks de narration en streaming, résultat final du tour |
 
 Cette séparation permet de :
@@ -554,7 +554,7 @@ Cette séparation permet de :
 
 ## 8bis. Contrat d'API front/backend — exécution asynchrone et flux SSE
 
-**Décision actée** : le pipeline d'un tour est exécuté en tâche de fond via BullMQ plutôt qu'en synchrone dans le cycle requête/réponse HTTP. Le front soumet l'action du joueur (POST classique), reçoit un accusé de réception immédiat, puis s'abonne à un flux SSE (AdonisJS Transmit) pour recevoir la progression du tour au fur et à mesure que le job avance dans le pipeline.
+**Décision actée** : le pipeline d'un tour est exécuté en tâche de fond via une file de jobs plutôt qu'en synchrone dans le cycle requête/réponse HTTP. Le front soumet l'action du joueur (POST classique), reçoit un accusé de réception immédiat, puis s'abonne à un flux SSE (AdonisJS Transmit) pour recevoir la progression du tour au fur et à mesure que le job avance dans le pipeline.
 
 **Justification** : le pipeline complet (jusqu'à 3 appels LLM séquentiels) peut prendre plusieurs secondes. Sans retour progressif, le joueur n'a qu'un indicateur de chargement générique. Le flux SSE permet d'afficher un message d'attente contextuel à chaque étape franchie plutôt qu'un simple spinner.
 
@@ -583,7 +583,17 @@ event: turn_failed     { turn, error_category, message }
 
 **Rattrapage.** Un client qui a manqué des événements (onglet rechargé, coupure réseau) relit le tour par une route de lecture, qui renvoie son statut et, s'il est terminé, son résultat. Pas de rejeu d'événements côté serveur : tant qu'un tour ne compte que quelques jalons, relire son état suffit.
 
-**Exécution.** Le worker BullMQ tourne dans le process HTTP, en `concurrency: 1` et sans retry (`attempts: 1`) ; Transmit diffuse donc en mémoire. Simplification propre à la Phase 2, qui ne tient pas à plusieurs instances : un worker séparé imposera le transport Redis de Transmit.
+**Exécution.** Le worker tourne dans le process HTTP, en `concurrency: 1` et sans retry ; Transmit diffuse donc en mémoire. Simplification propre à la Phase 2, qui ne tient pas à plusieurs instances : un worker séparé imposera le transport Redis de Transmit.
+
+**File de jobs : pg-boss d'abord, BullMQ ensuite.** La file est un service substituable — un port, un adaptateur par outil, le choix dans la configuration — servi en Phase 2 par **pg-boss**, qui stocke ses jobs dans PostgreSQL : tant qu'il n'y a qu'une instance, aucun Redis n'est à héberger. **BullMQ reste la cible** du passage à plusieurs instances, qui ramène de toute façon Redis pour le transport de Transmit ; la bascule consiste alors à écrire l'adaptateur BullMQ et à changer la configuration, file vidée. Contrepartie acceptée : pg-boss interroge la base à intervalle régulier au lieu d'être notifié — l'intervalle est réglé explicitement pour ne pas retarder visiblement le début du tour.
+
+La bascule n'est simple que si **rien de ce qui garantit l'intégrité d'un tour ne dépend de la file** :
+
+- le job ne transporte que l'identifiant du tour ; tout l'état est lu en base ;
+- l'idempotence vit dans `turn_log`, jamais dans la déduplication propre à l'outil ;
+- la sérialisation des tours relève de `concurrency: 1` en Phase 2, puis d'un verrou PostgreSQL par `session_id` (`pg_advisory_xact_lock`) — jamais d'une fonctionnalité de file (BullMQ ne sérialise par clé que dans sa version Pro, payante) ;
+- les événements SSE sont émis par le code du tour via Transmit, jamais dérivés des événements de la file ;
+- aucune logique ne repose sur la mise en file dans la même transaction que l'écriture du tour — pg-boss le permet, BullMQ non. Un tour resté `pending` au-delà d'un délai (process arrêté en cours de tour, mise en file échouée) est passé en échec.
 
 **Ce qui ne change pas** : le contenu et l'ordre des étapes du pipeline (section 3) restent identiques — seule la façon dont le résultat de chaque étape est communiqué au front évolue, d'un unique retour final vers une séquence d'événements progressifs. Les principes de sécurité et de validation backend (section 7) s'appliquent de la même façon, quel que soit le canal de transport.
 
@@ -596,7 +606,7 @@ event: turn_failed     { turn, error_category, message }
 ```
 Tour de jeu
 │
-├─ Front : POST action joueur → accusé de réception immédiat, job BullMQ mis en file
+├─ Front : POST action joueur → accusé de réception immédiat, job mis en file
 │  Front : abonnement au flux SSE (Transmit) pour ce tour
 │
 ├─ Étape 0 (backend, dans le job) : récupération state + lore taggué + mémoire
@@ -619,7 +629,7 @@ Tour de jeu
 │
 ├─ Étape 5 (backend) : validation + application du delta + écriture turn_log → event: turn_completed
 │
-└─ Étape 6 (job async BullMQ, périodique, hors chemin critique du tour) : régénération du résumé narratif
+└─ Étape 6 (job asynchrone, périodique, hors chemin critique du tour) : régénération du résumé narratif
 ```
 
 ---
