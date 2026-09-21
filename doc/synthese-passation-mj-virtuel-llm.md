@@ -120,7 +120,7 @@ Exclusivement un rôle technique de back-office dans un premier temps — utilis
 
 ## 6. Documents de référence associés
 
-Ce document de synthèse s'appuie sur quatre documents détaillés, à fournir en complément :
+Ce document de synthèse s'appuie sur cinq documents détaillés, à fournir en complément :
 
 | Document | Contenu |
 |---|---|
@@ -128,8 +128,9 @@ Ce document de synthèse s'appuie sur quatre documents détaillés, à fournir e
 | **base-de-donnees-mj-virtuel-postgresql.md** | Structure complète des tables PostgreSQL, types de colonnes, exemples de contenu JSONB, schéma relationnel, recommandations spécifiques PostgreSQL (JSONB/GIN, pgvector, partitionnement) |
 | **systeme-regles-jeu-mj-virtuel.md** | Système de règles générique (formule 2d6 + compétence + modificateurs), attributs/compétences paramétrables par univers, échelle de difficulté, gestion des modificateurs contextuels (LLM) vs modificateurs d'objets (backend), points de vie et dégâts, modélisation du combat |
 | **roadmap-mj-virtuel-llm.md** | Roadmap détaillée en phases (0 à 9 + 5bis), contenu et critères de sortie de chaque phase, intégration de la gestion de comptes (`player` / `game_master` / `superadmin`), **stratégie de test transverse**, synthèse et points ouverts |
+| **cahier-des-charges-front-mj-virtuel.md** | Cahier des charges du front joueur : principes, parcours et écrans de la Phase 2, machine d'état d'un tour, gestion des erreurs, besoins d'API, direction visuelle, évolutions par phase, et base de prompts pour générer les maquettes avec Stitch |
 
-**Ordre de lecture conseillé** : ce document de synthèse en premier, puis architecture, puis base de données, puis système de règles, puis roadmap — chaque document référence les précédents sans les répéter intégralement.
+**Ordre de lecture conseillé** : ce document de synthèse en premier, puis architecture, puis base de données, puis système de règles, puis roadmap, puis cahier des charges du front — chaque document référence les précédents sans les répéter intégralement.
 
 ---
 
@@ -143,6 +144,8 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - Système prompt statique par étape (rôle, contraintes, schéma de sortie) ; le contenu dynamique (contexte de jeu) passe uniquement en message utilisateur, toujours introduit comme donnée et non comme instruction (défense anti prompt-injection).
 - Le lore, le state et la mémoire narrative suivent trois mécanismes de sélection distincts : filtrage par tags/RAG pour le lore, requête déterministe pour le state, résumé + buffer récent pour la mémoire.
 - **Exécution asynchrone et contrat d'API** : le pipeline d'un tour s'exécute en tâche de fond via BullMQ (Redis) ; le front reçoit un accusé de réception puis un flux d'événements progressifs via AdonisJS Transmit (SSE), introduit dès la Phase 2 de la roadmap.
+- **Contrat SSE de la Phase 2** : un canal par partie, abonné avant toute soumission ; événements limités aux jalons (`step_started`, `roll_resolved`, `turn_completed`, `turn_failed`), sans streaming de la narration tant qu'elle sort en JSON avec les effets (réintroduit en Phase 3) ; rattrapage par lecture du tour. Voir document d'architecture, section 8bis.
+- **Soumission d'un tour idempotente** : clé fournie par le client, une par soumission, enregistrée avant la mise en file. En Phase 2, worker BullMQ unique dans le process HTTP, en `concurrency: 1` et sans retry — simplification à reprendre avant le beta test.
 
 ### Système de règles
 - Formule unique : `2d6 + valeur de compétence + modificateurs`, comparée à un seuil de difficulté qualitatif (facile/moyenne/difficile/très difficile).
@@ -219,7 +222,8 @@ L'inventaire se scinde exactement sur la ligne « le LLM propose, le backend dé
 - `turn_log` isolé dès la conception pour ne jamais alourdir les tables d'état courant.
 - **Convention de langue** : documentation et échanges de conception en français ; nommage technique (tables, colonnes, enums, clés JSON, code) exclusivement en anglais, appliqué directement dans tous les documents techniques ; langue par défaut de l'application (interface et narration) en anglais, support multi-langue en complément (modalités non tranchées).
 - **Environnement technique** : dev et tests locaux sous Docker (PostgreSQL + Redis), repo en monorepo AdonisJS (`--kit=api`, Turborepo) avec packages `backend` et `frontend` dès la Phase 0, `back-office` ajouté en Phase 5.
-- **Authentification** : le scaffolding register/login inclus par défaut dans un projet AdonisJS sert de base à l'authentification joueur — pas de système d'authentification construit from scratch. Seul le champ `role` et son enum sont une extension propre au projet.
+- **Authentification** : le scaffolding register/login inclus par défaut dans un projet AdonisJS sert de base à l'authentification joueur — pas de système d'authentification construit from scratch. Seul le champ `role` et son enum sont une extension propre au projet. Le front s'authentifie par **cookie de session** : `EventSource` ne peut pas porter d'en-tête `Authorization`.
+- **Front joueur** : Vite + React, Tailwind CSS, TanStack Router (TanStack Query envisagé pour les lectures).
 
 ### Gestion des comptes
 - Trois rôles distincts : `player`, `game_master`, `superadmin`.
@@ -274,15 +278,16 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 - **Choix du modèle de monétisation** — la démarche pour y parvenir est actée (voir section 4 : mesure du coût réel puis validation de l'appétence en beta test), mais aucune piste n'est encore sélectionnée.
 - Modalités d'une éventuelle ouverture future du rôle "maître du jeu" à des utilisateurs tiers (aujourd'hui strictement technique/interne) — non planifiée, envisagée comme possibilité à long terme.
 - Support multi-langue : l'architecture est actée (voir section 7), mais **la liste des langues cibles** et le choix de la bibliothèque d'internationalisation du front restent ouverts. Reste également à décider du niveau de granularité du glossaire de noms propres (par scénario, par univers) et de son outillage de saisie dans le back-office.
-- Granularité exacte des événements SSE et gestion de la reconnexion en cas de coupure réseau côté client (voir document d'architecture, section 8bis).
+- Événements SSE : granularité et rattrapage tranchés pour la Phase 2 ; restent ouverts le streaming de la narration (Phase 3) et un éventuel rejeu des événements manqués (voir document d'architecture, section 8bis).
+- Passage à plusieurs instances : worker séparé (transport Redis de Transmit) et sérialisation des tours par `session_id` — à trancher avant le beta test.
 
 ---
 
 ## 9. État d'avancement
 
-**Phase actuelle** : conception — aucune implémentation n'a encore démarré. Les quatre documents de référence listés en section 6 constituent l'ensemble des spécifications produites à ce jour.
+**Phases 0 et 1 terminées.** Le socle technique est en place, et un tour de jeu complet se joue de bout en bout par requête HTTP directe dans l'univers des *Trois Mousquetaires*, avec mise à jour de `world_states`, écriture de `turn_log` et erreurs différenciées.
 
-**Prochaine étape envisagée avant reprise du développement** : décomposition détaillée de la Phase 0 de la roadmap en tickets de suivi de projet (specs, règles métier, critères d'acceptation, tests de recette) — non encore réalisée.
+**Phase actuelle : Phase 2 (front minimal)**, en préparation. Les décisions de cadrage — stack front, authentification par cookie, worker, idempotence, contrat SSE — sont reportées dans la roadmap (Phase 2) et le document d'architecture (section 8bis). Reste à la découper en tickets.
 
 ---
 

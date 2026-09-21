@@ -57,6 +57,9 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
 
 - Monorepo Turborepo (npm workspaces, `apps/*`) — `backend` (AdonisJS `--kit=api`),
   `frontend`, et `back-office` ajouté plus tard (Phase 5).
+- Front joueur (`apps/frontend`, Phase 2) : **Vite + React, Tailwind CSS, TanStack Router**
+  (TanStack Query envisagé pour les lectures). Authentification par **cookie de session**
+  (guard `web`) — `EventSource` ne peut pas porter d'en-tête `Authorization`.
 - **PostgreSQL** (seul moteur supporté — la connexion `pg` est la seule configurée),
   JSONB pour toute structure variable par univers/scénario.
 - **Clés primaires : `uuid`**, générées côté base (`gen_random_uuid()`). Ne pas revenir à
@@ -106,12 +109,22 @@ Acquis :
   d'erreur du gateway, les cascades, les contraintes, la réversibilité des migrations et
   la non-exposition du rôle.
 
-**Prochaine étape : Phase 1** — boucle de jeu minimale, suivie dans Jira (epic `KAN-4`).
-Univers retenu : **Les Trois Mousquetaires** (connu du LLM, domaine public).
+**Phase 1 (boucle de jeu minimale) terminée** — epic Jira `KAN-4`. Un tour complet se joue
+par requête HTTP directe dans l'univers **Les Trois Mousquetaires** (connu du LLM, domaine
+public). Ses simplifications volontaires restent en vigueur jusqu'à la Phase 3 : univers et
+règles en dur dans le system prompt, un seul type de jet, aucun modificateur, pas d'étape E
+séparée.
 
-Rappel des simplifications volontaires de cette phase : univers et règles en dur dans le
-system prompt, un seul type de jet, aucun modificateur, pas d'étape E séparée. Ne pas
-implémenter le pipeline complet ici : c'est la Phase 3.
+**Phase actuelle : Phase 2 (front minimal)**, en préparation. Décisions de cadrage actées
+(détail : roadmap Phase 2, architecture §8bis) :
+- worker BullMQ **dans le process HTTP**, `concurrency: 1`, `attempts: 1` ; Transmit en
+  mémoire, sans transport Redis — ne tient pas à plusieurs instances, à reprendre avant la
+  beta ;
+- **clé d'idempotence** fournie par le client, une par soumission, enregistrée avant la mise
+  en file ; un retry après `turn_failed` est une nouvelle soumission ;
+- SSE : un canal par partie, abonné avant la soumission ; jalons seulement (`step_started`,
+  `roll_resolved`, `turn_completed`, `turn_failed`), **pas de streaming de la narration**
+  avant la Phase 3 ; rattrapage par lecture du tour.
 
 **Découpage des appels LLM, en deux branches** (amende le « appel unique fusionné A+B+C+D »
 d'origine, qui faisait narrer l'issue du jet avant que le backend ne la calcule) :

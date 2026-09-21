@@ -32,6 +32,9 @@ Les invariants non négociables sont dans `CLAUDE.md` (déjà chargé). Ce skill
 | Contraintes à inscrire dans le prompt d'arbitrage | `doc/systeme-regles-jeu-mj-virtuel.md` | 10 |
 | Contenu et critère de sortie d'une phase | `doc/roadmap-mj-virtuel-llm.md` | Phase concernée |
 | Stratégie de test, tests vs evals, corpus d'évaluation | `doc/roadmap-mj-virtuel-llm.md` | Stratégie de test |
+| Écrans, parcours, états et erreurs du front joueur | `doc/cahier-des-charges-front-mj-virtuel.md` | 4, 5 |
+| Ce que le front attend de l'API (libellés, vue d'une partie) | `doc/cahier-des-charges-front-mj-virtuel.md` | 6 |
+| Direction visuelle, prompts Stitch pour les maquettes | `doc/cahier-des-charges-front-mj-virtuel.md` | 8, 10 |
 
 **Une question de conception qui ressurgit est probablement déjà tranchée.** Consulter
 avant de rouvrir un arbitrage déjà motivé.

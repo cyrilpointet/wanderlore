@@ -90,17 +90,34 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 
 **Objectif** : rendre le pipeline de la Phase 1 accessible via une interface web basique, avec authentification joueur.
 
+### Décisions de cadrage
+
+Tranchées à l'ouverture de la phase, avant toute implémentation :
+
+- **Stack front** : Vite + React, Tailwind CSS, TanStack Router. TanStack Query envisagé pour les lectures (partie, personnage, historique), à confirmer à l'usage. Pas de bibliothèque d'internationalisation à ce stade — l'interface est en anglais — mais les libellés restent regroupés pour ne pas compliquer son introduction.
+- **Authentification par cookie de session** (guard `web`, déjà configuré dans le scaffolding) plutôt que par access token. Motif : le flux SSE repose sur `EventSource`, qui ne peut pas porter d'en-tête `Authorization` mais envoie nativement les cookies. En développement, le serveur Vite proxifie l'API : front et backend partagent la même origine, sans configuration CORS avec credentials. Contrepartie : l'authentification par cookie expose au CSRF — la protection de `@adonisjs/shield`, aujourd'hui désactivée, est à activer.
+- **Worker BullMQ dans le process HTTP**, démarré au boot du serveur web (pas en environnement de test ni de console). C'est l'option la plus simple : un seul process à lancer, et Transmit diffuse en mémoire sans transport Redis — l'événement émis par le job atteint directement les connexions SSE du même process. **Limite assumée** : ne passe pas à plusieurs instances. Un worker séparé imposera le transport Redis de Transmit ; à reprendre au plus tard en Phase 9.
+- **Pas de retry BullMQ** (`attempts: 1`), conformément à la décision projet sur les erreurs LLM.
+- **Clé d'idempotence fournie par le client** pour la protection contre les doubles soumissions (voir ci-dessous).
+- **Événements SSE limités aux jalons**, sans streaming de la narration (voir document d'architecture, section 8bis).
+
 ### Contenu
 
 - Interface de chat : historique de messages + champ de saisie.
 - Affichage en lecture seule des statistiques du personnage (points de vie, compétences). Pas d'inventaire à ce stade (aucun objet n'existe encore dans le système).
-- **Exécution asynchrone du pipeline via BullMQ, avec retour progressif via AdonisJS Transmit (SSE)** : le front soumet l'action du joueur, reçoit un accusé de réception, puis affiche des messages d'attente contextuels au fil des événements reçus (étape en cours, jet résolu, narration en cours d'écriture) jusqu'au résultat final du tour. Voir document d'architecture, section 8bis, pour le détail du contrat d'événements. Ce choix remplace l'hypothèse initiale d'une réponse synchrone simple, dès cette phase plutôt qu'en Phase 9.
+- **Routes de lecture** nécessaires au front : liste des parties du joueur, détail d'une partie (personnage, historique des tours pour le chat), lecture d'un tour. Cette dernière sert aussi de rattrapage quand le flux SSE a été manqué ou coupé.
+- **Exécution asynchrone du pipeline via BullMQ, avec retour progressif via AdonisJS Transmit (SSE)** : le front soumet l'action du joueur, reçoit un accusé de réception (`202`), puis affiche des messages d'attente contextuels au fil des événements reçus (étape en cours, jet résolu) jusqu'au résultat final du tour. Voir document d'architecture, section 8bis, pour le contrat d'événements. Ce choix remplace l'hypothèse initiale d'une réponse synchrone simple, dès cette phase plutôt qu'en Phase 9.
 - **Sérialisation des tours par partie** — point non négociable, découvert en Phase 1 : un tour passe plusieurs secondes en attente du LLM entre la lecture du dernier numéro de tour et son écriture. Deux soumissions rapprochées calculent donc le même numéro. **Un seul joueur qui envoie deux fois suffit** : ce n'est pas un problème de multi-joueur. La contrainte d'unicité `(session_id, turn_number)` le rattrape et doit être conservée comme dernier filet, mais elle n'est pas une solution.
-  - BullMQ **ne règle pas ce point par sa seule présence** : sa concurrence se paramètre par worker, pas par clé. `concurrency: 1` sérialise tout le jeu et plafonne le débit toutes parties confondues ; plusieurs workers ramènent le problème. Les pistes réelles sont un verrou Redis par `session_id` autour du job, une file par partie (ingérable), ou les *groups* de BullMQ Pro (payant).
-  - **La mise en file ne suffit pas non plus** : deux jobs valides produiraient deux tours de jeu là où le joueur en voulait un, chacun facturé — une erreur bruyante remplacée par un état de jeu faux. Il faut en plus refuser une soumission quand un tour est déjà en cours sur la partie (la Phase 1 répond déjà `409 turn_already_in_progress`), ou une clé d'idempotence fournie par le client. Désactiver le bouton côté front est une commodité d'ergonomie, pas une protection.
+  - BullMQ **ne règle pas ce point par sa seule présence** : sa concurrence se paramètre par worker, pas par clé. Les pistes générales sont un verrou Redis par `session_id` autour du job, une file par partie (ingérable), ou les *groups* de BullMQ Pro (payant).
+  - **Retenu pour cette phase : un worker unique en `concurrency: 1`.** Les tours s'exécutent strictement l'un après l'autre, chacun lisant l'état laissé par le précédent : la course sur le numéro de tour disparaît. Le prix — un débit plafonné toutes parties confondues — est sans effet tant qu'un seul joueur teste. **À reprendre avant le beta test** (Phase 9), avec un verrou par `session_id`.
+  - **La mise en file ne suffit pas non plus** : deux jobs valides produiraient deux tours de jeu là où le joueur en voulait un, chacun facturé — une erreur bruyante remplacée par un état de jeu faux. **Retenu : une clé d'idempotence fournie par le client** avec chaque soumission.
+    - Une clé identifie **une soumission**, pas un texte : le client en génère une par action envoyée, et la réutilise telle quelle s'il renvoie la même requête (double clic, perte réseau avant l'accusé de réception). Le backend qui reçoit une clé déjà connue renvoie l'accusé du tour existant sans remettre de job en file.
+    - La clé est enregistrée **au moment de la soumission**, avant la mise en file — un enregistrement en fin de tour laisserait passer le doublon pendant toute la durée des appels LLM. Elle est aussi conservée dans `turn_log`, sous contrainte d'unicité par partie.
+    - Le bouton de nouvelle tentative après un `turn_failed` est une **nouvelle** soumission, donc une nouvelle clé : réutiliser l'ancienne renverrait le tour échoué.
+    - Désactiver le bouton côté front reste une commodité d'ergonomie, pas une protection.
 - Gestion d'erreur côté front : affichage du message spécifique renvoyé par le backend (via l'événement `turn_failed` ou en cas d'échec de soumission), avec un bouton de nouvelle tentative qui réutilise l'input déjà saisi (le joueur ne doit jamais avoir à retaper son texte après une erreur).
-- **Authentification joueur simple** : connexion par identifiant/mot de passe (session ou JWT), en s'appuyant sur le système register/login inclus par défaut dans le scaffolding AdonisJS posé en Phase 0 — pas de système d'authentification à construire from scratch. Un seul rôle actif à ce stade (`player`) — pas de distinction fonctionnelle par rôle côté front.
-- `sessions.user_id` devient une relation vers un compte authentifié réel, plutôt qu'un identifiant de test fixe.
+- **Authentification joueur simple** : connexion par identifiant/mot de passe, par cookie de session (voir décisions de cadrage), en s'appuyant sur le système register/login inclus par défaut dans le scaffolding AdonisJS posé en Phase 0 — pas de système d'authentification à construire from scratch. Un seul rôle actif à ce stade (`player`) — pas de distinction fonctionnelle par rôle côté front.
+- `sessions.user_id` est une relation vers un compte authentifié réel — déjà en place depuis la Phase 0 (clé étrangère vers `users`), et la Phase 1 cherche déjà la partie parmi celles du joueur connecté.
 - Pas d'inscription libre nécessaire à ce stade : un compte peut encore être créé manuellement en base.
 
 ### Critère de sortie de phase
@@ -340,7 +357,7 @@ Ces points sont pénibles à rattraper après coup :
 |---|---|
 | 0 | Harnais : cycle de vie de la base, isolation par test, faux provider. Catégories d'erreur du LLM Gateway, cascades et contraintes du schéma, réversibilité des migrations, non-exposition du rôle |
 | 1 | Moteur de règles (formule, seuils, bornes de marge), validation du delta d'état, écriture de `turn_log` y compris sur échec |
-| 2 | Contrat d'API : authentification requise, accusé de réception, et **séquence des événements SSE** — écrire ce test force à trancher leur granularité, aujourd'hui en point ouvert |
+| 2 | Contrat d'API : authentification requise, accusé de réception, **séquence des événements SSE** (granularité tranchée, voir architecture section 8bis), et idempotence — une clé rejouée ne remet aucun job en file |
 | 3 | Un test de contrat par étape du pipeline, filet de sécurité lors des modifications de prompt |
 | 4 | Séparation des deux familles de modificateurs, conditions `owned`/`equipped`, traçabilité de l'origine, refus d'un identifiant d'objet hors liste |
 | 5 | Contrôle d'accès par rôle, route par route — rend continu l'audit prévu en Phase 9 |
@@ -393,7 +410,9 @@ finit toujours par être ignoré.
 - **Objets** : séparation entre référence stable anglaise (`item_reference`) et noms d'affichage par langue ; catalogue fermé par scénario ; l'étape d'extraction ne peut accorder qu'un objet figurant dans la liste transmise. Voir document d'architecture, section 6bis.
 - **Exécution asynchrone et contrat d'API front/backend** : pipeline exécuté en tâche de fond via BullMQ (Redis), retour progressif au front via AdonisJS Transmit (SSE) — introduit dès la Phase 2, pas différé à la Phase 9. Voir document d'architecture, section 8bis, pour le détail des événements.
 - **Environnement technique** : dev et tests locaux sous Docker (PostgreSQL + Redis), repo structuré en monorepo AdonisJS (`--kit=api`, Turborepo) avec packages `backend` et `frontend` dès la Phase 0, et `back-office` ajouté en Phase 5.
-- **Authentification** : le scaffolding register/login inclus par défaut dans un projet AdonisJS est réutilisé comme base pour l'authentification joueur (Phase 2), plutôt que de construire ce système from scratch — seul le champ `role` (enum `player`/`game_master`/`superadmin`) est une extension propre au projet.
+- **Authentification** : le scaffolding register/login inclus par défaut dans un projet AdonisJS est réutilisé comme base pour l'authentification joueur (Phase 2), plutôt que de construire ce système from scratch — seul le champ `role` (enum `player`/`game_master`/`superadmin`) est une extension propre au projet. Le front s'authentifie par **cookie de session**, seul mode compatible sans contournement avec `EventSource`.
+- **Front** : Vite + React, Tailwind CSS, TanStack Router (TanStack Query envisagé pour les lectures).
+- **Soumission d'un tour** : clé d'idempotence fournie par le client, enregistrée avant la mise en file ; tours exécutés par un worker unique en `concurrency: 1`, dans le process HTTP, pour la Phase 2 (voir Phase 2, décisions de cadrage).
 
 ---
 
@@ -404,4 +423,5 @@ finit toujours par être ignoré.
 - Choix définitif entre pgvector intégré et vector store externe si la Phase 6 est activée (dépend du volume de lore réellement atteint).
 - Réintroduction éventuelle d'un retry automatique limité (Phase 9), une fois le comportement réel des erreurs observé en usage — probablement restreint aux erreurs transitoires (timeout, 5xx), jamais aux erreurs de schéma qui indiquent un problème de prompt à corriger plutôt qu'à retenter.
 - Support multi-langue : l'architecture est actée et répercutée dans les phases ci-dessus (paramètre `language` et colonne `turn_log.language` en Phase 1, séparation référence/affichage en Phase 4, catalogue et glossaire en Phase 5, résumé anglais en Phase 7). **Restent ouverts** : la liste des langues cibles, le choix de la bibliothèque d'internationalisation du front, et la phase à laquelle une seconde langue est effectivement activée — probablement pas avant que la Phase 5 rende le contenu paramétrable.
-- Granularité exacte des événements SSE (un événement par étape du pipeline vs uniquement les jalons significatifs pour le joueur) et gestion de la reconnexion en cas de coupure réseau côté client pendant un tour en cours.
+- Événements SSE : la granularité et le rattrapage par lecture du tour sont tranchés pour la Phase 2 (architecture, section 8bis). **Restent ouverts** : le streaming de la narration, à réexaminer en Phase 3 quand la narration devient du texte libre, et le rejeu des événements manqués, jugé inutile tant que la lecture du tour suffit.
+- Passage à plusieurs instances : worker BullMQ séparé (transport Redis de Transmit) et sérialisation par `session_id` plutôt que par `concurrency: 1` — à trancher avant le beta test de la Phase 9.

@@ -5,6 +5,7 @@
 **Stack** : API AdonisJS + appel à une API LLM externe
 **Format** : jeu de rôle textuel type chat, le joueur interagit avec un maître du jeu (MJ) virtuel
 **Communication temps réel** : AdonisJS Transmit (SSE) pour le flux serveur→client, BullMQ (Redis) pour l'exécution du pipeline en tâche de fond et les jobs différés (résumé narratif)
+**Front joueur** : Vite + React, Tailwind CSS, TanStack Router (TanStack Query envisagé pour les lectures) ; authentification par cookie de session
 **Dev et tests locaux** : Docker pour PostgreSQL et Redis
 **Structure de repo** : monorepo AdonisJS créé avec `--kit=api`, géré par Turborepo (workspaces). Deux packages par défaut : `backend` (API AdonisJS) et `frontend` (front joueur). Un troisième package `back-office` sera ajouté en temps voulu (voir roadmap, Phase 5bis) pour l'interface superadmin — la structure en workspaces permet cet ajout sans réorganisation du repo.
 
@@ -557,20 +558,36 @@ Cette séparation permet de :
 
 **Justification** : le pipeline complet (jusqu'à 3 appels LLM séquentiels) peut prendre plusieurs secondes. Sans retour progressif, le joueur n'a qu'un indicateur de chargement générique. Le flux SSE permet d'afficher un message d'attente contextuel à chaque étape franchie plutôt qu'un simple spinner.
 
-**Événements SSE envisagés** (à affiner en implémentation, structure indicative) :
+### Contrat retenu pour la Phase 2
+
+**Soumission.** `POST /sessions/:id/turns` porte l'entrée du joueur et une **clé d'idempotence** générée par le client. La réponse est un accusé de réception `202` qui désigne le tour. Une clé déjà connue renvoie l'accusé du tour existant, sans nouvelle mise en file (voir roadmap, Phase 2).
+
+**Canal.** Un canal Transmit **par partie**, auquel le front s'abonne à l'ouverture de l'écran de jeu, **avant** toute soumission : aucun événement ne peut ainsi partir avant l'abonnement. L'accès au canal est autorisé par l'appartenance de la partie au joueur connecté, authentifié par cookie de session — `EventSource` ne sait pas porter d'en-tête `Authorization`. Chaque événement porte l'identifiant du tour **et la clé d'idempotence** de la soumission : un événement peut arriver avant la réponse `202`, et le front ne peut alors le rattacher qu'à la clé qu'il a lui-même générée.
+
+**Granularité : les jalons significatifs pour le joueur, pas un événement par étape technique.** Le front n'en tire que des messages d'attente ; au-delà, un événement ne sert à rien.
 
 ```
-event: step_started    { step: "arbitration" }
-event: step_completed  { step: "arbitration", result: { mode: "roll_required", skill: "persuasion" } }
-event: roll_resolved   { result: "success", margin: "comfortable" }
-event: narration_chunk { text: "..." }   (répété, si la narration elle-même est streamée token par token)
-event: turn_completed  { narration, applied_effects, updated_character_state }
-event: turn_failed     { error_category: "...", message: "..." }
+event: step_started    { turn, step: "arbitration" | "narration" }
+event: roll_resolved   { turn, skill: { reference, label }, result: "success" | "failure", margin: "comfortable" | ... }
+event: turn_completed  { turn, narration, applied_effects, character }
+event: turn_failed     { turn, error_category, message }
 ```
+
+- Branche **sans jet** : un seul appel LLM fusionné → `step_started(narration)`, puis `turn_completed`.
+- Branche **avec jet** : `step_started(arbitration)`, `roll_resolved`, `step_started(narration)`, puis `turn_completed`.
+- Un tour se termine toujours par **exactement un** `turn_completed` ou `turn_failed`.
+- `roll_resolved` ne porte que la compétence jouée, le résultat et la marge qualitative — jamais les dés, le seuil ni la valeur de compétence. Le joueur de JDR veut savoir sur quoi il a lancé et comment ça s'est passé ; les chiffres, eux, n'apportent rien au récit. Le front n'affiche que ce qu'on lui transmet (voir le cahier des charges du front).
+- `step_completed` est abandonné : il n'apportait au front qu'une information déjà portée par l'événement suivant.
+
+**Pas de streaming de la narration en Phase 2.** En Phase 1, l'appel de narration renvoie un **JSON** (narration + effets) : le découper en `narration_chunk` exigerait de parser un JSON partiel, pour un texte qui n'est de toute façon pas validé tant que le JSON complet ne l'est pas. Le streaming redevient naturel en Phase 3, quand la narration (D) devient du texte libre séparé de l'extraction (E) — l'événement `narration_chunk { turn, text }` est alors à réintroduire.
+
+**Rattrapage.** Un client qui a manqué des événements (onglet rechargé, coupure réseau) relit le tour par une route de lecture, qui renvoie son statut et, s'il est terminé, son résultat. Pas de rejeu d'événements côté serveur : tant qu'un tour ne compte que quelques jalons, relire son état suffit.
+
+**Exécution.** Le worker BullMQ tourne dans le process HTTP, en `concurrency: 1` et sans retry (`attempts: 1`) ; Transmit diffuse donc en mémoire. Simplification propre à la Phase 2, qui ne tient pas à plusieurs instances : un worker séparé imposera le transport Redis de Transmit.
 
 **Ce qui ne change pas** : le contenu et l'ordre des étapes du pipeline (section 3) restent identiques — seule la façon dont le résultat de chaque étape est communiqué au front évolue, d'un unique retour final vers une séquence d'événements progressifs. Les principes de sécurité et de validation backend (section 7) s'appliquent de la même façon, quel que soit le canal de transport.
 
-**Point ouvert** : granularité exacte des événements (un événement par étape du pipeline vs uniquement les jalons significatifs pour le joueur), et gestion de la reconnexion SSE en cas de coupure réseau côté client pendant un tour en cours.
+**Point ouvert** : le rejeu des événements manqués, si la lecture du tour cesse un jour de suffire.
 
 ---
 
