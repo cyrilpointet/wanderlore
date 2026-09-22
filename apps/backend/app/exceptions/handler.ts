@@ -1,4 +1,5 @@
 import app from '@adonisjs/core/services/app'
+import { errors as shieldErrors } from '@adonisjs/shield'
 import { type HttpContext, ExceptionHandler } from '@adonisjs/core/http'
 
 import { describeTurnFailure } from '#exceptions/turn_failure'
@@ -15,6 +16,17 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * response to the client
    */
   async handle(error: unknown, ctx: HttpContext) {
+    /**
+     * Shield answers a bad CSRF token with a redirect back, which is a
+     * server-rendered reflex: the API has no page to send anyone back to, and
+     * the front needs a status it can tell apart from a 401.
+     */
+    if (error instanceof shieldErrors.E_BAD_CSRF_TOKEN) {
+      return ctx.response.status(403).send({
+        error: { code: 'invalid_csrf_token', message: error.message },
+      })
+    }
+
     /**
      * A pipeline failure always reaches the player — the project decided
      * against automatic retry — so it must at least say which kind it was.

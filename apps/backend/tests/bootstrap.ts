@@ -6,6 +6,7 @@ import { pluginAdonisJS } from '@japa/plugin-adonisjs'
 import { dbAssertions } from '@adonisjs/lucid/plugins/db'
 import testUtils from '@adonisjs/core/services/test_utils'
 import { authApiClient } from '@adonisjs/auth/plugins/api_client'
+import { shieldApiClient } from '@adonisjs/shield/plugins/api_client'
 import { sessionApiClient } from '@adonisjs/session/plugins/api_client'
 import type { Registry } from '../.adonisjs/client/registry/schema.d.ts'
 
@@ -31,6 +32,12 @@ export const plugins: Config['plugins'] = [
   apiClient(),
   sessionApiClient(app),
   authApiClient(app),
+  /**
+   * CSRF verification is on: a mutating request must opt in with
+   * `.withCsrfToken()`, which is exactly what makes the tests asserting a 403
+   * without it meaningful.
+   */
+  shieldApiClient(),
 ]
 
 /**

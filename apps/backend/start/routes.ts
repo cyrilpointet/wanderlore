@@ -7,6 +7,7 @@
 |
 */
 
+import app from '@adonisjs/core/services/app'
 import { middleware } from '#start/kernel'
 import router from '@adonisjs/core/services/router'
 import { controllers } from '#generated/controllers'
@@ -20,7 +21,18 @@ router
     router
       .group(() => {
         router.post('signup', [controllers.NewAccount, 'store'])
-        router.post('login', [controllers.AccessTokens, 'store'])
+        router.post('login', [controllers.Login, 'store'])
+
+        /**
+         * Scripted clients (curl, `requests/test.http`) cannot read the
+         * encrypted XSRF-TOKEN cookie, so they read the raw token here and
+         * send it back as `X-CSRF-TOKEN`. A browser front never needs this
+         * route — it reads the cookie. Kept out of production: same-origin is
+         * the only thing protecting the token from being read cross-site.
+         */
+        if (!app.inProduction) {
+          router.get('csrf', ({ request }) => ({ csrfToken: request.csrfToken })).as('csrf')
+        }
       })
       .prefix('auth')
       .as('auth')
@@ -28,7 +40,7 @@ router
     router
       .group(() => {
         router.get('profile', [controllers.Profile, 'show'])
-        router.post('logout', [controllers.AccessTokens, 'destroy'])
+        router.post('logout', [controllers.Login, 'destroy'])
       })
       .prefix('account')
       .as('profile')

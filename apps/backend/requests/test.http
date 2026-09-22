@@ -3,19 +3,33 @@
 ### Ping — the scaffold route, no auth, no database
 GET {{api}}/
 
-### Login
-# @name login
+### CSRF token
+# The front reads the XSRF-TOKEN cookie; a scripted client cannot decrypt it,
+# so it reads the raw token here instead. Development and test only.
+# @name csrf
+GET {{api}}/api/v1/auth/csrf
+
+@csrfToken = {{csrf.response.body.csrfToken}}
+
+### Login — sets the session cookie, kept by the REST client for later requests
 POST {{api}}/api/v1/auth/login
 Content-Type: application/json
+X-CSRF-TOKEN: {{csrfToken}}
 
 { "email": "player@wanderlore.test", "password": "password" }
 
+### Profile
+GET {{api}}/api/v1/account/profile
+
 ### Tour de jeu
-@token = {{login.response.body.data.token}}
 @sid = 505a0880-7f99-4c45-9c01-17b6ca752782
 
 POST {{api}}/api/v1/sessions/{{sid}}/turns
-Authorization: Bearer {{token}}
 Content-Type: application/json
+X-CSRF-TOKEN: {{csrfToken}}
 
 { "playerInput": "I look around me" }
+
+### Logout
+POST {{api}}/api/v1/account/logout
+X-CSRF-TOKEN: {{csrfToken}}

@@ -18,9 +18,10 @@ test.group('Turns endpoint | authorisation', (group) => {
   test('refuses an anonymous request', async ({ client }) => {
     const sessionId = await createSession(await createUser())
 
-    const response = await client.post(`/api/v1/sessions/${sessionId}/turns`).json({
-      playerInput: 'I look around.',
-    })
+    const response = await client
+      .post(`/api/v1/sessions/${sessionId}/turns`)
+      .json({ playerInput: 'I look around.' })
+      .withCsrfToken()
 
     response.assertStatus(401)
   })
@@ -33,6 +34,7 @@ test.group('Turns endpoint | authorisation', (group) => {
       .post(`/api/v1/sessions/${sessionId}/turns`)
       .json({ playerInput: '   ' })
       .loginAs(await user(userId))
+      .withCsrfToken()
 
     response.assertStatus(422)
   })
@@ -45,6 +47,7 @@ test.group('Turns endpoint | authorisation', (group) => {
       .post(`/api/v1/sessions/${sessionId}/turns`)
       .json({ playerInput: 'I look around.' })
       .loginAs(await user(intruder))
+      .withCsrfToken()
 
     /**
      * Not a 403: telling an intruder that a session exists but is not theirs

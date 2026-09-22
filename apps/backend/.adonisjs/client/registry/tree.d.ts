@@ -6,16 +6,17 @@ export interface ApiDefinition {
     newAccount: {
       store: typeof routes['auth.new_account.store']
     }
-    accessTokens: {
-      store: typeof routes['auth.access_tokens.store']
+    login: {
+      store: typeof routes['auth.login.store']
     }
+    csrf: typeof routes['auth.csrf']
   }
   profile: {
     profile: {
       show: typeof routes['profile.profile.show']
     }
-    accessTokens: {
-      destroy: typeof routes['profile.access_tokens.destroy']
+    login: {
+      destroy: typeof routes['profile.login.destroy']
     }
   }
   game: {

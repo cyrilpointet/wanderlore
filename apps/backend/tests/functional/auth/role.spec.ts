@@ -28,7 +28,7 @@ test.group('Account role', (group) => {
   test('a new account is a player', async ({ client, assert }) => {
     const payload = signupPayload()
 
-    const response = await client.post(SIGNUP).json(payload)
+    const response = await client.post(SIGNUP).json(payload).withCsrfToken()
     response.assertStatus(200)
 
     /**
@@ -42,7 +42,7 @@ test.group('Account role', (group) => {
   test('the role is never exposed by the API', async ({ client, assert }) => {
     const payload = signupPayload()
 
-    const signup = await client.post(SIGNUP).json(payload)
+    const signup = await client.post(SIGNUP).json(payload).withCsrfToken()
     const user = await User.findByOrFail('email', payload.email)
     const profile = await client.get(PROFILE).loginAs(user)
 
@@ -53,14 +53,14 @@ test.group('Account role', (group) => {
      *
      * Whoever needs to expose it will have to delete this test — and read why.
      */
-    assert.notProperty(signup.body().data.user, 'role')
+    assert.notProperty(signup.body().data, 'role')
     assert.notProperty(profile.body().data, 'role')
   })
 
   test('the role cannot be set through the signup payload', async ({ client, assert }) => {
     const payload = signupPayload({ role: 'superadmin' })
 
-    await client.post(SIGNUP).json(payload)
+    await client.post(SIGNUP).json(payload).withCsrfToken()
 
     /**
      * The privilege-escalation guard. `signupValidator` drops unknown fields

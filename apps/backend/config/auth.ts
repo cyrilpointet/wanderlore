@@ -6,8 +6,13 @@ import type { InferAuthenticators, InferAuthEvents, Authenticators } from '@adon
 const authConfig = defineConfig({
   /**
    * Default guard used when no guard is explicitly specified.
+   *
+   * The whole application authenticates by session cookie: `EventSource`
+   * cannot carry an `Authorization` header. The token guard below stays
+   * declared — the table and the model relation exist — but no exposed route
+   * uses it any more.
    */
-  default: 'api',
+  default: 'web',
 
   guards: {
     /**

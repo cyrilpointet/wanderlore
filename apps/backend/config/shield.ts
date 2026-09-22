@@ -1,3 +1,4 @@
+import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/shield'
 
 const shieldConfig = defineConfig({
@@ -29,8 +30,11 @@ const shieldConfig = defineConfig({
   csrf: {
     /**
      * Enable CSRF token verification for state-changing requests.
+     *
+     * Required since the front authenticates by cookie: without it, any site
+     * could have the browser replay an authenticated mutation.
      */
-    enabled: false,
+    enabled: true,
 
     /**
      * Route patterns to exclude from CSRF checks.
@@ -39,9 +43,21 @@ const shieldConfig = defineConfig({
     exceptRoutes: [],
 
     /**
-     * Expose an encrypted XSRF-TOKEN cookie for frontend HTTP clients.
+     * Expose an encrypted XSRF-TOKEN cookie for frontend HTTP clients. The
+     * front reads it and echoes it back in the `X-XSRF-TOKEN` header.
      */
     enableXsrfCookie: true,
+
+    /**
+     * The XSRF cookie is deliberately readable by JavaScript (shield forces
+     * `httpOnly: false`); only the session cookie carrying the secret is
+     * `httpOnly`.
+     */
+    cookieOptions: {
+      path: '/',
+      sameSite: 'lax',
+      secure: app.inProduction,
+    },
 
     /**
      * HTTP methods protected by CSRF validation.
