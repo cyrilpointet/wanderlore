@@ -415,7 +415,11 @@ projet : on ne teste pas le framework.
 
 ---
 
-## 8. Direction visuelle (proposition)
+## 8. Direction visuelle
+
+Validée sur les maquettes de la Phase 2 (KAN-20, `apps/frontend/design/`). Les valeurs
+ci-dessous font foi ; les exports Stitch en sont une illustration, avec des écarts listés dans
+`apps/frontend/design/README.md`.
 
 **Intention** : *un livre qu'on lit à la lueur d'une lampe, avec la feuille de personnage
 posée à côté*. Calme, lisible, concentré sur le texte. Inspiré de la table de jeu, sans
@@ -423,26 +427,55 @@ folklore : ni parchemin texturé, ni dragons, ni polices gothiques — l'univers
 partie à l'autre, l'habillage ne doit pas en choisir un.
 
 **Typographie**
-- Narration : serif de lecture, confortable en longs paragraphes (ex. *Literata* ou
-  *Source Serif 4*), 18 px sur mobile, interligne ~1,6.
-- Interface : sans-serif neutre (ex. *Inter*), 14–16 px.
-- Wordmark **Wanderlore** : la serif de narration, en petites capitales espacées.
+- Narration : *Literata*, 18 px / interligne 29 px sur desktop, 16 px / interligne 26 px
+  sur mobile, sans espacement de lettres négatif. Colonne de lecture limitée à ~70 caractères
+  (~680 px). L'italique est réservé aux états d'attente et aux murmures narratifs.
+- Interface : *Inter* — corps 15 px, libellés 13 px, métadonnées 11 px (capitales espacées).
+- Titres (nom du personnage, « My games ») : *Literata*, 20 à 32 px selon le niveau.
+- Actions du joueur : *Inter*, jamais la serif — c'est ce qui les distingue de la narration.
+- Wordmark **Wanderlore** : *Literata* 16 px, capitales, espacement 0,22 em.
 
-**Couleurs**
-- Thème sombre (par défaut) : fond encre chaude (proche de `#15130F`), surfaces légèrement
-  plus claires, texte crème (`#EDE6D6`).
-- Thème clair : fond papier (proche de `#F6F1E7`), texte encre.
-- Un seul accent, laiton / ambre, réservé aux actions (envoyer, retry, liens).
-- Sémantiques atténuées, jamais criardes : réussite (vert sauge), échec (rouge brique),
-  points de vie (rouge brique, dégradé vers l'ambre quand ils baissent).
+**Couleurs** — thème sombre (par défaut)
 
-**Formes et mouvement** : coins faiblement arrondis (4–8 px), bordures fines plutôt
-qu'ombres, beaucoup d'espace. Animations brèves : apparition en fondu de la narration,
-pulsation de la jauge de points de vie quand elle change, points de suspension animés pour
-l'attente.
+| Rôle | Valeur |
+|---|---|
+| Fond (niveau 0) | `#15130F` |
+| Surfaces : header, saisie, fiche (niveau 1) | `#1E1B16` |
+| Cartes, puces (niveau 2) | `#28241E` |
+| Feuille ouverte, popovers (niveau 3) | `#332E27` |
+| Bordures fines / actives | `#2E2922` / `#3A342C` |
+| Texte principal / secondaire / métadonnées | `#EDE6D6` / `#A89F91` / `#787063` |
+| Accent laiton (survol) | `#D49B44` (`#C88D37`) |
+| Réussite — vert sauge | `#7A9A7B` |
+| Échec et points de vie — rouge brique | `#B85C50` |
+
+- Un seul accent, réservé aux actions : envoyer, *Retry*, liens, anneau de focus. Jamais
+  pour un libellé, un indicateur d'attente ou une décoration.
+- Les points de vie sont **toujours** en rouge brique — jamais en vert, qui signifie une
+  réussite de jet. Dégradé vers l'ambre quand ils baissent (à confirmer à l'intégration).
+- Thème clair : fond papier (proche de `#F6F1E7`), texte encre — non maquetté en Phase 2.
+
+**Formes et mouvement** : coins faiblement arrondis — 4 px pour les puces et badges, 6 à
+8 px pour les champs, cartes et boutons ; pas de pilule, sauf les petits boutons-icônes
+ronds. Bordures fines plutôt qu'ombres, la profondeur venant des niveaux de surface ; seule
+la feuille ouverte porte une ombre ambiante. Beaucoup d'espace. Animations brèves :
+apparition en fondu de la narration, pulsation de la jauge de points de vie quand elle
+change, points de suspension animés pour l'attente.
+
+**Composants récurrents** (tels que maquettés)
+- *Action du joueur* : libellé « You » en métadonnée neutre, texte en *Inter*, filet laiton
+  de 2 px à gauche.
+- *Puce de jet* : centrée entre l'action et la narration, icône de dé, « Compétence ·
+  Issue », teinte sémantique sur fond atténué, sans aucun chiffre.
+- *Ligne d'effets* : sous la narration, discrète, icône et couleur sémantique (« −2 HP »).
+- *Carte d'erreur* : à la place de la narration, liseré rouge brique sans fond rouge,
+  message et boutons *Retry* (plein) / *Edit* (contour).
+- *Fiche* : attributs avec leurs compétences en retrait, ressources, bloc « Situation » ;
+  colonne de 320 px sur desktop, feuille couvrant les deux tiers de l'écran sur mobile.
 
 **Iconographie** : jeu d'icônes linéaire (Lucide, courant avec React). Une icône de dé pour
-les jets, un cœur pour les points de vie, une épingle de carte pour les lieux.
+les jets, un cœur pour les points de vie, une épingle de carte pour les lieux. Les exports
+Stitch utilisent Material Symbols, à remplacer.
 
 ---
 
@@ -494,8 +527,10 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
 ### Livrables et dépôt
 
 Les maquettes validées sont versionnées dans **`apps/frontend/design/`**, pour que
-l'intégration se fasse depuis le dépôt plutôt que depuis Stitch, auquel aucun outil de
-développement n'a accès directement.
+l'intégration se fasse depuis le dépôt plutôt que depuis Stitch : le projet Stitch peut encore
+évoluer ou être retouché, le dépôt fige la version validée. Stitch est accessible depuis Claude
+Code par son serveur MCP (génération, lecture et export des écrans), mais l'intégration ne s'y
+réfère pas.
 
 Pour chaque écran et chaque format, deux fichiers au même nom :
 - **l'export HTML de Stitch** (option *Code*) : la source de référence pour les couleurs,
@@ -676,4 +711,5 @@ is focused.
   Solution transitoire à trancher côté backend — par exemple des libellés portés par la
   définition de l'univers codée en dur (`world.ts`).
 - **Délai de rattrapage** sans événement SSE avant relecture de l'état du tour (5.3.5).
-- **Direction visuelle** (section 8) : proposition, à valider sur les premières maquettes.
+- **Direction visuelle** (section 8) : validée sur les maquettes de la Phase 2 (KAN-20). Reste
+  ouvert : le dégradé des points de vie vers l'ambre, et le thème clair, non maquetté.
