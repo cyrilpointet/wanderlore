@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#0d0c0a]" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Wanderlore - Character Sheet (Mobile)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            surface: {
+              DEFAULT: '#15130f',
+              dim: '#15130f',
+              sheet: '#1c1a15',
+              card: '#22201a',
+              input: '#1d1b16',
+            },
+            cream: {
+              DEFAULT: '#EDE6D6',
+              muted: '#A9A294',
+              subtle: '#787265',
+            },
+            accent: {
+              brass: '#d49b44',
+            },
+            semantic: {
+              brick: '#c05346',
+              brickMuted: '#422421',
+              sage: '#78956e',
+            }
+          },
+          fontFamily: {
+            serif: ['Literata', 'Georgia', 'serif'],
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    /* Clean custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 3px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2f2c25;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body class="bg-[#0d0c0a] text-[#EDE6D6] font-sans antialiased h-full flex items-center justify-center p-0 sm:p-4 select-none">
+<!-- ========================================== -->
+<!-- MOBILE VIEWPORT FRAME (390px x 844px)      -->
+<!-- ========================================== -->
+<div class="w-full max-w-[390px] h-full sm:h-[844px] sm:max-h-[844px] bg-[#15130f] sm:rounded-[40px] sm:border-[8px] sm:border-[#22201a] sm:shadow-2xl flex flex-col overflow-hidden relative">
+<!-- ========================================== -->
+<!-- BACKGROUND SCREEN: Dimmed Mobile Game View  -->
+<!-- ========================================== -->
+<div aria-hidden="true" class="absolute inset-0 flex flex-col pointer-events-none filter brightness-[0.4] select-none">
+<!-- Mobile Game Header -->
+<header class="h-14 border-b border-[#2b2721] px-4 flex items-center justify-between bg-[#15130f] shrink-0">
+<div class="flex items-center gap-3">
+<!-- Back arrow -->
+<div class="text-[#A9A294] p-1">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div>
+<h1 class="font-serif text-[16px] font-medium text-[#EDE6D6] leading-tight">d'Artagnan</h1>
+<p class="font-sans text-[11px] text-[#787265] tracking-wide">The Road to Paris</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<!-- Hit points badge in header -->
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1e1c17] border border-[#2d2922]">
+<svg class="w-3.5 h-3.5 text-[#c05346]" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-xs font-mono font-medium text-[#c05346]">8 / 10</span>
+</div>
+<!-- Character sheet action icon -->
+<div class="p-1.5 rounded bg-[#1e1c17] border border-[#2d2922] text-[#A9A294]">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</div>
+</header>
+<!-- Narration snippet peeking behind sheet -->
+<div class="px-5 pt-4 pb-3 font-serif text-[14px] leading-relaxed text-[#EDE6D6]/90 space-y-3.5">
+<div class="border-l-2 border-[#d49b44]/70 pl-3">
+<span class="text-[10px] tracking-widest text-[#787265] uppercase font-sans block mb-0.5 font-medium">YOU</span>
+<p class="text-[13px] text-[#EDE6D6]">I walk up to him and demand that he apologise for laughing at my horse.</p>
+</div>
+<p class="text-[#EDE6D6]/80 text-[13.5px] leading-relaxed">
+          Your words come out sharper than you meant. The stranger does not even turn his head. Two of his servants step between you, and one of them shoves you hard against the doorframe. By the time you steady yourself, the gentleman has gone back inside.
+        </p>
+<div class="flex items-center gap-1.5 text-xs text-[#c05346] font-mono pt-0.5">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>−2 HP</span>
+</div>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- MODAL BACKDROP OVERLAY                     -->
+<!-- ========================================== -->
+<div class="absolute inset-0 bg-black/60 pointer-events-none transition-opacity"></div>
+<!-- ========================================== -->
+<!-- THE CHARACTER SHEET BOTTOM SHEET           -->
+<!-- Covers ~2/3 of mobile viewport             -->
+<!-- ========================================== -->
+<div class="relative z-10 mt-auto w-full h-[68%] flex flex-col bg-[#1c1a15] rounded-t-3xl border-t border-[#38332a] shadow-2xl overflow-hidden">
+<!-- Sheet Grab Handle -->
+<div class="pt-3 pb-1 flex justify-center items-center w-full shrink-0">
+<div class="w-9 h-1 rounded-full bg-[#3d382f]"></div>
+</div>
+<!-- Sheet Header with Character Name & Close Button -->
+<div class="px-5 pt-2 pb-3 flex items-start justify-between border-b border-[#2b2721]/80 shrink-0">
+<div>
+<h2 class="font-serif text-[22px] font-medium text-[#EDE6D6] tracking-tight leading-tight">
+            d'Artagnan
+          </h2>
+<p class="font-sans text-[11px] text-[#787265] tracking-wide mt-0.5">Character Sheet</p>
+</div>
+<!-- Close Button ('✕') -->
+<button aria-label="Close character sheet" class="p-1 -mr-1 text-[#A9A294] hover:text-[#EDE6D6] hover:bg-[#26231d] rounded-lg active:scale-95 transition-all" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- Scrollable Sheet Content -->
+<div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+<!-- HIT POINTS section -->
+<div>
+<div class="flex items-center justify-between text-xs mb-1.5 font-sans">
+<span class="text-[11px] font-medium uppercase tracking-wider text-[#A9A294]">Hit Points</span>
+<span class="font-mono text-xs font-semibold text-[#c05346] tracking-tight">8 / 10</span>
+</div>
+<div class="w-full h-1.5 rounded-full bg-[#2b2422] overflow-hidden border border-[#3f2724]/40">
+<div class="h-full bg-[#c05346] rounded-full" style="width: 80%;"></div>
+</div>
+</div>
+<!-- ATTRIBUTES & SKILLS section -->
+<div>
+<h3 class="text-[11px] font-semibold uppercase tracking-wider text-[#787265] mb-2">
+            Attributes &amp; skills
+          </h3>
+<div class="space-y-2.5 font-sans">
+<!-- Physical Group -->
+<div class="bg-[#171511] rounded-lg p-3 border border-[#2b2721]/60">
+<div class="flex items-center justify-between text-[13.5px] font-medium text-[#EDE6D6] pb-1.5 border-b border-[#26231d]">
+<span>Physical</span>
+<span class="font-mono font-semibold text-[#EDE6D6]">3</span>
+</div>
+<div class="pt-2 pl-2 space-y-1.5">
+<div class="flex items-center justify-between text-[12.5px] text-[#A9A294]">
+<span>Swordsmanship</span>
+<span class="font-mono text-[12px] text-[#A9A294]">3</span>
+</div>
+<div class="flex items-center justify-between text-[12.5px] text-[#A9A294]">
+<span>Athletics</span>
+<span class="font-mono text-[12px] text-[#A9A294]">1</span>
+</div>
+</div>
+</div>
+<!-- Mental Group -->
+<div class="bg-[#171511] rounded-lg p-3 border border-[#2b2721]/60">
+<div class="flex items-center justify-between text-[13.5px] font-medium text-[#EDE6D6] pb-1.5 border-b border-[#26231d]">
+<span>Mental</span>
+<span class="font-mono font-semibold text-[#EDE6D6]">2</span>
+</div>
+<div class="pt-2 pl-2 space-y-1.5">
+<div class="flex items-center justify-between text-[12.5px] text-[#A9A294]">
+<span>Observation</span>
+<span class="font-mono text-[12px] text-[#A9A294]">1</span>
+</div>
+</div>
+</div>
+<!-- Social Group -->
+<div class="bg-[#171511] rounded-lg p-3 border border-[#2b2721]/60">
+<div class="flex items-center justify-between text-[13.5px] font-medium text-[#EDE6D6] pb-1.5 border-b border-[#26231d]">
+<span>Social</span>
+<span class="font-mono font-semibold text-[#EDE6D6]">3</span>
+</div>
+<div class="pt-2 pl-2 space-y-1.5">
+<div class="flex items-center justify-between text-[12.5px] text-[#A9A294]">
+<span>Persuasion</span>
+<span class="font-mono text-[12px] text-[#A9A294]">2</span>
+</div>
+<div class="flex items-center justify-between text-[12.5px] text-[#A9A294]">
+<span>Etiquette</span>
+<span class="font-mono text-[12px] text-[#A9A294]">1</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- RESOURCES section -->
+<div>
+<h3 class="text-[11px] font-semibold uppercase tracking-wider text-[#787265] mb-2">
+            Resources
+          </h3>
+<div class="bg-[#171511] rounded-lg px-3 py-2.5 border border-[#2b2721]/60 flex items-center justify-between">
+<span class="text-[13px] font-medium text-[#EDE6D6]">Purse</span>
+<span class="font-mono font-semibold text-[13px] text-[#EDE6D6]">15</span>
+</div>
+</div>
+<!-- SITUATION section -->
+<div class="pb-3">
+<h3 class="text-[11px] font-semibold uppercase tracking-wider text-[#787265] mb-2">
+            Situation
+          </h3>
+<div class="bg-[#171511] rounded-lg p-3 border border-[#2b2721]/60 space-y-2.5 font-sans">
+<!-- Location with Map Pin Icon -->
+<div>
+<div class="text-[10.5px] uppercase tracking-wider text-[#787265] mb-1 font-medium">Location</div>
+<div class="flex items-center gap-1.5 text-[13.5px] text-[#EDE6D6] font-medium">
+<svg class="w-3.5 h-3.5 text-[#A9A294] shrink-0" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+<path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Meung-sur-Loire</span>
+</div>
+</div>
+<!-- Divider -->
+<div class="border-t border-[#26231d]"></div>
+<!-- Quest -->
+<div>
+<div class="text-[10.5px] uppercase tracking-wider text-[#787265] mb-1 font-medium">Quest</div>
+<div class="text-[13.5px] font-medium text-[#EDE6D6] mb-0.5">Deliver the letter</div>
+<p class="font-serif text-[12.5px] text-[#A9A294] leading-relaxed italic">
+                Carry your father's letter to Monsieur de Tréville.
+              </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

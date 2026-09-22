@@ -1,0 +1,216 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Wanderlore — My Games</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface": "#15130f",
+            "tertiary-fixed": "#ffdad5",
+            "surface-tint": "#f9bb61",
+            "on-primary-container": "#533500",
+            "on-secondary": "#1a361f",
+            "on-error": "#690005",
+            "primary-container": "#d49b44",
+            "inverse-surface": "#e8e1da",
+            "tertiary": "#ffb4a9",
+            "secondary-container": "#325036",
+            "on-surface": "#e8e1da",
+            "outline-variant": "#504537",
+            "on-secondary-fixed-variant": "#304d34",
+            "on-surface-variant": "#d4c4b2",
+            "on-secondary-container": "#a0c1a0",
+            "tertiary-fixed-dim": "#ffb4a9",
+            "secondary-fixed-dim": "#aecfad",
+            "on-tertiary": "#5d1711",
+            "secondary-fixed": "#c9ebc8",
+            "secondary": "#aecfad",
+            "inverse-on-surface": "#33302b",
+            "on-primary-fixed-variant": "#624000",
+            "surface-container-low": "#1d1b17",
+            "surface-variant": "#373430",
+            "surface-container-lowest": "#100e0a",
+            "error-container": "#93000a",
+            "primary-fixed-dim": "#f9bb61",
+            "on-primary": "#452b00",
+            "surface-dim": "#15130f",
+            "surface-container": "#221f1b",
+            "on-error-container": "#ffdad6",
+            "on-secondary-fixed": "#04210b",
+            "outline": "#9d8e7e",
+            "on-tertiary-fixed": "#3f0202",
+            "surface-container-high": "#2c2a25",
+            "on-tertiary-fixed-variant": "#7b2d25",
+            "error": "#ffb4ab",
+            "background": "#15130f",
+            "tertiary-container": "#f1897b",
+            "surface-container-highest": "#373430",
+            "surface-bright": "#3c3934",
+            "on-tertiary-container": "#6c221b",
+            "primary": "#f9bb61",
+            "on-primary-fixed": "#291800",
+            "primary-fixed": "#ffddb2",
+            "inverse-primary": "#825500",
+            "on-background": "#e8e1da"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "2rem",
+            "space-xl": "2.5rem",
+            "gutter-sm": "1rem",
+            "margin-sm": "1rem",
+            "gutter": "1.5rem",
+            "space-md": "1rem",
+            "space-lg": "1.5rem",
+            "space-xs": "0.25rem",
+            "space-sm": "0.5rem"
+          },
+          "fontFamily": {
+            "prose-caption": ["Literata"],
+            "ui-meta": ["Inter"],
+            "ui-body": ["Inter"],
+            "prose-narrative-mobile": ["Literata"],
+            "prose-narrative": ["Literata"],
+            "headline-xl-mobile": ["Literata"],
+            "wordmark": ["Literata"],
+            "headline-sm": ["Literata"],
+            "headline-lg": ["Literata"],
+            "ui-label": ["Inter"],
+            "ui-body-strong": ["Inter"],
+            "headline-xl": ["Literata"]
+          },
+          "fontSize": {
+            "prose-caption": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "ui-meta": ["11px", { "lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+            "ui-body": ["15px", { "lineHeight": "22px", "fontWeight": "400" }],
+            "prose-narrative-mobile": ["16px", { "lineHeight": "26px", "fontWeight": "400" }],
+            "prose-narrative": ["18px", { "lineHeight": "29px", "fontWeight": "400" }],
+            "headline-xl-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "wordmark": ["16px", { "lineHeight": "24px", "letterSpacing": "0.22em", "fontWeight": "600" }],
+            "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+            "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "500" }],
+            "ui-label": ["13px", { "lineHeight": "18px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+            "ui-body-strong": ["15px", { "lineHeight": "22px", "fontWeight": "600" }],
+            "headline-xl": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col antialiased selection:bg-primary-container selection:text-on-primary-container pb-24">
+<!-- Top Navigation Bar -->
+<header class="bg-surface-container-low sticky top-0 z-40 w-full transition-all duration-150">
+<div class="flex justify-between items-center w-full px-6 py-3.5 max-w-7xl mx-auto">
+<div class="flex items-center space-x-3">
+
+<span class="font-wordmark text-wordmark uppercase tracking-[0.22em] text-on-surface select-none">WANDERLORE</span>
+</div>
+<!-- Account Initials Button -->
+<button aria-label="Account Settings" class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/40 flex items-center justify-center text-primary font-ui-label text-ui-label hover:border-primary-container transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-primary-container" type="button">
+<span class="">DA</span>
+</button>
+</div>
+</header>
+<!-- Main View Container -->
+<main class="flex-1 w-full max-w-md mx-auto px-6 pt-7 pb-6 flex flex-col justify-start">
+<!-- Header Section -->
+<section class="mb-8">
+<div class="flex items-baseline justify-between mb-1.5">
+<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface font-medium tracking-tight">
+          My games
+        </h1>
+
+</div>
+
+</section>
+<!-- Games Ledger List -->
+<div class="space-y-4">
+<!-- Card 1: d'Artagnan -->
+<article class="group relative bg-surface-container-low rounded-lg p-5 border border-outline-variant/30 hover:border-primary-container/60 active:scale-[0.99] transition-all duration-150 ease-out cursor-pointer focus:outline-none focus:border-primary-container" role="button" tabindex="0">
+<!-- Header row inside card -->
+<div class="flex items-start justify-between gap-2 mb-2">
+<h2 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors duration-150 font-normal">
+            d'Artagnan
+          </h2>
+<!-- Status Badge: In Progress (Sage) -->
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-secondary-container/40 border border-secondary-container text-secondary font-ui-meta text-ui-meta tracking-wide uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="">In progress</span>
+</div>
+</div>
+<!-- Subtitle & Storyline -->
+<p class="font-prose-caption text-prose-caption text-on-surface-variant mb-5 line-clamp-1 italic">
+          The Three Musketeers · The Road to Paris
+        </p>
+<!-- Card Footer Metadata -->
+<div class="pt-3 border-t border-outline-variant/20 flex items-center justify-between font-ui-meta text-ui-meta text-on-surface-variant">
+<!-- Hit Points Indicator -->
+<div class="flex items-center gap-1.5" title="Vitality: 8 of 10">
+<span class="material-symbols-outlined text-tertiary-container text-base leading-none select-none">favorite</span>
+<span class="font-ui-body-strong text-on-surface tracking-tight">8 <span class="text-on-surface-variant/50 font-normal">/ 10</span></span>
+</div>
+<!-- Timestamp -->
+<div class="flex items-center gap-1 text-on-surface-variant/70">
+<span class="material-symbols-outlined text-sm select-none">schedule</span>
+<span class="">2 hours ago</span>
+</div>
+</div>
+</article>
+<!-- Card 2: Evelyn Vance -->
+<article class="group relative bg-surface-container-low rounded-lg p-5 border border-outline-variant/30 hover:border-primary-container/60 active:scale-[0.99] transition-all duration-150 ease-out cursor-pointer focus:outline-none focus:border-primary-container" role="button" tabindex="0">
+<!-- Header row inside card -->
+<div class="flex items-start justify-between gap-2 mb-2">
+<h2 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors duration-150 font-normal">Constance Bonacieux</h2>
+<!-- Status Badge: Paused (Neutral Muted) -->
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container-highest border border-outline-variant/40 text-on-surface-variant font-ui-meta text-ui-meta tracking-wide uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<span class="">Paused</span>
+</div>
+</div>
+<!-- Subtitle & Storyline -->
+<p class="font-prose-caption text-prose-caption text-on-surface-variant mb-5 line-clamp-1 italic">The Three Musketeers · The Road to Paris</p>
+<!-- Card Footer Metadata -->
+<div class="pt-3 border-t border-outline-variant/20 flex items-center justify-between font-ui-meta text-ui-meta text-on-surface-variant">
+<!-- Hit Points Indicator -->
+<div class="flex items-center gap-1.5" title="Vitality: 5 of 10">
+<span class="material-symbols-outlined text-tertiary-container text-base leading-none select-none">favorite</span>
+<span class="font-ui-body-strong text-on-surface tracking-tight">5 <span class="text-on-surface-variant/50 font-normal">/ 10</span></span>
+</div>
+<!-- Timestamp -->
+<div class="flex items-center gap-1 text-on-surface-variant/70">
+<span class="material-symbols-outlined text-sm select-none">schedule</span>
+<span class="">3 days ago</span>
+</div>
+</div>
+</article>
+</div>
+<!-- Quiet Reading Ambience Note -->
+
+</main>
+<!-- Bottom Navigation Bar -->
+
+
+
+</body></html>

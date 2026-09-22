@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>WANDERLORE — Turn in Progress</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts: Literata & Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with configuration -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary-container": "#f1897b",
+            "primary-container": "#d49b44",
+            "on-secondary-container": "#a0c1a0",
+            "secondary-fixed": "#c9ebc8",
+            "tertiary-fixed-dim": "#ffb4a9",
+            "primary": "#f9bb61",
+            "secondary-container": "#325036",
+            "error": "#ffb4ab",
+            "surface-dim": "#15130f",
+            "on-tertiary-fixed": "#3f0202",
+            "tertiary-fixed": "#ffdad5",
+            "on-surface-variant": "#d4c4b2",
+            "secondary-fixed-dim": "#aecfad",
+            "on-tertiary-fixed-variant": "#7b2d25",
+            "surface-container-highest": "#373430",
+            "error-container": "#93000a",
+            "outline-variant": "#504537",
+            "on-tertiary-container": "#6c221b",
+            "surface-tint": "#f9bb61",
+            "on-error-container": "#ffdad6",
+            "on-background": "#e8e1da",
+            "surface": "#15130f",
+            "surface-container-lowest": "#100e0a",
+            "on-secondary-fixed": "#04210b",
+            "on-primary-container": "#533500",
+            "inverse-on-surface": "#33302b",
+            "background": "#15130f",
+            "on-tertiary": "#5d1711",
+            "on-primary": "#452b00",
+            "secondary": "#aecfad",
+            "on-secondary": "#1a361f",
+            "primary-fixed": "#ffddb2",
+            "surface-container": "#221f1b",
+            "on-secondary-fixed-variant": "#304d34",
+            "on-primary-fixed-variant": "#624000",
+            "on-surface": "#e8e1da",
+            "surface-variant": "#373430",
+            "tertiary": "#ffb4a9",
+            "primary-fixed-dim": "#f9bb61",
+            "on-primary-fixed": "#291800",
+            "inverse-primary": "#825500",
+            "surface-container-low": "#1d1b17",
+            "surface-container-high": "#2c2a25",
+            "outline": "#9d8e7e",
+            "inverse-surface": "#e8e1da",
+            "surface-bright": "#3c3934",
+            "on-error": "#690005"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-xs": "0.25rem",
+            "space-xl": "2.5rem",
+            "space-sm": "0.5rem",
+            "space-lg": "1.5rem",
+            "space-md": "1rem",
+            "margin-sm": "1rem",
+            "margin": "2rem",
+            "gutter": "1.5rem",
+            "gutter-sm": "1rem"
+          },
+          "fontFamily": {
+            "ui-meta": ["Inter", "sans-serif"],
+            "headline-sm": ["Literata", "serif"],
+            "ui-body-strong": ["Inter", "sans-serif"],
+            "headline-xl-mobile": ["Literata", "serif"],
+            "headline-xl": ["Literata", "serif"],
+            "prose-narrative-mobile": ["Literata", "serif"],
+            "prose-caption": ["Literata", "serif"],
+            "wordmark": ["Literata", "serif"],
+            "ui-label": ["Inter", "sans-serif"],
+            "headline-lg": ["Literata", "serif"],
+            "prose-narrative": ["Literata", "serif"],
+            "ui-body": ["Inter", "sans-serif"]
+          },
+          "fontSize": {
+            "ui-meta": ["11px", { "lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+            "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+            "ui-body-strong": ["15px", { "lineHeight": "22px", "fontWeight": "600" }],
+            "headline-xl-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "headline-xl": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "prose-narrative-mobile": ["16px", { "lineHeight": "26px", "fontWeight": "400" }],
+            "prose-caption": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "wordmark": ["16px", { "lineHeight": "24px", "letterSpacing": "0.22em", "fontWeight": "600" }],
+            "ui-label": ["13px", { "lineHeight": "18px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+            "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "500" }],
+            "prose-narrative": ["18px", { "lineHeight": "29px", "fontWeight": "400" }],
+            "ui-body": ["15px", { "lineHeight": "22px", "fontWeight": "400" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 0.25; transform: scale(0.9); }
+      50% { opacity: 0.85; transform: scale(1.1); }
+    }
+    .dot-1 { animation: pulse-subtle 1.4s infinite ease-in-out; }
+    .dot-2 { animation: pulse-subtle 1.4s infinite ease-in-out 0.2s; }
+    .dot-3 { animation: pulse-subtle 1.4s infinite ease-in-out 0.4s; }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#100e0a] text-on-surface antialiased flex justify-center items-center min-h-screen p-0 sm:py-6 selection:bg-primary-container selection:text-surface-dim">
+<!-- Mobile Frame Container: 390px x 844px strict view -->
+<main class="w-full max-w-[390px] h-[844px] bg-surface flex flex-col relative overflow-hidden sm:border sm:border-outline-variant shadow-2xl">
+<!-- Top Bar Navigation & Character Status -->
+<header class="w-full h-14 bg-surface-container-low px-margin-sm flex items-center justify-between z-30 shrink-0 border-b border-outline-variant select-none">
+<!-- Left: Back Navigation & Persona Meta -->
+<div class="flex items-center gap-space-sm">
+<button aria-label="Return to Chronicle" class="text-outline hover:text-on-surface transition-colors duration-150 p-1 -ml-1 flex items-center justify-center" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="arrow_back">arrow_back</span>
+</button>
+<div class="flex flex-col text-left">
+<span class="font-headline-sm text-[16px] leading-[20px] font-medium text-on-surface tracking-tight">d'Artagnan</span>
+<span class="font-ui-meta text-[11px] leading-[14px] text-outline tracking-[0.02em]">The Road to Paris</span>
+</div>
+</div>
+<!-- Right: HP Vital Indicator & Folio Sheet Trigger -->
+<div class="flex items-center gap-space-md">
+<!-- Compact Hit Points -->
+<div class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-container border border-outline-variant/60">
+<span class="material-symbols-outlined fill-icon text-[#e06c5f] text-[15px]" data-icon="favorite" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span class="font-ui-meta text-[11px] leading-none font-medium text-on-surface tracking-tight">8 / 10</span>
+</div>
+<!-- Character Sheet Icon Button (No Initials) -->
+<button aria-label="Open Folio" class="text-outline hover:text-on-surface transition-colors duration-150 p-1 flex items-center justify-center" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="badge">badge</span>
+</button>
+</div>
+</header>
+<!-- Narrative Canvas / Story Feed (Scrollable Area) -->
+<div class="flex-1 overflow-y-auto px-margin-sm pt-space-lg pb-space-xl flex flex-col gap-space-lg">
+<!-- Sequence 1: Concluding resolution of Turn 3 -->
+<section class="flex flex-col gap-space-sm">
+<!-- Narration Passage -->
+<p class="font-prose-narrative-mobile text-prose-narrative-mobile text-[#EDE6D6] leading-[26px]">
+          Your words come out sharper than you meant. The stranger does not even turn his head. Two of his servants step between you, and one of them shoves you hard against the doorframe. By the time you steady yourself, the gentleman has gone back inside.
+        </p>
+<!-- Mechanical Effect Status Tag -->
+<div class="flex items-center gap-1.5 pt-0.5 select-none">
+<span class="material-symbols-outlined fill-icon text-[#e06c5f] text-[13px]" data-icon="favorite" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span class="font-ui-label text-[12px] font-medium text-[#e06c5f] tracking-wide">−2 HP</span>
+</div>
+</section>
+<!-- Divider Gap / Quiet Rhythm -->
+<div class="w-8 h-[1px] bg-outline-variant/50 self-start my-space-xs"></div>
+<!-- Sequence 2: Turn in Progress - Player Action & Pending Resolution -->
+<section class="flex flex-col gap-space-md">
+<!-- Player Action Block with slim brass left border -->
+<div class="border-l-2 border-primary-container pl-3 py-0.5 flex flex-col gap-0.5">
+<span class="font-ui-meta text-[10px] uppercase font-semibold text-primary tracking-[0.14em]">YOU</span>
+<p class="font-prose-narrative-mobile text-[16px] text-on-surface leading-[24px]">
+            I draw my sword and follow him inside.
+          </p>
+</div>
+<!-- Outcome / Dice Roll Pill (Interpretation Only - Strictly No Numbers) -->
+<div class="flex justify-center my-space-xs">
+<div class="inline-flex items-center gap-space-xs px-3 py-1.5 rounded-lg bg-surface-container-high/80 border border-[#485b4b]">
+<span class="material-symbols-outlined text-[#a0c1a0] text-[16px]" data-icon="casino">casino</span>
+<span class="font-ui-label text-[12px] font-medium text-[#a0c1a0] tracking-wide">Swordsmanship · Narrow success</span>
+</div>
+</div>
+<!-- Status Line & Subtle Ambient Waiting Animation -->
+<div class="flex items-center justify-center gap-2 pt-space-xs">
+<span class="font-prose-narrative-mobile text-[15px] italic text-outline text-center">
+            The game master tells what happens
+          </span>
+<!-- Literary 3-dot pulse -->
+<div class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary/70 dot-1 inline-block"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary/70 dot-2 inline-block"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary/70 dot-3 inline-block"></span>
+</div>
+</div>
+</section>
+</div>
+<!-- Persistent Bottom Composer Tray (State: Dimmed & Disabled) -->
+<footer class="w-full bg-surface-container-low border-t border-outline-variant px-margin-sm py-space-sm z-30 shrink-0">
+<div class="flex items-center gap-space-sm opacity-40 cursor-not-allowed select-none">
+<!-- Disabled Input Shell -->
+<div class="flex-1 bg-surface-container rounded-lg border border-outline-variant px-3 py-2.5 flex items-center">
+<span class="font-ui-body text-[14px] text-outline truncate italic font-light">
+            The game master is answering…
+          </span>
+</div>
+<!-- Disabled Action / Send Trigger -->
+<div class="w-10 h-10 rounded-lg bg-surface-container border border-outline-variant flex items-center justify-center text-outline shrink-0">
+<span class="material-symbols-outlined text-[19px]" data-icon="arrow_upward">arrow_upward</span>
+</div>
+</div>
+<!-- iOS / Android Home Indicator Clearance -->
+<div class="h-3 w-full"></div>
+</footer>
+</main>
+</body></html>

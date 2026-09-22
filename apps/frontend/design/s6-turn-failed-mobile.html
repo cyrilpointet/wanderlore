@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Wanderlore - Game</title>
+<!-- Tailwind CSS CDN with Forms & Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Literata & Inter, plus Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;1,7..72,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<!-- Custom Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#15130F',
+            surface: '#1D1B17',
+            surfaceElevated: '#24221D',
+            cream: '#EDE6D6',
+            muted: '#A89F91',
+            dimmed: '#7D7567',
+            borderHairline: '#2E2A24',
+            brass: '#D49B44',
+            sage: '#7E9F7B',
+            brick: '#C25953'
+          },
+          fontFamily: {
+            serif: ['Literata', 'serif'],
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+<!-- BEGIN: Custom Typography and Scroll Styles -->
+<style data-purpose="typography">
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #15130F;
+      color: #EDE6D6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-narrative {
+      font-family: 'Literata', serif;
+      font-size: 16.5px;
+      line-height: 1.68;
+      letter-spacing: -0.01em;
+    }
+  </style>
+<style data-purpose="layout-utilities">
+    /* Support for mobile viewport safe areas */
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+    .pt-safe {
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+    /* Hide scrollbars for clean literary view */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<!-- END: Custom Typography and Scroll Styles -->
+</head>
+<body class="bg-ink min-h-screen flex flex-col justify-between selection:bg-[#D49B44]/20 selection:text-[#EDE6D6]">
+<!-- BEGIN: GameHeader -->
+<header class="sticky top-0 z-30 bg-[#1D1B17]/95 backdrop-blur-md border-b border-[#2E2A24] px-4 py-3 pt-safe" data-purpose="top-navigation-bar">
+<div class="flex items-center justify-between gap-3 max-w-xl mx-auto">
+<!-- Back Navigation & Title Group -->
+<div class="flex items-center gap-3 min-w-0">
+<!-- Return to games list button -->
+<button aria-label="Go back to games" class="p-1 -ml-1 text-[#A89F91] hover:text-[#EDE6D6] transition-colors focus:outline-none" type="button">
+<span class="material-symbols-outlined text-[22px] leading-none select-none">arrow_back</span>
+</button>
+<!-- Character and Campaign titles -->
+<div class="min-w-0">
+<h1 class="font-serif font-medium text-base text-[#EDE6D6] tracking-tight leading-snug truncate">
+            d'Artagnan
+          </h1>
+<p class="font-sans text-xs text-[#A89F91] tracking-normal leading-tight truncate">
+            The Road to Paris
+          </p>
+</div>
+</div>
+<!-- Right Action Items: Health Stat & Character Sheet Button -->
+<div class="flex items-center gap-2.5 shrink-0">
+<!-- Hit points counter: strictly brick red icon -->
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#24221D] border border-[#2E2A24]" data-purpose="hp-indicator" title="Hit Points">
+<span class="material-symbols-outlined text-[15px] leading-none text-[#C25953] select-none" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span class="font-sans text-xs font-medium text-[#EDE6D6] tracking-wide">8 / 10</span>
+</div>
+<!-- Character Sheet Drawer Trigger -->
+<button aria-label="Open character sheet" class="flex items-center justify-center w-8 h-8 rounded bg-[#24221D] border border-[#2E2A24] text-[#A89F91] hover:text-[#EDE6D6] hover:border-[#D49B44]/40 transition-colors focus:outline-none" type="button">
+<span class="material-symbols-outlined text-[18px] leading-none select-none">badge</span>
+</button>
+</div>
+</div>
+</header>
+<!-- END: GameHeader -->
+<!-- BEGIN: StoryLog -->
+<main class="flex-1 w-full max-w-xl mx-auto px-5 py-6 space-y-8 overflow-y-auto" data-purpose="story-stream"><!-- Turn 3 Narration & HP Outcome -->
+<article class="space-y-3">
+<div class="font-narrative text-[#EDE6D6]">
+<p>
+      Your words come out sharper than you meant. The stranger does not even turn his head. Two of his servants step between you, and one of them shoves you hard against the doorframe. By the time you steady yourself, the gentleman has gone back inside.
+    </p>
+</div>
+<div class="flex items-center gap-1.5 pt-0.5 text-[#C25953] text-xs font-sans font-medium tracking-wide" data-purpose="hp-loss-indicator">
+<span class="material-symbols-outlined text-[14px] leading-none select-none" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span>−2 HP</span>
+</div>
+</article>
+<!-- Latest Player Action -->
+<div class="border-l-2 border-[#D49B44] pl-3 py-0.5" data-purpose="player-action">
+<span class="font-sans text-xs font-medium text-[#A89F91] uppercase tracking-wider block mb-0.5">YOU</span>
+<p class="font-sans text-[15px] text-[#EDE6D6] leading-relaxed">
+    I challenge him to a duel in the name of my father.
+  </p>
+</div>
+<!-- Sober Inline Error / Retry Alert Card -->
+<div class="bg-[#1D1B17] border border-[#C25953]/50 rounded-lg p-4 space-y-3.5" data-purpose="retry-alert-card">
+<div class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[#C25953] text-[20px] leading-snug shrink-0 select-none">error</span>
+<p class="font-sans text-[14px] text-[#EDE6D6] leading-relaxed">
+      The game master took too long to answer. Try your action again.
+    </p>
+</div>
+<div class="flex items-center gap-2.5 pt-0.5">
+<button class="bg-[#D49B44] text-[#15130F] font-sans font-medium text-xs px-4 py-2 rounded-md hover:bg-[#c48e3a] active:scale-95 transition-all shadow-sm focus:outline-none" type="button">
+      Retry
+    </button>
+<button class="border border-[#2E2A24] bg-transparent text-[#EDE6D6] font-sans font-medium text-xs px-4 py-2 rounded-md hover:bg-[#24221D] hover:border-[#D49B44]/40 active:scale-95 transition-all focus:outline-none" type="button">
+      Edit
+    </button>
+</div>
+</div></main>
+<!-- END: StoryLog -->
+<!-- BEGIN: StoryInputArea -->
+<footer class="sticky bottom-0 z-30 bg-[#15130F] border-t border-[#2E2A24] px-4 py-3 pb-safe" data-purpose="narrative-input-bar">
+<div class="max-w-xl mx-auto">
+<form class="relative flex items-center" data-purpose="action-form" onsubmit="event.preventDefault();">
+<label class="sr-only" for="player-action-input">What do you do?</label>
+<!-- Text Input with warm focus ring -->
+<input autocomplete="off" class="w-full h-12 pl-4 pr-12 rounded-lg bg-[#1D1B17] border border-[#2E2A24] text-[#EDE6D6] placeholder-[#7D7567] text-[15px] font-sans focus:outline-none focus:border-[#D49B44]/60 focus:ring-1 focus:ring-[#D49B44]/40 transition-colors" id="player-action-input" placeholder="What do you do?" type="text"/>
+<!-- Primary Brass Action Button -->
+<button aria-label="Send action" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-md bg-[#D49B44] text-[#15130F] hover:bg-[#c48e3a] active:scale-95 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D49B44]/50" type="submit">
+<span class="material-symbols-outlined text-[20px] font-semibold leading-none select-none">arrow_upward</span>
+</button>
+</form>
+</div>
+</footer>
+<!-- END: StoryInputArea -->
+</body></html>

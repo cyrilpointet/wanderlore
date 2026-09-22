@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wanderlore - Sign In</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'surface': '#15130F',
+            'surface-container': '#1D1B17',
+            'on-surface': '#EDE6D6',
+            'on-surface-variant': '#A8A193',
+            'primary': '#D49B44',
+            'on-primary': '#1A1104',
+            'outline': '#3C3934',
+            'outline-focus': '#D49B44',
+            'error': '#D96B5B',
+          },
+          fontFamily: {
+            serif: ['Literata', 'Georgia', 'serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #15130F;
+      color: #EDE6D6;
+      font-family: 'Inter', sans-serif;
+    }
+    .font-wordmark {
+      font-family: 'Literata', Georgia, serif;
+      font-variant-caps: all-small-caps;
+      letter-spacing: 0.22em;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-surface flex flex-col items-center justify-center px-4 selection:bg-primary/20 selection:text-primary">
+
+  <main class="w-full max-w-[360px] flex flex-col items-center">
+    <!-- Header: Wordmark & Tagline -->
+    <header class="text-center mb-8">
+      <h1 class="font-wordmark text-[26px] font-semibold text-on-surface tracking-[0.22em] uppercase leading-none mb-3">
+        Wanderlore
+      </h1>
+      <p class="font-serif text-[15px] leading-relaxed text-on-surface-variant font-normal">
+        Your solo tabletop adventure, with a game master who never cancels.
+      </p>
+    </header>
+
+    <!-- Sign In Form -->
+    <form class="w-full space-y-4" onsubmit="event.preventDefault();">
+      <!-- Email Field -->
+      <div class="space-y-1.5">
+        <label for="email" class="block text-xs font-medium text-on-surface-variant">
+          Email
+        </label>
+        <input 
+          type="email" 
+          id="email" 
+          name="email" 
+          value="chronicler@wanderlore.io" 
+          autocomplete="email"
+          class="w-full px-3.5 py-2.5 bg-surface-container border border-outline rounded-md text-sm text-on-surface placeholder:text-outline focus:outline-none focus:border-primary transition-colors"
+        />
+      </div>
+
+      <!-- Password Field -->
+      <div class="space-y-1.5">
+        <label for="password" class="block text-xs font-medium text-on-surface-variant">
+          Password
+        </label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          value="wanderlorepass" 
+          autocomplete="current-password"
+          class="w-full px-3.5 py-2.5 bg-surface-container border border-outline rounded-md text-sm text-on-surface placeholder:text-outline focus:outline-none focus:border-primary transition-colors"
+        />
+      </div>
+
+      <!-- Action Button -->
+      <div class="pt-2">
+        <button 
+          type="submit" 
+          class="w-full py-2.5 px-4 bg-primary hover:bg-[#c48d38] active:bg-[#b58030] text-on-primary font-medium text-sm rounded-md transition-colors shadow-none"
+        >
+          Sign in
+        </button>
+      </div>
+
+      <!-- Inline Error Message -->
+      <div class="flex items-center justify-center gap-1.5 text-xs text-error pt-1 font-sans">
+        <span class="material-symbols-outlined text-[15px] leading-none select-none">
+          error
+        </span>
+        <span>Invalid email or password.</span>
+      </div>
+    </form>
+  </main>
+
+</body>
+</html>

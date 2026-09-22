@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>WANDERLORE — d'Artagnan</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-secondary-fixed": "#04210b",
+            "error": "#ffb4ab",
+            "surface-container-low": "#1d1b17",
+            "surface-bright": "#3c3934",
+            "error-container": "#93000a",
+            "on-tertiary-container": "#6c221b",
+            "on-primary-container": "#533500",
+            "surface-variant": "#373430",
+            "on-primary": "#452b00",
+            "on-tertiary-fixed": "#3f0202",
+            "on-secondary-container": "#a0c1a0",
+            "secondary-fixed-dim": "#aecfad",
+            "on-tertiary": "#5d1711",
+            "inverse-primary": "#825500",
+            "secondary-container": "#325036",
+            "primary": "#f9bb61",
+            "surface": "#15130f",
+            "surface-tint": "#f9bb61",
+            "on-secondary": "#1a361f",
+            "on-primary-fixed": "#291800",
+            "tertiary-container": "#f1897b",
+            "surface-container-high": "#2c2a25",
+            "on-background": "#e8e1da",
+            "on-primary-fixed-variant": "#624000",
+            "tertiary-fixed": "#ffdad5",
+            "secondary": "#aecfad",
+            "on-error": "#690005",
+            "tertiary-fixed-dim": "#ffb4a9",
+            "primary-fixed-dim": "#f9bb61",
+            "surface-dim": "#15130f",
+            "outline": "#9d8e7e",
+            "on-tertiary-fixed-variant": "#7b2d25",
+            "on-secondary-fixed-variant": "#304d34",
+            "tertiary": "#ffb4a9",
+            "outline-variant": "#504537",
+            "surface-container": "#221f1b",
+            "surface-container-highest": "#373430",
+            "background": "#15130f",
+            "inverse-on-surface": "#33302b",
+            "secondary-fixed": "#c9ebc8",
+            "surface-container-lowest": "#100e0a",
+            "on-surface": "#e8e1da",
+            "on-surface-variant": "#d4c4b2",
+            "on-error-container": "#ffdad6",
+            "primary-container": "#d49b44",
+            "primary-fixed": "#ffddb2",
+            "inverse-surface": "#e8e1da"
+          },
+          borderRadius: {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          spacing: {
+            "space-md": "1rem",
+            "gutter": "1.5rem",
+            "margin-sm": "1rem",
+            "space-xs": "0.25rem",
+            "space-sm": "0.5rem",
+            "margin": "2rem",
+            "space-xl": "2.5rem",
+            "space-lg": "1.5rem",
+            "gutter-sm": "1rem"
+          },
+          fontFamily: {
+            "headline-sm": ["Literata"],
+            "ui-body": ["Inter"],
+            "headline-xl": ["Literata"],
+            "ui-body-strong": ["Inter"],
+            "prose-narrative-mobile": ["Literata"],
+            "prose-narrative": ["Literata"],
+            "ui-label": ["Inter"],
+            "prose-caption": ["Literata"],
+            "headline-xl-mobile": ["Literata"],
+            "ui-meta": ["Inter"],
+            "headline-lg": ["Literata"],
+            "wordmark": ["Literata"]
+          },
+          fontSize: {
+            "headline-sm": ["20px", { lineHeight: "28px", fontWeight: "500" }],
+            "ui-body": ["15px", { lineHeight: "22px", fontWeight: "400" }],
+            "headline-xl": ["32px", { lineHeight: "40px", letterSpacing: "-0.01em", fontWeight: "500" }],
+            "ui-body-strong": ["15px", { lineHeight: "22px", fontWeight: "600" }],
+            "prose-narrative-mobile": ["16px", { lineHeight: "26px", fontWeight: "400" }],
+            "prose-narrative": ["18px", { lineHeight: "29px", fontWeight: "400" }],
+            "ui-label": ["13px", { lineHeight: "18px", letterSpacing: "0.02em", fontWeight: "500" }],
+            "prose-caption": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+            "headline-xl-mobile": ["26px", { lineHeight: "34px", letterSpacing: "-0.01em", fontWeight: "500" }],
+            "ui-meta": ["11px", { lineHeight: "14px", letterSpacing: "0.05em", fontWeight: "500" }],
+            "headline-lg": ["24px", { lineHeight: "32px", fontWeight: "500" }],
+            "wordmark": ["16px", { lineHeight: "24px", letterSpacing: "0.22em", fontWeight: "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+      font-size: 16px;
+      line-height: 1;
+    }
+    ::selection {
+      background-color: #504537;
+      color: #EDE6D6;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface antialiased selection:bg-surface-variant min-h-screen flex flex-col font-ui-body">
+<!-- Header -->
+<header class="sticky top-0 z-40 w-full bg-surface-container-low border-b border-outline-variant/30 px-6 lg:px-12 py-3 flex items-center justify-between">
+<!-- Left Navigation / Back -->
+<div class="flex items-center gap-6">
+<a class="font-ui-label text-ui-label text-outline hover:text-on-surface transition-colors duration-150 flex items-center gap-1.5 group" href="#">
+<span class="group-hover:-translate-x-0.5 transition-transform duration-150">←</span>
+<span>My games</span>
+</a>
+<div class="h-4 w-[1px] bg-outline-variant/40"></div>
+<div class="flex flex-col">
+<span class="font-wordmark text-sm font-semibold tracking-wide text-on-surface">d'Artagnan</span>
+<span class="font-ui-meta text-ui-meta text-outline">The Three Musketeers · The Road to Paris</span>
+</div>
+</div>
+<!-- Right Header Elements: HP Pill & Account Initials Badge -->
+<div class="flex items-center gap-5">
+<div class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-surface-container border border-outline-variant/30">
+<span class="font-ui-meta text-ui-meta text-outline tracking-wider">HP</span>
+<div class="w-16 h-1.5 rounded-full bg-surface-container-highest overflow-hidden">
+<div class="h-full bg-secondary-fixed-dim rounded-full" style="width: 80%;"></div>
+</div>
+<span class="font-ui-body-strong text-xs text-on-surface tabular-nums">8 / 10</span>
+</div>
+<div class="w-8 h-8 rounded-lg bg-surface-container-high border border-outline-variant/40 flex items-center justify-center font-ui-body-strong text-xs text-primary-fixed-dim tracking-wider select-none">
+        DA
+      </div>
+</div>
+</header>
+<!-- Main Split Canvas -->
+<div class="flex-1 w-full max-w-[1440px] mx-auto flex overflow-hidden">
+<!-- Central Reading Column & Sticky Prompt Tray -->
+<main class="flex-1 min-w-0 flex flex-col relative h-[calc(100vh-57px)]">
+<!-- Narrative Prose Scroll Canvas -->
+<div class="flex-1 overflow-y-auto px-6 lg:px-16 pt-10 pb-36 scroll-smooth">
+<div class="max-w-[70ch] mx-auto flex flex-col gap-10">
+<!-- Turn 1 -->
+<article class="flex flex-col gap-5">
+<div class="flex items-start gap-3 pl-3.5 border-l-2 border-primary-container/80 py-0.5">
+<span class="font-ui-label text-ui-label text-outline select-none pt-0.5">You</span>
+<p class="font-ui-body text-ui-body text-on-surface">I ride into the courtyard of the Jolly Miller inn and look around.</p>
+</div>
+<p class="font-prose-narrative text-prose-narrative text-on-surface leading-[1.65]">
+              The courtyard of the Jolly Miller smells of wet straw and woodsmoke. A few townsmen idle by the well; one of them points at your yellow horse and laughs. Near a window on the ground floor, a gentleman in a dark cloak watches you with open contempt, a thin scar running along his temple.
+            </p>
+</article>
+<!-- Turn 2 -->
+<article class="flex flex-col gap-5">
+<div class="flex items-start gap-3 pl-3.5 border-l-2 border-primary-container/80 py-0.5">
+<span class="font-ui-label text-ui-label text-outline select-none pt-0.5">You</span>
+<p class="font-ui-body text-ui-body text-on-surface">I ask the innkeeper who the gentleman in the dark cloak is.</p>
+</div>
+<!-- Roll Chip (Success) -->
+<div class="flex justify-center my-1">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-surface-container border border-outline-variant/30 text-secondary">
+<span class="material-symbols-outlined text-[15px]" data-icon="casino">casino</span>
+<span class="font-ui-label text-xs tracking-wide">Persuasion · Clear success</span>
+</div>
+</div>
+<p class="font-prose-narrative text-prose-narrative text-on-surface leading-[1.65]">
+              The innkeeper glances toward the courtyard, then leans across the counter and lowers his voice. "A gentleman who pays well and asks no questions, monsieur. He came from Paris this morning and speaks of nobody but a certain milady." Beyond the window, the stranger folds a letter and slides it into his doublet, his scarred face turned your way.
+            </p>
+</article>
+<!-- Turn 3 -->
+<article class="flex flex-col gap-5">
+<div class="flex items-start gap-3 pl-3.5 border-l-2 border-primary-container/80 py-0.5">
+<span class="font-ui-label text-ui-label text-outline select-none pt-0.5">You</span>
+<p class="font-ui-body text-ui-body text-on-surface">I walk up to him and demand that he apologise for laughing at my horse.</p>
+</div>
+<!-- Roll Chip (Failure) -->
+<div class="flex justify-center my-1">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-surface-container border border-outline-variant/30 text-tertiary">
+<span class="material-symbols-outlined text-[15px]" data-icon="casino">casino</span>
+<span class="font-ui-label text-xs tracking-wide">Etiquette · Failure</span>
+</div>
+</div>
+<p class="font-prose-narrative text-prose-narrative text-on-surface leading-[1.65]">
+              Your words come out sharper than you meant. The stranger does not even turn his head. Two of his servants step between you, and one of them shoves you hard against the doorframe. By the time you steady yourself, the gentleman has gone back inside.
+            </p>
+<!-- Effects Line -->
+<div class="flex items-center gap-1.5 pl-1 text-tertiary font-ui-label text-xs">
+<span class="material-symbols-outlined text-[15px]" data-icon="favorite">favorite</span>
+<span>−2 HP</span>
+</div>
+</article>
+</div>
+</div>
+<!-- Persistent Sticky Bottom Narrative Input Dock -->
+<div class="absolute bottom-0 left-0 right-0 bg-surface-container-low border-t border-outline-variant/30 px-6 lg:px-16 py-4">
+<div class="max-w-[70ch] mx-auto">
+<form class="relative flex items-center rounded-lg bg-surface-container border border-outline-variant/50 focus-within:border-primary-container/70 transition-colors duration-150 p-1.5">
+<textarea class="w-full resize-none bg-transparent border-0 py-2 pl-3.5 pr-12 text-on-surface placeholder:text-outline/70 font-ui-body text-ui-body focus:ring-0 focus:outline-none" placeholder="What do you do?" rows="1" style="min-height: 40px; max-height: 120px;"></textarea>
+<button aria-label="Send action" class="absolute right-2 px-3 py-2 rounded-lg bg-primary-container text-on-primary-container hover:bg-primary transition-colors duration-150 flex items-center justify-center font-ui-body-strong focus:outline-none" type="submit">
+<span class="material-symbols-outlined text-[18px] text-background" data-icon="arrow_upward">arrow_upward</span>
+</button>
+</form>
+</div>
+</div>
+</main>
+<!-- Right Sidebar (320px Fixed Read-only Character Ledger) -->
+<aside class="w-[320px] flex-shrink-0 border-l border-outline-variant/30 bg-surface-container-low overflow-y-auto flex flex-col p-6 space-y-6 select-none">
+<!-- Character Identity & Condition -->
+<section class="space-y-3 pb-5 border-b border-outline-variant/20">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">d'Artagnan</h2>
+<!-- Hit Points Gauge -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-baseline font-ui-label text-xs">
+<span class="text-outline">Hit Points</span>
+<span class="text-on-surface font-ui-body-strong tabular-nums">8 / 10</span>
+</div>
+<div class="w-full h-1.5 rounded-full bg-surface-container-highest overflow-hidden">
+<div class="h-full bg-secondary-fixed-dim rounded-full transition-all" style="width: 80%;"></div>
+</div>
+</div>
+</section>
+<!-- Attributes & Skills -->
+<section class="space-y-4 pb-5 border-b border-outline-variant/20">
+<h3 class="font-ui-meta text-ui-meta uppercase text-outline tracking-wider">Attributes &amp; Skills</h3>
+<!-- Physical -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center font-ui-body-strong text-ui-body text-on-surface">
+<span>Physical</span>
+<span class="tabular-nums font-ui-body">3</span>
+</div>
+<div class="pl-3.5 space-y-1 border-l border-outline-variant/30">
+<div class="flex justify-between items-center font-ui-label text-ui-label text-on-surface-variant">
+<span>Swordsmanship</span>
+<span class="tabular-nums">3</span>
+</div>
+<div class="flex justify-between items-center font-ui-label text-ui-label text-on-surface-variant">
+<span>Athletics</span>
+<span class="tabular-nums">1</span>
+</div>
+</div>
+</div>
+<!-- Mental -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center font-ui-body-strong text-ui-body text-on-surface">
+<span>Mental</span>
+<span class="tabular-nums font-ui-body">2</span>
+</div>
+<div class="pl-3.5 space-y-1 border-l border-outline-variant/30">
+<div class="flex justify-between items-center font-ui-label text-ui-label text-on-surface-variant">
+<span>Observation</span>
+<span class="tabular-nums">1</span>
+</div>
+</div>
+</div>
+<!-- Social -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center font-ui-body-strong text-ui-body text-on-surface">
+<span>Social</span>
+<span class="tabular-nums font-ui-body">3</span>
+</div>
+<div class="pl-3.5 space-y-1 border-l border-outline-variant/30">
+<div class="flex justify-between items-center font-ui-label text-ui-label text-on-surface-variant">
+<span>Persuasion</span>
+<span class="tabular-nums">2</span>
+</div>
+<div class="flex justify-between items-center font-ui-label text-ui-label text-on-surface-variant">
+<span>Etiquette</span>
+<span class="tabular-nums">1</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Resources -->
+<section class="space-y-2 pb-5 border-b border-outline-variant/20">
+<h3 class="font-ui-meta text-ui-meta uppercase text-outline tracking-wider">Resources</h3>
+<div class="flex items-center justify-between font-ui-label text-ui-label text-on-surface">
+<span>Purse</span>
+<span class="tabular-nums font-ui-body-strong">15</span>
+</div>
+</section>
+<!-- Situation Block -->
+<section class="space-y-4">
+<h3 class="font-ui-meta text-ui-meta uppercase text-outline tracking-wider">Situation</h3>
+<div class="space-y-1">
+<span class="font-ui-meta text-ui-meta text-outline">Location</span>
+<div class="flex items-center gap-1.5 text-on-surface font-ui-body text-ui-body">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="location_on">location_on</span>
+<span>Meung-sur-Loire</span>
+</div>
+</div>
+<div class="space-y-1">
+<span class="font-ui-meta text-ui-meta text-outline">Quest</span>
+<p class="font-ui-body-strong text-ui-body text-on-surface">Deliver the letter</p>
+<p class="font-prose-caption text-prose-caption text-on-surface-variant leading-relaxed pt-0.5">
+            Carry your father's letter to Monsieur de Tréville.
+          </p>
+</div>
+</section>
+</aside>
+</div>
+</body></html>
