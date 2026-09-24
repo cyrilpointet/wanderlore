@@ -259,6 +259,8 @@ Log complet de chaque tour, table à plus forte volumétrie du système. Indispe
 | `roll_result` | jsonb | détail du jet le cas échéant (compétence, dé, seuil, résultat, modificateurs appliqués avec leur origine) |
 | `narrated_text` | text | sortie de l'étape D |
 | `applied_effects` | jsonb | delta réellement appliqué au state après validation (étape E) |
+| `status` | enum `turn_status` | `pending` / `completed` / `failed` — seul un tour `completed` fait partie de l'histoire |
+| `failure` | jsonb | pour un tour `failed` uniquement : code et message montrés au joueur, étape et règles rejetées pour le diagnostic |
 | `alerts` | jsonb | prompt injection suspectée, hors cadre, etc. |
 | `llm_usage` | jsonb | jetons consommés par appel du tour (entrée, sortie, raisonnement) |
 | `language` | text | langue de la partie pour ce tour |

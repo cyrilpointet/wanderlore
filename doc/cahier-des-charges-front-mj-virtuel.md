@@ -333,10 +333,10 @@ disponible.
 | `POST` | `/auth/login` | Existe, **à passer en cookie de session** | Connexion |
 | `POST` | `/account/logout` | Existe, à adapter | Déconnexion |
 | `GET` | `/account/profile` | Existe | Nom et initiales dans le menu du compte |
-| `GET` | `/sessions` | **À créer** | Liste des parties (5.2) |
-| `GET` | `/sessions/:id` | **À créer** | Partie : personnage, libellés, tour en cours éventuel |
-| `GET` | `/sessions/:id/turns` | **À créer** | Historique des tours aboutis |
-| `GET` | `/sessions/:id/turns/:turn` | **À créer** | État et résultat d'un tour (rattrapage) |
+| `GET` | `/sessions` | Existe (KAN-16) | Liste des parties (5.2) |
+| `GET` | `/sessions/:id` | Existe (KAN-16) | Partie : personnage, libellés, tour en cours éventuel |
+| `GET` | `/sessions/:id/turns` | Existe (KAN-16) | Historique des tours aboutis |
+| `GET` | `/sessions/:id/turns/:turnId` | Existe (KAN-16) | État et résultat d'un tour (rattrapage) |
 | `POST` | `/sessions/:id/turns` | Existe, **à passer en `202` + clé d'idempotence** | Soumission |
 | SSE | canal Transmit de la partie | **À créer** | Progression du tour (architecture, 8bis) |
 
@@ -359,6 +359,10 @@ servis par un seul point d'accès côté backend (`ContentLabels`). Une référe
 fait échouer la réponse plutôt que d'afficher la référence brute. Pour que cela ne puisse
 pas arriver en jeu, les lieux forment une **liste fermée** : un déplacement proposé par le
 LLM hors de cette liste est rejeté par la validation du tour.
+
+**Un tour se désigne par son identifiant**, pas par son numéro : un tour `pending` n'a pas
+forcément encore de numéro (KAN-17). La lecture d'un tour renvoie son `status`, et pour un
+tour `failed` son `failure` (`code`, `message`) — le même message que `turn_failed`.
 
 Exemple indicatif de la vue d'une partie :
 
