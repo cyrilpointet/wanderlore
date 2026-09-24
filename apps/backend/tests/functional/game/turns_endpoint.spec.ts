@@ -1,8 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { test } from '@japa/runner'
 
+import queue from '#services/queue'
+import { PLAY_TURN_QUEUE } from '#services/game/turn_service'
+import type { MemoryQueue } from '#services/queue/drivers/memory_queue'
+
 import { LlmError, type LlmErrorCategory } from '#services/llm/errors'
-import { ConcurrentTurnError } from '#services/game/errors'
+import { ConcurrentTurnError, QueueUnavailableError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
 import { describeTurnFailure } from '#exceptions/turn_failure'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
@@ -72,6 +76,54 @@ test.group('Turns endpoint | authorisation', (group) => {
     response.assertStatus(422)
   })
 
+  test('accepts a turn at once, pending, and queues it', async ({ client, assert }) => {
+    const userId = await createUser()
+    const sessionId = await createSession(userId)
+
+    const response = await client
+      .post(`/api/v1/sessions/${sessionId}/turns`)
+      .json({ playerInput: 'I look around.' })
+      .header('Idempotency-Key', randomUUID())
+      .loginAs(await user(userId))
+      .withCsrfToken()
+
+    response.assertStatus(202)
+    const { id, status } = (response.body() as { data: { id: string; status: string } }).data
+
+    /**
+     * Answered before it is played: the worker never starts in tests, so the
+     * job simply waits in the in-memory queue.
+     */
+    assert.equal(status, 'pending')
+    assert.deepInclude((queue as MemoryQueue).jobs, {
+      queue: PLAY_TURN_QUEUE,
+      payload: { turnId: id },
+    })
+  })
+
+  test('answers a repeated submission with the same turn', async ({ client, assert }) => {
+    const userId = await createUser()
+    const sessionId = await createSession(userId)
+    const key = randomUUID()
+
+    const send = async () =>
+      client
+        .post(`/api/v1/sessions/${sessionId}/turns`)
+        .json({ playerInput: 'I look around.' })
+        .header('Idempotency-Key', key)
+        .loginAs(await user(userId))
+        .withCsrfToken()
+
+    const first = await send()
+    const again = await send()
+
+    again.assertStatus(202)
+    assert.equal(
+      (again.body() as { data: { id: string } }).data.id,
+      (first.body() as { data: { id: string } }).data.id
+    )
+  })
+
   test("hides someone else's session behind a not-found", async ({ client }) => {
     const intruder = await createUser()
     const sessionId = await createSession(await createUser())
@@ -133,6 +185,13 @@ test.group('Turn failures | distinguishable categories', () => {
      * status, so the code is what the client actually tells them apart by.
      */
     assert.equal(new Set(codes.map((failure) => failure?.code)).size, categories.length)
+  })
+
+  test('maps a turn that could not be queued to 503', ({ assert }) => {
+    const failure = describeTurnFailure(new QueueUnavailableError())
+
+    assert.equal(failure?.status, 503)
+    assert.equal(failure?.code, 'turn_queue_unavailable')
   })
 
   test('maps a racing turn to 409 rather than a database error', ({ assert }) => {

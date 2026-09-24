@@ -69,6 +69,7 @@
     "@vinejs/vine": "^4.4.0",
     "luxon": "^3.7.2",
     "pg": "^8.23.0",
+    "pg-boss": "^12.34.0",
     "reflect-metadata": "^0.2.2"
   },
   "hotHook": {

@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { test } from '@japa/runner'
+import { DateTime } from 'luxon'
+import db from '@adonisjs/lucid/services/db'
 
 import TurnLog from '#models/turn_log'
 import Session from '#models/session'
@@ -8,8 +10,10 @@ import WorldState from '#models/world_state'
 import { DiceService } from '#services/dice'
 import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
-import { TurnService } from '#services/game/turn_service'
-import { ConcurrentTurnError } from '#services/game/errors'
+import { PLAY_TURN_QUEUE, TurnService } from '#services/game/turn_service'
+import { MemoryQueue } from '#services/queue/drivers/memory_queue'
+import type { JobQueue } from '#services/queue/types'
+import { ConcurrentTurnError, QueueUnavailableError, StaleTurnError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
 import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
@@ -77,14 +81,24 @@ async function arrangeScene() {
  * Faces are chosen so the roll lands where each spec needs it: 4 + 4 plus a
  * persuasion of 3 is 11 against the medium threshold of 9.
  */
-function buildService(answers: unknown[], faces: number[] = [4, 4]) {
-  const provider = new FakeLlmProvider({ jsonSequence: answers })
+function buildService(
+  answers: unknown[],
+  faces: number[] = [4, 4],
+  queue: JobQueue = new MemoryQueue(),
+  delayMs = 0
+) {
+  const provider = new FakeLlmProvider({ jsonSequence: answers, delayMs })
   const service = new TurnService(
     new LlmGateway(provider, { requestTimeoutMs: 1000 }),
-    new RulesEngine(new DiceService(FakeRandomSource.fromFaces(faces)))
+    new RulesEngine(new DiceService(FakeRandomSource.fromFaces(faces))),
+    queue
   )
 
-  return { provider, service, play: playerOf(service) }
+  return { provider, service, queue, play: playerOf(service) }
+}
+
+function submission(sessionId: string, userId: string, playerInput = 'I look around.') {
+  return { sessionId, userId, playerInput, idempotencyKey: randomUUID() }
 }
 
 test.group('TurnService | a settled turn', (group) => {
@@ -334,70 +348,75 @@ test.group('TurnService | a turn that fails', (group) => {
   })
 })
 
+test.group('TurnService | submission', (group) => {
+  useTransaction(group)
+
+  test('records the turn as pending and queues it, without playing it', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const queue = new MemoryQueue()
+    const { provider, service } = buildService([SETTLED], undefined, queue)
+
+    const { turn } = await service.submit(submission(sessionId, userId))
+
+    assert.equal(turn.status, 'pending')
+    assert.isNull(turn.turnNumber)
+
+    /** The job carries the turn's id and nothing else. */
+    assert.deepEqual(queue.jobs, [{ queue: PLAY_TURN_QUEUE, payload: { turnId: turn.id } }])
+    assert.lengthOf(provider.requests, 0)
+  })
+
+  test('fails the turn at once when it cannot be queued', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { service } = buildService([SETTLED], undefined, new UnreachableQueue())
+
+    const error = await service
+      .submit(submission(sessionId, userId))
+      .then(() => null)
+      .catch((caught) => caught)
+
+    assert.instanceOf(error, QueueUnavailableError)
+
+    /** No job will ever pick it up, so it must not wait as pending. */
+    const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
+    assert.equal(turn.status, 'failed')
+    assert.equal(turn.failure!.code, 'turn_queue_unavailable')
+  })
+})
+
 test.group('TurnService | a repeated submission', (group) => {
   useTransaction(group)
 
-  test('returns the same turn and plays it only once', async ({ assert }) => {
+  test('returns the same turn and queues it only once', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { provider, service } = buildService([SETTLED, SETTLED])
-    const submission = {
-      sessionId,
-      userId,
-      playerInput: 'I look around.',
-      idempotencyKey: randomUUID(),
-    }
+    const queue = new MemoryQueue()
+    const { service } = buildService([SETTLED], undefined, queue)
+    const sent = submission(sessionId, userId)
 
-    const first = await service.submit(submission)
-    const again = await service.submit(submission)
+    const first = await service.submit(sent)
+    const again = await service.submit(sent)
 
     assert.equal(again.turn.id, first.turn.id)
     assert.isFalse(first.replayed)
     assert.isTrue(again.replayed)
 
-    /** The exit criterion: the model was called for one turn, not two. */
-    assert.lengthOf(provider.requests, 1)
+    /** The exit criterion of KAN-17: one turn, one job. */
+    assert.lengthOf(queue.jobs, 1)
     assert.lengthOf(await TurnLog.query().where('sessionId', sessionId), 1)
   })
 
-  test('does not play a turn whose first submission is still pending', async ({ assert }) => {
+  test('hands back a played turn as it stands', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { provider, service } = buildService([SETTLED])
-    const submission = {
-      sessionId,
-      userId,
-      playerInput: 'I look around.',
-      idempotencyKey: randomUUID(),
-    }
+    const queue = new MemoryQueue()
+    const { provider, service } = buildService([SETTLED], undefined, queue)
+    const sent = submission(sessionId, userId)
 
-    /**
-     * Recorded but not yet played, which is where a turn sits for the whole
-     * time the model takes to answer.
-     */
-    const recorded = await service.record(submission)
-    const again = await service.submit(submission)
+    const { turn } = await service.submit(sent)
+    await service.run(turn.id)
+    const again = await service.submit(sent)
 
-    assert.equal(again.turn.id, recorded.turn.id)
-    assert.equal(again.turn.status, 'pending')
-    assert.lengthOf(provider.requests, 0)
-  })
-
-  test('hands back a failed turn rather than playing it again', async ({ assert }) => {
-    const { sessionId, userId } = await arrangeScene()
-    const { provider, service } = buildService([
-      { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
-    ])
-    const submission = {
-      sessionId,
-      userId,
-      playerInput: 'I brew a potion.',
-      idempotencyKey: randomUUID(),
-    }
-
-    await service.submit(submission).catch(() => {})
-    const again = await service.submit(submission)
-
-    /** A retry after a failed turn is a new submission, with a new key. */
-    assert.equal(again.turn.status, 'failed')
+    assert.equal(again.turn.status, 'completed')
+    assert.lengthOf(queue.jobs, 1)
     assert.lengthOf(provider.requests, 1)
   })
 
@@ -405,23 +424,78 @@ test.group('TurnService | a repeated submission', (group) => {
     const { sessionId, userId } = await arrangeScene()
     const other = await arrangeScene()
     const { service } = buildService([SETTLED, SETTLED])
-    const idempotencyKey = randomUUID()
+    const sent = submission(sessionId, userId)
 
-    const first = await service.submit({
-      sessionId,
-      userId,
-      playerInput: 'I look around.',
-      idempotencyKey,
-    })
+    const first = await service.submit(sent)
     const second = await service.submit({
+      ...sent,
       sessionId: other.sessionId,
       userId: other.userId,
-      playerInput: 'I look around.',
-      idempotencyKey,
     })
 
     assert.notEqual(second.turn.id, first.turn.id)
     assert.isFalse(second.replayed)
+  })
+})
+
+test.group('TurnService | turns left pending', (group) => {
+  useTransaction(group)
+
+  test('expires the turns pending since before the cutoff, and those only', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { service, play } = buildService([SETTLED])
+
+    const stale = await service.record(submission(sessionId, userId))
+    await db
+      .from('turn_log')
+      .where('id', stale.turn.id)
+      .update({ created_at: DateTime.now().minus({ minutes: 10 }).toJSDate() })
+    const fresh = await service.record(submission(sessionId, userId))
+    const completed = await play({ sessionId, userId, playerInput: 'I look around.' })
+
+    const expired = await service.expireStale(DateTime.now().minus({ minutes: 5 }))
+
+    assert.deepEqual(expired, [stale.turn.id])
+
+    await stale.turn.refresh()
+    assert.equal(stale.turn.status, 'failed')
+    assert.equal(stale.turn.failure!.code, 'turn_expired')
+
+    await fresh.turn.refresh()
+    assert.equal(fresh.turn.status, 'pending')
+
+    await completed.refresh()
+    assert.equal(completed.status, 'completed')
+  })
+
+  test('drops the outcome of a turn expired while it was being played', async ({ assert }) => {
+    const { sessionId, userId, character } = await arrangeScene()
+    const { provider, service } = buildService([NEEDS_ROLL, NARRATED], undefined, undefined, 50)
+    const { turn } = await service.record(submission(sessionId, userId))
+
+    const playing = service
+      .run(turn.id)
+      .then(() => null)
+      .catch((caught) => caught)
+
+    /** Expired once the model is answering — past every check made at the start. */
+    while (provider.requests.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 5))
+    }
+    await service.expireStale(DateTime.now().plus({ minutes: 1 }))
+
+    assert.instanceOf(await playing, StaleTurnError)
+
+    /**
+     * The player was already told this turn failed. Completing it now would
+     * tell them a second, different story — and apply effects they never saw.
+     */
+    await turn.refresh()
+    assert.equal(turn.status, 'failed')
+    assert.equal(turn.failure!.code, 'turn_expired')
+
+    await character.refresh()
+    assert.equal(character.hitPoints, 10)
   })
 })
 
@@ -484,3 +558,10 @@ test.group('TurnService | two turns racing', (group) => {
     assert.equal(failed[0].failure!.code, 'turn_already_in_progress')
   })
 })
+
+/** A queue that cannot take a job, as when its database is out of reach. */
+class UnreachableQueue extends MemoryQueue {
+  async enqueue(): Promise<void> {
+    throw new Error('connection refused')
+  }
+}

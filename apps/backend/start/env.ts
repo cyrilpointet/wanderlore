@@ -32,7 +32,10 @@ export default await Env.create(new URL('../', import.meta.url), {
   PG_PASSWORD: Env.schema.string(),
   PG_DB_NAME: Env.schema.string(),
 
-  // Redis (consumed by BullMQ from Phase 2 onwards)
+  // Job queue (see config/queue.ts)
+  QUEUE_DRIVER: Env.schema.enum.optional(['pgboss', 'memory'] as const),
+
+  // Redis (consumed by BullMQ once the app runs on several instances)
   REDIS_HOST: Env.schema.string({ format: 'host' }),
   REDIS_PORT: Env.schema.number(),
 

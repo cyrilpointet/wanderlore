@@ -19,6 +19,32 @@ export class ConcurrentTurnError extends Error {
   }
 }
 
+/**
+ * The turn was recorded but could not be put in the queue, so nothing will
+ * ever play it. It is marked failed on the spot rather than left pending.
+ */
+export class QueueUnavailableError extends Error {
+  constructor(options?: ErrorOptions) {
+    super('The turn could not be queued.', options)
+    this.name = 'QueueUnavailableError'
+  }
+}
+
+/**
+ * The turn stopped being pending while it was being played — expired by the
+ * sweep, most likely. Whatever it produced is dropped: its outcome was already
+ * settled, and overwriting it would tell the player two different stories.
+ */
+export class StaleTurnError extends Error {
+  readonly turnId: string
+
+  constructor(turnId: string) {
+    super(`Turn ${turnId} is no longer pending; its outcome is discarded.`)
+    this.name = 'StaleTurnError'
+    this.turnId = turnId
+  }
+}
+
 const PG_UNIQUE_VIOLATION = '23505'
 const TURN_NUMBER_CONSTRAINT = 'turn_log_session_id_turn_number_unique'
 

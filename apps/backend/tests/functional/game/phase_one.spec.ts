@@ -10,6 +10,7 @@ import { LlmError, type LlmErrorCategory } from '#services/llm/errors'
 import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
+import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import { THREE_MUSKETEERS } from '#services/game/world'
 import { ContentLabels, type ContentKind } from '#services/game/content_labels'
 import { FakeLlmProvider, type FakeLlmProviderOptions } from '#tests/helpers/fake_llm_provider'
@@ -62,7 +63,8 @@ function buildService(options: FakeLlmProviderOptions, timeoutMs = 1000) {
 
   const service = new TurnService(
     new LlmGateway(provider, { requestTimeoutMs: timeoutMs }),
-    new RulesEngine(new DiceService(FakeRandomSource.fromFaces([5, 4])))
+    new RulesEngine(new DiceService(FakeRandomSource.fromFaces([5, 4]))),
+    new MemoryQueue()
   )
 
   return { provider, service, play: playerOf(service) }

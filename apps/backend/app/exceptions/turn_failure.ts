@@ -1,5 +1,5 @@
 import { LlmError } from '#services/llm/errors'
-import { ConcurrentTurnError } from '#services/game/errors'
+import { ConcurrentTurnError, QueueUnavailableError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
 
 /**
@@ -61,6 +61,14 @@ export function describeTurnFailure(error: unknown): TurnFailure | null {
        * second turn rather than repeat the first.
        */
       message: 'A turn is already being played for this game. Wait for it to finish.',
+    }
+  }
+
+  if (error instanceof QueueUnavailableError) {
+    return {
+      status: 503,
+      code: 'turn_queue_unavailable',
+      message: 'The game master could not take your action right now. Try again in a moment.',
     }
   }
 

@@ -44,11 +44,14 @@ export default class TurnsController {
   }
 
   /**
-   * Answers with the turn, in the same shape as reading it back. A repeated
-   * submission gets the turn its key already names, as it stands, and nothing
-   * is played twice.
+   * Accepts the turn and answers at once, before it is played: `202` and the
+   * turn, pending, in the same shape as reading it back. How it goes arrives
+   * over SSE, or by reading it back.
+   *
+   * A repeated submission gets the turn its key already names, as it stands,
+   * and nothing is queued twice.
    */
-  async store({ params, request, auth, serialize }: HttpContext) {
+  async store({ params, request, response, auth, serialize }: HttpContext) {
     const { playerInput, headers } = await request.validateUsing(playTurnValidator)
 
     const { turn } = await turns.submit({
@@ -61,6 +64,8 @@ export default class TurnsController {
       playerInput,
       idempotencyKey: headers['idempotency-key'],
     })
+
+    response.status(202)
 
     return serialize(TurnTransformer.transform(turn, labels))
   }

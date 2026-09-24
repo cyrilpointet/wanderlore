@@ -10,10 +10,16 @@ import type WorldState from '#models/world_state'
 import type { LlmGateway } from '#services/llm/gateway'
 import type { LlmCallMetadata } from '#services/llm/types'
 import type { RulesEngine } from '#services/rules/engine'
+import type { JobQueue } from '#services/queue/types'
 import { toNarrationOutcome } from '#services/rules/engine'
 import type { RollResolution } from '#services/rules/types'
 
-import { ConcurrentTurnError, isTurnNumberConflict } from './errors.js'
+import {
+  ConcurrentTurnError,
+  QueueUnavailableError,
+  StaleTurnError,
+  isTurnNumberConflict,
+} from './errors.js'
 import { THREE_MUSKETEERS, locationReferences } from './world.js'
 import {
   ARBITRATION_SCHEMA,
@@ -49,6 +55,23 @@ const RECENT_TURNS = 5
  */
 export const DEFAULT_LANGUAGE: GameLanguage = 'en'
 
+/** The queue turns are played from, one job per turn. */
+export const PLAY_TURN_QUEUE = 'play-turn'
+
+/** The job carries the turn's id and nothing else: all state is read from the database. */
+export type PlayTurnJob = {
+  turnId: string
+}
+
+/**
+ * What a turn left pending too long is marked with. Its message is the one the
+ * player reads back.
+ */
+const EXPIRED: StoredFailure = {
+  code: 'turn_expired',
+  message: 'The game master never finished this turn. Try your action again.',
+}
+
 export type TurnSubmission = {
   sessionId: string
   /**
@@ -78,24 +101,28 @@ export type SubmittedTurn = {
 /**
  * One turn, end to end.
  *
- * Split in two on purpose: `record` answers the submission, `run` plays it. The
- * job queue (KAN-18) will slot in between; until then `submit` chains them in
- * the same request. Regenerating the narrative summary is Phase 7.
+ * Split in two on purpose: `submit` records the turn and queues it, answering
+ * the player at once; `run` plays it, in a job. Regenerating the narrative
+ * summary is Phase 7.
  */
 export class TurnService {
   #llm: LlmGateway
   #rules: RulesEngine
+  #queue: JobQueue
 
-  constructor(llm: LlmGateway, rules: RulesEngine) {
+  constructor(llm: LlmGateway, rules: RulesEngine, queue: JobQueue) {
     this.#llm = llm
     this.#rules = rules
+    this.#queue = queue
   }
 
   /**
-   * Records the submission and plays it — unless its key is already known, in
-   * which case the existing turn is returned and the model is not called.
+   * Records the submission and queues it — unless its key is already known, in
+   * which case the existing turn is returned and nothing is queued again.
    *
-   * A pipeline failure is re-thrown, after the turn has been marked failed.
+   * Enqueued after the turn is written, never in the same transaction: BullMQ
+   * could not take part in one. A turn that cannot be queued is marked failed
+   * at once, since no job will ever pick it up.
    */
   async submit(submission: TurnSubmission): Promise<SubmittedTurn> {
     const recorded = await this.record(submission)
@@ -104,7 +131,35 @@ export class TurnService {
       return recorded
     }
 
-    return { turn: await this.run(recorded.turn.id), replayed: false }
+    try {
+      await this.#queue.enqueue<PlayTurnJob>(PLAY_TURN_QUEUE, { turnId: recorded.turn.id })
+    } catch (cause) {
+      const error = new QueueUnavailableError({ cause })
+
+      await markFailed(recorded.turn.id, emptyTrace(), error)
+
+      throw error
+    }
+
+    return recorded
+  }
+
+  /**
+   * Fails every turn still pending since before `cutoff`: its process died
+   * mid-turn, or its job was lost. Left alone, it would keep the game screen
+   * waiting on a turn nothing will ever finish.
+   *
+   * Returns the ids it expired.
+   */
+  async expireStale(cutoff: DateTime): Promise<string[]> {
+    const rows: { id: string }[] = await db
+      .from('turn_log')
+      .where('status', 'pending')
+      .where('created_at', '<', cutoff.toJSDate())
+      .update({ status: 'failed', failure: EXPIRED })
+      .returning('id')
+
+    return rows.map((row) => row.id)
   }
 
   /**
@@ -166,12 +221,7 @@ export class TurnService {
      * Filled as the pipeline progresses, so a turn that dies halfway still
      * leaves behind everything it had managed to produce.
      */
-    const trace: TurnTrace = {
-      arbitration: null,
-      roll: null,
-      narration: null,
-      usage: [],
-    }
+    const trace = emptyTrace()
 
     try {
       const effects = await this.#runPipeline(turn, scene, trace)
@@ -307,6 +357,20 @@ export class TurnService {
 
     try {
       await db.transaction(async (trx) => {
+        /**
+         * Locked and re-read: the sweep may have expired this turn while the
+         * model was answering. Its outcome is then settled, and must not be
+         * overwritten — nor its effects applied.
+         */
+        const current = await TurnLog.query({ client: trx })
+          .where('id', turn.id)
+          .forUpdate()
+          .firstOrFail()
+
+        if (current.status !== 'pending') {
+          throw new StaleTurnError(turn.id)
+        }
+
         const applied = await applyEffects(scene, effects, trx)
 
         scene.session.lastActivityAt = DateTime.now()
@@ -450,6 +514,11 @@ async function applyEffects(
 async function markFailed(turnId: string, trace: TurnTrace, error: unknown): Promise<void> {
   const turn = await TurnLog.findOrFail(turnId)
 
+  /** Already settled — by the sweep, most likely. The first outcome stands. */
+  if (turn.status !== 'pending') {
+    return
+  }
+
   turn.merge({
     ...traceColumns(trace),
     status: 'failed',
@@ -460,6 +529,10 @@ async function markFailed(turnId: string, trace: TurnTrace, error: unknown): Pro
   })
 
   await turn.save()
+}
+
+function emptyTrace(): TurnTrace {
+  return { arbitration: null, roll: null, narration: null, usage: [] }
 }
 
 function traceColumns(trace: TurnTrace) {
