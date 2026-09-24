@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { test } from '@japa/runner'
 
 import TurnLog from '#models/turn_log'
@@ -13,6 +14,7 @@ import { TurnValidationError } from '#services/game/turn_validator'
 import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
+import { playerOf } from '#tests/helpers/turns'
 
 /**
  * The pipeline end to end, with the model and the dice replaced. No network
@@ -82,7 +84,7 @@ function buildService(answers: unknown[], faces: number[] = [4, 4]) {
     new RulesEngine(new DiceService(FakeRandomSource.fromFaces(faces)))
   )
 
-  return { provider, service }
+  return { provider, service, play: playerOf(service) }
 }
 
 test.group('TurnService | a settled turn', (group) => {
@@ -90,13 +92,13 @@ test.group('TurnService | a settled turn', (group) => {
 
   test('resolves in a single call and applies its effects', async ({ assert }) => {
     const { sessionId, userId, worldState } = await arrangeScene()
-    const { provider, service } = buildService([SETTLED])
+    const { provider, play } = buildService([SETTLED])
 
-    const result = await service.play({ sessionId, userId, playerInput: 'I look around.' })
+    const result = await play({ sessionId, userId, playerInput: 'I look around.' })
 
     assert.lengthOf(provider.requests, 1)
     assert.equal(result.turnNumber, 1)
-    assert.isNull(result.roll)
+    assert.isNull(result.rollResult)
 
     await worldState.refresh()
     assert.deepEqual(worldState.narrativeFlags, { stable_boy_seen: true })
@@ -105,9 +107,9 @@ test.group('TurnService | a settled turn', (group) => {
 
   test('logs the turn with its language and token usage', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { service } = buildService([SETTLED])
+    const { play } = buildService([SETTLED])
 
-    await service.play({ sessionId, userId, playerInput: 'I look around.' })
+    await play({ sessionId, userId, playerInput: 'I look around.' })
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
 
@@ -120,8 +122,8 @@ test.group('TurnService | a settled turn', (group) => {
   test('numbers turns in sequence', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
 
-    await buildService([SETTLED]).service.play({ sessionId, userId, playerInput: 'I look around.' })
-    const second = await buildService([SETTLED]).service.play({
+    await buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I look around.' })
+    const second = await buildService([SETTLED]).play({
       sessionId,
       userId,
       playerInput: 'I look again.',
@@ -136,24 +138,25 @@ test.group('TurnService | a turn with a roll', (group) => {
 
   test('calls the model twice and resolves the roll in between', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { provider, service } = buildService([NEEDS_ROLL, NARRATED])
+    const { provider, play } = buildService([NEEDS_ROLL, NARRATED])
 
-    const result = await service.play({
+    const result = await play({
       sessionId,
       userId,
       playerInput: 'I ask him to let me pass.',
     })
 
     assert.lengthOf(provider.requests, 2)
-    assert.equal(result.narration, NARRATED.narration)
-    assert.deepEqual(result.roll, { skill: 'persuasion', result: 'success', margin: 'comfortable' })
+    assert.equal(result.narratedText, NARRATED.narration)
+    assert.equal(result.rollResult!.result, 'success')
+    assert.equal(result.rollResult!.marginLabel, 'comfortable')
   })
 
   test('never sends the mechanics to the narrator', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { provider, service } = buildService([NEEDS_ROLL, NARRATED])
+    const { provider, play } = buildService([NEEDS_ROLL, NARRATED])
 
-    await service.play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
+    await play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
 
     /**
      * The invariant the whole two-call split exists to protect, asserted on
@@ -167,7 +170,7 @@ test.group('TurnService | a turn with a roll', (group) => {
   test('logs both calls and the dice that were rolled', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
 
-    await buildService([NEEDS_ROLL, NARRATED]).service.play({
+    await buildService([NEEDS_ROLL, NARRATED]).play({
       sessionId,
       userId,
       playerInput: 'I ask him to let me pass.',
@@ -186,7 +189,7 @@ test.group('TurnService | a turn with a roll', (group) => {
   test('applies the hit point loss the narration described', async ({ assert }) => {
     const { sessionId, userId, character } = await arrangeScene()
 
-    await buildService([NEEDS_ROLL, NARRATED]).service.play({
+    await buildService([NEEDS_ROLL, NARRATED]).play({
       sessionId,
       userId,
       playerInput: 'I ask him to let me pass.',
@@ -200,7 +203,7 @@ test.group('TurnService | a turn with a roll', (group) => {
     const { sessionId, userId } = await arrangeScene()
     const { lastActivityAt: before } = await Session.findOrFail(sessionId)
 
-    await buildService([SETTLED]).service.play({ sessionId, userId, playerInput: 'I look around.' })
+    await buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I look around.' })
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
     assert.equal(turn.status, 'completed')
@@ -219,13 +222,13 @@ test.group('TurnService | a turn with a roll', (group) => {
     const result = await buildService([
       NEEDS_ROLL,
       { ...NARRATED, effects: { movement: null, scenario_flags: [], hit_points_delta: -3 } },
-    ]).service.play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
+    ]).play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
 
     /**
      * Hit points stop at zero, so the player lost one, not three — and that is
      * what the journal must say.
      */
-    assert.equal(result.effects.hit_points_delta, -1)
+    assert.equal(result.appliedEffects!.hit_points_delta, -1)
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
     assert.equal(turn.appliedEffects!.hit_points_delta, -1)
@@ -234,14 +237,14 @@ test.group('TurnService | a turn with a roll', (group) => {
   test('records no movement to where the character already stands', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
 
-    await buildService([SETTLED]).service.play({ sessionId, userId, playerInput: 'I look around.' })
-    const second = await buildService([SETTLED]).service.play({
+    await buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I look around.' })
+    const second = await buildService([SETTLED]).play({
       sessionId,
       userId,
       playerInput: 'I look around again.',
     })
 
-    assert.isNull(second.effects.movement)
+    assert.isNull(second.appliedEffects!.movement)
   })
 })
 
@@ -250,12 +253,11 @@ test.group('TurnService | a turn that fails', (group) => {
 
   test('rejects a skill the character does not have', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { service } = buildService([
+    const { play } = buildService([
       { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
     ])
 
-    const error = await service
-      .play({ sessionId, userId, playerInput: 'I brew a potion.' })
+    const error = await play({ sessionId, userId, playerInput: 'I brew a potion.' })
       .then(() => null)
       .catch((caught) => caught)
 
@@ -264,11 +266,11 @@ test.group('TurnService | a turn that fails', (group) => {
 
   test('still logs the turn it could not finish', async ({ assert }) => {
     const { sessionId, userId, worldState } = await arrangeScene()
-    const { service } = buildService([
+    const { play } = buildService([
       { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
     ])
 
-    await service.play({ sessionId, userId, playerInput: 'I brew a potion.' }).catch(() => {})
+    await play({ sessionId, userId, playerInput: 'I brew a potion.' }).catch(() => {})
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
 
@@ -287,11 +289,11 @@ test.group('TurnService | a turn that fails', (group) => {
 
   test('records why it failed, as the player was told', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { service } = buildService([
+    const { play } = buildService([
       { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
     ])
 
-    await service.play({ sessionId, userId, playerInput: 'I brew a potion.' }).catch(() => {})
+    await play({ sessionId, userId, playerInput: 'I brew a potion.' }).catch(() => {})
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
 
@@ -307,30 +309,119 @@ test.group('TurnService | a turn that fails', (group) => {
     await buildService([
       { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
     ])
-      .service.play({ sessionId, userId, playerInput: 'I brew a potion.' })
+      .play({ sessionId, userId, playerInput: 'I brew a potion.' })
       .catch(() => {})
 
     const next = buildService([SETTLED])
-    const result = await next.service.play({ sessionId, userId, playerInput: 'I look around.' })
+    const result = await next.play({ sessionId, userId, playerInput: 'I look around.' })
 
     /**
-     * The failed turn is not part of the story, so the model never hears of it
-     * — but it still holds its number.
+     * The failed turn is not part of the story: the model never hears of it,
+     * and it takes no place in the numbering.
      */
     assert.notInclude(next.provider.requests[0].userMessage, 'I brew a potion.')
-    assert.equal(result.turnNumber, 2)
+    assert.equal(result.turnNumber, 1)
   })
 
   test('leaves the state untouched when the narration call fails', async ({ assert }) => {
     const { sessionId, userId, character } = await arrangeScene()
-    const { service } = buildService([NEEDS_ROLL, { narration: '', effects: NARRATED.effects }])
+    const { play } = buildService([NEEDS_ROLL, { narration: '', effects: NARRATED.effects }])
 
-    await service
-      .play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
-      .catch(() => {})
+    await play({ sessionId, userId, playerInput: 'I ask him to let me pass.' }).catch(() => {})
 
     await character.refresh()
     assert.equal(character.hitPoints, 10)
+  })
+})
+
+test.group('TurnService | a repeated submission', (group) => {
+  useTransaction(group)
+
+  test('returns the same turn and plays it only once', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { provider, service } = buildService([SETTLED, SETTLED])
+    const submission = {
+      sessionId,
+      userId,
+      playerInput: 'I look around.',
+      idempotencyKey: randomUUID(),
+    }
+
+    const first = await service.submit(submission)
+    const again = await service.submit(submission)
+
+    assert.equal(again.turn.id, first.turn.id)
+    assert.isFalse(first.replayed)
+    assert.isTrue(again.replayed)
+
+    /** The exit criterion: the model was called for one turn, not two. */
+    assert.lengthOf(provider.requests, 1)
+    assert.lengthOf(await TurnLog.query().where('sessionId', sessionId), 1)
+  })
+
+  test('does not play a turn whose first submission is still pending', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { provider, service } = buildService([SETTLED])
+    const submission = {
+      sessionId,
+      userId,
+      playerInput: 'I look around.',
+      idempotencyKey: randomUUID(),
+    }
+
+    /**
+     * Recorded but not yet played, which is where a turn sits for the whole
+     * time the model takes to answer.
+     */
+    const recorded = await service.record(submission)
+    const again = await service.submit(submission)
+
+    assert.equal(again.turn.id, recorded.turn.id)
+    assert.equal(again.turn.status, 'pending')
+    assert.lengthOf(provider.requests, 0)
+  })
+
+  test('hands back a failed turn rather than playing it again', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { provider, service } = buildService([
+      { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
+    ])
+    const submission = {
+      sessionId,
+      userId,
+      playerInput: 'I brew a potion.',
+      idempotencyKey: randomUUID(),
+    }
+
+    await service.submit(submission).catch(() => {})
+    const again = await service.submit(submission)
+
+    /** A retry after a failed turn is a new submission, with a new key. */
+    assert.equal(again.turn.status, 'failed')
+    assert.lengthOf(provider.requests, 1)
+  })
+
+  test('scopes a key to its game', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const other = await arrangeScene()
+    const { service } = buildService([SETTLED, SETTLED])
+    const idempotencyKey = randomUUID()
+
+    const first = await service.submit({
+      sessionId,
+      userId,
+      playerInput: 'I look around.',
+      idempotencyKey,
+    })
+    const second = await service.submit({
+      sessionId: other.sessionId,
+      userId: other.userId,
+      playerInput: 'I look around.',
+      idempotencyKey,
+    })
+
+    assert.notEqual(second.turn.id, first.turn.id)
+    assert.isFalse(second.replayed)
   })
 })
 
@@ -347,12 +438,12 @@ test.group('TurnService | two turns racing', (group) => {
      * waiting on the model.
      */
     const [first, second] = await Promise.allSettled([
-      buildService([SETTLED]).service.play({
+      buildService([SETTLED]).play({
         sessionId,
         userId,
         playerInput: 'I look around.',
       }),
-      buildService([SETTLED]).service.play({
+      buildService([SETTLED]).play({
         sessionId,
         userId,
         playerInput: 'I look around.',
@@ -369,20 +460,27 @@ test.group('TurnService | two turns racing', (group) => {
     assert.instanceOf((rejected as PromiseRejectedResult).reason, ConcurrentTurnError)
   })
 
-  test('leaves the losing turn no trace and the winner intact', async ({ assert }) => {
+  test('logs the losing turn as failed and leaves the winner intact', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
 
     await Promise.allSettled([
-      buildService([SETTLED]).service.play({ sessionId, userId, playerInput: 'I look around.' }),
-      buildService([SETTLED]).service.play({ sessionId, userId, playerInput: 'I look around.' }),
+      buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I look around.' }),
+      buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I look around.' }),
     ])
 
+    const turns = await TurnLog.query().where('sessionId', sessionId).orderBy('status')
+    const completed = turns.filter((turn) => turn.status === 'completed')
+    const failed = turns.filter((turn) => turn.status === 'failed')
+
+    assert.lengthOf(completed, 1)
+    assert.equal(completed[0].turnNumber, 1)
+
     /**
-     * The loser writes no failure log either: that turn number belongs to the
-     * request that won.
+     * The loser was recorded at submission, so it stays in the log — failed,
+     * with no number: that place in the story belongs to the winner.
      */
-    const turns = await TurnLog.query().where('sessionId', sessionId)
-    assert.lengthOf(turns, 1)
-    assert.equal(turns[0].turnNumber, 1)
+    assert.lengthOf(failed, 1)
+    assert.isNull(failed[0].turnNumber)
+    assert.equal(failed[0].failure!.code, 'turn_already_in_progress')
   })
 })

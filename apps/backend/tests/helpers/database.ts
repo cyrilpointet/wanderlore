@@ -139,7 +139,7 @@ export async function createWorldState(sessionId: string): Promise<string> {
 
 export async function createTurn(
   sessionId: string,
-  turnNumber = 1,
+  turnNumber: number | null = 1,
   overrides: Partial<{ status: string; failure: Record<string, unknown> | null }> = {}
 ): Promise<string> {
   const [row] = await db

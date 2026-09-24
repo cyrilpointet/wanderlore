@@ -27,9 +27,12 @@ GET {{api}}/api/v1/sessions
 ### Tour de jeu
 @sid = 1a8ccf4d-7d06-4b22-a463-b9ab8c7bef2c
 
+# Une clé neuve par soumission. La figer pour rejouer la même requête : le
+# backend renvoie alors le tour déjà enregistré, sans rappeler le LLM.
 POST {{api}}/api/v1/sessions/{{sid}}/turns
 Content-Type: application/json
 X-CSRF-TOKEN: {{csrfToken}}
+Idempotency-Key: {{$guid}}
 
 { "playerInput": "I look around me" }
 

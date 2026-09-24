@@ -15,6 +15,7 @@ import { ContentLabels, type ContentKind } from '#services/game/content_labels'
 import { FakeLlmProvider, type FakeLlmProviderOptions } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { useTransaction } from '#tests/helpers/database'
+import { playerOf } from '#tests/helpers/turns'
 import TestUserSeeder from '#database/seeders/test_user_seeder'
 import DemoSessionSeeder from '#database/seeders/demo_session_seeder'
 
@@ -59,13 +60,12 @@ async function seedGame(): Promise<{ userId: string; sessionId: string }> {
 function buildService(options: FakeLlmProviderOptions, timeoutMs = 1000) {
   const provider = new FakeLlmProvider(options)
 
-  return {
-    provider,
-    service: new TurnService(
-      new LlmGateway(provider, { requestTimeoutMs: timeoutMs }),
-      new RulesEngine(new DiceService(FakeRandomSource.fromFaces([5, 4])))
-    ),
-  }
+  const service = new TurnService(
+    new LlmGateway(provider, { requestTimeoutMs: timeoutMs }),
+    new RulesEngine(new DiceService(FakeRandomSource.fromFaces([5, 4])))
+  )
+
+  return { provider, service, play: playerOf(service) }
 }
 
 test.group('Phase 1 | the seeded game is playable', (group) => {
@@ -119,15 +119,15 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
 
   test('a full turn updates the world and logs what it cost', async ({ assert }) => {
     const { userId, sessionId } = await seedGame()
-    const { service } = buildService({ jsonSequence: [ARBITRATION_WITH_ROLL, NARRATION] })
+    const { play } = buildService({ jsonSequence: [ARBITRATION_WITH_ROLL, NARRATION] })
 
-    const result = await service.play({
+    const result = await play({
       sessionId,
       userId,
       playerInput: 'I present my father’s letter to Monsieur de Tréville.',
     })
 
-    assert.equal(result.narration, NARRATION.narration)
+    assert.equal(result.narratedText, NARRATION.narration)
 
     const world = await WorldState.query().where('sessionId', sessionId).firstOrFail()
     assert.propertyVal(world.narrativeFlags, 'letter_delivered', true)
@@ -143,14 +143,14 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
   test('the recent buffer carries the previous turn into the next one', async ({ assert }) => {
     const { userId, sessionId } = await seedGame()
 
-    await buildService({ jsonSequence: [ARBITRATION_WITH_ROLL, NARRATION] }).service.play({
+    await buildService({ jsonSequence: [ARBITRATION_WITH_ROLL, NARRATION] }).play({
       sessionId,
       userId,
       playerInput: 'I present the letter.',
     })
 
     const next = buildService({ jsonSequence: [ARBITRATION_WITH_ROLL, NARRATION] })
-    await next.service.play({ sessionId, userId, playerInput: 'I ask about my father.' })
+    await next.play({ sessionId, userId, playerInput: 'I ask about my father.' })
 
     /**
      * Without it the game master would forget the previous exchange, which is
@@ -173,10 +173,9 @@ test.group('Phase 1 | every failure is differentiated', (group) => {
   for (const [category, options] of cases) {
     test(`surfaces ${category} without applying anything`, async ({ assert }) => {
       const { userId, sessionId } = await seedGame()
-      const { service } = buildService(options)
+      const { play } = buildService(options)
 
-      const error = await service
-        .play({ sessionId, userId, playerInput: 'I present the letter.' })
+      const error = await play({ sessionId, userId, playerInput: 'I present the letter.' })
         .then(() => null)
         .catch((caught) => caught)
 
@@ -190,10 +189,9 @@ test.group('Phase 1 | every failure is differentiated', (group) => {
 
   test('surfaces a timeout when the model runs past the deadline', async ({ assert }) => {
     const { userId, sessionId } = await seedGame()
-    const { service } = buildService({ delayMs: 200, json: ARBITRATION_WITH_ROLL }, 20)
+    const { play } = buildService({ delayMs: 200, json: ARBITRATION_WITH_ROLL }, 20)
 
-    const error = await service
-      .play({ sessionId, userId, playerInput: 'I present the letter.' })
+    const error = await play({ sessionId, userId, playerInput: 'I present the letter.' })
       .then(() => null)
       .catch((caught) => caught)
 
@@ -203,9 +201,9 @@ test.group('Phase 1 | every failure is differentiated', (group) => {
 
   test('logs a failed turn so it can be debugged', async ({ assert }) => {
     const { userId, sessionId } = await seedGame()
-    const { service } = buildService({ raw: 'not json at all' })
+    const { play } = buildService({ raw: 'not json at all' })
 
-    await service.play({ sessionId, userId, playerInput: 'I present the letter.' }).catch(() => {})
+    await play({ sessionId, userId, playerInput: 'I present the letter.' }).catch(() => {})
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
 

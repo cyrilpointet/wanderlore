@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { test } from '@japa/runner'
 
 import { LlmError, type LlmErrorCategory } from '#services/llm/errors'
@@ -33,6 +34,38 @@ test.group('Turns endpoint | authorisation', (group) => {
     const response = await client
       .post(`/api/v1/sessions/${sessionId}/turns`)
       .json({ playerInput: '   ' })
+      .header('Idempotency-Key', randomUUID())
+      .loginAs(await user(userId))
+      .withCsrfToken()
+
+    response.assertStatus(422)
+  })
+
+  test('rejects a submission without an idempotency key', async ({ client }) => {
+    const userId = await createUser()
+    const sessionId = await createSession(userId)
+
+    const response = await client
+      .post(`/api/v1/sessions/${sessionId}/turns`)
+      .json({ playerInput: 'I look around.' })
+      .loginAs(await user(userId))
+      .withCsrfToken()
+
+    /**
+     * Without a key a submission cannot be told apart from its own
+     * repetition, which is the double turn the key exists to prevent.
+     */
+    response.assertStatus(422)
+  })
+
+  test('rejects an idempotency key that is not a uuid', async ({ client }) => {
+    const userId = await createUser()
+    const sessionId = await createSession(userId)
+
+    const response = await client
+      .post(`/api/v1/sessions/${sessionId}/turns`)
+      .json({ playerInput: 'I look around.' })
+      .header('Idempotency-Key', 'click-1')
       .loginAs(await user(userId))
       .withCsrfToken()
 
@@ -46,6 +79,7 @@ test.group('Turns endpoint | authorisation', (group) => {
     const response = await client
       .post(`/api/v1/sessions/${sessionId}/turns`)
       .json({ playerInput: 'I look around.' })
+      .header('Idempotency-Key', randomUUID())
       .loginAs(await user(intruder))
       .withCsrfToken()
 

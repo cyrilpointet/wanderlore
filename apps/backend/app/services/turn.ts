@@ -21,4 +21,4 @@ const turns = new TurnService(llm, rules)
 export default turns
 
 export { DEFAULT_LANGUAGE, TurnService } from './game/turn_service.js'
-export type { TurnRequest, TurnResult } from './game/turn_service.js'
+export type { SubmittedTurn, TurnSubmission } from './game/turn_service.js'

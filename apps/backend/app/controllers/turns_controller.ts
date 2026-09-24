@@ -5,7 +5,6 @@ import { ContentLabels } from '#services/game/content_labels'
 import { THREE_MUSKETEERS } from '#services/game/world'
 import { playTurnValidator } from '#validators/turn'
 import TurnTransformer from '#transformers/turn_transformer'
-import TurnResultTransformer from '#transformers/turn_result_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 
 /** One world until Phase 5, where the session names its own. */
@@ -44,10 +43,15 @@ export default class TurnsController {
     return serialize(TurnTransformer.transform(turn, labels))
   }
 
+  /**
+   * Answers with the turn, in the same shape as reading it back. A repeated
+   * submission gets the turn its key already names, as it stands, and nothing
+   * is played twice.
+   */
   async store({ params, request, auth, serialize }: HttpContext) {
-    const { playerInput } = await request.validateUsing(playTurnValidator)
+    const { playerInput, headers } = await request.validateUsing(playTurnValidator)
 
-    const result = await turns.play({
+    const { turn } = await turns.submit({
       sessionId: params.id,
       /**
        * The session is looked up scoped to its owner, so someone else's session
@@ -55,9 +59,10 @@ export default class TurnsController {
        */
       userId: auth.getUserOrFail().id,
       playerInput,
+      idempotencyKey: headers['idempotency-key'],
     })
 
-    return serialize(TurnResultTransformer.transform(result, labels))
+    return serialize(TurnTransformer.transform(turn, labels))
   }
 }
 

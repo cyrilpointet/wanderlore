@@ -77,7 +77,7 @@ export class SessionSchema extends BaseModel {
 }
 
 export class TurnLogSchema extends BaseModel {
-  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'failure', 'id', 'language', 'llmUsage', 'narratedText', 'playerInput', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
+  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'failure', 'id', 'idempotencyKey', 'language', 'llmUsage', 'narratedText', 'playerInput', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
   $columns = TurnLogSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare alerts: Record<string, unknown>[] | null
@@ -91,6 +91,8 @@ export class TurnLogSchema extends BaseModel {
   declare failure: Record<string, unknown> | null
   @column({ isPrimary: true })
   declare id: string
+  @column()
+  declare idempotencyKey: string | null
   @column()
   declare language: string
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
@@ -106,7 +108,7 @@ export class TurnLogSchema extends BaseModel {
   @column()
   declare status: 'pending' | 'completed' | 'failed'
   @column()
-  declare turnNumber: number
+  declare turnNumber: number | null
 }
 
 export class UserSchema extends BaseModel {

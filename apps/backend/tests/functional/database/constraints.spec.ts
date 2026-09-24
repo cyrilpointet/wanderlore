@@ -58,7 +58,7 @@ test.group('Schema constraints', (group) => {
   test('a failed turn cannot be logged without saying why', async ({ assert }) => {
     const sessionId = await createSession(await createUser())
 
-    const error = await expectDbError(() => createTurn(sessionId, 1, { status: 'failed' }))
+    const error = await expectDbError(() => createTurn(sessionId, null, { status: 'failed' }))
 
     /**
      * Reading the turn back after a lost SSE stream is the only way the player
@@ -75,6 +75,22 @@ test.group('Schema constraints', (group) => {
     )
 
     assert.equal(error.code, PG_CHECK_VIOLATION)
+  })
+
+  test('only a completed turn holds a place in the story', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+
+    const pendingWithNumber = await expectDbError(() =>
+      createTurn(sessionId, 1, { status: 'pending' })
+    )
+    const completedWithout = await expectDbError(() => createTurn(sessionId, null))
+
+    /**
+     * The number is earned by completing: a pending turn holding one could
+     * collide with the turn that completes before it.
+     */
+    assert.equal(pendingWithNumber.code, PG_CHECK_VIOLATION)
+    assert.equal(completedWithout.code, PG_CHECK_VIOLATION)
   })
 
   test('two accounts cannot share an email', async ({ assert }) => {

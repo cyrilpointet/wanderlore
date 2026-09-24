@@ -80,10 +80,11 @@ function completedTurn(sessionId: string, turnNumber: number) {
   })
 }
 
-function failedTurn(sessionId: string, turnNumber: number) {
+/** A failed turn never takes a place in the story, so it holds no number. */
+function failedTurn(sessionId: string) {
   return TurnLog.create({
     sessionId,
-    turnNumber,
+    turnNumber: null,
     status: 'failed',
     playerInput: 'I brew a potion.',
     language: 'en',
@@ -214,8 +215,8 @@ test.group('GET /sessions/:id/turns', (group) => {
   test('returns completed turns only, oldest first', async ({ client, assert }) => {
     const player = await User.findOrFail(await createUser())
     const session = await arrangeGame(player.id)
-    await completedTurn(session.id, 3)
-    await failedTurn(session.id, 2)
+    await completedTurn(session.id, 2)
+    await failedTurn(session.id)
     await completedTurn(session.id, 1)
 
     const response = await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player)
@@ -225,7 +226,7 @@ test.group('GET /sessions/:id/turns', (group) => {
     /** A failed turn is logged, but it is not part of the story. */
     assert.deepEqual(
       dataOf(response).map((turn: { turnNumber: number }) => turn.turnNumber),
-      [1, 3]
+      [1, 2]
     )
   })
 
@@ -283,7 +284,7 @@ test.group('GET /sessions/:id/turns/:turnId', (group) => {
   test('reads a failed turn back with what the player was told', async ({ client, assert }) => {
     const player = await User.findOrFail(await createUser())
     const session = await arrangeGame(player.id)
-    const turn = await failedTurn(session.id, 1)
+    const turn = await failedTurn(session.id)
 
     const response = await client
       .get(`/api/v1/sessions/${session.id}/turns/${turn.id}`)
