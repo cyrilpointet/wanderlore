@@ -38,8 +38,8 @@ Ces principes découlent des invariants du projet. Ils s'appliquent à toutes le
 
 2. **Deux sources de libellés, jamais confondues.**
    - Les **enums fermés du système** (`result`, `margin`, `step`, `status`, codes d'erreur)
-     sont traduits en texte par le front, via une table de libellés centralisée. Ils sont
-     finis et connus à la compilation.
+     sont traduits en texte par le front, via les fichiers de traduction de l'i18n (voir
+     section 7). Ils sont finis et connus à la compilation.
    - Les **références de contenu** (compétences, attributs, lieux, quêtes, chapitres, puis
      objets en Phase 4) arrivent du backend **avec leur libellé**. Le front n'affiche jamais
      `meung_sur_loire` ni ne le transforme lui-même en « Meung Sur Loire » : ce contenu
@@ -197,7 +197,7 @@ Le journal se lit comme un livre, pas comme une messagerie. Types d'éléments :
 | **Narration** | Texte du MJ, un ou plusieurs paragraphes | Pleine largeur de la colonne, **typographie serif de lecture**, sans bulle, interligne généreux |
 | **Effets** | Conséquences appliquées : *« −2 HP »*, *« You arrive at Paris »* | Ligne discrète sous la narration, icônes ; absente si aucun effet visible |
 | **Attente** | Message d'étape (voir 5.3.5) | Ligne animée sous l'action en cours |
-| **Échec** | Message du backend + **Retry** / **Edit** | Encadré d'alerte sobre à la place de la narration |
+| **Échec** | Message traduit d'après le `code` d'erreur + **Retry** / **Edit** | Encadré d'alerte sobre à la place de la narration |
 
 Libellés des issues de jet (table du front, à partir de `result` + `margin`) :
 
@@ -301,8 +301,12 @@ l'affichage. Aucun rejeu d'événements n'est attendu du serveur.
 
 #### 5.3.6 Erreurs
 
-Le front **affiche le message renvoyé par le backend** : il est rédigé pour le joueur, et il
-diffère selon la catégorie. Le front choisit seulement la présentation et l'action proposée.
+Le front **affiche le message associé au `code` d'erreur** renvoyé par l'API, via une clé de
+traduction de l'i18n : les codes forment une liste fermée, connue à la compilation, comme les
+autres enums du système (principe 2). Le `message` textuel de l'API ne sert qu'au **débogage**
+et de **repli** pour un code que le front ne connaît pas encore — jamais comme texte principal,
+puisqu'il reste en anglais quelle que soit la langue de l'interface. Le front choisit aussi la
+présentation et l'action proposée.
 
 | Situation | Source | Présentation | Action |
 |---|---|---|---|
@@ -370,7 +374,8 @@ LLM hors de cette liste est rejeté par la validation du tour.
 
 **Un tour se désigne par son identifiant**, pas par son numéro : un tour `pending` n'a pas
 forcément encore de numéro (KAN-17). La lecture d'un tour renvoie son `status`, et pour un
-tour `failed` son `failure` (`code`, `message`) — le même message que `turn_failed`.
+tour `failed` son `failure` (`code`, `message`) — le même que `turn_failed`. Le front affiche la
+traduction du `code` ; le `message` sert au débogage et de repli (section 5.3.6).
 
 Exemple indicatif de la vue d'une partie :
 
@@ -413,9 +418,27 @@ disposition à deux colonnes n'apparaît qu'à partir de `lg` (1024 px).
 **Thèmes** : clair et sombre, sombre par défaut, choix mémorisé ; suit le système si le
 joueur n'a rien choisi.
 
-**Internationalisation (préparation)** : l'interface est en anglais en Phase 2, sans
-bibliothèque d'i18n. Tous les libellés sont néanmoins regroupés dans un module unique, et
-aucune chaîne n'est assemblée par concaténation. Les polices retenues couvrent le latin
+**Internationalisation** : posée dès la Phase 2 avec **react-i18next** (i18next), même si elle
+ne contient au départ que l'anglais. Ajouter une langue ne doit être qu'un travail de
+traduction.
+- **Pourquoi react-i18next** : les clés dynamiques avec repli sont natives, ce qu'exigent les
+  codes d'erreur (`t(\`errors.${code}\`, { defaultValue: message })`, section 5.3.6) et les
+  libellés d'enums ; les clés se typent à partir des fichiers anglais, sans étape de
+  compilation ; un plugin ESLint (`no-literal-string`) détecte les textes en dur ; une langue
+  supplémentaire se charge à la demande. Contrepartie acceptée : environ 20 ko gzippés, et
+  des pluriels par suffixes plutôt qu'en ICU (plugin `i18next-icu` si un jour nécessaire).
+- **Aucun texte d'interface en dur** dans les composants : libellés, messages d'état, textes
+  d'accueil, attributs d'accessibilité (`aria-label`, `alt`) et libellés des enums du système
+  passent tous par une clé de traduction.
+- **Aucune chaîne assemblée par concaténation** : un message à variable (*« You arrive at
+  {location} »*) est une clé avec interpolation, et un pluriel passe par les règles de
+  pluriel de la bibliothèque. L'ordre des mots change d'une langue à l'autre.
+- **Dates et nombres** formatés selon la langue active (`Intl`), jamais à la main : dernière
+  activité relative, points de vie, compteur de caractères.
+- **Langue active fixée à `en`** en Phase 2, sans sélecteur : le choix par le joueur arrive
+  en Phase 9.
+- **Ce que l'i18n ne couvre pas** : les références de contenu, dont le libellé vient du
+  backend (principe 2), et la narration, produite par le LLM dans la langue de la partie. Les polices retenues couvrent le latin
 étendu (accents, ligatures) : la narration sera un jour dans la langue du joueur.
 
 **Sécurité**
@@ -520,7 +543,7 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   l'adversaire si le backend le transmet) ; mise en pause et reprise ; écrans de fin
   (victoire, mort du personnage, abandon).
 - **Phase 9 — Ouverture.** Inscription, validation d'email, mot de passe oublié ; choix de la
-  langue de la partie et de l'interface (bibliothèque d'i18n à choisir) ; paramètres du
+  langue de la partie et de l'interface (traductions ajoutées à l'i18n posée en Phase 2) ; paramètres du
   compte ; messages de modération.
 
 ---

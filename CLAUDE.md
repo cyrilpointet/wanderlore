@@ -58,8 +58,10 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
 - Monorepo Turborepo (npm workspaces, `apps/*`) — `backend` (AdonisJS `--kit=api`),
   `frontend`, et `back-office` ajouté plus tard (Phase 5).
 - Front joueur (`apps/frontend`, Phase 2) : **Vite + React, Tailwind CSS, TanStack Router**
-  (TanStack Query envisagé pour les lectures). Authentification par **cookie de session**
-  (guard `web`) — `EventSource` ne peut pas porter d'en-tête `Authorization`.
+  (TanStack Query envisagé pour les lectures). **i18n dès la Phase 2 avec react-i18next** —
+  anglais seul au départ, mais aucun texte d'interface en dur : tout passe par une clé de
+  traduction, et les erreurs s'affichent d'après leur `code`. Authentification par **cookie
+  de session** (guard `web`) — `EventSource` ne peut pas porter d'en-tête `Authorization`.
 - **PostgreSQL** (seul moteur supporté — la connexion `pg` est la seule configurée),
   JSONB pour toute structure variable par univers/scénario.
 - **Clés primaires : `uuid`**, générées côté base (`gen_random_uuid()`). Ne pas revenir à

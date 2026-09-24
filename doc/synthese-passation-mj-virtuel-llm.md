@@ -252,7 +252,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 ### Gestion des erreurs
 - **Pas de retry automatique** dans un premier temps.
-- Chaque erreur est renvoyée au front avec un message spécifique selon sa catégorie (timeout/API injoignable, sortie LLM hors schéma, erreur HTTP de l'API externe, échec de validation backend).
+- Chaque erreur est renvoyée au front avec un `code` spécifique selon sa catégorie (timeout/API injoignable, sortie LLM hors schéma, erreur HTTP de l'API externe, échec de validation backend). Le front en affiche la traduction via son i18n ; le `message` textuel de l'API sert au débogage et de repli pour un code inconnu.
 - Système de log d'erreurs API structuré explicitement différé (prévu en Phase 9 / todolist).
 
 ### Scope
@@ -278,7 +278,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 - Hébergement et canal de distribution définitifs (au-delà des solutions légères envisagées pour la phase de test — voir section 4) — non abordés pour une éventuelle montée en charge.
 - **Choix du modèle de monétisation** — la démarche pour y parvenir est actée (voir section 4 : mesure du coût réel puis validation de l'appétence en beta test), mais aucune piste n'est encore sélectionnée.
 - Modalités d'une éventuelle ouverture future du rôle "maître du jeu" à des utilisateurs tiers (aujourd'hui strictement technique/interne) — non planifiée, envisagée comme possibilité à long terme.
-- Support multi-langue : l'architecture est actée (voir section 7), mais **la liste des langues cibles** et le choix de la bibliothèque d'internationalisation du front restent ouverts. Reste également à décider du niveau de granularité du glossaire de noms propres (par scénario, par univers) et de son outillage de saisie dans le back-office.
+- Support multi-langue : l'architecture est actée (voir section 7), mais **la liste des langues cibles** reste ouverte. L'i18n du front est posée dès la Phase 2, avec l'anglais seul ; bibliothèque retenue : react-i18next. Reste également à décider du niveau de granularité du glossaire de noms propres (par scénario, par univers) et de son outillage de saisie dans le back-office.
 - Événements SSE : granularité et rattrapage tranchés pour la Phase 2 ; restent ouverts le streaming de la narration (Phase 3) et un éventuel rejeu des événements manqués (voir document d'architecture, section 8bis).
 - Passage à plusieurs instances : bascule de la file vers BullMQ, worker séparé (transport Redis de Transmit) et sérialisation des tours par verrou PostgreSQL sur `session_id` — à trancher avant le beta test.
 
