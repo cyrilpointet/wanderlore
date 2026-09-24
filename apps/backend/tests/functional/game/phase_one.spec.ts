@@ -11,6 +11,7 @@ import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
 import { THREE_MUSKETEERS } from '#services/game/world'
+import { ContentLabels, type ContentKind } from '#services/game/content_labels'
 import { FakeLlmProvider, type FakeLlmProviderOptions } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { useTransaction } from '#tests/helpers/database'
@@ -78,8 +79,42 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
      * The closed list the validator enforces is only true if the seeded
      * character respects it too.
      */
-    const known = THREE_MUSKETEERS.skills.map((skill) => skill.name)
+    const known = THREE_MUSKETEERS.skills.map((skill) => skill.reference)
     assert.containsSubset(known, Object.keys(session.characters[0].skills))
+  })
+
+  test('every content reference of the seeded game has a label', async ({ assert }) => {
+    const { sessionId } = await seedGame()
+    const session = await Session.query()
+      .where('id', sessionId)
+      .preload('characters')
+      .preload('worldState')
+      .firstOrFail()
+    const [character] = session.characters
+    const labels = new ContentLabels(THREE_MUSKETEERS)
+
+    /**
+     * What the game view will show: a reference the world cannot label would
+     * fail that view outright rather than reach the player raw.
+     */
+    const references: [ContentKind, string][] = [
+      ['chapter', session.currentChapter!],
+      ...Object.keys(character.attributes).map((ref): [ContentKind, string] => ['attribute', ref]),
+      ...Object.keys(character.skills).map((ref): [ContentKind, string] => ['skill', ref]),
+      ...Object.keys(character.resources).map((ref): [ContentKind, string] => ['resource', ref]),
+      ...session.worldState.visitedLocations.map((location): [ContentKind, string] => [
+        'location',
+        location.reference as string,
+      ]),
+      ...session.worldState.activeQuests.map((quest): [ContentKind, string] => [
+        'quest',
+        quest.reference as string,
+      ]),
+    ]
+
+    for (const [kind, reference] of references) {
+      assert.doesNotThrow(() => labels.of(kind, reference), `${kind} "${reference}"`)
+    }
   })
 
   test('a full turn updates the world and logs what it cost', async ({ assert }) => {

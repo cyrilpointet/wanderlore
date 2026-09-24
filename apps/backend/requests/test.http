@@ -22,7 +22,7 @@ X-CSRF-TOKEN: {{csrfToken}}
 GET {{api}}/api/v1/account/profile
 
 ### Tour de jeu
-@sid = 505a0880-7f99-4c45-9c01-17b6ca752782
+@sid = 1a8ccf4d-7d06-4b22-a463-b9ab8c7bef2c
 
 POST {{api}}/api/v1/sessions/{{sid}}/turns
 Content-Type: application/json

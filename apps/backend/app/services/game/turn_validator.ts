@@ -41,6 +41,8 @@ export class TurnValidationError extends Error {
 export type ValidationMeta = {
   /** Closed list: the skills this character actually has. */
   skills: string[]
+  /** Closed list: the places the world defines, and so can label. */
+  locations: string[]
   /** Bounds the damage or healing a single turn may claim. */
   hitPointsMax: number
 }
@@ -57,7 +59,11 @@ const MAX_FLAGS_PER_TURN = 5
 
 const effects = () =>
   vine.object({
-    movement: vine.string().regex(REFERENCE).nullable(),
+    /**
+     * A place the model made up would reach the player as a raw reference,
+     * with no label to show and no translation to come.
+     */
+    movement: vine.enum((field) => (field.meta as ValidationMeta).locations).nullable(),
     scenario_flags: vine.array(vine.string().regex(REFERENCE)).maxLength(MAX_FLAGS_PER_TURN),
     hit_points_delta: vine.number().withoutDecimals(),
   })

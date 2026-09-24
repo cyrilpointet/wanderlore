@@ -9,6 +9,7 @@ import {
 
 const META: ValidationMeta = {
   skills: ['swordsmanship', 'persuasion'],
+  locations: ['paris', 'louvre'],
   hitPointsMax: 10,
 }
 
@@ -28,7 +29,7 @@ function settled(overrides: Record<string, unknown> = {}) {
   return arbitration({
     resolution: { mode: 'automatic_success', skill_used: null, difficulty: null },
     narration: 'The guard waves you through without a word.',
-    effects: { movement: 'noble_quarter', scenario_flags: [], hit_points_delta: 0 },
+    effects: { movement: 'louvre', scenario_flags: [], hit_points_delta: 0 },
     ...overrides,
   })
 }
@@ -71,7 +72,7 @@ test.group('Turn validator | accepted payloads', () => {
   test('accepts a settled turn that narrates and states its effects', async ({ assert }) => {
     const output = await validateArbitration(settled(), META)
 
-    assert.equal(output.effects?.movement, 'noble_quarter')
+    assert.equal(output.effects?.movement, 'louvre')
   })
 
   test('accepts a narration payload', async ({ assert }) => {
@@ -113,6 +114,23 @@ test.group('Turn validator | closed lists', () => {
     assert.include(fields(error), 'resolution.difficulty')
   })
 
+  test('rejects a movement to a place the world does not define', async ({ assert }) => {
+    const error = await reject(() =>
+      validateNarration(
+        narration({
+          effects: { movement: 'noble_quarter', scenario_flags: [], hit_points_delta: 0 },
+        }),
+        META
+      )
+    )
+
+    /**
+     * A well-formed reference is not enough: a place outside the list has no
+     * label, so it would reach the player as a raw identifier.
+     */
+    assert.include(fields(error), 'effects.movement')
+  })
+
   test('rejects a flag written as a display name', async ({ assert }) => {
     const error = await reject(() =>
       validateNarration(
@@ -149,7 +167,7 @@ test.group('Turn validator | roll coherence', () => {
     const error = await reject(() =>
       validateArbitration(
         arbitration({
-          effects: { movement: 'noble_quarter', scenario_flags: [], hit_points_delta: 0 },
+          effects: { movement: 'louvre', scenario_flags: [], hit_points_delta: 0 },
         }),
         META
       )

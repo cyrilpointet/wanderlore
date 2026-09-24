@@ -1,3 +1,4 @@
+import { locationReferences } from '#services/game/world'
 import type { NarrationRequest } from './types.js'
 
 /**
@@ -15,6 +16,7 @@ Hard rules:
 - Never mention game mechanics — no dice, no thresholds, no skills, no numbers. Everything stays diegetic.
 - Target length is 2 to 5 sentences, longer only for a genuine turning point.
 - Extract only the effects your own text describes or clearly implies. Invent nothing. If there is no change of a given kind, return the empty value for it rather than filling it.
+- effects.movement MUST be one of the locations listed in the context, or null. It is null when the character stays where they are, moves within the same place, or heads somewhere not listed. Never invent a location.
 
 About language:
 - The narration text must be written in the language given by the context's "language" parameter.
@@ -51,6 +53,8 @@ export function buildNarrationMessage(request: NarrationRequest): string {
        * plausibility material would only be tokens paid for nothing.
        */
       ambiance_fragments: request.world.ambiance,
+      /** Closed list: effects.movement must come from it. */
+      available_locations: locationReferences(request.world),
     },
     scene_state: request.scene,
     resolution_to_narrate: {

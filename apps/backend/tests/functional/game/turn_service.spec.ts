@@ -23,7 +23,7 @@ const SETTLED = {
   resolution: { mode: 'automatic_success', skill_used: null, difficulty: null },
   narration: 'The courtyard is empty but for a stable boy brushing down a grey mare.',
   effects: {
-    movement: 'treville_courtyard',
+    movement: 'hotel_de_treville',
     scenario_flags: ['stable_boy_seen'],
     hit_points_delta: 0,
   },
@@ -41,7 +41,7 @@ const NEEDS_ROLL = {
 
 const NARRATED = {
   narration: 'He weighs you for a long moment, then steps aside.',
-  effects: { movement: 'noble_quarter', scenario_flags: [], hit_points_delta: -1 },
+  effects: { movement: 'louvre', scenario_flags: [], hit_points_delta: -1 },
 }
 
 async function arrangeScene() {
@@ -52,7 +52,7 @@ async function arrangeScene() {
     sessionId,
     name: "d'Artagnan",
     skills: { persuasion: 3, swordsmanship: 2 },
-    attributes: { Social: 3 },
+    attributes: { social: 3 },
     resources: {},
     progression: {},
     hitPoints: 10,
@@ -95,11 +95,11 @@ test.group('TurnService | a settled turn', (group) => {
 
     assert.lengthOf(provider.requests, 1)
     assert.equal(result.turnNumber, 1)
-    assert.isNull(result.outcome)
+    assert.isNull(result.roll)
 
     await worldState.refresh()
     assert.deepEqual(worldState.narrativeFlags, { stable_boy_seen: true })
-    assert.deepEqual(worldState.visitedLocations, [{ reference: 'treville_courtyard' }])
+    assert.deepEqual(worldState.visitedLocations, [{ reference: 'hotel_de_treville' }])
   })
 
   test('logs the turn with its language and token usage', async ({ assert }) => {
@@ -145,7 +145,7 @@ test.group('TurnService | a turn with a roll', (group) => {
 
     assert.lengthOf(provider.requests, 2)
     assert.equal(result.narration, NARRATED.narration)
-    assert.deepEqual(result.outcome, { result: 'success', margin: 'comfortable' })
+    assert.deepEqual(result.roll, { skill: 'persuasion', result: 'success', margin: 'comfortable' })
   })
 
   test('never sends the mechanics to the narrator', async ({ assert }) => {

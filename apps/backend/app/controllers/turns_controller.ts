@@ -1,5 +1,8 @@
 import turns from '#services/turn'
+import { ContentLabels } from '#services/game/content_labels'
+import { THREE_MUSKETEERS } from '#services/game/world'
 import { playTurnValidator } from '#validators/turn'
+import TurnResultTransformer from '#transformers/turn_result_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 
 /**
@@ -23,6 +26,7 @@ export default class TurnsController {
       playerInput,
     })
 
-    return serialize(result)
+    /** One world until Phase 5, where the session names its own. */
+    return serialize(TurnResultTransformer.transform(result, new ContentLabels(THREE_MUSKETEERS)))
   }
 }

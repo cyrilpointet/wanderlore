@@ -47,7 +47,7 @@ export default class extends BaseSeeder {
     await Character.create({
       sessionId: session.id,
       name: "d'Artagnan",
-      attributes: { Physical: 3, Mental: 2, Social: 3 },
+      attributes: { physical: 3, mental: 2, social: 3 },
       /**
        * Drawn from the world's own skill list, so the arbitration step can
        * never name one this character does not have.
@@ -80,7 +80,7 @@ export default class extends BaseSeeder {
  * would make the closed list the validator enforces a lie.
  */
 function skillsFor(names: string[]): Record<string, number> {
-  const known = new Set(THREE_MUSKETEERS.skills.map((skill) => skill.name))
+  const known = new Set(THREE_MUSKETEERS.skills.map((skill) => skill.reference))
   const values: Record<string, number> = { swordsmanship: 3, persuasion: 2 }
 
   for (const name of names) {

@@ -1,4 +1,4 @@
-import { skillNames } from '#services/game/world'
+import { locationReferences, skillReferences } from '#services/game/world'
 import type { TurnContext } from './types.js'
 
 /**
@@ -27,6 +27,7 @@ Hard rules:
 About the narration and effects fields:
 - When the mode is automatic_success or narrative_automatic_failure, write the narration yourself and extract its effects. The outcome is already settled, so nothing is missing.
 - When the mode is roll_required, set narration to null and effects to null. The outcome of the roll is not known yet, it is computed by the backend, and anything you wrote would be discarded.
+- effects.movement MUST be one of the locations listed in the context, or null. It is null when the character stays where they are, moves within the same place, or heads somewhere not listed. Never invent a location.
 
 About language:
 - The narration text must be written in the language given by the context's "language" parameter.
@@ -113,7 +114,9 @@ export function buildArbitrationMessage(context: TurnContext): string {
        * Sent on every call rather than assumed known: the model must pick
        * skill_used from this list, and from Phase 5 the list varies per world.
        */
-      available_skills: skillNames(context.world),
+      available_skills: skillReferences(context.world),
+      /** Closed list, like the skills: effects.movement must come from it. */
+      available_locations: locationReferences(context.world),
     },
     scene_state: context.scene,
     character: {

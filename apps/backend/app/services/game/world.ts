@@ -12,13 +12,27 @@
  * ever produced in the player's language.
  */
 
-export type WorldSkill = {
-  name: string
+/**
+ * A piece of world content: the stable reference the state and the model use,
+ * and the label the player reads.
+ *
+ * The labels are a stopgap until Phase 5, where `display_names` and `glossary`
+ * take over and bring translations with them. They are English, like the
+ * interface.
+ */
+export type ContentEntry = {
+  reference: string
+  label: string
+}
+
+export type WorldSkill = ContentEntry & {
+  /** Reference of the attribute the skill hangs off. */
   attribute: string
 }
 
 export type WorldDefinition = {
   reference: string
+  label: string
   /** One line, handed to both steps so arbitration and narration agree on register. */
   tone: string
   /**
@@ -31,12 +45,21 @@ export type WorldDefinition = {
    * only pay for tokens it cannot act on.
    */
   ambiance: string[]
-  attributes: string[]
+  attributes: ContentEntry[]
   skills: WorldSkill[]
+  resources: ContentEntry[]
+  /**
+   * Closed list: a movement the model proposes must land on one of these, or
+   * the turn is rejected. A place it made up would have no label to show.
+   */
+  locations: ContentEntry[]
+  chapters: ContentEntry[]
+  quests: ContentEntry[]
 }
 
 export const THREE_MUSKETEERS: WorldDefinition = {
   reference: 'three_musketeers',
+  label: 'The Three Musketeers',
 
   tone: 'France, 1625: cloak-and-dagger adventure, court intrigue, honour and hot tempers.',
 
@@ -57,7 +80,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
     'The court glitters, and everyone in it is calculating something.',
   ],
 
-  attributes: ['Physical', 'Mental', 'Social'],
+  attributes: [
+    { reference: 'physical', label: 'Physical' },
+    { reference: 'mental', label: 'Mental' },
+    { reference: 'social', label: 'Social' },
+  ],
 
   /**
    * Flat and short on purpose: the rules document warns that the simpler the
@@ -65,19 +92,49 @@ export const THREE_MUSKETEERS: WorldDefinition = {
    * exactly one of them.
    */
   skills: [
-    { name: 'swordsmanship', attribute: 'Physical' },
-    { name: 'athletics', attribute: 'Physical' },
-    { name: 'stealth', attribute: 'Physical' },
-    { name: 'marksmanship', attribute: 'Physical' },
-    { name: 'observation', attribute: 'Mental' },
-    { name: 'scholarship', attribute: 'Mental' },
-    { name: 'persuasion', attribute: 'Social' },
-    { name: 'intimidation', attribute: 'Social' },
-    { name: 'deception', attribute: 'Social' },
-    { name: 'etiquette', attribute: 'Social' },
+    { reference: 'swordsmanship', label: 'Swordsmanship', attribute: 'physical' },
+    { reference: 'athletics', label: 'Athletics', attribute: 'physical' },
+    { reference: 'stealth', label: 'Stealth', attribute: 'physical' },
+    { reference: 'marksmanship', label: 'Marksmanship', attribute: 'physical' },
+    { reference: 'observation', label: 'Observation', attribute: 'mental' },
+    { reference: 'scholarship', label: 'Scholarship', attribute: 'mental' },
+    { reference: 'persuasion', label: 'Persuasion', attribute: 'social' },
+    { reference: 'intimidation', label: 'Intimidation', attribute: 'social' },
+    { reference: 'deception', label: 'Deception', attribute: 'social' },
+    { reference: 'etiquette', label: 'Etiquette', attribute: 'social' },
   ],
+
+  resources: [{ reference: 'purse', label: 'Purse' }],
+
+  /**
+   * Places the story actually turns on, at the grain of the novel. Moving
+   * within one of them — from a tavern's common room to its stable — is not a
+   * movement.
+   */
+  locations: [
+    { reference: 'meung_sur_loire', label: 'Meung-sur-Loire' },
+    { reference: 'road_to_paris', label: 'The road to Paris' },
+    { reference: 'paris', label: 'Paris' },
+    { reference: 'rue_des_fossoyeurs', label: 'Rue des Fossoyeurs' },
+    { reference: 'hotel_de_treville', label: 'Hôtel de Tréville' },
+    { reference: 'carmes_deschaux', label: 'Carmes-Deschaux' },
+    { reference: 'louvre', label: 'The Louvre' },
+    { reference: 'palais_cardinal', label: 'Palais-Cardinal' },
+    { reference: 'chantilly', label: 'Chantilly' },
+    { reference: 'amiens', label: 'Amiens' },
+    { reference: 'calais', label: 'Calais' },
+    { reference: 'london', label: 'London' },
+  ],
+
+  chapters: [{ reference: 'the_road_to_paris', label: 'The Road to Paris' }],
+
+  quests: [{ reference: 'deliver_the_letter', label: 'Deliver the letter' }],
 }
 
-export function skillNames(world: WorldDefinition): string[] {
-  return world.skills.map((skill) => skill.name)
+export function skillReferences(world: WorldDefinition): string[] {
+  return world.skills.map((skill) => skill.reference)
+}
+
+export function locationReferences(world: WorldDefinition): string[] {
+  return world.locations.map((location) => location.reference)
 }

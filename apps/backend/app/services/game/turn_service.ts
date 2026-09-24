@@ -12,7 +12,7 @@ import { toNarrationOutcome } from '#services/rules/engine'
 import type { NarrationOutcome, RollResolution } from '#services/rules/types'
 
 import { ConcurrentTurnError, isTurnNumberConflict } from './errors.js'
-import { THREE_MUSKETEERS } from './world.js'
+import { THREE_MUSKETEERS, locationReferences } from './world.js'
 import {
   ARBITRATION_SCHEMA,
   ARBITRATION_SYSTEM_PROMPT,
@@ -58,10 +58,18 @@ export type TurnRequest = {
   language?: GameLanguage
 }
 
+/**
+ * What the player gets to see of a roll: the skill, the verdict and a
+ * qualitative margin — never the dice, the threshold or the total.
+ */
+export type TurnRoll = NarrationOutcome & {
+  skill: string
+}
+
 export type TurnResult = {
   turnNumber: number
   narration: string
-  outcome: NarrationOutcome | null
+  roll: TurnRoll | null
   effects: TurnEffects
 }
 
@@ -129,6 +137,7 @@ export class TurnService {
     const context = buildContext(scene, request.playerInput, language)
     const meta: ValidationMeta = {
       skills: Object.keys(scene.character.skills),
+      locations: locationReferences(THREE_MUSKETEERS),
       hitPointsMax: scene.character.hitPointsMax,
     }
 
@@ -153,13 +162,14 @@ export class TurnService {
 
       return {
         narration: decision.narration as string,
-        outcome: null,
+        roll: null,
         effects: decision.effects as TurnEffects,
       }
     }
 
+    const skill = decision.resolution.skill_used as string
     const resolution = this.#rules.resolve(
-      scene.character.skills[decision.resolution.skill_used as string],
+      scene.character.skills[skill],
       decision.resolution.difficulty!
     )
 
@@ -184,7 +194,7 @@ export class TurnService {
 
     return {
       narration: narrated.narration,
-      outcome: toNarrationOutcome(resolution),
+      roll: { skill, ...toNarrationOutcome(resolution) },
       effects: narrated.effects,
     }
   }
