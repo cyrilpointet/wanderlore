@@ -11,6 +11,7 @@ import type { LlmGateway } from '#services/llm/gateway'
 import type { LlmCallMetadata } from '#services/llm/types'
 import type { RulesEngine } from '#services/rules/engine'
 import type { JobQueue } from '#services/queue/types'
+import type { TurnEvents, TurnRef } from '#services/game/turn_events'
 import { toNarrationOutcome } from '#services/rules/engine'
 import type { RollResolution } from '#services/rules/types'
 
@@ -109,11 +110,13 @@ export class TurnService {
   #llm: LlmGateway
   #rules: RulesEngine
   #queue: JobQueue
+  #events: TurnEvents
 
-  constructor(llm: LlmGateway, rules: RulesEngine, queue: JobQueue) {
+  constructor(llm: LlmGateway, rules: RulesEngine, queue: JobQueue, events: TurnEvents) {
     this.#llm = llm
     this.#rules = rules
     this.#queue = queue
+    this.#events = events
   }
 
   /**
@@ -136,7 +139,7 @@ export class TurnService {
     } catch (cause) {
       const error = new QueueUnavailableError({ cause })
 
-      await markFailed(recorded.turn.id, emptyTrace(), error)
+      await this.#fail(recorded.turn, emptyTrace(), error)
 
       throw error
     }
@@ -152,12 +155,20 @@ export class TurnService {
    * Returns the ids it expired.
    */
   async expireStale(cutoff: DateTime): Promise<string[]> {
-    const rows: { id: string }[] = await db
+    const rows: { id: string; session_id: string; idempotency_key: string | null }[] = await db
       .from('turn_log')
       .where('status', 'pending')
       .where('created_at', '<', cutoff.toJSDate())
       .update({ status: 'failed', failure: EXPIRED })
-      .returning('id')
+      .returning(['id', 'session_id', 'idempotency_key'])
+
+    /** A screen still waiting on one of these stops waiting now. */
+    for (const row of rows) {
+      this.#events.emit(
+        { turnId: row.id, sessionId: row.session_id, idempotencyKey: row.idempotency_key },
+        { type: 'turn_failed', failure: { code: EXPIRED.code, message: EXPIRED.message } }
+      )
+    }
 
     return rows.map((row) => row.id)
   }
@@ -227,17 +238,36 @@ export class TurnService {
       const effects = await this.#runPipeline(turn, scene, trace)
 
       await this.#complete(turn, scene, trace, effects)
-
-      return turn
     } catch (error) {
       /**
        * The log of a failed turn is what makes the failure debuggable at all,
        * so it is written before the error is re-thrown — and its own failure is
        * swallowed rather than allowed to mask the real one.
        */
-      await markFailed(turn.id, trace, error).catch(() => {})
+      await this.#fail(turn, trace, error).catch(() => {})
 
       throw error
+    }
+
+    /** After the commit: the player is never told of a turn that could still roll back. */
+    this.#events.emit(refOf(turn), { type: 'turn_completed', turn, character: scene.character })
+
+    return turn
+  }
+
+  /**
+   * Marks the turn failed and tells the player — unless it was already
+   * settled, by the sweep most likely, which has told them already. Exactly one
+   * terminal event per turn.
+   */
+  async #fail(turn: TurnLog, trace: TurnTrace, error: unknown): Promise<void> {
+    const failure = await markFailed(turn.id, trace, error)
+
+    if (failure) {
+      this.#events.emit(refOf(turn), {
+        type: 'turn_failed',
+        failure: { code: failure.code, message: failure.message },
+      })
     }
   }
 
@@ -249,6 +279,12 @@ export class TurnService {
       locations: locationReferences(THREE_MUSKETEERS),
       hitPointsMax: scene.character.hitPointsMax,
     }
+
+    /**
+     * Always arbitration first, roll or no roll: which branch the turn takes
+     * is only known once this call has answered.
+     */
+    this.#events.emit(refOf(turn), { type: 'step_started', step: 'arbitration' })
 
     const arbitration = await this.#llm.generateJson<unknown>('arbitration', {
       systemPrompt: ARBITRATION_SYSTEM_PROMPT,
@@ -277,6 +313,13 @@ export class TurnService {
     )
 
     trace.roll = resolution
+
+    this.#events.emit(refOf(turn), {
+      type: 'roll_resolved',
+      skill: decision.resolution.skill_used as string,
+      ...toNarrationOutcome(resolution),
+    })
+    this.#events.emit(refOf(turn), { type: 'step_started', step: 'narration' })
 
     const narration = await this.#llm.generateJson<unknown>('narration', {
       systemPrompt: NARRATION_SYSTEM_PROMPT,
@@ -511,13 +554,20 @@ async function applyEffects(
  * stopped. Read afresh: the instance that failed may still be bound to the
  * transaction that rolled back.
  */
-async function markFailed(turnId: string, trace: TurnTrace, error: unknown): Promise<void> {
+/** Returns the failure written, or `null` if the turn was already settled. */
+async function markFailed(
+  turnId: string,
+  trace: TurnTrace,
+  error: unknown
+): Promise<StoredFailure | null> {
   const turn = await TurnLog.findOrFail(turnId)
 
   /** Already settled — by the sweep, most likely. The first outcome stands. */
   if (turn.status !== 'pending') {
-    return
+    return null
   }
+
+  const failure = toStoredFailure(error)
 
   turn.merge({
     ...traceColumns(trace),
@@ -525,10 +575,16 @@ async function markFailed(turnId: string, trace: TurnTrace, error: unknown): Pro
     /** A failed turn never takes a place in the story. */
     turnNumber: null,
     appliedEffects: null,
-    failure: toStoredFailure(error),
+    failure,
   })
 
   await turn.save()
+
+  return failure
+}
+
+function refOf(turn: TurnLog): TurnRef {
+  return { turnId: turn.id, sessionId: turn.sessionId, idempotencyKey: turn.idempotencyKey }
 }
 
 function emptyTrace(): TurnTrace {

@@ -15,6 +15,7 @@ import { TurnWorker } from '#services/game/turn_worker'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
+import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
 
 /**
@@ -65,10 +66,12 @@ async function arrangeScene() {
 
 function buildWorker(answers: unknown[]) {
   const queue = new MemoryQueue()
+  const events = new RecordingTurnEvents()
   const service = new TurnService(
     new LlmGateway(new FakeLlmProvider({ jsonSequence: answers }), { requestTimeoutMs: 1000 }),
     new RulesEngine(new DiceService(FakeRandomSource.fromFaces([4, 4]))),
-    queue
+    queue,
+    events
   )
   const worker = new TurnWorker(queue, service, {
     staleAfterMs: 5 * 60_000,
@@ -76,7 +79,7 @@ function buildWorker(answers: unknown[]) {
     logger,
   })
 
-  return { queue, service, worker }
+  return { queue, service, worker, events }
 }
 
 function submission(sessionId: string, userId: string, playerInput = 'I look around.') {

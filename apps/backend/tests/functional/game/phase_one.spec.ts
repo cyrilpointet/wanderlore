@@ -15,6 +15,7 @@ import { THREE_MUSKETEERS } from '#services/game/world'
 import { ContentLabels, type ContentKind } from '#services/game/content_labels'
 import { FakeLlmProvider, type FakeLlmProviderOptions } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
+import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { useTransaction } from '#tests/helpers/database'
 import { playerOf } from '#tests/helpers/turns'
 import TestUserSeeder from '#database/seeders/test_user_seeder'
@@ -61,13 +62,15 @@ async function seedGame(): Promise<{ userId: string; sessionId: string }> {
 function buildService(options: FakeLlmProviderOptions, timeoutMs = 1000) {
   const provider = new FakeLlmProvider(options)
 
+  const events = new RecordingTurnEvents()
   const service = new TurnService(
     new LlmGateway(provider, { requestTimeoutMs: timeoutMs }),
     new RulesEngine(new DiceService(FakeRandomSource.fromFaces([5, 4]))),
-    new MemoryQueue()
+    new MemoryQueue(),
+    events
   )
 
-  return { provider, service, play: playerOf(service) }
+  return { provider, service, events, play: playerOf(service) }
 }
 
 test.group('Phase 1 | the seeded game is playable', (group) => {

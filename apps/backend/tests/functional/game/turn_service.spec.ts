@@ -17,6 +17,7 @@ import { ConcurrentTurnError, QueueUnavailableError, StaleTurnError } from '#ser
 import { TurnValidationError } from '#services/game/turn_validator'
 import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
+import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
 import { playerOf } from '#tests/helpers/turns'
 
@@ -88,13 +89,15 @@ function buildService(
   delayMs = 0
 ) {
   const provider = new FakeLlmProvider({ jsonSequence: answers, delayMs })
+  const events = new RecordingTurnEvents()
   const service = new TurnService(
     new LlmGateway(provider, { requestTimeoutMs: 1000 }),
     new RulesEngine(new DiceService(FakeRandomSource.fromFaces(faces))),
-    queue
+    queue,
+    events
   )
 
-  return { provider, service, queue, play: playerOf(service) }
+  return { provider, service, queue, events, play: playerOf(service) }
 }
 
 function submission(sessionId: string, userId: string, playerInput = 'I look around.') {
