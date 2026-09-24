@@ -87,6 +87,11 @@ export default {
         arbitration_output: jsonObject,
         roll_result: jsonObject,
         applied_effects: jsonObject,
+        status: {
+          tsType: "'pending' | 'completed' | 'failed'",
+          decorators: column,
+        },
+        failure: jsonObject,
         alerts: jsonObjectList,
         llm_usage: jsonObjectList,
       },

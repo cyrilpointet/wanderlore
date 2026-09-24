@@ -2,6 +2,7 @@ import { BaseTransformer } from '@adonisjs/core/transformers'
 
 import type { ContentLabels } from '#services/game/content_labels'
 import type { TurnResult } from '#services/game/turn_service'
+import { presentEffects, presentRoll } from '#transformers/turn_transformer'
 
 /**
  * A played turn, as the front shows it.
@@ -23,15 +24,8 @@ export default class TurnResultTransformer extends BaseTransformer<TurnResult> {
     return {
       turnNumber: this.resource.turnNumber,
       narration: this.resource.narration,
-      roll: roll && {
-        skill: this.#labels.of('skill', roll.skill),
-        result: roll.result,
-        margin: roll.margin,
-      },
-      effects: {
-        hitPointsDelta: effects.hit_points_delta,
-        movement: effects.movement === null ? null : this.#labels.of('location', effects.movement),
-      },
+      roll: roll && presentRoll(roll, this.#labels),
+      effects: presentEffects(effects, this.#labels),
     }
   }
 }

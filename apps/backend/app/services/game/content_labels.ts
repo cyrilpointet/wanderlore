@@ -11,6 +11,10 @@ export type Labelled = {
   label: string
 }
 
+export type LabelledValue = Labelled & {
+  value: number
+}
+
 export type ContentKind = 'attribute' | 'skill' | 'resource' | 'location' | 'chapter' | 'quest'
 
 /**
@@ -41,7 +45,7 @@ export class MissingLabelError extends Error {
  */
 export class ContentLabels {
   readonly #world: WorldDefinition
-  readonly #entries: Record<ContentKind, Map<string, string>>
+  readonly #entries: Record<ContentKind, Map<string, IndexedEntry>>
 
   constructor(world: WorldDefinition) {
     this.#world = world
@@ -60,16 +64,47 @@ export class ContentLabels {
   }
 
   of(kind: ContentKind, reference: string): Labelled {
-    const label = this.#entries[kind].get(reference)
-
-    if (label === undefined) {
-      throw new MissingLabelError(this.#world.reference, kind, reference)
-    }
+    const { label } = this.#find(kind, reference)
 
     return { reference, label }
   }
+
+  /**
+   * Scores keyed by reference — a character's attributes, skills or resources —
+   * labelled and put in the order the world declares them, so the sheet reads
+   * the same from one request to the next whatever order the jsonb kept.
+   */
+  valued(kind: ContentKind, values: Record<string, number>): LabelledValue[] {
+    return Object.entries(values)
+      .map(([reference, value]) => ({ ...this.#find(kind, reference), reference, value }))
+      .sort((a, b) => a.rank - b.rank)
+      .map(({ reference, label, value }) => ({ reference, label, value }))
+  }
+
+  /** Reference of the attribute a skill hangs off, for grouping the sheet. */
+  attributeOf(skill: string): string {
+    this.#find('skill', skill)
+
+    return this.#world.skills.find((entry) => entry.reference === skill)!.attribute
+  }
+
+  #find(kind: ContentKind, reference: string): IndexedEntry {
+    const entry = this.#entries[kind].get(reference)
+
+    if (entry === undefined) {
+      throw new MissingLabelError(this.#world.reference, kind, reference)
+    }
+
+    return entry
+  }
 }
 
-function index(entries: ContentEntry[]): Map<string, string> {
-  return new Map(entries.map((entry) => [entry.reference, entry.label]))
+type IndexedEntry = {
+  label: string
+  /** Position in the world definition. */
+  rank: number
+}
+
+function index(entries: ContentEntry[]): Map<string, IndexedEntry> {
+  return new Map(entries.map((entry, rank) => [entry.reference, { label: entry.label, rank }]))
 }

@@ -1,18 +1,49 @@
 import turns from '#services/turn'
+import Session from '#models/session'
+import TurnLog from '#models/turn_log'
 import { ContentLabels } from '#services/game/content_labels'
 import { THREE_MUSKETEERS } from '#services/game/world'
 import { playTurnValidator } from '#validators/turn'
+import TurnTransformer from '#transformers/turn_transformer'
 import TurnResultTransformer from '#transformers/turn_result_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 
+/** One world until Phase 5, where the session names its own. */
+const labels = new ContentLabels(THREE_MUSKETEERS)
+
 /**
- * Plays one turn.
- *
- * Deliberately thin: it validates the request body, names who is asking, and
+ * Deliberately thin: it validates the request, names who is asking, and
  * delegates. It computes nothing — no dice, no state, no error shaping. Failures
  * travel up to the exception handler, which owns the mapping.
  */
 export default class TurnsController {
+  /** The story so far: completed turns only, oldest first. */
+  async index({ params, auth, serialize }: HttpContext) {
+    const session = await findOwnSession(params.id, auth.getUserOrFail().id)
+
+    const history = await TurnLog.query()
+      .where('sessionId', session.id)
+      .withScopes((scopes) => scopes.completed())
+      .orderBy('turnNumber', 'asc')
+
+    return serialize(TurnTransformer.transform(history, labels))
+  }
+
+  /**
+   * One turn whatever its status, failed included: this is how a client that
+   * missed the end of the SSE stream learns how the turn ended.
+   */
+  async show({ params, auth, serialize }: HttpContext) {
+    const session = await findOwnSession(params.id, auth.getUserOrFail().id)
+
+    const turn = await TurnLog.query()
+      .where('sessionId', session.id)
+      .where('id', params.turnId)
+      .firstOrFail()
+
+    return serialize(TurnTransformer.transform(turn, labels))
+  }
+
   async store({ params, request, auth, serialize }: HttpContext) {
     const { playerInput } = await request.validateUsing(playTurnValidator)
 
@@ -26,7 +57,14 @@ export default class TurnsController {
       playerInput,
     })
 
-    /** One world until Phase 5, where the session names its own. */
-    return serialize(TurnResultTransformer.transform(result, new ContentLabels(THREE_MUSKETEERS)))
+    return serialize(TurnResultTransformer.transform(result, labels))
   }
+}
+
+/**
+ * Scoped to its owner, so someone else's session reads as one that does not
+ * exist.
+ */
+function findOwnSession(sessionId: string, userId: string) {
+  return Session.query().where('id', sessionId).where('userId', userId).firstOrFail()
 }

@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 
 import TurnLog from '#models/turn_log'
+import Session from '#models/session'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
 import { DiceService } from '#services/dice'
@@ -194,6 +195,54 @@ test.group('TurnService | a turn with a roll', (group) => {
     await character.refresh()
     assert.equal(character.hitPoints, 9)
   })
+
+  test('records the turn as completed and the session as active', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { lastActivityAt: before } = await Session.findOrFail(sessionId)
+
+    await buildService([SETTLED]).service.play({ sessionId, userId, playerInput: 'I look around.' })
+
+    const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
+    assert.equal(turn.status, 'completed')
+    assert.isNull(turn.failure)
+
+    /** The game list is sorted on it. */
+    const session = await Session.findOrFail(sessionId)
+    assert.isTrue(session.lastActivityAt > before)
+  })
+
+  test('records and returns the effects as applied, not as proposed', async ({ assert }) => {
+    const { sessionId, userId, character } = await arrangeScene()
+    character.hitPoints = 1
+    await character.save()
+
+    const result = await buildService([
+      NEEDS_ROLL,
+      { ...NARRATED, effects: { movement: null, scenario_flags: [], hit_points_delta: -3 } },
+    ]).service.play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
+
+    /**
+     * Hit points stop at zero, so the player lost one, not three — and that is
+     * what the journal must say.
+     */
+    assert.equal(result.effects.hit_points_delta, -1)
+
+    const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
+    assert.equal(turn.appliedEffects!.hit_points_delta, -1)
+  })
+
+  test('records no movement to where the character already stands', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+
+    await buildService([SETTLED]).service.play({ sessionId, userId, playerInput: 'I look around.' })
+    const second = await buildService([SETTLED]).service.play({
+      sessionId,
+      userId,
+      playerInput: 'I look around again.',
+    })
+
+    assert.isNull(second.effects.movement)
+  })
 })
 
 test.group('TurnService | a turn that fails', (group) => {
@@ -230,9 +279,46 @@ test.group('TurnService | a turn that fails', (group) => {
     assert.equal(turn.playerInput, 'I brew a potion.')
     assert.lengthOf(turn.llmUsage!, 1)
     assert.isNull(turn.narratedText)
+    assert.isNull(turn.appliedEffects)
 
     await worldState.refresh()
     assert.deepEqual(worldState.narrativeFlags, {})
+  })
+
+  test('records why it failed, as the player was told', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { service } = buildService([
+      { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
+    ])
+
+    await service.play({ sessionId, userId, playerInput: 'I brew a potion.' }).catch(() => {})
+
+    const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
+
+    /** A client that missed `turn_failed` reads the same code and message back. */
+    assert.equal(turn.status, 'failed')
+    assert.equal(turn.failure!.code, 'turn_validation_failed')
+    assert.isString(turn.failure!.message)
+  })
+
+  test("keeps a failed turn out of the next turn's recent buffer", async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+
+    await buildService([
+      { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
+    ])
+      .service.play({ sessionId, userId, playerInput: 'I brew a potion.' })
+      .catch(() => {})
+
+    const next = buildService([SETTLED])
+    const result = await next.service.play({ sessionId, userId, playerInput: 'I look around.' })
+
+    /**
+     * The failed turn is not part of the story, so the model never hears of it
+     * — but it still holds its number.
+     */
+    assert.notInclude(next.provider.requests[0].userMessage, 'I brew a potion.')
+    assert.equal(result.turnNumber, 2)
   })
 
   test('leaves the state untouched when the narration call fails', async ({ assert }) => {

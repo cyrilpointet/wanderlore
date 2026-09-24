@@ -1,5 +1,5 @@
 import Session from '#models/session'
-import { belongsTo } from '@adonisjs/lucid/orm'
+import { belongsTo, scope } from '@adonisjs/lucid/orm'
 import { TurnLogSchema } from '#database/schema'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 
@@ -12,4 +12,12 @@ export default class TurnLog extends TurnLogSchema {
 
   @belongsTo(() => Session)
   declare session: BelongsTo<typeof Session>
+
+  /**
+   * Turns that belong to the story. A failed turn stays in the log for
+   * debugging, but the player never reads it back.
+   */
+  static completed = scope((query) => {
+    query.where('status', 'completed')
+  })
 }

@@ -9,15 +9,27 @@ export type ScannedRoutes = {
     'auth.csrf': { paramsTuple?: []; params?: {} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'profile.login.destroy': { paramsTuple?: []; params?: {} }
+    'game.sessions.index': { paramsTuple?: []; params?: {} }
+    'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
     'game.turns.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   GET: {
     'auth.csrf': { paramsTuple?: []; params?: {} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
+    'game.sessions.index': { paramsTuple?: []; params?: {} }
+    'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
   }
   HEAD: {
     'auth.csrf': { paramsTuple?: []; params?: {} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
+    'game.sessions.index': { paramsTuple?: []; params?: {} }
+    'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
   }
   POST: {
     'auth.new_account.store': { paramsTuple?: []; params?: {} }

@@ -1,7 +1,9 @@
+import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import TurnLog from '#models/turn_log'
+import { describeTurnFailure } from '#exceptions/turn_failure'
 import Session from '#models/session'
 import type Character from '#models/character'
 import type WorldState from '#models/world_state'
@@ -101,16 +103,22 @@ export class TurnService {
       arbitration: null,
       roll: null,
       narration: null,
-      effects: null,
       usage: [],
     }
 
     try {
       const result = await this.#runPipeline(request, scene, language, trace)
 
-      await this.#persist(request, scene, turnNumber, language, trace, result.effects)
+      const applied = await this.#persist(
+        request,
+        scene,
+        turnNumber,
+        language,
+        trace,
+        result.effects
+      )
 
-      return { turnNumber, ...result }
+      return { turnNumber, ...result, effects: applied }
     } catch (error) {
       /**
        * The log of a failed turn is what makes the failure debuggable at all,
@@ -121,7 +129,10 @@ export class TurnService {
        * that won, and logging under it would only collide again.
        */
       if (!(error instanceof ConcurrentTurnError)) {
-        await this.#logFailure(request, scene, turnNumber, language, trace).catch(() => {})
+        await writeTurn(request, scene, turnNumber, language, trace, {
+          status: 'failed',
+          failure: toStoredFailure(error),
+        }).catch(() => {})
       }
 
       throw error
@@ -158,7 +169,6 @@ export class TurnService {
      */
     if (decision.resolution.mode !== 'roll_required') {
       trace.narration = decision.narration
-      trace.effects = decision.effects
 
       return {
         narration: decision.narration as string,
@@ -190,7 +200,6 @@ export class TurnService {
 
     const narrated = await validateNarration(narration.content, meta)
     trace.narration = narrated.narration
-    trace.effects = narrated.effects
 
     return {
       narration: narrated.narration,
@@ -213,10 +222,21 @@ export class TurnService {
       throw new Error(`Session ${sessionId} has no character to play.`)
     }
 
+    /**
+     * Completed turns only: a failed turn is not part of the story, and handing
+     * the model an action that never happened would have it narrate around it.
+     */
     const turns = await TurnLog.query()
       .where('sessionId', sessionId)
+      .withScopes((scopes) => scopes.completed())
       .orderBy('turnNumber', 'desc')
       .limit(RECENT_TURNS)
+
+    /** Every turn, failed ones included, holds its number. */
+    const last = await TurnLog.query()
+      .where('sessionId', sessionId)
+      .max('turn_number as max')
+      .first()
 
     return {
       session,
@@ -224,13 +244,15 @@ export class TurnService {
       worldState: session.worldState,
       /** Oldest first, so the model reads the exchange in the order it happened. */
       recentTurns: turns.reverse(),
-      lastTurnNumber: turns.length > 0 ? Math.max(...turns.map((turn) => turn.turnNumber)) : 0,
+      lastTurnNumber: Number(last?.$extras.max ?? 0),
     }
   }
 
   /**
    * State change and turn log land together: a state that moved without a log
    * entry explaining it would be impossible to reconstruct afterwards.
+   *
+   * Returns the effects as applied, which is what the player is shown.
    */
   async #persist(
     request: TurnRequest,
@@ -239,11 +261,25 @@ export class TurnService {
     language: GameLanguage,
     trace: TurnTrace,
     effects: TurnEffects
-  ): Promise<void> {
+  ): Promise<TurnEffects> {
     try {
-      await db.transaction(async (trx) => {
-        await applyEffects(scene, effects, trx)
-        await writeTurn(request, scene, turnNumber, language, trace, trx)
+      return await db.transaction(async (trx) => {
+        const applied = await applyEffects(scene, effects, trx)
+
+        scene.session.lastActivityAt = DateTime.now()
+        await scene.session.useTransaction(trx).save()
+
+        await writeTurn(
+          request,
+          scene,
+          turnNumber,
+          language,
+          trace,
+          { status: 'completed', applied },
+          trx
+        )
+
+        return applied
       })
     } catch (error) {
       /**
@@ -256,16 +292,6 @@ export class TurnService {
 
       throw error
     }
-  }
-
-  async #logFailure(
-    request: TurnRequest,
-    scene: LoadedScene,
-    turnNumber: number,
-    language: GameLanguage,
-    trace: TurnTrace
-  ): Promise<void> {
-    await writeTurn(request, scene, turnNumber, language, trace)
   }
 }
 
@@ -281,7 +307,6 @@ type TurnTrace = {
   arbitration: ArbitrationOutput | null
   roll: RollResolution | null
   narration: string | null
-  effects: TurnEffects | null
   usage: LlmCallMetadata[]
 }
 
@@ -299,7 +324,7 @@ function buildContext(
       hit_points_max: scene.character.hitPointsMax,
     },
     scene: {
-      location: currentLocation(scene.worldState),
+      location: scene.worldState.currentLocation,
       narrative_flags: scene.worldState.narrativeFlags,
       visited_locations: scene.worldState.visitedLocations,
       world_objects: scene.worldState.worldObjects,
@@ -308,16 +333,6 @@ function buildContext(
     player_input: playerInput,
     language,
   }
-}
-
-/**
- * The current location is the last one visited: there is no separate column for
- * it, and duplicating it would only create two truths to keep in step.
- */
-function currentLocation(worldState: WorldState): string | null {
-  const last = worldState.visitedLocations.at(-1)
-
-  return typeof last?.reference === 'string' ? last.reference : null
 }
 
 function toRecentBuffer(turns: TurnLog[]): RecentTurn[] {
@@ -335,13 +350,18 @@ function toRecentBuffer(turns: TurnLog[]): RecentTurn[] {
 /**
  * Applies the validated delta. Everything here is deterministic: the model
  * proposed, the backend decides what the numbers actually become.
+ *
+ * Returns what actually changed, which can be less than what was proposed: a
+ * delta clamped at zero hit points, or a "movement" to where the character
+ * already stands.
  */
 async function applyEffects(
   scene: LoadedScene,
   effects: TurnEffects,
   trx: TransactionClientContract
-): Promise<void> {
+): Promise<TurnEffects> {
   const { character, worldState } = scene
+  const hitPointsBefore = character.hitPoints
 
   if (effects.hit_points_delta !== 0) {
     /**
@@ -357,7 +377,7 @@ async function applyEffects(
   }
 
   const movement = effects.movement
-  const moved = movement !== null && movement !== currentLocation(worldState)
+  const moved = movement !== null && movement !== worldState.currentLocation
 
   if (moved) {
     worldState.visitedLocations = [...worldState.visitedLocations, { reference: movement }]
@@ -373,7 +393,20 @@ async function applyEffects(
   if (moved || effects.scenario_flags.length > 0) {
     await worldState.useTransaction(trx).save()
   }
+
+  return {
+    movement: moved ? movement : null,
+    scenario_flags: effects.scenario_flags,
+    hit_points_delta: character.hitPoints - hitPointsBefore,
+  }
 }
+
+/**
+ * How a turn ended. Only a completed turn applied anything, so only a completed
+ * turn has effects to record — a failed one records why it failed instead.
+ */
+type TurnEnding =
+  { status: 'completed'; applied: TurnEffects } | { status: 'failed'; failure: StoredFailure }
 
 async function writeTurn(
   request: TurnRequest,
@@ -381,6 +414,7 @@ async function writeTurn(
   turnNumber: number,
   language: GameLanguage,
   trace: TurnTrace,
+  ending: TurnEnding,
   trx?: TransactionClientContract
 ): Promise<void> {
   const turn = new TurnLog()
@@ -393,7 +427,9 @@ async function writeTurn(
     arbitrationOutput: trace.arbitration as Record<string, unknown> | null,
     rollResult: trace.roll as Record<string, unknown> | null,
     narratedText: trace.narration,
-    appliedEffects: trace.effects as Record<string, unknown> | null,
+    status: ending.status,
+    appliedEffects: ending.status === 'completed' ? ending.applied : null,
+    failure: ending.status === 'failed' ? ending.failure : null,
     alerts: toAlerts(trace.arbitration),
     /**
      * Both calls of a turn are recorded, so the real cost of a turn is the sum
@@ -408,6 +444,29 @@ async function writeTurn(
   }
 
   await turn.save()
+}
+
+/**
+ * What the player was told, kept so that reading the turn back tells them the
+ * same thing. The step and the rejected rules are for whoever debugs it.
+ */
+type StoredFailure = {
+  code: string
+  message: string
+  step?: string
+  reasons?: { field: string; rule: string; message: string }[]
+}
+
+function toStoredFailure(error: unknown): StoredFailure {
+  const failure = describeTurnFailure(error)
+
+  if (!failure) {
+    return { code: 'unexpected_error', message: 'Something went wrong while playing this turn.' }
+  }
+
+  const { status, ...stored } = failure
+
+  return stored
 }
 
 function toAlerts(arbitration: ArbitrationOutput | null): Record<string, unknown>[] | null {

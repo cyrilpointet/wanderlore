@@ -20,7 +20,13 @@ export interface ApiDefinition {
     }
   }
   game: {
+    sessions: {
+      index: typeof routes['game.sessions.index']
+      show: typeof routes['game.sessions.show']
+    }
     turns: {
+      index: typeof routes['game.turns.index']
+      show: typeof routes['game.turns.show']
       store: typeof routes['game.turns.store']
     }
   }

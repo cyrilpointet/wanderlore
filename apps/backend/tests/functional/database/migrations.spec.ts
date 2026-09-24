@@ -4,7 +4,7 @@ import testUtils from '@adonisjs/core/services/test_utils'
 
 const TABLES = ['users', 'auth_access_tokens', 'sessions', 'characters', 'world_states', 'turn_log']
 
-const ENUM_TYPES = ['user_role', 'session_status']
+const ENUM_TYPES = ['user_role', 'session_status', 'turn_status']
 
 async function existingTables(): Promise<string[]> {
   const { rows } = await db.rawQuery("select tablename from pg_tables where schemaname = 'public'")

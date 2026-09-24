@@ -48,8 +48,18 @@ router
 
     router
       .group(() => {
+        router.get('sessions', [controllers.Sessions, 'index'])
+        router.get('sessions/:id', [controllers.Sessions, 'show'])
+        router.get('sessions/:id/turns', [controllers.Turns, 'index'])
+        router.get('sessions/:id/turns/:turnId', [controllers.Turns, 'show'])
         router.post('sessions/:id/turns', [controllers.Turns, 'store'])
       })
+      /**
+       * A malformed id is a game or a turn that does not exist: without the
+       * matchers it would reach PostgreSQL and fail there as a 500.
+       */
+      .where('id', router.matchers.uuid())
+      .where('turnId', router.matchers.uuid())
       .as('game')
       .use(middleware.auth())
   })

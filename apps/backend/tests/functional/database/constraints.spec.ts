@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 
 import {
+  PG_CHECK_VIOLATION,
   PG_UNIQUE_VIOLATION,
   createSession,
   createTurn,
@@ -52,6 +53,28 @@ test.group('Schema constraints', (group) => {
      * own turns from 1.
      */
     assert.isString(turnId)
+  })
+
+  test('a failed turn cannot be logged without saying why', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+
+    const error = await expectDbError(() => createTurn(sessionId, 1, { status: 'failed' }))
+
+    /**
+     * Reading the turn back after a lost SSE stream is the only way the player
+     * learns why it failed.
+     */
+    assert.equal(error.code, PG_CHECK_VIOLATION)
+  })
+
+  test('only a failed turn carries a failure', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+
+    const error = await expectDbError(() =>
+      createTurn(sessionId, 1, { failure: { code: 'llm_timeout', message: 'Too slow.' } })
+    )
+
+    assert.equal(error.code, PG_CHECK_VIOLATION)
   })
 
   test('two accounts cannot share an email', async ({ assert }) => {

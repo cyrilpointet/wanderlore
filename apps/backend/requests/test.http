@@ -21,6 +21,9 @@ X-CSRF-TOKEN: {{csrfToken}}
 ### Profile
 GET {{api}}/api/v1/account/profile
 
+### Mes parties
+GET {{api}}/api/v1/sessions
+
 ### Tour de jeu
 @sid = 1a8ccf4d-7d06-4b22-a463-b9ab8c7bef2c
 
@@ -29,6 +32,16 @@ Content-Type: application/json
 X-CSRF-TOKEN: {{csrfToken}}
 
 { "playerInput": "I look around me" }
+
+### Vue d'une partie
+GET {{api}}/api/v1/sessions/{{sid}}
+
+### Historique des tours aboutis
+GET {{api}}/api/v1/sessions/{{sid}}/turns
+
+### Lecture d'un tour (rattrapage) — id pris dans l'historique
+@turnId = a68faff5-e621-4126-add0-f5a223001b61
+GET {{api}}/api/v1/sessions/{{sid}}/turns/{{turnId}}
 
 ### Logout
 POST {{api}}/api/v1/account/logout

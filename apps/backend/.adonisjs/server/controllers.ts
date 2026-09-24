@@ -7,5 +7,6 @@ export const controllers = {
   Login: () => import('#controllers/login_controller'),
   NewAccount: () => import('#controllers/new_account_controller'),
   Profile: () => import('#controllers/profile_controller'),
+  Sessions: () => import('#controllers/sessions_controller'),
   Turns: () => import('#controllers/turns_controller'),
 }

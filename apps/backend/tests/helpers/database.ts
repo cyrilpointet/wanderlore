@@ -29,6 +29,7 @@ export type DatabaseError = {
  */
 export const PG_UNIQUE_VIOLATION = '23505'
 export const PG_INVALID_TEXT_REPRESENTATION = '22P02'
+export const PG_CHECK_VIOLATION = '23514'
 
 /**
  * Runs a statement expected to be rejected, and returns the driver error.
@@ -136,12 +137,18 @@ export async function createWorldState(sessionId: string): Promise<string> {
   return row.id
 }
 
-export async function createTurn(sessionId: string, turnNumber = 1): Promise<string> {
+export async function createTurn(
+  sessionId: string,
+  turnNumber = 1,
+  overrides: Partial<{ status: string; failure: Record<string, unknown> | null }> = {}
+): Promise<string> {
   const [row] = await db
     .table('turn_log')
     .insert({
       session_id: sessionId,
       turn_number: turnNumber,
+      status: overrides.status ?? 'completed',
+      failure: overrides.failure ?? null,
       player_input: 'I look around.',
       created_at: new Date(),
     })

@@ -67,6 +67,54 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/login_controller').default['destroy']>>>
     }
   }
+  'game.sessions.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/sessions'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['index']>>>
+    }
+  }
+  'game.sessions.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/sessions/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['show']>>>
+    }
+  }
+  'game.turns.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/sessions/:id/turns'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/turns_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/turns_controller').default['index']>>>
+    }
+  }
+  'game.turns.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/sessions/:id/turns/:turnId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { id: ParamValue; turnId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/turns_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/turns_controller').default['show']>>>
+    }
+  }
   'game.turns.store': {
     methods: ["POST"]
     pattern: '/api/v1/sessions/:id/turns'
