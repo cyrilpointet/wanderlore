@@ -562,19 +562,28 @@ Cette séparation permet de :
 
 **Soumission.** `POST /sessions/:id/turns` porte l'entrée du joueur et une **clé d'idempotence** générée par le client. La réponse est un accusé de réception `202` qui désigne le tour. Une clé déjà connue renvoie l'accusé du tour existant, sans nouvelle mise en file (voir roadmap, Phase 2).
 
-**Canal.** Un canal Transmit **par partie**, auquel le front s'abonne à l'ouverture de l'écran de jeu, **avant** toute soumission : aucun événement ne peut ainsi partir avant l'abonnement. L'accès au canal est autorisé par l'appartenance de la partie au joueur connecté, authentifié par cookie de session — `EventSource` ne sait pas porter d'en-tête `Authorization`. Chaque événement porte l'identifiant du tour **et la clé d'idempotence** de la soumission : un événement peut arriver avant la réponse `202`, et le front ne peut alors le rattacher qu'à la clé qu'il a lui-même générée.
+**Canal.** Un canal Transmit **par partie** (`sessions/:id`, routes `/__transmit/*` protégées par l'authentification ; l'abonnement est un `POST`, qui porte donc l'en-tête CSRF), auquel le front s'abonne à l'ouverture de l'écran de jeu, **avant** toute soumission : aucun événement ne peut ainsi partir avant l'abonnement. L'accès au canal est autorisé par l'appartenance de la partie au joueur connecté, authentifié par cookie de session — `EventSource` ne sait pas porter d'en-tête `Authorization`. Chaque événement porte l'identifiant du tour **et la clé d'idempotence** de la soumission : un événement peut arriver avant la réponse `202`, et le front ne peut alors le rattacher qu'à la clé qu'il a lui-même générée.
 
 **Granularité : les jalons significatifs pour le joueur, pas un événement par étape technique.** Le front n'en tire que des messages d'attente ; au-delà, un événement ne sert à rien.
 
 ```
-event: step_started    { turn, step: "arbitration" | "narration" }
-event: roll_resolved   { turn, skill: { reference, label }, result: "success" | "failure", margin: "comfortable" | ... }
-event: turn_completed  { turn, narration, applied_effects, character }
-event: turn_failed     { turn, error_category, message }
+step_started    { event, turnId, idempotencyKey, step: "arbitration" | "narration" }
+roll_resolved   { event, turnId, idempotencyKey, skill: { reference, label }, result: "success" | "failure", margin: "comfortable" | ... }
+turn_completed  { event, turnId, idempotencyKey, turn, character }
+turn_failed     { event, turnId, idempotencyKey, failure: { code, message } }
 ```
 
-- Branche **sans jet** : un seul appel LLM fusionné → `step_started(narration)`, puis `turn_completed`.
+Transmit ne nomme pas ses messages : le type d'événement voyage dans le champ `event`. Les
+charges reprennent les formes des routes de lecture, en camelCase : `turn` est le tour tel
+que le renvoie `GET /sessions/:id/turns/:turnId` (narration, jet, effets appliqués avec
+libellés), `character` la fiche telle que la renvoie `GET /sessions/:id`. Le front traite
+donc un tour de la même façon, qu'il l'ait reçu en direct ou relu. `failure.code` est le code
+d'erreur de la section 5.3.6 du cahier des charges.
+
+- **Toujours `step_started(arbitration)` en premier** (tranché en KAN-19). Le premier appel LLM est l'arbitrage dans les deux branches, et c'est sa réponse qui décide s'il y a un jet : avant lui, les deux branches sont indiscernables.
+- Branche **sans jet** : `step_started(arbitration)`, puis `turn_completed` — l'appel fusionné a déjà narré.
 - Branche **avec jet** : `step_started(arbitration)`, `roll_resolved`, `step_started(narration)`, puis `turn_completed`.
+- `turn_completed` n'est émis qu'après la validation de la transaction du tour ; un tour balayé (`turn_expired`) reçoit son `turn_failed` du balayage, et le tour qui finirait après coup n'émet plus rien.
 - Un tour se termine toujours par **exactement un** `turn_completed` ou `turn_failed`.
 - `roll_resolved` ne porte que la compétence jouée, le résultat et la marge qualitative — jamais les dés, le seuil ni la valeur de compétence. Le joueur de JDR veut savoir sur quoi il a lancé et comment ça s'est passé ; les chiffres, eux, n'apportent rien au récit. Le front n'affiche que ce qu'on lui transmet (voir le cahier des charges du front).
 - `step_completed` est abandonné : il n'apportait au front qu'une information déjà portée par l'événement suivant.

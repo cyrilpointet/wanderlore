@@ -289,6 +289,11 @@ idle ──submit──▶ submitting ──202──▶ in_progress ──turn_
 rattachés à la soumission par sa clé d'idempotence, car ils peuvent arriver avant la réponse
 `202`.
 
+Tout tour commence par `step_started { step: "arbitration" }`, jet ou non : sans jet, il est
+directement suivi de `turn_completed`. Le canal est `sessions/:id` ; l'abonnement Transmit
+(`POST /__transmit/subscribe`) porte l'en-tête CSRF, à ajouter via le hook `beforeSubscribe`
+du client Transmit. Format des messages : architecture, section 8bis.
+
 **Rattrapage** : à l'ouverture de l'écran, si la partie a un tour en cours, le front entre
 directement en `in_progress`. Si le flux SSE se reconnecte, ou si aucun événement n'arrive
 pendant un délai à fixer (de l'ordre de 30 s), le front relit l'état du tour et en déduit

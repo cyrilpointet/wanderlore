@@ -193,6 +193,9 @@ Supabase, Railway…).
   l'intégrité d'un tour (idempotence, sérialisation, événements SSE) ne repose sur la file.
   Le pilote se choisit dans `config/queue.ts` (`QUEUE_DRIVER`), la suite de tests tourne sur
   le pilote mémoire, et le worker (`start/worker.ts`) ne démarre qu'avec le serveur web.
+- **Tout événement de tour passe par le port `TurnEvents`** (`#services/turn_events` en
+  application, `RecordingTurnEvents` en test), émis par le code du tour — jamais dérivé de la
+  file. Un envoi raté ne fait jamais échouer un tour : le front rattrape en relisant le tour.
 - **Toute référence de contenu envoyée au front passe par `ContentLabels`**
   (`#services/game/content_labels`) et sort en `{ reference, label }`. Jusqu'à la Phase 5,
   les libellés vivent dans `app/services/game/world.ts`. Une référence sans libellé lève
