@@ -595,6 +595,10 @@ La bascule n'est simple que si **rien de ce qui garantit l'intégrité d'un tour
 - les événements SSE sont émis par le code du tour via Transmit, jamais dérivés des événements de la file ;
 - aucune logique ne repose sur la mise en file dans la même transaction que l'écriture du tour — pg-boss le permet, BullMQ non. Un tour resté `pending` au-delà d'un délai (process arrêté en cours de tour, mise en file échouée) est passé en échec.
 
+**Tours restés `pending` (tranché en KAN-18).** Le worker balaie les tours `pending` depuis plus de **5 minutes** — bien au-delà des deux appels LLM qu'un tour enchaîne au plus — à son démarrage, puis **chaque minute**, et les passe en `failed` avec le code `turn_expired`. Un tour qui n'a pas pu être mis en file passe en échec sur-le-champ (`turn_queue_unavailable`, `503` sur la soumission). Un tour balayé pendant qu'il se jouait ne peut plus aboutir : sa ligne est verrouillée et son statut revérifié avant l'application des effets, et son résultat est abandonné.
+
+**Schéma `pgboss`.** pg-boss crée ses tables dans son propre schéma, hors des migrations Lucid. La génération de `database/schema.ts`, `db:truncate` et `db:wipe` ne regardent que `public` : ce schéma leur est invisible. La suite de tests n'utilise jamais pg-boss (pilote mémoire, `QUEUE_DRIVER=memory`).
+
 **Ce qui ne change pas** : le contenu et l'ordre des étapes du pipeline (section 3) restent identiques — seule la façon dont le résultat de chaque étape est communiqué au front évolue, d'un unique retour final vers une séquence d'événements progressifs. Les principes de sécurité et de validation backend (section 7) s'appliquent de la même façon, quel que soit le canal de transport.
 
 **Point ouvert** : le rejeu des événements manqués, si la lecture du tour cesse un jour de suffire.

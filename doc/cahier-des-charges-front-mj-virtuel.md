@@ -306,6 +306,8 @@ diffère selon la catégorie. Le front choisit seulement la présentation et l'a
 | `llm_http_error` | `turn_failed` | Encadré d'échec | **Retry** / **Edit** |
 | `llm_invalid_output` | `turn_failed` | Encadré d'échec — le message suggère de reformuler | **Edit** mis en avant, **Retry** |
 | `turn_validation_failed` | `turn_failed` | Encadré d'échec (*« Nothing was applied. »*) | **Retry** / **Edit** |
+| `turn_expired` | lecture du tour | Encadré d'échec — le tour ne s'est jamais terminé | **Retry** / **Edit** |
+| `turn_queue_unavailable` (503) | POST | Encadré d'échec — le tour n'a pas pu être pris en charge | **Retry** avec une **nouvelle** clé |
 | `turn_already_in_progress` (409) | POST | Pas d'encadré : bascule en attente du tour en cours | — |
 | Saisie invalide (422 du validateur) | POST | Erreur sous le champ, texte conservé | Corriger |
 | Non authentifié (401) | toute requête | Redirection vers `/login`, brouillon conservé | Se reconnecter |

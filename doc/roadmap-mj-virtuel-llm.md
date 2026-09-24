@@ -103,6 +103,7 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
   - la sérialisation des tours relève de `concurrency: 1`, puis d'un verrou PostgreSQL par `session_id` — jamais d'une fonctionnalité de file ;
   - les événements SSE sont émis par le code du tour via Transmit, jamais dérivés des événements de la file ;
   - aucune logique ne repose sur la mise en file dans la même transaction que l'écriture du tour (pg-boss le permet, BullMQ non). Un tour resté `pending` au-delà d'un délai — process arrêté en cours de tour, mise en file échouée — est passé en échec.
+  - **Tranché (KAN-18)** : délai de 5 minutes, balayage au démarrage du worker puis chaque minute ; échec immédiat si la mise en file échoue. Détail : architecture, section 8bis.
 - **Worker dans le process HTTP**, démarré au boot du serveur web (pas en environnement de test ni de console). C'est l'option la plus simple : un seul process à lancer, et Transmit diffuse en mémoire sans transport Redis — l'événement émis par le job atteint directement les connexions SSE du même process. **Limite assumée** : ne passe pas à plusieurs instances. Un worker séparé imposera le transport Redis de Transmit ; à reprendre au plus tard en Phase 9.
 - **Pas de retry de la file** (`retryLimit: 0` avec pg-boss, `attempts: 1` avec BullMQ), conformément à la décision projet sur les erreurs LLM.
 - **Clé d'idempotence fournie par le client** pour la protection contre les doubles soumissions (voir ci-dessous).

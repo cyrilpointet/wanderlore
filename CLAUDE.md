@@ -188,6 +188,11 @@ Supabase, Railway…).
 - **Tout appel LLM passe par `import llm from '#services/llm'`** — jamais un provider ni un
   SDK directement. `generateJson()` pour les étapes structurées (A+B+C, E),
   `generateText()` / `streamText()` pour la narration (D).
+- **Toute mise en file passe par `import queue from '#services/queue'`** — jamais pg-boss ni
+  BullMQ directement. Un job ne transporte que des identifiants ; rien de ce qui garantit
+  l'intégrité d'un tour (idempotence, sérialisation, événements SSE) ne repose sur la file.
+  Le pilote se choisit dans `config/queue.ts` (`QUEUE_DRIVER`), la suite de tests tourne sur
+  le pilote mémoire, et le worker (`start/worker.ts`) ne démarre qu'avec le serveur web.
 - **Toute référence de contenu envoyée au front passe par `ContentLabels`**
   (`#services/game/content_labels`) et sort en `{ reference, label }`. Jusqu'à la Phase 5,
   les libellés vivent dans `app/services/game/world.ts`. Une référence sans libellé lève
