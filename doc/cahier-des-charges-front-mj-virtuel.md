@@ -278,7 +278,8 @@ idle ──submit──▶ submitting ──202──▶ in_progress ──turn_
 | `submit_failed` | Échec du POST | Selon le cas (voir 5.3.6) |
 
 **Clé d'idempotence** (décision de la roadmap, Phase 2) :
-- générée par le front (`crypto.randomUUID()`) **à chaque soumission voulue par le joueur** ;
+- générée par le front (`crypto.randomUUID()`) **à chaque soumission voulue par le joueur**,
+  et transmise dans l'en-tête `Idempotency-Key` (obligatoire, au format uuid) ;
 - **réutilisée** quand le front renvoie la même soumission après une erreur réseau survenue
   avant l'accusé de réception (le backend renverra l'accusé du tour déjà créé, s'il existe) ;
 - **renouvelée** pour **Retry** après un `turn_failed` : c'est une nouvelle tentative.

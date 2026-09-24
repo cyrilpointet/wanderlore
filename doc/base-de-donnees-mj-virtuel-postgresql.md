@@ -253,7 +253,8 @@ Log complet de chaque tour, table à plus forte volumétrie du système. Indispe
 |---|---|---|
 | `id` | uuid | identifiant |
 | `session_id` | FK → sessions | partie parente |
-| `turn_number` | int | numéro séquentiel du tour |
+| `turn_number` | int, nullable | numéro séquentiel dans l'histoire, attribué quand le tour aboutit — `NULL` pour un tour `pending` ou `failed` |
+| `idempotency_key` | uuid | clé fournie par le client à la soumission, unique par partie |
 | `player_input` | text | texte brut soumis par le joueur |
 | `arbitration_output` | jsonb | sortie complète de l'étape A+B+C (intent, validity, resolution, alerts) |
 | `roll_result` | jsonb | détail du jet le cas échéant (compétence, dé, seuil, résultat, modificateurs appliqués avec leur origine) |
