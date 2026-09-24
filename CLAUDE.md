@@ -188,6 +188,10 @@ Supabase, Railway…).
 - **Tout appel LLM passe par `import llm from '#services/llm'`** — jamais un provider ni un
   SDK directement. `generateJson()` pour les étapes structurées (A+B+C, E),
   `generateText()` / `streamText()` pour la narration (D).
+- **Toute référence de contenu envoyée au front passe par `ContentLabels`**
+  (`#services/game/content_labels`) et sort en `{ reference, label }`. Jusqu'à la Phase 5,
+  les libellés vivent dans `app/services/game/world.ts`. Une référence sans libellé lève
+  `MissingLabelError` : jamais de référence brute ni « embellie » en repli.
 - **Changer de provider** = écrire un adaptateur dans `app/services/llm/providers/` et
   changer la ligne de `config/llm.ts`. Rien d'autre.
 - Le gateway **garantit un JSON parsable, pas un JSON valide** : la validation métier du

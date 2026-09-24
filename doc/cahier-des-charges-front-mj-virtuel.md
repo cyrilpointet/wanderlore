@@ -248,8 +248,9 @@ Contenu Phase 2, tout fourni par le backend avec les libellés :
 - **Compétences**, groupées sous leur attribut, avec leur valeur. Seules les compétences
   que le personnage possède.
 - **Ressources** : *Purse 15*.
-- **Situation** *(optionnel en Phase 2, voir points ouverts)* : lieu actuel et quête en
-  cours avec son résumé.
+- **Situation** : lieu actuel et quête en cours avec son résumé. Retenu en Phase 2 (KAN-15) :
+  l'état d'accueil d'une partie neuve exige déjà ces données, et le bloc sert la reprise
+  après interruption.
 
 Pas d'inventaire (Phase 4), pas d'action possible depuis la fiche.
 
@@ -351,6 +352,13 @@ origine). Les requêtes mutantes portent l'en-tête CSRF attendu par `@adonisjs/
 - un tour d'historique : action du joueur, jet éventuel (compétence avec libellé, `result`,
   `margin`), narration, effets visibles avec libellés ;
 - `turn_completed` : de quoi mettre à jour le journal **et** la fiche sans nouvelle requête.
+
+**Libellés en Phase 2 (KAN-15).** Faute de tables de contenu avant la Phase 5, les libellés
+sont portés par la définition de l'univers codée en dur (`app/services/game/world.ts`) et
+servis par un seul point d'accès côté backend (`ContentLabels`). Une référence sans libellé
+fait échouer la réponse plutôt que d'afficher la référence brute. Pour que cela ne puisse
+pas arriver en jeu, les lieux forment une **liste fermée** : un déplacement proposé par le
+LLM hors de cette liste est rejeté par la validation du tour.
 
 Exemple indicatif de la vue d'une partie :
 
@@ -703,13 +711,6 @@ is focused.
 
 ## 11. Points ouverts
 
-- **Bloc « Situation » dans la fiche** (lieu actuel, quête en cours) : la roadmap ne cite
-  que points de vie et compétences pour la Phase 2. Les données existent déjà en base et le
-  bloc sert directement la reprise après interruption — à confirmer.
-- **Libellés des références en Phase 2** : le backend doit les fournir (principe 2), alors
-  que les tables de contenu (`worlds`, `display_names`, `glossary`) n'arrivent qu'en Phase 5.
-  Solution transitoire à trancher côté backend — par exemple des libellés portés par la
-  définition de l'univers codée en dur (`world.ts`).
 - **Délai de rattrapage** sans événement SSE avant relecture de l'état du tour (5.3.5).
 - **Direction visuelle** (section 8) : validée sur les maquettes de la Phase 2 (KAN-20). Reste
   ouvert : le dégradé des points de vie vers l'ambre, et le thème clair, non maquetté.
