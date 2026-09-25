@@ -16,6 +16,7 @@ import { TurnInFlight } from '@/games/turn_in_flight'
 import { isBusy, progressKey } from '@/games/turn_machine'
 import { waitingText } from '@/games/waiting'
 import { useDraft } from '@/games/use_draft'
+import { useNarrationVoice } from '@/games/use_narration_voice'
 import { useTurn } from '@/games/use_turn'
 
 export const Route = createFileRoute('/_authenticated/games/$gameId')({
@@ -45,6 +46,7 @@ function GameScreen() {
   // The draft is cleared once the turn is accepted, never before: a failed POST keeps it.
   const turn = useTurn(game, { onAccepted: () => setDraft('') })
   const { state } = turn
+  const voice = useNarrationVoice(turn.narrated)
   const { t } = useTranslation('game')
 
   function edit() {
@@ -54,7 +56,7 @@ function GameScreen() {
 
   return (
     <div className="flex h-dvh flex-col">
-      <GameHeader game={game} onOpenSheet={() => setSheetOpen(true)} />
+      <GameHeader game={game} onOpenSheet={() => setSheetOpen(true)} voice={voice} />
 
       <div className="flex min-h-0 flex-1">
         <main className="flex min-w-0 flex-1 flex-col">

@@ -2,6 +2,9 @@
   "backToGames": "My games",
   "openSheet": "Character sheet",
   "closeSheet": "Close",
+  "voice": {
+    "label": "Read the story aloud"
+  },
   "notFound": "This game does not exist or is not yours.",
   "loading": "Opening your game…",
   "journal": {
