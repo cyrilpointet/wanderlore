@@ -14,6 +14,9 @@ export type ScannedRoutes = {
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
     'game.turns.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'event_stream': { paramsTuple?: []; params?: {} }
+    'subscribe': { paramsTuple?: []; params?: {} }
+    'unsubscribe': { paramsTuple?: []; params?: {} }
   }
   GET: {
     'auth.csrf': { paramsTuple?: []; params?: {} }
@@ -22,6 +25,7 @@ export type ScannedRoutes = {
     'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
+    'event_stream': { paramsTuple?: []; params?: {} }
   }
   HEAD: {
     'auth.csrf': { paramsTuple?: []; params?: {} }
@@ -30,12 +34,15 @@ export type ScannedRoutes = {
     'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
+    'event_stream': { paramsTuple?: []; params?: {} }
   }
   POST: {
     'auth.new_account.store': { paramsTuple?: []; params?: {} }
     'auth.login.store': { paramsTuple?: []; params?: {} }
     'profile.login.destroy': { paramsTuple?: []; params?: {} }
     'game.turns.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'subscribe': { paramsTuple?: []; params?: {} }
+    'unsubscribe': { paramsTuple?: []; params?: {} }
   }
 }
 declare module '@adonisjs/core/types/http' {

@@ -30,4 +30,7 @@ export interface ApiDefinition {
       store: typeof routes['game.turns.store']
     }
   }
+  eventStream: typeof routes['event_stream']
+  subscribe: typeof routes['subscribe']
+  unsubscribe: typeof routes['unsubscribe']
 }
