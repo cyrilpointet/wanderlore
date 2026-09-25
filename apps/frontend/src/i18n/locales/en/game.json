@@ -9,7 +9,9 @@
     "you": "You",
     "roll": "{{skill}} · {{outcome}}",
     "newMessage": "New message",
-    "welcome": "Your story begins. What do you do?"
+    "welcome": "Your story begins. What do you do?",
+    "sending": "Sending…",
+    "considering": "The game master considers your action"
   },
   "effects": {
     "hitPoints": "{{delta, number(signDisplay: exceptZero)}} HP",
@@ -23,5 +25,16 @@
     "location": "Location",
     "quest": "Quest",
     "noLocation": "Unknown"
+  },
+  "composer": {
+    "label": "Your action",
+    "placeholder": "What do you do?",
+    "locked": "The game master is answering…",
+    "send": "Send",
+    "counter": "{{count, number}} / {{max, number}}"
+  },
+  "failure": {
+    "retry": "Retry",
+    "edit": "Edit"
   }
 }

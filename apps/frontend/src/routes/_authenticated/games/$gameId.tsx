@@ -10,6 +10,12 @@ import { GameHeader } from '@/games/game_header'
 import { Journal } from '@/games/journal'
 import { gameQuery, turnsQuery } from '@/games/queries'
 import { SheetDialog } from '@/games/sheet_dialog'
+import { Composer } from '@/games/composer'
+import { TurnInFlight } from '@/games/turn_in_flight'
+import { isBusy, progressKey } from '@/games/turn_machine'
+import { waitingText } from '@/games/waiting'
+import { useDraft } from '@/games/use_draft'
+import { useTurn } from '@/games/use_turn'
 
 export const Route = createFileRoute('/_authenticated/games/$gameId')({
   loader: async ({ context: { queryClient }, params: { gameId } }) => {
@@ -34,6 +40,16 @@ function GameScreen() {
   const { data: turns } = useSuspenseQuery(turnsQuery(gameId))
   const [sheetOpen, setSheetOpen] = useState(false)
   const closeSheet = useCallback(() => setSheetOpen(false), [])
+  const [draft, setDraft] = useDraft(gameId)
+  // The draft is cleared once the turn is accepted, never before: a failed POST keeps it.
+  const turn = useTurn(game, { onAccepted: () => setDraft('') })
+  const { state } = turn
+  const { t } = useTranslation('game')
+
+  function edit() {
+    const text = turn.edit()
+    if (text !== null) setDraft(text)
+  }
 
   return (
     <div className="flex h-dvh flex-col">
@@ -41,7 +57,27 @@ function GameScreen() {
 
       <div className="flex min-h-0 flex-1">
         <main className="flex min-w-0 flex-1 flex-col">
-          <Journal game={game} turns={turns} />
+          <Journal
+            game={game}
+            turns={turns}
+            progress={progressKey(state)}
+            inFlight={
+              state.status !== 'idle' && (
+                <TurnInFlight state={state} onRetry={turn.retry} onEdit={edit} />
+              )
+            }
+          />
+          <Composer
+            value={draft}
+            onChange={setDraft}
+            onSubmit={turn.submit}
+            locked={isBusy(state)}
+            ready={turn.subscribed}
+          />
+          {/* Waiting messages, then the narration, told once to screen readers. */}
+          <p aria-live="polite" className="sr-only">
+            {state.status === 'in_progress' ? waitingText(state, t) : (turn.narrated ?? '')}
+          </p>
         </main>
 
         <aside className="hidden w-80 shrink-0 overflow-y-auto border-l border-border bg-surface-1 px-6 py-8 lg:block">

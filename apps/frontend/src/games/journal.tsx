@@ -1,4 +1,5 @@
 import { ArrowDown, Dice5, Heart, MapPin } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { Margin } from '@/api/enums'
@@ -10,15 +11,29 @@ import { useStickToBottom } from './use_stick_to_bottom'
  * The story, oldest first, read like a book rather than a chat: no bubbles,
  * the narration full width in the reading serif.
  */
-export function Journal({ game, turns }: { game: Game; turns: Turn[] }) {
+export function Journal({
+  game,
+  turns,
+  inFlight,
+  progress,
+}: {
+  game: Game
+  turns: Turn[]
+  /** The turn being played, if any, after the story so far. */
+  inFlight?: ReactNode
+  /** Changes whenever the turn in flight moves on, so the journal follows it. */
+  progress?: string
+}) {
   const { t } = useTranslation('game')
-  const { ref, hasNew, scrollToBottom } = useStickToBottom<HTMLDivElement>(turns.length)
+  const { ref, hasNew, scrollToBottom } = useStickToBottom<HTMLDivElement>(
+    `${turns.length}:${progress ?? ''}`
+  )
 
   return (
     <div className="relative min-h-0 flex-1">
       <div ref={ref} className="h-full overflow-y-auto">
         <div className="mx-auto w-full max-w-reading px-4 py-8 sm:px-6 lg:py-12">
-          {turns.length === 0 ? (
+          {turns.length === 0 && !inFlight ? (
             <Welcome game={game} />
           ) : (
             <ol aria-label={t('journal.label')} className="flex flex-col gap-12">
@@ -27,6 +42,7 @@ export function Journal({ game, turns }: { game: Game; turns: Turn[] }) {
                   <TurnEntry turn={turn} />
                 </li>
               ))}
+              {inFlight && <li>{inFlight}</li>}
             </ol>
           )}
         </div>

@@ -6,6 +6,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import './styles.css'
 import './i18n'
 import { ApiError, onUnauthorized } from './api/client'
+import { closeTransmit } from './api/transmit'
 import { currentUserQuery } from './auth/session'
 import { watchSystemTheme } from './theme'
 import { routeTree } from './routeTree.gen'
@@ -38,6 +39,7 @@ declare module '@tanstack/react-router' {
 onUnauthorized(() => {
   // Forgotten first, or `/login` would still see a signed-in player and send them straight back.
   queryClient.setQueryData(currentUserQuery.queryKey, null)
+  closeTransmit()
 
   const { pathname, href } = router.state.location
   if (pathname === '/login') return

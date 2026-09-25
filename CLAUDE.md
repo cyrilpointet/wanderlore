@@ -230,6 +230,10 @@ Supabase, Railway…).
   `locales/en/errors.json`.
 - **Un enum fermé du système** se déclare dans `src/api/enums.ts` et se libelle dans
   `locales/en/enums.json` ; un test vérifie que chaque valeur a son libellé.
+- **Un tour côté front passe par la machine `turnReducer`** (`src/games/turn_machine.ts`),
+  pure et testée : elle ne génère aucune clé et ne lit aucune horloge, c'est `useTurn` qui
+  les lui fournit. Le flux SSE passe par `transmit()` (`src/api/transmit.ts`), fermé à la
+  déconnexion et sur un `401`.
 - **Couleurs par jetons sémantiques uniquement** (`src/styles.css`) — jamais une valeur brute.
 - En développement, Vite proxifie `/api` et `/__transmit` vers le backend (même origine).
 

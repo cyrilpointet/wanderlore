@@ -13,7 +13,8 @@ export type ErrorCode = keyof typeof en.errors
 export function errorMessage(error: { code: string; message?: string }): string {
   return i18n.t(error.code as ErrorCode, {
     ns: 'errors',
-    defaultValue: error.message ?? i18n.t('unexpected', { ns: 'errors' }),
+    // An empty message is no better than none.
+    defaultValue: error.message || i18n.t('unexpected', { ns: 'errors' }),
   })
 }
 

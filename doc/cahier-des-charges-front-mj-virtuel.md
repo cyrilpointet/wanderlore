@@ -296,8 +296,14 @@ du client Transmit. Format des messages : architecture, section 8bis.
 
 **Rattrapage** : à l'ouverture de l'écran, si la partie a un tour en cours, le front entre
 directement en `in_progress`. Si le flux SSE se reconnecte, ou si aucun événement n'arrive
-pendant un délai à fixer (de l'ordre de 30 s), le front relit l'état du tour et en déduit
-l'affichage. Aucun rejeu d'événements n'est attendu du serveur.
+pendant **30 s** (tranché en KAN-25, `SILENCE_BEFORE_READ_MS`), le front relit l'état du tour
+et en déduit l'affichage ; le délai est réarmé tant que le tour reste en cours. Aucun rejeu
+d'événements n'est attendu du serveur.
+
+**Fin de tour sans nouvelle requête** : `turn_completed` porte le tour et la fiche. Le lieu
+affiché dans la fiche suit l'effet `movement` du tour, que le backend a appliqué. Un tour
+terminé connu par relecture (et non par l'événement) ne porte pas la fiche : le front la
+relit alors.
 
 #### 5.3.6 Erreurs
 

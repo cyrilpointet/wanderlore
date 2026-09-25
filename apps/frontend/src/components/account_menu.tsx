@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { LogOut } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { closeTransmit } from '@/api/transmit'
 import { currentUserQuery, signOut } from '@/auth/session'
 import { failureMessage } from '@/i18n/errors'
 
@@ -27,6 +28,7 @@ export function AccountMenu() {
     mutationFn: signOut,
     onSuccess: async () => {
       queryClient.setQueryData(currentUserQuery.queryKey, null)
+      closeTransmit()
       await navigate({ to: '/login' })
       // Nothing read as this player may outlive their session.
       queryClient.clear()

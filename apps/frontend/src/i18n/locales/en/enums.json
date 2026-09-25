@@ -10,8 +10,8 @@
     "failed": "Failed"
   },
   "step": {
-    "arbitration": "The game master weighs your action…",
-    "narration": "The game master tells what happens…"
+    "arbitration": "The game master weighs your action",
+    "narration": "The game master tells what happens"
   },
   "result": {
     "success": "Success",
