@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Wanderlore</title>
+    <!--
+      Applies the theme before the first paint, so a light-theme player never
+      sees a dark flash. Mirrors src/theme.ts, which owns the logic afterwards.
+    -->
+    <script>
+      try {
+        var choice = localStorage.getItem('wanderlore.theme')
+        var light =
+          choice === 'light' ||
+          (choice !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches)
+        document.documentElement.dataset.theme = light ? 'light' : 'dark'
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

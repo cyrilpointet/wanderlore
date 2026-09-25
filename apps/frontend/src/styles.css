@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+/* Optical-size axis: the browser tunes the serif to each size on its own. */
+@import '@fontsource-variable/literata/opsz.css';
+@import '@fontsource-variable/literata/opsz-italic.css';
+
+/*
+ * Visual direction: front spec, section 8. The dark theme is the default and
+ * its values are the validated ones; the light theme was not mocked up in
+ * Phase 2 and is a first proposal (paper background, ink text), checked for
+ * WCAG AA contrast.
+ *
+ * Components only ever use the semantic tokens below (`bg-surface-1`,
+ * `text-muted`, `text-accent`…), never a raw colour: switching theme is then
+ * nothing more than swapping these variables.
+ */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --wl-bg: #15130f;
+  --wl-surface-1: #1e1b16;
+  --wl-surface-2: #28241e;
+  --wl-surface-3: #332e27;
+  --wl-border: #2e2922;
+  --wl-border-strong: #3a342c;
+  --wl-text: #ede6d6;
+  --wl-text-muted: #a89f91;
+  --wl-text-subtle: #787063;
+  --wl-accent: #d49b44;
+  --wl-accent-hover: #c88d37;
+  --wl-on-accent: #15130f;
+  --wl-success: #7a9a7b;
+  --wl-danger: #b85c50;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --wl-bg: #f6f1e7;
+  --wl-surface-1: #fbf8f1;
+  --wl-surface-2: #ede5d6;
+  --wl-surface-3: #fffdf9;
+  --wl-border: #e4dac8;
+  --wl-border-strong: #d3c6b0;
+  --wl-text: #2a241c;
+  --wl-text-muted: #5c5244;
+  --wl-text-subtle: #6e6456;
+  --wl-accent: #8a5a12;
+  --wl-accent-hover: #744b0e;
+  --wl-on-accent: #fbf8f1;
+  --wl-success: #4a6e4c;
+  --wl-danger: #a0453a;
+}
+
+@theme inline {
+  --color-bg: var(--wl-bg);
+  --color-surface-1: var(--wl-surface-1);
+  --color-surface-2: var(--wl-surface-2);
+  --color-surface-3: var(--wl-surface-3);
+  --color-border: var(--wl-border);
+  --color-border-strong: var(--wl-border-strong);
+  --color-text: var(--wl-text);
+  --color-muted: var(--wl-text-muted);
+  --color-subtle: var(--wl-text-subtle);
+  --color-accent: var(--wl-accent);
+  --color-accent-hover: var(--wl-accent-hover);
+  --color-on-accent: var(--wl-on-accent);
+  --color-success: var(--wl-success);
+  --color-danger: var(--wl-danger);
+}
+
+@theme {
+  --font-serif: 'Literata Variable', Georgia, serif;
+  --font-sans: 'Inter Variable', system-ui, sans-serif;
+
+  /* Narration: 16/26 on mobile, 18/29 from `lg`, never negative tracking. */
+  --text-narration: 1rem;
+  --text-narration--line-height: 1.625rem;
+  --text-narration-lg: 1.125rem;
+  --text-narration-lg--line-height: 1.8125rem;
+
+  /* Interface: body 15 px, labels 13 px, metadata 11 px (spaced capitals). */
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.5rem;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.25rem;
+  --text-meta: 0.6875rem;
+  --text-meta--line-height: 1rem;
+  --text-meta--letter-spacing: 0.08em;
+
+  /* Reading column: ~70 characters. */
+  --container-reading: 42.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-bg font-sans text-body text-text antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

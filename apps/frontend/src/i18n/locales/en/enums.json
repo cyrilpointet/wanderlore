@@ -1,0 +1,27 @@
+{
+  "gameStatus": {
+    "in_progress": "In progress",
+    "paused": "Paused",
+    "completed": "Completed"
+  },
+  "turnStatus": {
+    "pending": "In progress",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "step": {
+    "arbitration": "The game master weighs your action…",
+    "narration": "The game master tells what happens…"
+  },
+  "result": {
+    "success": "Success",
+    "failure": "Failure"
+  },
+  "margin": {
+    "critical_success": "Critical success",
+    "comfortable": "Clear success",
+    "narrow": "Narrow success",
+    "minor_failure": "Failure",
+    "critical_failure": "Critical failure"
+  }
+}

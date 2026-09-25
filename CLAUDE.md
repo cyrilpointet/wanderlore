@@ -57,8 +57,8 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
 
 - Monorepo Turborepo (npm workspaces, `apps/*`) — `backend` (AdonisJS `--kit=api`),
   `frontend`, et `back-office` ajouté plus tard (Phase 5).
-- Front joueur (`apps/frontend`, Phase 2) : **Vite + React, Tailwind CSS, TanStack Router**
-  (TanStack Query envisagé pour les lectures). **i18n dès la Phase 2 avec react-i18next** —
+- Front joueur (`apps/frontend`, Phase 2) : **Vite + React + TypeScript, Tailwind CSS 4,
+  TanStack Router (routes par fichiers), TanStack Query, Vitest**. **i18n dès la Phase 2 avec react-i18next** —
   anglais seul au départ, mais aucun texte d'interface en dur : tout passe par une clé de
   traduction, et les erreurs s'affichent d'après leur `code`. Authentification par **cookie
   de session** (guard `web`) — `EventSource` ne peut pas porter d'en-tête `Authorization`.
@@ -208,6 +208,21 @@ Supabase, Railway…).
   payload reste à la charge de l'appelant, avant toute écriture dans le state.
 - Le raisonnement provider (`thinking`) est **désactivé par défaut** — facturé et inutile
   aux étapes déterministes. L'activer au cas par cas via `reasoning: true`.
+
+### Front (`apps/frontend`)
+
+- **Tout appel d'API passe par `api()`** (`src/api/client.ts`) — jamais `fetch` directement.
+  Il porte l'en-tête CSRF et renvoie vers `/login?redirect=…` sur un `401`. Le client
+  Transmit réutilise `csrfHeaders()` dans son `beforeSubscribe`.
+- **Aucun texte d'interface en dur**, attributs d'accessibilité compris : le lint le refuse
+  (`i18next/no-literal-string`). Clés typées depuis les fichiers anglais.
+- **Une erreur s'affiche via `errorMessage()`** (`src/i18n/errors.ts`) : traduction du `code`,
+  repli sur le `message` de l'API. Un code nouveau côté backend = une entrée dans
+  `locales/en/errors.json`.
+- **Un enum fermé du système** se déclare dans `src/api/enums.ts` et se libelle dans
+  `locales/en/enums.json` ; un test vérifie que chaque valeur a son libellé.
+- **Couleurs par jetons sémantiques uniquement** (`src/styles.css`) — jamais une valeur brute.
+- En développement, Vite proxifie `/api` et `/__transmit` vers le backend (même origine).
 
 ### Tests
 

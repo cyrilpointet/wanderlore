@@ -1,0 +1,13 @@
+{
+  "llm_timeout": "The game master took too long to answer. Try your action again.",
+  "llm_unreachable": "The game master could not be reached. Try again in a moment.",
+  "llm_http_error": "The game master refused the request.",
+  "llm_invalid_output": "The game master answered something unusable. Try rephrasing your action.",
+  "turn_validation_failed": "The game master proposed something the rules do not allow. Nothing was applied.",
+  "turn_expired": "The game master never finished this turn. Try your action again.",
+  "turn_queue_unavailable": "The game master could not take your action right now. Try again in a moment.",
+  "turn_already_in_progress": "A turn is already being played for this game.",
+  "invalid_csrf_token": "Your page is out of date. Reload it and try again.",
+  "network_error": "Connection lost.",
+  "unexpected": "Something went wrong."
+}

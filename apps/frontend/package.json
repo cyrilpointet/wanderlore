@@ -2,13 +2,49 @@
   "name": "frontend",
   "version": "0.0.0",
   "private": true,
-  "description": "Empty frontend starter - choose your own framework",
+  "description": "Player front of Wanderlore",
   "type": "module",
   "scripts": {
-    "dev": "echo 'Setup your frontend framework first. See README.md'",
-    "build": "echo 'Setup your frontend framework first. See README.md'",
-    "test": "echo 'No tests configured yet'",
-    "lint": "echo 'No linting configured yet'",
-    "typecheck": "echo 'No typecheck configured yet'"
-  }
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/literata": "^5.3.0",
+    "@tanstack/react-query": "^5.103.2",
+    "@tanstack/react-router": "^1.170.39",
+    "i18next": "^26.4.2",
+    "i18next-resources-to-backend": "^1.2.3",
+    "lucide-react": "^1.48.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-i18next": "^17.0.15"
+  },
+  "devDependencies": {
+    "@adonisjs/prettier-config": "^1.5.0",
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/router-plugin": "^1.168.40",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "eslint": "^10.11.0",
+    "eslint-plugin-i18next": "^6.1.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  },
+  "prettier": "@adonisjs/prettier-config"
 }
