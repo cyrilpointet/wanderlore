@@ -1,0 +1,27 @@
+{
+  "backToGames": "My games",
+  "openSheet": "Character sheet",
+  "closeSheet": "Close",
+  "notFound": "This game does not exist or is not yours.",
+  "loading": "Opening your game…",
+  "journal": {
+    "label": "Story",
+    "you": "You",
+    "roll": "{{skill}} · {{outcome}}",
+    "newMessage": "New message",
+    "welcome": "Your story begins. What do you do?"
+  },
+  "effects": {
+    "hitPoints": "{{delta, number(signDisplay: exceptZero)}} HP",
+    "movement": "You arrive at {{location}}"
+  },
+  "sheet": {
+    "hitPoints": "Hit points",
+    "attributesAndSkills": "Attributes & skills",
+    "resources": "Resources",
+    "situation": "Situation",
+    "location": "Location",
+    "quest": "Quest",
+    "noLocation": "Unknown"
+  }
+}
