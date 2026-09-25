@@ -154,6 +154,10 @@ Supabase, Railway…).
   Lucid) — ne jamais l'éditer à la main, ni le reformater : il est réécrit à chaque
   migration. Il est exclu de Prettier via `apps/backend/.prettierignore`. Les modèles de
   `app/models/` étendent les classes qu'il expose et y ajoutent la logique métier.
+- **`apps/backend/.adonisjs/` est généré mais versionné** (hook `init` d'`adonisrc.ts`) :
+  `start/routes.ts` importe `#generated/controllers`, et `tsc` ne le régénère pas. Après
+  tout changement de route ou de contrôleur, lancer `node ace codegen` et commiter les
+  fichiers régénérés **dans le même commit**. Ne jamais les éditer à la main.
 - **Les classes de `database/schema.ts` ne sont pas des modèles** : elles n'ont pas de
   `static table`. Chaque modèle de `app/models/` le déclare donc explicitement — et c'est
   indispensable sur `TurnLog`, la table `turn_log` étant au singulier. Tant qu'une table
