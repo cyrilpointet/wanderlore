@@ -36,6 +36,17 @@
     "send": "Send",
     "counter": "{{count, number}} / {{max, number}}"
   },
+  "dictation": {
+    "start": "Dictate your action",
+    "stop": "Stop dictating",
+    "error": {
+      "not-allowed": "Microphone access was refused. Allow it in your browser to dictate.",
+      "no-speech": "Nothing was heard. Tap the microphone and speak again.",
+      "audio-capture": "No microphone was found.",
+      "network": "Dictation needs a connection to your browser's speech service.",
+      "generic": "Dictation stopped unexpectedly. You can type your action instead."
+    }
+  },
   "failure": {
     "retry": "Retry",
     "edit": "Edit"
