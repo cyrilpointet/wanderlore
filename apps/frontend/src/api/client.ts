@@ -56,10 +56,35 @@ type RequestOptions = {
   body?: unknown
   headers?: Record<string, string>
   signal?: AbortSignal
+  /**
+   * `false` for a request whose 401 is an expected answer rather than an
+   * expired session — asking who is signed in, for one.
+   */
+  redirectOnUnauthorized?: boolean
 }
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? 'GET'
+
+  let { response, body } = await send(path, method, options)
+
+  /**
+   * Shield refused the CSRF token — none yet on a first visit, or one tied to
+   * a session that has since expired. It sets a fresh cookie before refusing,
+   * and nothing was processed, so sending once more with it is safe.
+   */
+  if (response.status === 403 && errorCode(body) === 'invalid_csrf_token') {
+    ;({ response, body } = await send(path, method, options))
+  }
+
+  if (response.ok) return body as T
+
+  if (response.status === 401 && options.redirectOnUnauthorized !== false) unauthorizedHandler()
+
+  throw toApiError(response.status, body)
+}
+
+async function send(path: string, method: string, options: RequestOptions) {
   const headers: Record<string, string> = {
     Accept: 'application/json',
     ...(MUTATING_METHODS.has(method) ? csrfHeaders() : {}),
@@ -83,13 +108,11 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     throw new NetworkError(error)
   }
 
-  const body = await readBody(response)
+  return { response, body: await readBody(response) }
+}
 
-  if (response.ok) return body as T
-
-  if (response.status === 401) unauthorizedHandler()
-
-  throw toApiError(response.status, body)
+function errorCode(body: unknown): unknown {
+  return isRecord(body) && isRecord(body.error) ? body.error.code : undefined
 }
 
 async function readBody(response: Response): Promise<unknown> {

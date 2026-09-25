@@ -1,15 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { Wordmark } from '@/components/wordmark'
+import { HOME } from '@/auth/session'
 
 export const Route = createFileRoute('/')({
-  component: Home,
+  beforeLoad: () => {
+    throw redirect({ to: HOME })
+  },
 })
-
-function Home() {
-  return (
-    <main className="grid min-h-dvh place-items-center">
-      <Wordmark />
-    </main>
-  )
-}

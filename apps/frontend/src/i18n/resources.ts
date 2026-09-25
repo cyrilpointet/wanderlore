@@ -1,6 +1,8 @@
+import auth from './locales/en/auth.json'
 import common from './locales/en/common.json'
 import enums from './locales/en/enums.json'
 import errors from './locales/en/errors.json'
+import games from './locales/en/games.json'
 
 /**
  * English is the base language: bundled with the app, and the source the
@@ -9,4 +11,4 @@ import errors from './locales/en/errors.json'
  */
 export const defaultNS = 'common'
 
-export const en = { common, enums, errors }
+export const en = { common, enums, errors, auth, games }

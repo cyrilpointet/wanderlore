@@ -213,7 +213,12 @@ Supabase, Railway…).
 
 - **Tout appel d'API passe par `api()`** (`src/api/client.ts`) — jamais `fetch` directement.
   Il porte l'en-tête CSRF et renvoie vers `/login?redirect=…` sur un `401`. Le client
-  Transmit réutilise `csrfHeaders()` dans son `beforeSubscribe`.
+  Transmit réutilise `csrfHeaders()` dans son `beforeSubscribe`. Un `403 invalid_csrf_token`
+  est renvoyé **une seule fois** : shield pose un cookie neuf avant de refuser, et rien n'a
+  été traité (première visite, session expirée).
+- **Toute page protégée vit sous `src/routes/_authenticated/`** : la garde s'appuie sur
+  `currentUserQuery` (`src/auth/session.ts`), qui n'est modifiée que par la connexion, la
+  déconnexion et un `401`. Une cible `?redirect=` n'est suivie que si c'est un chemin de l'app.
 - **Aucun texte d'interface en dur**, attributs d'accessibilité compris : le lint le refuse
   (`i18next/no-literal-string`). Clés typées depuis les fichiers anglais.
 - **Une erreur s'affiche via `errorMessage()`** (`src/i18n/errors.ts`) : traduction du `code`,

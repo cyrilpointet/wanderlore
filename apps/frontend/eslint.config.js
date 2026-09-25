@@ -27,7 +27,8 @@ export default tseslint.config(
      * No interface text is ever written in a component: every string a player
      * can read — or hear, through `aria-label` and `alt` — goes through a
      * translation key. `jsx-only` checks attributes as well as text; the
-     * attributes excluded here carry markup, routing or wiring, never words.
+     * attributes excluded here carry markup, routing, wiring or a
+     * component variant, never words.
      */
     files: ['src/**/*.tsx'],
     ignores: ['src/**/*.test.tsx'],
@@ -40,6 +41,8 @@ export default tseslint.config(
           'jsx-attributes': {
             exclude: [
               'className',
+              'size',
+              'variant',
               'style',
               'type',
               'key',

@@ -1,3 +1,4 @@
+import { ApiError, NetworkError } from '@/api/client'
 import i18n from './index'
 import type { en } from './resources'
 
@@ -14,4 +15,16 @@ export function errorMessage(error: { code: string; message?: string }): string 
     ns: 'errors',
     defaultValue: error.message ?? i18n.t('unexpected', { ns: 'errors' }),
   })
+}
+
+/**
+ * The same, for anything a request can throw: a coded failure (API or
+ * network) says what it is, anything else stays generic.
+ */
+export function failureMessage(error: unknown): string {
+  if ((error instanceof ApiError || error instanceof NetworkError) && error.code) {
+    return errorMessage({ code: error.code, message: error.message })
+  }
+
+  return errorMessage({ code: 'unexpected' })
 }
