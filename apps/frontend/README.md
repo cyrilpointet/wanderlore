@@ -27,6 +27,9 @@ et du jeton CSRF.
 | `src/routes/` | Une route par fichier ; `src/routeTree.gen.ts` est généré par le plugin du routeur, ne pas l'éditer |
 | `src/api/client.ts` | Seul point d'accès à l'API : cookie de session, en-tête CSRF, `401` → `/login?redirect=…` |
 | `src/api/enums.ts` | Enums fermés du système (`status`, `step`, `result`, `margin`) |
+| `src/auth/` | Utilisateur courant, connexion, déconnexion, cible de redirection |
+| `src/games/` | Requêtes et composants des parties |
+| `src/format/` | Dérivations purement visuelles (unité d'un temps relatif) ; le texte reste à `Intl` |
 | `src/i18n/` | Initialisation, fichiers de traduction par langue et namespace, clés typées |
 | `src/theme.ts` | Thème sombre par défaut, choix mémorisé, sinon celui du système |
 | `src/styles.css` | Jetons de couleur des deux thèmes, polices, tailles de texte |

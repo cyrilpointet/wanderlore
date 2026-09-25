@@ -1,3 +1,7 @@
 {
-  "title": "My games"
+  "title": "My games",
+  "loading": "Loading your games…",
+  "empty": "No game yet.",
+  "worldAndChapter": "{{world}} · {{chapter}}",
+  "lastActivity": "{{value, relativetime}}"
 }

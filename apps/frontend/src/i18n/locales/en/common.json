@@ -1,3 +1,8 @@
 {
-  "appName": "Wanderlore"
+  "appName": "Wanderlore",
+  "tryAgain": "Try again",
+  "hitPoints": {
+    "value": "{{current, number}} / {{max, number}}",
+    "label": "Hit points: {{current, number}} of {{max, number}}"
+  }
 }
