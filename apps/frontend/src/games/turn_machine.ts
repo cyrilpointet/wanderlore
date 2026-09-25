@@ -29,7 +29,8 @@ export type Submission = {
 export type Failure = { code: string; message: string }
 
 export type TurnState =
-  | { status: 'idle' }
+  /** `inputError`: the last submission's text was refused as it stands, shown under the field. */
+  | { status: 'idle'; inputError?: Failure }
   | { status: 'submitting'; submission: Submission }
   | { status: 'in_progress'; submission: Submission; step: Step | null; roll: Roll | null }
   | { status: 'failed'; submission: Submission; roll: Roll | null; failure: Failure }
@@ -61,6 +62,16 @@ export type TurnAction =
   /** The `202`, with the turn as it stands — pending, or already over on a repeated key. */
   | { type: 'accepted'; turn: Turn }
   | { type: 'submit_failed'; failure: Failure; retryWithSameKey: boolean }
+  /** The text itself was refused: back to the field, to be corrected. */
+  | { type: 'rejected'; failure: Failure }
+  /**
+   * Another turn was already being played (`409`): wait for that one — or,
+   * if it is already over, for nothing. The player's own text stays in the
+   * field, never accepted.
+   */
+  | { type: 'superseded'; turn: Turn | null }
+  /** The player changes the text an error was about. */
+  | { type: 'input_changed' }
   | { type: 'message'; message: TurnMessage }
   /** The turn read back: on reopening the screen, after a reconnection or a silence. */
   | { type: 'read'; turn: Turn }
@@ -153,6 +164,26 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
         failure: action.failure,
         retryWithSameKey: action.retryWithSameKey,
       }
+
+    case 'rejected':
+      return state.status === 'submitting' ? { status: 'idle', inputError: action.failure } : state
+
+    case 'superseded':
+      if (state.status !== 'submitting') return state
+      if (action.turn?.status !== 'pending') return initialTurnState
+      return {
+        status: 'in_progress',
+        submission: {
+          playerInput: action.turn.playerInput,
+          idempotencyKey: null,
+          turnId: action.turn.id,
+        },
+        step: null,
+        roll: action.turn.roll,
+      }
+
+    case 'input_changed':
+      return state.status === 'idle' && state.inputError ? initialTurnState : state
 
     case 'message':
       return onMessage(state, action.message)

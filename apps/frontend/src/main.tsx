@@ -8,6 +8,7 @@ import './i18n'
 import { ApiError, onUnauthorized } from './api/client'
 import { closeTransmit } from './api/transmit'
 import { currentUserQuery } from './auth/session'
+import { ErrorPage, NotFoundPage } from './components/system_pages'
 import { watchSystemTheme } from './theme'
 import { routeTree } from './routeTree.gen'
 
@@ -24,6 +25,8 @@ const router = createRouter({
   routeTree,
   context: { queryClient },
   defaultPreload: 'intent',
+  defaultNotFoundComponent: NotFoundPage,
+  defaultErrorComponent: ErrorPage,
 })
 
 declare module '@tanstack/react-router' {

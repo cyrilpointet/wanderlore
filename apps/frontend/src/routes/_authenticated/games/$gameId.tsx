@@ -4,6 +4,7 @@ import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { ApiError } from '@/api/client'
+import { errorMessage } from '@/i18n/errors'
 import { AppHeader } from '@/components/app_header'
 import { CharacterSheet } from '@/games/character_sheet'
 import { GameHeader } from '@/games/game_header'
@@ -69,10 +70,18 @@ function GameScreen() {
           />
           <Composer
             value={draft}
-            onChange={setDraft}
+            onChange={(value) => {
+              setDraft(value)
+              turn.inputChanged()
+            }}
             onSubmit={turn.submit}
             locked={isBusy(state)}
             ready={turn.subscribed}
+            error={
+              state.status === 'idle' && state.inputError
+                ? errorMessage(state.inputError)
+                : undefined
+            }
           />
           {/* Waiting messages, then the narration, told once to screen readers. */}
           <p aria-live="polite" className="sr-only">

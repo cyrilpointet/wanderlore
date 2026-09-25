@@ -5,5 +5,11 @@
   "hitPoints": {
     "value": "{{current, number}} / {{max, number}}",
     "label": "Hit points: {{current, number}} of {{max, number}}"
+  },
+  "system": {
+    "notFound": "This page does not exist.",
+    "unexpected": "Something went wrong.",
+    "reload": "Reload",
+    "backToGames": "My games"
   }
 }

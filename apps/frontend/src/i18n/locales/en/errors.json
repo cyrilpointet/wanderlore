@@ -9,5 +9,8 @@
   "turn_already_in_progress": "A turn is already being played for this game.",
   "invalid_csrf_token": "Your page is out of date. Reload it and try again.",
   "network_error": "Connection lost.",
-  "unexpected": "Something went wrong."
+  "unexpected": "Something went wrong.",
+  "input_too_long": "Your action is too long. Shorten it and send it again.",
+  "input_empty": "Write what you do first.",
+  "input_invalid": "This action cannot be sent as it is."
 }

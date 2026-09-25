@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, NetworkError } from '@/api/client'
 import { transmit } from '@/api/transmit'
 import { gameQuery, gamesQuery, turnsQuery, type Character, type Game, type Turn } from './queries'
 import { channelOf, readTurn, submitTurn } from './turn_api'
+import { classifySubmitError } from './turn_errors'
 import {
   concerns,
   initialTurnState,
@@ -152,6 +152,18 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
     return () => clearTimeout(timer)
   }, [state, catchUp])
 
+  /** Another turn holds the game (`409`): find it and wait for it instead. */
+  const waitForTurnInProgress = useCallback(async () => {
+    try {
+      const fresh = await queryClient.fetchQuery({ ...gameQuery(gameId), staleTime: 0 })
+      const turn = fresh.pendingTurn ? await readTurn(gameId, fresh.pendingTurn.id) : null
+      if (turn?.status === 'completed') record(turn)
+      act({ type: 'superseded', turn })
+    } catch {
+      act({ type: 'superseded', turn: null })
+    }
+  }, [queryClient, gameId, act, record])
+
   const send = useCallback(async () => {
     const current = latest.current
     if (current.status !== 'submitting' || !current.submission.idempotencyKey) return
@@ -162,9 +174,20 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
       onAcceptedRef.current()
       settle(turn, { type: 'accepted', turn })
     } catch (error) {
-      act({ type: 'submit_failed', ...describeSubmitFailure(error) })
+      const outcome = classifySubmitError(error)
+      switch (outcome.kind) {
+        case 'card':
+          return act({ type: 'submit_failed', ...outcome })
+        case 'field':
+          return act({ type: 'rejected', failure: outcome.failure })
+        case 'wait':
+          return waitForTurnInProgress()
+        case 'signed_out':
+          // The sign-in redirect is already under way; the draft is safe in storage.
+          return
+      }
     }
-  }, [gameId, act, settle])
+  }, [gameId, act, settle, waitForTurnInProgress])
 
   const submit = useCallback(
     (playerInput: string) => {
@@ -188,33 +211,10 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
     return current.submission.playerInput
   }, [act])
 
-  return { state, subscribed, narrated, submit, retry, edit }
-}
+  const inputChanged = useCallback(() => {
+    if (latest.current.status === 'idle' && latest.current.inputError)
+      act({ type: 'input_changed' })
+  }, [act])
 
-/**
- * Whether a failed POST may have reached the backend. When it may have (no
- * answer, or a server error), resending with the same key gets back the turn
- * it recorded instead of playing a second one. KAN-26 refines the rest.
- */
-export function describeSubmitFailure(error: unknown): {
-  failure: { code: string; message: string }
-  retryWithSameKey: boolean
-} {
-  if (error instanceof NetworkError) {
-    return { failure: { code: error.code, message: error.message }, retryWithSameKey: true }
-  }
-
-  if (error instanceof ApiError) {
-    // The queue refused the turn: it is recorded as failed, so trying again is a new turn.
-    const refused = error.code === 'turn_queue_unavailable'
-    return {
-      failure: {
-        code: error.status >= 500 && !refused ? 'network_error' : (error.code ?? 'unexpected'),
-        message: error.message,
-      },
-      retryWithSameKey: error.status >= 500 && !refused,
-    }
-  }
-
-  return { failure: { code: 'unexpected', message: '' }, retryWithSameKey: false }
+  return { state, subscribed, narrated, submit, retry, edit, inputChanged }
 }

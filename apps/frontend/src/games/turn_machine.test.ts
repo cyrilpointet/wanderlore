@@ -201,6 +201,47 @@ describe('turn machine — failures', () => {
   })
 })
 
+describe('turn machine — refusals of the submission', () => {
+  const tooLong = { code: 'input_too_long', message: '' }
+
+  test('a refused text goes back to the field, with the reason', () => {
+    const state = run(submit, { type: 'rejected', failure: tooLong })
+
+    expect(state).toEqual({ status: 'idle', inputError: tooLong })
+    expect(isBusy(state)).toBe(false)
+  })
+
+  test('changing the text clears the reason', () => {
+    expect(run(submit, { type: 'rejected', failure: tooLong }, { type: 'input_changed' })).toEqual(
+      initialTurnState
+    )
+  })
+
+  test('sending again clears it too', () => {
+    expect(run(submit, { type: 'rejected', failure: tooLong }, submit)).toMatchObject({
+      status: 'submitting',
+    })
+  })
+
+  test('another turn in progress: wait for that one', () => {
+    const other = turn({ id: 'turn-7', playerInput: 'Someone else’s action.' })
+
+    expect(run(submit, { type: 'superseded', turn: other })).toEqual({
+      status: 'in_progress',
+      submission: { playerInput: 'Someone else’s action.', idempotencyKey: null, turnId: 'turn-7' },
+      step: null,
+      roll: null,
+    })
+  })
+
+  test('the turn in the way is already over: nothing to wait for', () => {
+    expect(run(submit, { type: 'superseded', turn: turn({ status: 'completed' }) })).toEqual(
+      initialTurnState
+    )
+    expect(run(submit, { type: 'superseded', turn: null })).toEqual(initialTurnState)
+  })
+})
+
 describe('turn machine — catching up', () => {
   test('a pending turn found on opening the screen resumes the wait', () => {
     const state = turnReducer(initialTurnState, { type: 'read', turn: turn() })

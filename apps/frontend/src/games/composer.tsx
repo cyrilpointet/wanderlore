@@ -15,6 +15,7 @@ export function Composer({
   onSubmit,
   locked,
   ready,
+  error,
 }: {
   value: string
   onChange: (value: string) => void
@@ -23,6 +24,8 @@ export function Composer({
   locked: boolean
   /** Subscribed to the game's channel: nothing is sent before someone is listening. */
   ready: boolean
+  /** Why the last text was refused, already in words; the text itself stays. */
+  error?: string
 }) {
   const { t } = useTranslation('game')
   const field = useRef<HTMLTextAreaElement>(null)
@@ -62,6 +65,8 @@ export function Composer({
           maxLength={MAX_INPUT}
           readOnly={locked}
           aria-disabled={locked}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? 'player-input-error' : undefined}
           placeholder={locked ? t('composer.locked') : t('composer.placeholder')}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
@@ -76,6 +81,15 @@ export function Composer({
           <ArrowUp aria-hidden className="size-5" />
         </button>
       </div>
+      {error && (
+        <p
+          id="player-input-error"
+          role="alert"
+          className="mx-auto mt-1.5 max-w-reading text-label text-danger"
+        >
+          {error}
+        </p>
+      )}
       {value.length > COUNTER_FROM && (
         <p
           className={`mx-auto mt-1.5 max-w-reading text-right text-meta ${value.length >= MAX_INPUT ? 'text-danger' : 'text-subtle'}`}
