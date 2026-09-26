@@ -149,6 +149,7 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
   - Appel E (extraction des effets) — sortie structurée, validée avant application au state.
 - Cette séparation permet notamment d'utiliser un modèle LLM différent (potentiellement moins coûteux) pour l'extraction que pour la narration.
 - Introduction de la table `resolution_rules` en base — encore limitée à un seul univers, mais structurée proprement plutôt qu'écrite en dur dans le prompt. Premier pas vers la généricité multi-univers.
+- **Table `npc_instances`, état minimal** (voir document de base de données) : référence, disposition envers le joueur, statut (dont la présence dans la scène). Les PNJ présents sont transmis au contexte (`npcs_present`), et l'étape E extrait les changements de disposition (`npc_relations`) depuis une **liste fermée** de références — le LLM ne crée pas de PNJ ayant un état. Le catalogue des PNJ vit dans la définition d'univers en dur, comme les lieux, avec ses libellés. Objectif : qu'une réaction de PNJ ait une suite d'un tour à l'autre (un PNJ insulté reste hostile), sans rien toucher au moteur de règles — la disposition est un label qualitatif.
 
 ### Critère de sortie de phase
 
@@ -169,6 +170,7 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
 - Calcul des modificateurs d'objets **exclusivement côté backend**, au moment du calcul du jet — jamais proposés ou chiffrés par le LLM. Le rapprochement se fait via `item_reference`, jamais via un nom d'affichage.
 - Distinction effective, dans le résultat de jet et dans `turn_log`, entre modificateurs contextuels (source : LLM) et modificateurs d'objets (source : backend).
 - Extension du front pour afficher l'inventaire du personnage (lecture seule), avec les noms d'affichage résolus côté backend dans la langue de la partie.
+- **Données de combat des PNJ** : compétences, points de vie et références d'armes, au même format que celles d'un personnage joueur (voir système de règles, section 8). Elles arrivent avec l'inventaire, dont dépend le calcul des dégâts, pour que la Phase 8 trouve un modèle mécanique complet.
 
 > **Note de séquencement** : le catalogue d'objets par scénario (`scenarios.item_catalog`) n'arrive qu'en Phase 5, avec la table `scenarios`. En Phase 4, la liste fermée des références autorisées peut rester rudimentaire — l'important est que la séparation référence/affichage et le principe de liste fermée soient posés dès maintenant.
 
@@ -187,6 +189,7 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
 
 - Tables `worlds` et `scenarios` en base, avec attributs et compétences paramétrables par univers, conformément au document de référence sur le système de règles.
 - **`scenarios.item_catalog`** : catalogue fermé des objets acquérables (référence stable, effets mécaniques, noms d'affichage par langue), qui devient la source de vérité alimentant la liste transmise à l'étape d'extraction (posée en Phase 4).
+- **`scenarios.planned_npcs`** : catalogue des PNJ du scénario (nommés et archétypes), qui remplace la liste en dur posée en Phase 3 et devient la source de vérité de la liste fermée transmise au pipeline — même trajectoire que `item_catalog`.
 - **`scenarios.glossary`** : noms propres (lieux, PNJ, factions) et leurs traductions, injectés à la seule étape de narration pour figer la cohérence des noms d'un tour à l'autre. Voir document d'architecture, section 4bis.
 - **Création du troisième package du monorepo, `back-office`** (aux côtés de `backend` et `frontend` posés en Phase 0) : formulaires CRUD basiques pour créer/éditer un univers (nom, ton narratif, attributs, compétences, règles générales) et un scénario (synopsis, structure de chapitres, catalogue d'objets, glossaire). Pas d'assistance LLM à la création, pas d'import de fichiers à ce stade.
 - Possibilité, à partir de cette phase, de basculer vers un univers original si une diffusion plus large est envisagée (voir point de vigilance en introduction).
@@ -268,6 +271,8 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
   - création de personnage guidée (au-delà d'un simple formulaire technique),
   - conditions de fin de partie (victoire, mort du personnage, abandon volontaire),
   - gestion de la reprise après une pause longue (régénération du résumé avant reprise si nécessaire).
+
+> **Prérequis** : la boucle de combat s'appuie sur `npc_instances`, posée en Phase 3 (état et disposition) et complétée en Phase 4 (données de combat). Cette phase n'ajoute que la boucle de rounds.
 
 ### Critère de sortie de phase
 

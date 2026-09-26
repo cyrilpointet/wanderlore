@@ -154,6 +154,8 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - **Modificateurs contextuels** (situationnels, proposés par le LLM, plafonnés à 2-3 par jet) strictement séparés des **modificateurs d'objets** (fixes, calculés par le backend à partir de l'inventaire, jamais chiffrés par le LLM).
 - Dégâts dérivés directement de la marge de réussite du jet d'attaque — pas de second jet séparé.
 - Combat modélisé comme une simple répétition du pipeline standard (pas de sous-système dédié).
+- **Liberté du joueur** : le MJ ne refuse jamais une action parce qu'elle est imprudente, immorale ou interdite dans l'univers — il la résout et en fait assumer les conséquences. Seul l'impossible matériel mène à un échec automatique, et le personnage y tente quand même l'action. Voir règles, section 10.
+- **Réaction des PNJ** : tout personnage touché par une action réagit dans la même narration. Une réaction peut ouvrir une menace, jamais la trancher contre le joueur — c'est son action suivante, et le jet qui la résout, qui en décide. Voir règles, section 10.
 
 ### Multi-langue
 
@@ -265,6 +267,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 - Choix définitif du provider LLM externe et du modèle par étape du pipeline.
 - Mécanisme exact de réconciliation si le LLM propose une compétence, un `action_type` ou un **identifiant d'objet** inexistant (rejet strict, fallback, ou nouvelle tentative). Le principe de la liste fermée est acté, la stratégie de rattrapage ne l'est pas.
+- **PNJ improvisés** : un personnage de passage (serveur, passant) ne figure dans aucun catalogue, alors que la liste des PNJ transmise au pipeline est fermée. Piste recommandée : le catalogue porte, à côté des PNJ nommés, des **archétypes** génériques ; le backend instancie un archétype dans `npc_instances` quand l'arbitrage en désigne un présent sur le lieu. Le LLM choisit toujours dans une liste fermée, et plusieurs instances d'un même archétype peuvent coexister. Restent à trancher : le déclencheur exact de l'instanciation, la façon de distinguer deux instances d'un même archétype dans le contexte, et leur durée de vie. À régler avant la Phase 3 (voir roadmap).
 - Gestion des objets à usage limité (consommables, dégradation) — non couverte par le mécanisme actuel de modificateurs d'objets.
 - Décision entre pgvector intégré et vector store externe pour le RAG, à trancher selon le volume de lore réellement atteint.
 - Modalités précises de l'inscription self-service (validation d'email, mot de passe oublié, authentification tierce).
