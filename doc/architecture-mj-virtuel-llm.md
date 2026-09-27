@@ -112,8 +112,8 @@ Pertinent seulement pour des lores massifs (corpus de type encyclopédie) où le
 
 | Étape | Lore | State | Mémoire narrative |
 |---|---|---|---|
-| A+B+C | Règles ciblées par les tags déclenchés par l'input | Scène courante : PNJ présents, objets dispo, lieu | Buffer court (2–4 tours) |
-| D | Fragments d'ambiance/description liés au lieu (pas les règles) | Scène complète + résultat de résolution | Résumé + buffer, pour la continuité de ton |
+| A+B+C | Règles ciblées par les tags déclenchés par l'input | Scène courante : PNJ présents, objets dispo, lieu | Résumé + buffer court (2 derniers tours) |
+| D | Fragments d'ambiance/description liés au lieu (pas les règles) | Scène complète + résultat de résolution | Résumé + buffer récent (2–4 tours), pour la continuité de ton |
 | E | Aucun | Schéma des champs modifiables (pas les valeurs actuelles) | Aucun (le texte narré suffit) |
 | Job résumé (async) | Aucun | Aucun | Résumé précédent + tours bruts à compresser |
 
@@ -130,7 +130,7 @@ est un poste marginal. Le poste dominant est le contexte réinjecté **à chaque
 
 | Étape | Langue de l'entrée | Langue de la sortie |
 |---|---|---|
-| A+B+C (arbitrage) | Contexte anglais + input joueur **brut**, quelle que soit sa langue | JSON anglais |
+| A+B+C (arbitrage) | Contexte anglais + buffer court et input joueur **bruts**, dans la langue du joueur | JSON anglais |
 | D (narration) | Contexte anglais + buffer récent (langue du joueur) + glossaire | Texte dans `language`, `ambiance_flags` en anglais |
 | E (extraction) | Texte narré (langue du joueur) + schéma | JSON anglais, identifiants issus d'une liste fermée |
 | Job résumé | Tours bruts (langue du joueur) | **Résumé en anglais** |
@@ -142,10 +142,19 @@ est un poste marginal. Le poste dominant est le contexte réinjecté **à chaque
 asynchrone et hors du chemin critique, il peut condenser une narration française en un résumé
 anglais sans pénaliser la latence perçue.
 
-**2. Le buffer récent reste dans la langue du joueur, mais n'est injecté qu'à l'étape D.** Il
-ne sert qu'à la continuité de ton et de dialogue. L'arbitrage n'a besoin que de faits : le
-résumé anglais et le state structuré lui suffisent. C'est une précision par rapport au tableau
-de la section 4, où le buffer court apparaissait aussi en entrée de A+B+C.
+**2. Le buffer récent reste dans la langue du joueur, et il est dosé par étape.** La
+narration (D) reçoit le buffer récent (2–4 tours) pour la continuité de ton et de dialogue ;
+l'arbitrage (A+B+C) reçoit un **buffer court** (les 2 derniers tours : entrée du joueur et
+narration), pour interpréter l'intention.
+
+*Révisé avant la Phase 3.* Une version antérieure réservait le buffer à la narration, au motif
+que le résumé anglais et le state suffiraient à l'arbitrage. C'est faux : le résumé est
+régénéré périodiquement, en tâche de fond, et les derniers tours ne figurent dans aucun résumé
+tant qu'il n'a pas été recalculé. Sans buffer, l'arbitrage ne saurait pas interpréter
+« j'accepte sa proposition », « je recommence » ou « je le suis » — l'antécédent n'existe que
+dans la dernière narration. Or c'est l'arbitrage qui interprète l'intention (A) et juge la
+plausibilité (B). La langue n'est pas un obstacle : l'entrée du joueur lui arrive déjà brute,
+dans sa langue.
 
 **3. Un glossaire de noms propres par langue est injecté à l'étape D.** Table compacte figeant
 la traduction des lieux, PNJ, objets et factions **présents dans la scène**. Elle règle
@@ -179,7 +188,7 @@ Trois niveaux, pour éviter de charger l'historique complet à chaque appel :
 
 1. **Faits permanents structurés** (state) — toujours injecté, compact, jamais résumé (c'est déjà une donnée structurée).
 2. **Résumé narratif glissant** — condensé régénéré périodiquement (job asynchrone, après chaque scène ou tous les N tours) par un appel LLM dédié qui absorbe les tours anciens. **Toujours rédigé en anglais**, quelle que soit la langue de la partie (voir section 4bis).
-3. **Buffer récent** — derniers tours en clair (2–4), dans la langue de la partie, pour la continuité immédiate de ton et de dialogue. Injecté à la seule étape de narration.
+3. **Buffer récent** — derniers tours en clair, dans la langue de la partie. La narration en reçoit 2–4, pour la continuité immédiate de ton et de dialogue ; l'arbitrage en reçoit un buffer court (2 tours), pour interpréter l'intention du joueur quand elle renvoie à ce qui vient de se passer (voir section 4bis, règle 2).
 
 Le résumé n'est jamais recalculé en synchrone dans le chemin critique de réponse au joueur : il tourne en tant que job différé de la file pour ne pas ajouter de latence perçue.
 
@@ -879,7 +888,7 @@ Tour de jeu
 ├─ Étape 0 (backend, dans le job) : récupération state + lore taggué + mémoire
 │
 ├─ Étape 1 (LLM, A+B+C) → event: step_completed (arbitration)
-│   IN  : lore filtré (règles) + state scène + perso + buffer court + input joueur + language
+│   IN  : lore filtré (règles) + state scène + perso + résumé + buffer court (2 tours) + input joueur + language
 │   OUT : intent + validity + resolution + alert
 │
 ├─ Étape 2 (backend) : calcul du jet si requis → event: roll_resolved

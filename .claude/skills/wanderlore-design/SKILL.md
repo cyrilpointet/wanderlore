@@ -18,6 +18,7 @@ Les invariants non négociables sont dans `CLAUDE.md` (déjà chargé). Ce skill
 | Question | Document | Section |
 |---|---|---|
 | Vue d'ensemble, décisions actées, points ouverts, budget, cible | `doc/synthese-passation-mj-virtuel-llm.md` | 7 (actées), 8 (ouverts) |
+| Organigramme complet d'un tour, de la soumission à la réponse (état cible) | `doc/flux-backend-tour-de-jeu-mj-virtuel.md` | tout |
 | Étapes du pipeline, ce qui est injecté à chaque étape | `doc/architecture-mj-virtuel-llm.md` | 3, 4 |
 | Multi-langue : quelle étape voit quelle langue, glossaire, résumé | `doc/architecture-mj-virtuel-llm.md` | 4bis |
 | Inventaire dans le pipeline, références vs noms affichés | `doc/architecture-mj-virtuel-llm.md` | 6bis |

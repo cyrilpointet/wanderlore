@@ -186,9 +186,10 @@ en boucle sur toute la durée d'une partie.
   de résumé est asynchrone : il peut condenser une narration française en résumé anglais.
   C'est la décision qui produit la plus grosse économie, puisque le résumé est réinjecté à
   chaque tour.
-- **Le buffer récent reste dans la langue du joueur**, mais n'est injecté qu'à l'étape de
-  narration, où il sert la continuité de ton. L'arbitrage se contente du résumé anglais et
-  des faits structurés.
+- **Le buffer récent reste dans la langue du joueur**, dosé par étape : 2–4 tours pour la
+  narration (continuité de ton), un buffer court de 2 tours pour l'arbitrage (interprétation
+  de l'intention). *Révisé avant la Phase 3* : l'arbitrage en était privé, alors que les
+  derniers tours ne figurent dans aucun résumé tant que le job ne l'a pas recalculé.
 - **Glossaire de noms propres par langue**, compact, limité aux entités présentes dans la
   scène, injecté à la seule étape de narration. Il règle le problème d'incohérence des noms
   d'un tour à l'autre — qui est la vraie raison pour laquelle on serait tenté de traduire

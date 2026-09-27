@@ -277,7 +277,7 @@ Tranchées en clôture de la Phase 2 :
 - Table `narrative_summaries`, avec granularité hiérarchique (scene / chapter / global) telle que définie dans le document de base de données.
 - Job asynchrone de régénération périodique du résumé, hors du chemin critique de réponse au joueur.
 - **Le résumé est rédigé en anglais**, quelle que soit la langue de la partie : le job étant asynchrone, il peut condenser une narration française en résumé anglais sans coût de latence perçu. C'est la principale économie de jetons du dispositif multi-langue, puisque le résumé est réinjecté à chaque tour (voir architecture, section 4bis).
-- **Différenciation de l'injection du buffer** : le buffer récent, dans la langue du joueur, n'est transmis qu'à l'étape de narration. L'arbitrage se contente du résumé anglais et du state structuré.
+- **Différenciation de l'injection du buffer** : le buffer récent, dans la langue du joueur, est dosé par étape — 2–4 tours pour la narration, un buffer court de 2 tours pour l'arbitrage, qui reçoit aussi le résumé anglais et le state structuré. Le buffer court reste nécessaire à l'arbitrage : les derniers tours ne figurent dans aucun résumé tant que le job ne l'a pas recalculé (architecture, section 4bis).
 - Utile principalement lorsque les parties commencent à dépasser en pratique la fenêtre de contexte raisonnable en buffer brut — à activer selon l'usage observé, pas nécessairement dès l'ouverture de cette phase.
 
 ### Critère de sortie de phase

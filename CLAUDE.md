@@ -122,8 +122,9 @@ public). Ses simplifications volontaires restent en vigueur jusqu'à la Phase 3 
 règles en dur dans le system prompt, un seul type de jet, aucun modificateur, pas d'étape E
 séparée.
 
-**Phase actuelle : Phase 2 (front minimal)**, en préparation. Décisions de cadrage actées
-(détail : roadmap Phase 2, architecture §8bis) :
+**Phase 2 (front minimal) terminée** — epic Jira `KAN-13`. Un joueur connecté joue un tour
+depuis l'interface web, avec retour progressif par SSE et erreurs affichées par catégorie.
+Ses choix d'exécution restent en vigueur (détail : roadmap Phase 2, architecture §8bis) :
 - file **pg-boss** derrière un port, BullMQ à la bascule multi-instance ; idempotence,
   sérialisation des tours et événements SSE ne dépendent **jamais** de la file (le job ne
   porte que l'identifiant du tour) ;
@@ -132,18 +133,34 @@ séparée.
   beta ;
 - **clé d'idempotence** fournie par le client, une par soumission, enregistrée avant la mise
   en file ; un retry après `turn_failed` est une nouvelle soumission ;
-- SSE : un canal par partie, abonné avant la soumission ; jalons seulement (`step_started`,
-  `roll_resolved`, `turn_completed`, `turn_failed`), **pas de streaming de la narration**
-  avant la Phase 3 ; rattrapage par lecture du tour.
+- SSE : un canal par partie, abonné avant la soumission ; jalons (`step_started`,
+  `roll_resolved`, `turn_completed`, `turn_failed`) ; rattrapage par lecture du tour.
 
-**Découpage des appels LLM, en deux branches** (amende le « appel unique fusionné A+B+C+D »
-d'origine, qui faisait narrer l'issue du jet avant que le backend ne la calcule) :
+**Découpage actuel des appels LLM, en deux branches** (hérité de la Phase 1, remplacé en
+Phase 3 par le pipeline séparé) :
 
 - **aucun jet requis** → un seul appel fusionné A+B+C+D, retournant narration + effets ;
 - **jet requis** → arbitrage (A+B+C, sans narration), puis calcul du jet côté backend, puis
   second appel de narration.
 
 Les effets viennent **toujours** de l'appel de narration : ils dépendent de l'issue du jet.
+
+**Phase actuelle : Phase 3 (pipeline complet)**, en préparation. Décisions de cadrage actées
+(détail : roadmap Phase 3, architecture §6ter, §6quater, §7, §8bis) :
+- pipeline séparé A+B+C → jet → D → E ; l'appel fusionné de la branche sans jet disparaît ;
+- **une seule nouvelle tentative** sur une sortie structurée rejetée (JSON illisible, hors
+  schéma, hors bornes, référence hors liste fermée), avec message correctif, puis échec ;
+- **narration en streaming** (`narration_chunk`), provisoire jusqu'à `turn_completed`,
+  retirée par le front sur `turn_failed` ;
+- **budget de 3 minutes par tour** ; le balayage des tours `pending` reste à 5 minutes ;
+- un seul modèle (`gemini-2.5-flash`) pour toutes les étapes pendant les phases de test ;
+- **`resolution_rules`** réduite (`world_reference`, `action_type`, `description`,
+  `associated_skill`), remplie par un seeder de contenu idempotent ; l'arbitrage choisit un
+  `action_type`, le backend en déduit la compétence, et le LLM ne voit plus les valeurs de
+  compétence ;
+- **PNJ et lieux : définitions et instances** — `unique` / `archetype`, l'improvisé est une
+  instance d'archétype générique ; tables `npc_instances` et `location_instances`, handles
+  attribués par le backend, instances créées par la seule étape E.
 
 Décision non tranchée, sans urgence : hébergement léger pour la phase de test (Vercel,
 Supabase, Railway…).
