@@ -205,7 +205,7 @@ Cette approche évite de coder un moteur de combat distinct : le combat n'est qu
 
 ## 9. Ce que ce système apporte au pipeline global
 
-- **Le LLM d'arbitrage n'a besoin de connaître ni chiffres ni formules** : il propose uniquement un `action_type`, un `skill_used` (parmi la liste définie pour l'univers courant) et une `difficulty` qualitative. Toute la résolution numérique reste dans le moteur déterministe du backend.
+- **Le LLM d'arbitrage n'a besoin de connaître ni chiffres ni formules** : il propose uniquement un `action_type` (parmi la liste fermée de l'univers courant) et une `difficulty` qualitative. La compétence jouée s'en déduit côté backend, via `resolution_rules`. Toute la résolution numérique reste dans le moteur déterministe du backend.
 - **Un seul point de calcul déterministe**, réutilisable pour toute action (jet simple, attaque, dégâts) sans branchement conditionnel selon le type d'action.
 - **La paramétrisation par univers reste limitée aux données** (attributs, compétences, éventuellement barème alternatif) sans jamais nécessiter de modification du moteur de règles lui-même.
 
@@ -215,8 +215,8 @@ Cette approche évite de coder un moteur de combat distinct : le combat n'est qu
 
 Pour que ce système fonctionne de façon fiable avec le LLM :
 
-- La liste des compétences valides pour l'univers courant doit être transmise dans le contexte dynamique de chaque appel (extraite de la définition de l'univers), jamais supposée connue à l'avance par le modèle.
-- Le LLM ne doit proposer `skill_used` que parmi cette liste — toute proposition hors liste doit être traitée comme une erreur à corriger ou à rejeter par le backend avant résolution.
+- La liste des catégories d'action (`action_type`, avec leur description) de l'univers courant doit être transmise dans le contexte dynamique de chaque appel, jamais supposée connue à l'avance par le modèle. Leur compétence associée n'est pas transmise : c'est le backend qui la déduit.
+- Le LLM ne doit proposer `action_type` que parmi cette liste. Une proposition hors liste est rejetée par le backend et déclenche la nouvelle tentative unique avec message correctif, puis l'échec du tour (architecture, section 7).
 - Le LLM ne doit jamais proposer plus de 2 à 3 modificateurs **contextuels** cumulés pour une même action.
 - Le LLM ne doit **jamais** chiffrer ou proposer de modificateur lié à un objet possédé ou équipé par le joueur — ces valeurs sont calculées séparément par le backend à partir de l'inventaire (voir section 5.2). Le rôle du LLM se limite à juger la plausibilité factuelle de l'usage de l'objet, jamais son effet mécanique.
 - Le LLM ne manipule que des labels qualitatifs (`easy`/`medium`/`hard`/`very_hard`, noms de compétences en anglais) — jamais de valeurs numériques de règles, qui restent entièrement du ressort du backend.
@@ -228,8 +228,7 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
 
 ## 11. Points ouverts / prochaines décisions
 
-- Mécanisme exact de réconciliation si le LLM propose une compétence ou un `action_type` qui n'existe pas dans la définition de l'univers (rejet strict, fallback vers une compétence par défaut, ou nouvelle tentative avec message d'erreur).
 - Décision sur l'opportunité de barèmes de difficulté alternatifs par univers (garder le standard partout pour la cohérence entre univers, ou permettre une personnalisation).
 - Modélisation précise des adversaires multiples en combat (ordre d'initiative, gestion de plusieurs PNJ hostiles simultanés dans un même round).
 - Éventuelle notion de statuts temporaires (blessé, effrayé, avantagé) et leur traduction en modificateurs automatiques plutôt que proposés au cas par cas par le LLM.
-- Gestion des objets à usage limité (consommables perdant leur effet après utilisation, objets qui se dégradent avec le temps ou l'usage) — actuellement le mécanisme de modificateurs d'objets (section 5.2) suppose un effet stable tant que l'objet est possédé/équipé, sans notion d'épuisement. À noter : le catalogue fermé d'objets par scénario (voir architecture, section 6bis) facilitera ce traitement, puisque chaque objet acquérable est déjà déclaré à l'avance avec ses caractéristiques.
+- Gestion des objets à usage limité (consommables perdant leur effet après utilisation, objets qui se dégradent avec le temps ou l'usage) — actuellement le mécanisme de modificateurs d'objets (section 5.2) suppose un effet stable tant que l'objet est possédé/équipé, sans notion d'épuisement. À noter : le modèle définition / instance (voir architecture, section 6bis) facilitera ce traitement — la définition déclare les caractéristiques de l'objet, l'instance portera son état d'usure ou ses charges restantes.

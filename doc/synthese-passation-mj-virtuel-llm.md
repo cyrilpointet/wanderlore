@@ -145,6 +145,13 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - Le lore, le state et la mémoire narrative suivent trois mécanismes de sélection distincts : filtrage par tags/RAG pour le lore, requête déterministe pour le state, résumé + buffer récent pour la mémoire.
 - **Exécution asynchrone et contrat d'API** : le pipeline d'un tour s'exécute en tâche de fond via une file de jobs ; le front reçoit un accusé de réception puis un flux d'événements progressifs via AdonisJS Transmit (SSE), introduit dès la Phase 2 de la roadmap.
 - **Contrat SSE de la Phase 2** : un canal par partie, abonné avant toute soumission ; événements limités aux jalons (`step_started`, `roll_resolved`, `turn_completed`, `turn_failed`), sans streaming de la narration tant qu'elle sort en JSON avec les effets (réintroduit en Phase 3) ; rattrapage par lecture du tour. Voir document d'architecture, section 8bis.
+- **Narration en streaming dès la Phase 3** : événement `narration_chunk`, narration provisoire jusqu'à `turn_completed`, retirée par le front si le tour échoue ensuite. Voir architecture, section 8bis.
+- **L'arbitrage choisit une catégorie d'action, pas une compétence** : `action_type` dans une liste fermée, compétence déduite par le backend via `resolution_rules` (schéma réduit en Phase 3, voir document de base de données).
+- **PNJ : définitions et instances** : deux axes indépendants — nature (`unique` / `archetype`) et source (univers / scénario). Le PNJ improvisé est une instance d'un archétype générique (`commoner`…) avec un descripteur libre sans portée mécanique. Handle attribué par le backend, instances créées par la seule extraction (E), jamais supprimées (`absent`). Voir architecture, section 6ter.
+- **Lieux : même modèle que les PNJ, dès la Phase 3** : lieux uniques et archétypes (`tavern`, `town`…), lieu improvisé = instance d'archétype avec parent, descripteur et nom éventuel ; un lieu unique est instancié à sa première visite, et la position courante est toujours un handle d'instance. Le front affiche le nom propre, sinon « archétype · parent ». Voir architecture, section 6quater.
+- **Objets : même modèle que les PNJ** (principe acté, schéma en Phase 4) : définitions univers / scénario, `unique` ou `archetype`, archétypes génériques pour l'improvisé, ligne d'inventaire réduite à l'état de l'instance, `stackable` pour les objets interchangeables ; le front affiche le libellé de l'archétype, jamais le descripteur. Voir architecture, section 6bis.
+- **Budget de 3 minutes par tour** (Phase 3) : chaque appel LLM reçoit au plus le temps restant, un budget épuisé fait échouer le tour (`llm_timeout`) ; le balayage des tours `pending` reste à 5 minutes. Voir architecture, section 8bis.
+- **Un seul modèle LLM pour toutes les étapes** pendant les phases de test (`gemini-2.5-flash`). La différenciation par étape attend les mesures de coût réelles (Phase 9).
 - **Soumission d'un tour idempotente** : clé fournie par le client, une par soumission, enregistrée avant la mise en file. En Phase 2, worker unique dans le process HTTP, en `concurrency: 1` et sans retry — simplification à reprendre avant le beta test.
 - **File de jobs substituable, pg-boss puis BullMQ** : port + adaptateur, pg-boss (PostgreSQL) tant qu'il n'y a qu'une instance — pas de Redis à héberger —, BullMQ au passage à plusieurs instances, qui ramène Redis pour Transmit. Condition de la bascule : idempotence, sérialisation des tours et événements SSE ne dépendent jamais de la file (voir architecture, section 8bis).
 
@@ -208,7 +215,7 @@ L'inventaire se scinde exactement sur la ligne « le LLM propose, le backend dé
   séparation, rien n'empêche le modèle de renvoyer « the letter » puis « sealed letter », ou
   le nom d'affichage traduit.
 - **L'étape d'extraction reçoit une liste fermée d'identifiants autorisés.** Tout ce qui en
-  sort est rejeté — même mécanisme de réconciliation que pour `skill_used` et `action_type`.
+  sort est rejeté — même mécanisme de réconciliation que pour `action_type`.
 - **Catalogue fermé d'objets par scénario.** Le LLM ne peut pas créer d'entrée d'inventaire :
   un objet inventé n'aurait ni effets mécaniques, ni identifiant stable, ni traduction. Le
   narrateur reste libre de décrire ce qu'il veut, il ne peut simplement pas faire apparaître
@@ -253,7 +260,8 @@ L'inventaire se scinde exactement sur la ligne « le LLM propose, le backend dé
 Voir le document de roadmap, section « Stratégie de test », pour le détail par phase.
 
 ### Gestion des erreurs
-- **Pas de retry automatique** dans un premier temps.
+- **Pas de retry automatique** des erreurs de transport (timeout, API injoignable, erreur HTTP).
+- **Une seule nouvelle tentative sur une sortie structurée rejetée** (tranché avant la Phase 3) : quand le backend rejette la sortie JSON d'une étape (A+B+C ou E) — JSON illisible, hors schéma, hors bornes, ou référence absente de la liste fermée —, l'appel est renvoyé une fois, avec un message correctif qui nomme les valeurs rejetées et rappelle la liste valide. Un second rejet fait échouer le tour. Détail : architecture, section 7.
 - Chaque erreur est renvoyée au front avec un `code` spécifique selon sa catégorie (timeout/API injoignable, sortie LLM hors schéma, erreur HTTP de l'API externe, échec de validation backend). Le front en affiche la traduction via son i18n ; le `message` textuel de l'API sert au débogage et de repli pour un code inconnu.
 - Système de log d'erreurs API structuré explicitement différé (prévu en Phase 9 / todolist).
 
@@ -265,13 +273,11 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 ## 8. Points ouverts (non tranchés à date)
 
-- Choix définitif du provider LLM externe et du modèle par étape du pipeline.
-- Mécanisme exact de réconciliation si le LLM propose une compétence, un `action_type` ou un **identifiant d'objet** inexistant (rejet strict, fallback, ou nouvelle tentative). Le principe de la liste fermée est acté, la stratégie de rattrapage ne l'est pas.
-- **PNJ improvisés** : un personnage de passage (serveur, passant) ne figure dans aucun catalogue, alors que la liste des PNJ transmise au pipeline est fermée. Piste recommandée : le catalogue porte, à côté des PNJ nommés, des **archétypes** génériques ; le backend instancie un archétype dans `npc_instances` quand l'arbitrage en désigne un présent sur le lieu. Le LLM choisit toujours dans une liste fermée, et plusieurs instances d'un même archétype peuvent coexister. Restent à trancher : le déclencheur exact de l'instanciation, la façon de distinguer deux instances d'un même archétype dans le contexte, et leur durée de vie. À régler avant la Phase 3 (voir roadmap).
-- Gestion des objets à usage limité (consommables, dégradation) — non couverte par le mécanisme actuel de modificateurs d'objets.
+- Choix définitif du provider LLM externe, et du modèle par étape au-delà des phases de test (un modèle unique d'ici là, voir section 7).
+- Gestion des objets à usage limité (consommables, dégradation) — non couverte par le mécanisme actuel de modificateurs d'objets. L'instance d'objet (voir section 7) est l'endroit prévu pour porter durabilité et charges ; la modélisation reste à trancher en Phase 4.
 - Décision entre pgvector intégré et vector store externe pour le RAG, à trancher selon le volume de lore réellement atteint.
 - Modalités précises de l'inscription self-service (validation d'email, mot de passe oublié, authentification tierce).
-- Réintroduction éventuelle d'un retry automatique limité, une fois le comportement réel des erreurs observé en usage.
+- Réintroduction éventuelle d'un retry automatique des erreurs de transport (timeout, 5xx), une fois le comportement réel des erreurs observé en usage. Les sorties structurées rejetées ont déjà leur nouvelle tentative unique (section 7).
 - Observabilité et évaluation de la qualité LLM (détection de dérive de prompt, evals automatisés) — non abordée en détail.
 - Modération de contenu au-delà du prompt injection (thèmes sensibles, classification d'âge).
 - Versionning des prompts et des règles de résolution en cas de modification en cours de vie du produit.
@@ -282,7 +288,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 - **Choix du modèle de monétisation** — la démarche pour y parvenir est actée (voir section 4 : mesure du coût réel puis validation de l'appétence en beta test), mais aucune piste n'est encore sélectionnée.
 - Modalités d'une éventuelle ouverture future du rôle "maître du jeu" à des utilisateurs tiers (aujourd'hui strictement technique/interne) — non planifiée, envisagée comme possibilité à long terme.
 - Support multi-langue : l'architecture est actée (voir section 7), mais **la liste des langues cibles** reste ouverte. L'i18n du front est posée dès la Phase 2, avec l'anglais seul ; bibliothèque retenue : react-i18next. Reste également à décider du niveau de granularité du glossaire de noms propres (par scénario, par univers) et de son outillage de saisie dans le back-office.
-- Événements SSE : granularité et rattrapage tranchés pour la Phase 2 ; restent ouverts le streaming de la narration (Phase 3) et un éventuel rejeu des événements manqués (voir document d'architecture, section 8bis).
+- Événements SSE : granularité et rattrapage tranchés pour la Phase 2 ; le streaming de la narration est tranché pour la Phase 3 ; reste ouvert un éventuel rejeu des événements manqués (voir document d'architecture, section 8bis).
 - Passage à plusieurs instances : bascule de la file vers BullMQ, worker séparé (transport Redis de Transmit) et sérialisation des tours par verrou PostgreSQL sur `session_id` — à trancher avant le beta test.
 
 ---

@@ -81,9 +81,11 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
   jouable de bout en bout. Ne pas anticiper une phase ultérieure sans raison explicite.
 - **Réutiliser le scaffolding AdonisJS** (register/login déjà en place) plutôt que de
   reconstruire. Seul le champ `role` est une extension propre au projet.
-- **Pas de retry automatique LLM** pour l'instant. Chaque erreur remonte au front avec un
-  message différencié selon sa catégorie (timeout, sortie hors schéma, erreur HTTP, échec
-  de validation backend).
+- **Pas de retry automatique LLM des erreurs de transport** (timeout, API injoignable,
+  erreur HTTP). **Exception, à partir de la Phase 3** : une sortie structurée rejetée par la
+  validation backend (JSON illisible, hors schéma, hors bornes, référence hors liste fermée)
+  est renvoyée **une seule fois**, avec un message correctif. Un second rejet fait échouer
+  le tour. Chaque erreur remonte au front avec un message différencié selon sa catégorie.
 - **`turn_log` est écrit à chaque tour** dès la première implémentation, même minimale.
 - **Tracking des tokens consommés par tour** dès la Phase 1 — il conditionne toute
   réflexion future sur le coût réel et la monétisation.

@@ -75,8 +75,8 @@ Trame narrative type, rattachée à un univers.
 | `title` | text | titre du scénario |
 | `synopsis` | text | résumé général |
 | `chapter_structure` | jsonb | liste ordonnée de chapitres/beats, objectifs, conditions de progression |
-| `planned_npcs` | jsonb | PNJ types définis pour ce scénario (références, pas instances jouées) |
-| `item_catalog` | jsonb | **catalogue fermé** des objets acquérables : référence stable, effets mécaniques, noms d'affichage par langue |
+| ~~`planned_npcs`~~ | — | remplacé par la table `npc_definitions` (Phase 5), qui porte aussi les PNJ de l'univers — voir architecture, section 6ter |
+| `item_catalog` | jsonb | **catalogue fermé** des objets acquérables : référence stable, effets mécaniques, noms d'affichage par langue — *forme à revoir en Phase 4 : définitions à deux niveaux (univers et scénario), comme les PNJ* |
 | `glossary` | jsonb | noms propres (lieux, PNJ, factions) et leurs traductions par langue |
 | `branch_points` | jsonb | points de bascule / choix narratifs possibles |
 
@@ -93,24 +93,42 @@ dupliquait tout le lore par langue.
 
 ### `resolution_rules`
 
-Barèmes de jeu paramétrables, table clé pour l'étape de résolution du pipeline LLM.
+Barèmes de jeu paramétrables, table clé pour l'étape de résolution du pipeline LLM. Elle
+rattache chaque catégorie d'action (`action_type`) à la compétence qui la résout : le LLM
+d'arbitrage choisit la catégorie dans une liste fermée, le backend en déduit la compétence.
+
+**Schéma de la Phase 3** (tranché avant la phase) — volontairement réduit à ce qu'un tour
+lit réellement :
 
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant |
-| `world_id` | FK → worlds | univers parent |
-| `scenario_id` | FK → scenarios, nullable | scénario parent si la règle surcharge celle de l'univers |
-| `action_type` | text | catégorie d'action (ex: `social_persuasion`, `melee_combat`, `offensive_spell`) |
-| `associated_skill` | text | compétence utilisée pour cette catégorie |
-| `difficulty_thresholds` | jsonb | seuils numériques par niveau qualitatif (`easy`/`medium`/`hard`/`very_hard`) |
-| `possible_modifiers` | jsonb | liste de sources de bonus/malus avec valeur et description |
-| `specific_conditions` | jsonb | règles particulières : prérequis stricts, conséquences d'échec/réussite critique, mécaniques propres au type d'action |
-| `created_at` / `updated_at` | timestamp | — |
+| `world_reference` | varchar | référence de l'univers (`three_musketeers`) ; devient `world_id` (FK → `worlds`) en Phase 5 |
+| `action_type` | varchar | catégorie d'action, référence anglaise stable (ex : `melee_combat`, `social_persuasion`) |
+| `description` | text | une phrase anglaise sur ce que couvre la catégorie, transmise à l'arbitrage |
+| `associated_skill` | varchar | référence d'une compétence de l'univers |
+| `created_at` / `updated_at` | timestamptz | — |
 
-**Exemple de contenu `difficulty_thresholds`** :
-```json
-{ "easy": 7, "medium": 9, "hard": 11, "very_hard": 13 }
-```
+Contrainte d'unicité sur `(world_reference, action_type)`, qui sert aussi d'index à la
+résolution. `action_type` est un `varchar`, pas un enum : la liste est propre à chaque
+univers, donc ouverte.
+
+- **Pas de clé étrangère vers les compétences** : jusqu'à la Phase 5, elles vivent dans la
+  définition d'univers en dur. Un test vérifie que chaque `associated_skill` y existe.
+- **Pas de seuils par ligne** : l'échelle de difficulté est fixe dans le code. Un barème
+  alternatif, s'il est un jour autorisé, se réglera par univers, sur `worlds`.
+- **Remplissage par un seeder de contenu idempotent**, exécuté dans tous les environnements :
+  les lignes sont écrites dans le code, à côté de la définition d'univers, et insérées ou
+  mises à jour par `(world_reference, action_type)`. Modifier le contenu revient à modifier ce
+  fichier, jusqu'à ce que le back-office de la Phase 5 prenne le relais.
+
+**Colonnes prévues plus tard**, ajoutées chacune par un `alterTable` quand un tour les lira :
+
+| Colonne | Type | Contenu | Phase |
+|---|---|---|---|
+| `scenario_id` | FK → scenarios, nullable | scénario parent si la règle surcharge celle de l'univers | 5 |
+| `possible_modifiers` | jsonb | sources de bonus/malus contextuels possibles | 4 au plus tôt |
+| `specific_conditions` | jsonb | prérequis stricts, conséquences d'échec/réussite critique, mécaniques propres au type d'action | à la première règle qui en a besoin |
 
 **Exemple de contenu `possible_modifiers`** :
 ```json
@@ -128,8 +146,6 @@ Barèmes de jeu paramétrables, table clé pour l'étape de résolution du pipel
   "skill_rarity": "moins de 1% de la population"
 }
 ```
-
-Index recommandé : `(world_id, action_type)` pour la résolution déterministe rapide côté backend.
 
 ---
 
@@ -171,6 +187,14 @@ Le personnage joué dans une partie donnée.
 ### `inventory_items`
 
 Objets possédés par le personnage.
+
+> **Schéma à revoir à l'ouverture de la Phase 4.** Le principe est tranché (architecture,
+> section 6bis) : une ligne d'inventaire est une **instance** qui pointe vers une définition
+> d'objet (univers ou scénario, `unique` ou `archetype`) et ne porte que l'état propre à
+> l'instance — quantité, `equipped` / `carried`, descripteur, plus tard durabilité et
+> charges. Les colonnes `display_names`, `descriptions` et `mechanical_effects` ci-dessous
+> passeront donc sur la définition. Le tableau reste en l'état jusqu'à ce que le schéma soit
+> tranché.
 
 | Colonne | Type | Contenu |
 |---|---|---|
@@ -224,22 +248,78 @@ complète : le coût en jetons reste identique que le produit supporte deux lang
 | `session_id` | FK → sessions (unique) | partie parente — relation 1:1 |
 | `active_quests` | jsonb | liste des quêtes avec statut et étape courante |
 | `narrative_flags` | jsonb | événements/booléens déclenchés (ex: `"noble_zone_access_granted": true`) |
-| `visited_locations` | jsonb | historique et lieu courant |
+| ~~`visited_locations`~~ | — | **remplacé en Phase 3** par `current_location_id` et la table `location_instances`, qui forme la liste des lieux visités |
+| `current_location_id` | FK → location_instances | lieu courant de la partie (Phase 3) |
 | `world_objects` | jsonb | objets visibles dans le monde mais non ramassés (distincts de l'inventaire) |
 | `updated_at` | timestamp | — |
 
-### `npc_instances`
+### `location_instances`
 
-État des PNJ tels qu'ils existent dans une partie précise, distinct de leur définition générique dans `scenarios.planned_npcs`.
+Lieux tels qu'ils existent dans une partie : lieux uniques visités et lieux d'archétype
+improvisés, sous une même forme. Définitions en dur dans la définition d'univers en Phase 3,
+en base en Phase 5 (`location_definitions`, même forme que `npc_definitions`, plus le parent).
+Voir architecture, section 6quater.
+
+**Schéma de la Phase 3** (tranché avant la phase) :
 
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant |
 | `session_id` | FK → sessions | partie parente |
-| `npc_reference` | text | référence au PNJ type défini dans le scénario |
-| `disposition` | jsonb | disposition envers le joueur (qualitative + valeur numérique) |
-| `status` | text | `alive` / `dead` / `absent` / `present_in_scene` |
-| `revealed_information` | jsonb | ce que ce PNJ a révélé au joueur au fil de la partie |
+| `handle` | varchar | identifiant stable dans la partie : la référence pour un lieu unique (`paris`), référence + numéro pour un archétype (`tavern_2`) |
+| `definition_reference` | varchar | référence de la définition instanciée |
+| `parent_reference` | varchar, nullable | lieu unique englobant ; null pour une instance de lieu unique, dont le parent est porté par la définition |
+| `name` | varchar, nullable | nom propre d'un lieu improvisé (« Orléans ») |
+| `descriptor` | text, nullable | description courte en anglais, réservée au narrateur |
+| `created_at` / `updated_at` | timestamptz | `created_at` vaut date de première visite |
+
+- Contrainte d'unicité sur `(session_id, handle)` ; le numéro d'un archétype est attribué par
+  le backend.
+- Un lieu unique n'a qu'une instance par partie, créée à sa première visite.
+- Le passage de `visited_locations` à `current_location_id` se fait par une migration
+  `alterTable` qui reprend les lieux déjà visités des parties existantes.
+
+### `npc_definitions` (Phase 5)
+
+Catalogue fermé des PNJ, qui remplace la liste en dur de la Phase 3. Forme prévue :
+`world_id`, `scenario_id` (nullable — une définition de scénario de même référence surcharge
+celle de l'univers), `reference`, `kind` (`unique` / `archetype`), `generic` (archétype
+générique servant aux PNJ improvisés), `description`, `default_disposition`, puis le profil
+de combat (Phase 4, d'abord en dur). Unicité sur `(world_id, scenario_id, reference)`. Voir
+architecture, section 6ter.
+
+### `npc_instances`
+
+État des PNJ tels qu'ils existent dans une partie précise, distinct de leur définition
+(catalogue fermé : en dur dans la définition d'univers en Phase 3, table `npc_definitions` en
+Phase 5). PNJ uniques, archétypes et PNJ improvisés y ont tous la même forme : un improvisé
+est une instance d'archétype générique. Voir architecture, section 6ter.
+
+**Schéma de la Phase 3** (tranché avant la phase) :
+
+| Colonne | Type | Contenu |
+|---|---|---|
+| `id` | uuid | identifiant |
+| `session_id` | FK → sessions | partie parente |
+| `handle` | varchar | identifiant stable dans la partie, seul moyen pour le LLM de désigner l'instance : la référence pour un unique (`treville`), référence + numéro pour un archétype (`cardinal_guard_2`) |
+| `definition_reference` | varchar | référence de la définition instanciée |
+| `name` | varchar, nullable | nom propre appris en cours de partie (« Jacques ») |
+| `descriptor` | text, nullable | description courte en anglais, pour distinguer deux instances d'un même archétype |
+| `disposition` | enum `npc_disposition` | `hostile` / `unfriendly` / `neutral` / `friendly` / `allied` — label qualitatif seul |
+| `status` | enum `npc_status` | `present` / `absent` / `dead` |
+| `created_at` / `updated_at` | timestamptz | — |
+
+- Contrainte d'unicité sur `(session_id, handle)` ; le numéro d'un archétype est attribué par
+  le backend, jamais par le LLM.
+- Un unique n'a qu'une instance par partie : une réapparition la repasse `present`.
+- Les instances ne sont jamais supprimées : un PNJ qui quitte la scène passe `absent`.
+- La disposition initiale vient de la définition. L'extraction propose une disposition
+  absolue, jamais un delta chiffré.
+
+**Colonnes prévues plus tard** : points de vie de l'instance (Phase 4, avec les profils de
+combat sur les définitions) ; `revealed_information` (jsonb, ce que ce PNJ a révélé au
+joueur), quand un tour le lira ; `last_location`, si la mémoire long terme (Phase 7) rappelle
+les PNJ connus d'un lieu.
 
 ---
 
@@ -364,7 +444,6 @@ users ──── usage_quotas (optionnel)
 
 - Choix définitif du mécanisme RAG : pgvector intégré vs vector store externe (Pinecone, Qdrant, etc.).
 - Politique de rétention/archivage de `turn_log` pour les parties terminées anciennes.
-- Mécanisme de réconciliation entre `action_type` proposé librement par le LLM et les valeurs exactes existantes dans `resolution_rules` (validation stricte, fuzzy matching, ou liste fermée imposée au LLM). Pour les **identifiants d'objets**, le principe de la liste fermée est acté ; reste à décider du comportement en cas de proposition hors liste.
 - Emplacement définitif du glossaire de noms propres : `scenarios.glossary` comme proposé ici, ou au niveau de `worlds` pour ce qui est commun à tous les scénarios d'un univers.
 - Faut-il indexer `inventory_items.item_reference` — dépend du volume d'objets par personnage, probablement inutile avant la Phase 8.
 - Stratégie de migration de schéma pour les colonnes jsonb (versionnement de structure interne si le format évolue avec de nouveaux univers).

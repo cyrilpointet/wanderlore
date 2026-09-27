@@ -140,6 +140,15 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
 
 **Objectif** : remplacer l'appel fusionné de la Phase 1 par le pipeline complet tel que défini dans le document d'architecture, une fois la boucle de base validée en usage réel.
 
+### Décisions de cadrage
+
+Tranchées en clôture de la Phase 2 :
+
+- **Une seule nouvelle tentative sur une sortie structurée rejetée.** Quand le backend rejette la sortie JSON d'une étape (A+B+C ou E) — JSON illisible, hors schéma, hors bornes, référence absente de la liste fermée —, l'appel est renvoyé une fois avec un message correctif qui nomme les valeurs rejetées et rappelle la liste valide. Un second rejet fait échouer le tour. Les erreurs de transport ne sont toujours pas retentées. Détail : architecture, section 7.
+- **Narration en streaming dès cette phase** (événement `narration_chunk`). La narration diffusée reste provisoire jusqu'à `turn_completed`, et le front la retire si le tour échoue ensuite. Détail : architecture, section 8bis.
+- **Budget de 3 minutes par tour**, compté depuis sa prise en charge : chaque appel LLM reçoit au plus le temps restant, et un budget épuisé fait échouer le tour en `llm_timeout`. Le balayage des tours `pending` reste à 5 minutes et ne peut plus expirer un tour vivant. Détail : architecture, section 8bis.
+- **Un seul modèle pour toutes les étapes** (`gemini-2.5-flash`) pendant les phases de test. La séparation des étapes rend la différenciation possible, mais elle attend les mesures de coût réelles (Phase 9).
+
 ### Contenu
 
 - Séparation effective des étapes :
@@ -147,9 +156,20 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
   - Calcul du jet en étape backend déterministe isolée, avec traçabilité complète (`applied_modifiers`) enregistrée dans `turn_log`.
   - Appel D (narration) — texte libre.
   - Appel E (extraction des effets) — sortie structurée, validée avant application au state.
-- Cette séparation permet notamment d'utiliser un modèle LLM différent (potentiellement moins coûteux) pour l'extraction que pour la narration.
-- Introduction de la table `resolution_rules` en base — encore limitée à un seul univers, mais structurée proprement plutôt qu'écrite en dur dans le prompt. Premier pas vers la généricité multi-univers.
-- **Table `npc_instances`, état minimal** (voir document de base de données) : référence, disposition envers le joueur, statut (dont la présence dans la scène). Les PNJ présents sont transmis au contexte (`npcs_present`), et l'étape E extrait les changements de disposition (`npc_relations`) depuis une **liste fermée** de références — le LLM ne crée pas de PNJ ayant un état. Le catalogue des PNJ vit dans la définition d'univers en dur, comme les lieux, avec ses libellés. Objectif : qu'une réaction de PNJ ait une suite d'un tour à l'autre (un PNJ insulté reste hostile), sans rien toucher au moteur de règles — la disposition est un label qualitatif.
+- Cette séparation permettra d'utiliser un modèle LLM différent (potentiellement moins coûteux) pour l'extraction que pour la narration — pas avant la Phase 9 (voir décisions de cadrage).
+- Narration en streaming : événement `narration_chunk`, et côté front un bloc de narration qui grandit puis se remplace par le tour persisté, ou se retire sur `turn_failed`.
+- Introduction de la table `resolution_rules` en base — encore limitée à un seul univers, mais structurée proprement plutôt qu'écrite en dur dans le prompt. Premier pas vers la généricité multi-univers. Schéma réduit (`world_reference`, `action_type`, `description`, `associated_skill`), rempli par un seeder de contenu idempotent (voir document de base de données). L'arbitrage choisit désormais un `action_type` et non plus une compétence : `skill_used` disparaît de sa sortie, le backend déduit la compétence, et les valeurs de compétence du personnage ne sont plus transmises à l'arbitrage (architecture, section 6, étape 1).
+- **PNJ : définitions et instances** (tranché avant la phase — architecture, section 6ter). PNJ uniques, archétypes et PNJ improvisés passent par un seul mécanisme :
+  - **catalogue en dur** dans la définition d'univers, comme les lieux, avec ses libellés : chaque définition est `unique` ou `archetype`, et quelques archétypes **génériques** (`commoner`, `thug`, `soldier`…) servent aux PNJ improvisés ;
+  - **table `npc_instances`** (voir document de base de données) : `handle` attribué par le backend (`treville`, `cardinal_guard_2`), nom appris, descripteur, disposition en label qualitatif, statut `present` / `absent` / `dead` ;
+  - les PNJ présents sont transmis au contexte (`npcs_present`) ; l'étape E extrait les entrées en scène (définition + descripteur), les sorties, les noms appris et les changements de disposition, toujours depuis des **listes fermées** — le LLM ne crée pas de PNJ ayant un état ;
+  - objectif : qu'une réaction de PNJ ait une suite d'un tour à l'autre (un PNJ insulté reste hostile), et que le passant imprévu devienne un PNJ suivi, sans rien toucher au moteur de règles.
+- **Lieux : même modèle que les PNJ** (tranché avant la phase — architecture, section 6quater) :
+  - catalogue en dur enrichi : chaque lieu est `unique` (avec son parent) ou `archetype` (`tavern`, `town`, `road`…), et quelques lieux de grande échelle (`france`, `england`) servent de racines ;
+  - **table `location_instances`** : un lieu unique y entre à sa première visite, un lieu improvisé y est créé avec définition, parent, descripteur et nom éventuel ; `world_states.visited_locations` est remplacé par `current_location_id` ;
+  - l'extraction propose un déplacement vers un lieu unique ou vers un nouveau lieu d'archétype ; au changement de lieu, les PNJ présents passent `absent`, sauf ceux qui suivent le joueur (`npcs_following`) ;
+  - le front affiche le nom propre du lieu, sinon « archétype · parent » ;
+  - objectif : qu'un voyage hors catalogue (« je file à Orléans ») soit suivi par le state au lieu d'être rejeté, et que la narration et le state ne divergent plus.
 
 ### Critère de sortie de phase
 
@@ -162,6 +182,11 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
 
 **Objectif** : introduire la gestion d'objets et leur impact mécanique sur les jets, conformément au document de référence sur le système de règles.
 
+### Décisions de cadrage
+
+- **Objets : définitions et instances, sur le modèle des PNJ** (principe tranché avant la Phase 3 — architecture, section 6bis). Définitions à deux niveaux (univers, scénario), `unique` ou `archetype`, archétypes génériques pour les objets improvisés, ligne d'inventaire réduite à l'état de l'instance, indicateur `stackable` pour les objets interchangeables.
+- **À trancher à l'ouverture de la phase** : le schéma d'`inventory_items` et des définitions d'objets, la forme de `stackable`, le détenteur d'un objet (personnage seulement, ou aussi PNJ et lieux), la durabilité et les charges.
+
 ### Contenu
 
 - Table `inventory_items`, avec le champ `mechanical_effects` structuré tel que défini dans le document de base de données (modificateurs avec `target_skill`, `value`, `condition` — `owned` ou `equipped`).
@@ -172,7 +197,7 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
 - Extension du front pour afficher l'inventaire du personnage (lecture seule), avec les noms d'affichage résolus côté backend dans la langue de la partie.
 - **Données de combat des PNJ** : compétences, points de vie et références d'armes, au même format que celles d'un personnage joueur (voir système de règles, section 8). Elles arrivent avec l'inventaire, dont dépend le calcul des dégâts, pour que la Phase 8 trouve un modèle mécanique complet.
 
-> **Note de séquencement** : le catalogue d'objets par scénario (`scenarios.item_catalog`) n'arrive qu'en Phase 5, avec la table `scenarios`. En Phase 4, la liste fermée des références autorisées peut rester rudimentaire — l'important est que la séparation référence/affichage et le principe de liste fermée soient posés dès maintenant.
+> **Note de séquencement** : le catalogue d'objets en base n'arrive qu'en Phase 5, avec les tables `worlds` et `scenarios`. En Phase 4, les définitions d'objets vivent en dur dans la définition d'univers, comme les PNJ en Phase 3, et la liste fermée des références autorisées peut rester rudimentaire — l'important est que la séparation référence/affichage et le principe de liste fermée soient posés dès maintenant.
 
 ### Critère de sortie de phase
 
@@ -188,8 +213,9 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
 ### Contenu applicatif
 
 - Tables `worlds` et `scenarios` en base, avec attributs et compétences paramétrables par univers, conformément au document de référence sur le système de règles.
-- **`scenarios.item_catalog`** : catalogue fermé des objets acquérables (référence stable, effets mécaniques, noms d'affichage par langue), qui devient la source de vérité alimentant la liste transmise à l'étape d'extraction (posée en Phase 4).
-- **`scenarios.planned_npcs`** : catalogue des PNJ du scénario (nommés et archétypes), qui remplace la liste en dur posée en Phase 3 et devient la source de vérité de la liste fermée transmise au pipeline — même trajectoire que `item_catalog`.
+- **Définitions d'objets en base** : catalogue fermé des objets de l'univers et du scénario (référence stable, `unique` / `archetype`, effets mécaniques, noms d'affichage par langue), qui remplace la liste en dur de la Phase 4 et devient la source de vérité alimentant la liste transmise à l'étape d'extraction. Forme exacte (table dédiée comme `npc_definitions`, ou `scenarios.item_catalog`) tranchée avec le schéma de la Phase 4.
+- **Table `location_definitions`** : catalogue des lieux de l'univers et du scénario, même forme que `npc_definitions` plus le parent, qui remplace la liste en dur de la Phase 3.
+- **Table `npc_definitions`** : catalogue des PNJ de l'univers et du scénario (uniques, archétypes, archétypes génériques), une définition de scénario surchargeant celle de l'univers de même référence. Elle remplace la liste en dur posée en Phase 3 et devient la source de vérité de la liste fermée transmise au pipeline — même trajectoire que `item_catalog`. Voir architecture, section 6ter.
 - **`scenarios.glossary`** : noms propres (lieux, PNJ, factions) et leurs traductions, injectés à la seule étape de narration pour figer la cohérence des noms d'un tour à l'autre. Voir document d'architecture, section 4bis.
 - **Création du troisième package du monorepo, `back-office`** (aux côtés de `backend` et `frontend` posés en Phase 0) : formulaires CRUD basiques pour créer/éditer un univers (nom, ton narratif, attributs, compétences, règles générales) et un scénario (synopsis, structure de chapitres, catalogue d'objets, glossaire). Pas d'assistance LLM à la création, pas d'import de fichiers à ce stade.
 - Possibilité, à partir de cette phase, de basculer vers un univers original si une diffusion plus large est envisagée (voir point de vigilance en introduction).
@@ -273,6 +299,8 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
   - gestion de la reprise après une pause longue (régénération du résumé avant reprise si nécessaire).
 
 > **Prérequis** : la boucle de combat s'appuie sur `npc_instances`, posée en Phase 3 (état et disposition) et complétée en Phase 4 (données de combat). Cette phase n'ajoute que la boucle de rounds.
+>
+> **Point à régler ici** : les instances de PNJ ne sont créées que par l'extraction (E), en fin de tour. Un PNJ improvisé que le joueur attaque dès son apparition (« je frappe le passant ») n'existe donc pas encore au moment du jet. Sans incidence tant que le jet n'oppose le joueur qu'à une difficulté ; avec les jets opposés, l'arbitrage devra pouvoir désigner un archétype comme cible et le backend en lire le profil.
 
 ### Critère de sortie de phase
 
@@ -415,7 +443,7 @@ finit toujours par être ignoré.
 ## Décisions déjà actées (rappel)
 
 - **Multi-joueur** : explicitement hors scope, à traiter dans un projet distinct avec ses propres réflexions d'architecture (concurrence d'accès au state, infrastructure temps réel, visibilité narrative différenciée par joueur).
-- **Retry/fallback LLM** : pas de retry automatique dans un premier temps. Chaque erreur est renvoyée au front avec un message spécifique selon le type détecté. Un système de log d'erreurs API structuré est prévu en todolist, à traiter en Phase 9.
+- **Retry/fallback LLM** : pas de retry automatique des erreurs de transport. Depuis la Phase 3, une sortie structurée rejetée par la validation backend a droit à **une** nouvelle tentative avec message correctif, puis le tour échoue (voir Phase 3). Chaque erreur est renvoyée au front avec un message spécifique selon le type détecté. Un système de log d'erreurs API structuré est prévu en todolist, à traiter en Phase 9.
 - **Modificateurs contextuels vs modificateurs d'objets** : séparation stricte actée — le LLM ne propose que des modificateurs contextuels (plafonnés à 2-3), les modificateurs d'objets sont toujours calculés par le backend à partir de l'inventaire.
 - **Un compte = un rôle unique** pour l'instant (`player` / `game_master` / `superadmin`), pas de cumul multi-rôle. À réévaluer si le besoin se présente concrètement.
 - **Budget de développement** : hébergement léger (ex. Vercel, Supabase, Railway) et LLM économique (ex. Gemini) pour la phase de test, budget cadré à 15-20€ mensuels — voir Phase 0.
@@ -436,7 +464,7 @@ finit toujours par être ignoré.
 - Modalités précises de l'inscription self-service (Phase 9) : validation d'email, gestion des mots de passe oubliés, éventuelle authentification via fournisseur tiers.
 - Décision sur la nécessité future d'un cumul de rôles (un MJ qui voudrait aussi jouer).
 - Choix définitif entre pgvector intégré et vector store externe si la Phase 6 est activée (dépend du volume de lore réellement atteint).
-- Réintroduction éventuelle d'un retry automatique limité (Phase 9), une fois le comportement réel des erreurs observé en usage — probablement restreint aux erreurs transitoires (timeout, 5xx), jamais aux erreurs de schéma qui indiquent un problème de prompt à corriger plutôt qu'à retenter.
+- Réintroduction éventuelle d'un retry automatique limité (Phase 9), une fois le comportement réel des erreurs observé en usage — restreint aux erreurs transitoires (timeout, 5xx). Les sorties rejetées ont leur nouvelle tentative unique depuis la Phase 3 ; un taux de rejet élevé reste le signe d'un prompt à corriger plutôt qu'à retenter.
 - Support multi-langue : l'architecture est actée et répercutée dans les phases ci-dessus (paramètre `language` et colonne `turn_log.language` en Phase 1, séparation référence/affichage en Phase 4, catalogue et glossaire en Phase 5, résumé anglais en Phase 7). L'i18n du front est posée dès la Phase 2, avec l'anglais seul. **Restent ouverts** : la liste des langues cibles, et la phase à laquelle une seconde langue est effectivement activée — probablement pas avant que la Phase 5 rende le contenu paramétrable.
-- Événements SSE : la granularité et le rattrapage par lecture du tour sont tranchés pour la Phase 2 (architecture, section 8bis). **Restent ouverts** : le streaming de la narration, à réexaminer en Phase 3 quand la narration devient du texte libre, et le rejeu des événements manqués, jugé inutile tant que la lecture du tour suffit.
+- Événements SSE : la granularité et le rattrapage par lecture du tour sont tranchés pour la Phase 2 (architecture, section 8bis). Le streaming de la narration est tranché pour la Phase 3 (voir ses décisions de cadrage). **Reste ouvert** le rejeu des événements manqués, jugé inutile tant que la lecture du tour suffit.
 - Passage à plusieurs instances : bascule de la file de pg-boss vers BullMQ, worker séparé (transport Redis de Transmit) et sérialisation par verrou PostgreSQL sur `session_id` plutôt que par `concurrency: 1` — à trancher avant le beta test de la Phase 9.

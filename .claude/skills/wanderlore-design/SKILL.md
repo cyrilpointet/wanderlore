@@ -21,6 +21,8 @@ Les invariants non négociables sont dans `CLAUDE.md` (déjà chargé). Ce skill
 | Étapes du pipeline, ce qui est injecté à chaque étape | `doc/architecture-mj-virtuel-llm.md` | 3, 4 |
 | Multi-langue : quelle étape voit quelle langue, glossaire, résumé | `doc/architecture-mj-virtuel-llm.md` | 4bis |
 | Inventaire dans le pipeline, références vs noms affichés | `doc/architecture-mj-virtuel-llm.md` | 6bis |
+| PNJ uniques, archétypes, improvisés : définitions et instances | `doc/architecture-mj-virtuel-llm.md` | 6ter |
+| Lieux : définitions, instances, parent, affichage | `doc/architecture-mj-virtuel-llm.md` | 6quater |
 | Exemple complet de tour avec system prompts réels | `doc/architecture-mj-virtuel-llm.md` | 6 |
 | Sécurité des prompts, anti prompt-injection | `doc/architecture-mj-virtuel-llm.md` | 7 |
 | Découpage applicatif AdonisJS (services, jobs) | `doc/architecture-mj-virtuel-llm.md` | 8 |
@@ -102,9 +104,9 @@ appel où du texte libre joueur transite.
 L'étape A+B+C, premier point de contact avec le texte du joueur, porte la responsabilité de
 signaler toute tentative de manipulation (`alert.prompt_injection_suspected`).
 
-Contraintes à inscrire dans le prompt d'arbitrage : la liste des compétences valides de
-l'univers courant est transmise dynamiquement (jamais supposée connue) ; `skill_used` doit
-en provenir ; maximum 2-3 modificateurs contextuels ; jamais de modificateur d'objet chiffré ;
+Contraintes à inscrire dans le prompt d'arbitrage : la liste des catégories d'action
+(`action_type` + description) de l'univers courant est transmise dynamiquement (jamais
+supposée connue) ; `action_type` doit en provenir, et le backend en déduit la compétence ; maximum 2-3 modificateurs contextuels ; jamais de modificateur d'objet chiffré ;
 jamais de valeur numérique de règle — uniquement des labels qualitatifs.
 
 ---

@@ -534,7 +534,9 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
 
 - **Phase 3 — Narration en streaming.** L'événement `narration_chunk` réapparaît : la
   narration s'écrit progressivement à la place du message d'attente. Le rendu du journal doit
-  donc accepter un bloc de narration qui grandit, sans saut de défilement.
+  donc accepter un bloc de narration qui grandit, sans saut de défilement. Cette narration
+  reste **provisoire** : `turn_completed` la remplace par celle du tour reçu, et sur
+  `turn_failed` elle est retirée au profit de l'encadré d'échec (architecture, section 8bis).
 - **Phase 4 — Inventaire.** Un onglet **Inventory** dans la fiche : objets possédés et
   équipés, noms d'affichage fournis par le backend, en lecture seule. La fiche est conçue
   dès la Phase 2 comme un panneau capable d'accueillir des onglets. La pastille de jet
