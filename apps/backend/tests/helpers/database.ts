@@ -162,6 +162,28 @@ export async function createLocationInstance(
   return row.id
 }
 
+export async function createNpcInstance(
+  sessionId: string,
+  handle = 'treville',
+  overrides: Partial<{ definitionReference: string; disposition: string; status: string }> = {}
+): Promise<string> {
+  const now = new Date()
+  const [row] = await db
+    .table('npc_instances')
+    .insert({
+      session_id: sessionId,
+      handle,
+      definition_reference: overrides.definitionReference ?? handle,
+      disposition: overrides.disposition ?? 'neutral',
+      ...(overrides.status ? { status: overrides.status } : {}),
+      created_at: now,
+      updated_at: now,
+    })
+    .returning('id')
+
+  return row.id
+}
+
 export async function createTurn(
   sessionId: string,
   turnNumber: number | null = 1,

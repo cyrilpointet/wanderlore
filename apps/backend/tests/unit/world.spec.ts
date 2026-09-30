@@ -64,6 +64,19 @@ test.group('World definition | npcs', () => {
     assert.isNotEmpty(generics)
   })
 
+  test('no unique character could be mistaken for an archetype instance', ({ assert }) => {
+    /** Both share a game's handles: `treville`, but `cardinal_guard_2`. */
+    const archetypes = THREE_MUSKETEERS.npcs.filter((npc) => npc.kind === 'archetype')
+
+    for (const archetype of archetypes) {
+      const handle = new RegExp(`^${archetype.reference}_\\d+$`)
+
+      for (const npc of THREE_MUSKETEERS.npcs) {
+        assert.notMatch(npc.reference, handle)
+      }
+    }
+  })
+
   test('lists every definition in the closed list', ({ assert }) => {
     assert.sameMembers(
       npcReferences(THREE_MUSKETEERS),

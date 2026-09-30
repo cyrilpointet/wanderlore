@@ -2,8 +2,10 @@ import { test } from '@japa/runner'
 
 import {
   PG_CHECK_VIOLATION,
+  PG_INVALID_TEXT_REPRESENTATION,
   PG_UNIQUE_VIOLATION,
   createLocationInstance,
+  createNpcInstance,
   createResolutionRule,
   createSession,
   createTurn,
@@ -127,6 +129,30 @@ test.group('Schema constraints', (group) => {
     await createLocationInstance(await createSession(userId), 'paris')
 
     assert.isString(await createLocationInstance(await createSession(userId), 'paris'))
+  })
+
+  test('a handle names one person per game', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    await createNpcInstance(sessionId, 'treville')
+
+    const error = await expectDbError(() => createNpcInstance(sessionId, 'treville'))
+
+    /** A unique character met again is made present, never written twice. */
+    assert.equal(error.code, PG_UNIQUE_VIOLATION)
+  })
+
+  test('a disposition is a qualitative label, nothing else', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+
+    const score = await expectDbError(() =>
+      createNpcInstance(sessionId, 'jussac', { disposition: '-2' })
+    )
+    const unknownStatus = await expectDbError(() =>
+      createNpcInstance(sessionId, 'jussac', { status: 'wounded' })
+    )
+
+    assert.equal(score.code, PG_INVALID_TEXT_REPRESENTATION)
+    assert.equal(unknownStatus.code, PG_INVALID_TEXT_REPRESENTATION)
   })
 
   test('two accounts cannot share an email', async ({ assert }) => {

@@ -22,14 +22,16 @@ async function migrate(options: { direction: 'up' } | { direction: 'down'; step:
   }
 }
 
-/** Back to just before the migration under test, whatever came after it. */
+/**
+ * Back to just before the migration under test, whatever came after it.
+ *
+ * One file at a time: the runner only counts `step` within the latest batch,
+ * and a migration run from the command line lands in a batch of its own.
+ */
 async function rollBackPastIt() {
-  const [{ total }] = await db
-    .from('adonis_schema')
-    .where('name', '>=', MIGRATION)
-    .count('* as total')
-
-  await migrate({ direction: 'down', step: Number(total) })
+  while (await db.from('adonis_schema').where('name', MIGRATION).first()) {
+    await migrate({ direction: 'down', step: 1 })
+  }
 }
 
 const JANUARY = new Date('2026-01-01T00:00:00Z')
@@ -79,6 +81,16 @@ test.group('Migrations | current location', (group) => {
 
     return createSession(userId)
   }
+
+  /**
+   * Puts the latest migration in a batch of its own, as `node ace
+   * migration:run` does after adding one: rolling back must reach the
+   * migration under test across batches, not only within the last one.
+   */
+  group.each.setup(async () => {
+    await migrate({ direction: 'down', step: 1 })
+    await migrate({ direction: 'up' })
+  })
 
   group.each.teardown(async () => {
     await testUtils.db().migrate()

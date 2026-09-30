@@ -82,6 +82,31 @@ export class LocationInstanceSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class NpcInstanceSchema extends BaseModel {
+  static $columns = ['createdAt', 'definitionReference', 'descriptor', 'disposition', 'handle', 'id', 'name', 'sessionId', 'status', 'updatedAt'] as const
+  $columns = NpcInstanceSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare definitionReference: string
+  @column()
+  declare descriptor: string | null
+  @column()
+  declare disposition: 'hostile' | 'unfriendly' | 'neutral' | 'friendly' | 'allied'
+  @column()
+  declare handle: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare name: string | null
+  @column()
+  declare sessionId: string
+  @column()
+  declare status: 'present' | 'absent' | 'dead'
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
 export class ResolutionRuleSchema extends BaseModel {
   static $columns = ['actionType', 'associatedSkill', 'createdAt', 'description', 'id', 'updatedAt', 'worldReference'] as const
   $columns = ResolutionRuleSchema.$columns

@@ -50,6 +50,19 @@ export default {
       },
     },
 
+    npc_instances: {
+      columns: {
+        disposition: {
+          tsType: "'hostile' | 'unfriendly' | 'neutral' | 'friendly' | 'allied'",
+          decorators: column,
+        },
+        status: {
+          tsType: "'present' | 'absent' | 'dead'",
+          decorators: column,
+        },
+      },
+    },
+
     sessions: {
       columns: {
         status: {
