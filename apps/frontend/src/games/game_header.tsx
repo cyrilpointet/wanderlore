@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, IdCard } from 'lucide-react'
+import { ArrowLeft, IdCard, Volume2, VolumeX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { AccountMenu } from '@/components/account_menu'
@@ -11,7 +11,16 @@ import type { Game } from './queries'
  * Who is playing and how they fare. Hit points stay visible at every size;
  * the sheet button only exists where the sheet is not already on screen.
  */
-export function GameHeader({ game, onOpenSheet }: { game: Game; onOpenSheet: () => void }) {
+export function GameHeader({
+  game,
+  onOpenSheet,
+  voice,
+}: {
+  game: Game
+  onOpenSheet: () => void
+  /** Reading the narration aloud; no button where the browser cannot speak. */
+  voice: { supported: boolean; enabled: boolean; setEnabled: (enabled: boolean) => void }
+}) {
   const { t } = useTranslation('game')
   const { character } = game
 
@@ -56,6 +65,22 @@ export function GameHeader({ game, onOpenSheet }: { game: Game; onOpenSheet: () 
             className="hidden w-16 sm:block"
           />
         </div>
+
+        {voice.supported && (
+          <button
+            type="button"
+            onClick={() => voice.setEnabled(!voice.enabled)}
+            aria-label={t('voice.label')}
+            aria-pressed={voice.enabled}
+            className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-surface-2 text-muted transition-colors hover:text-text"
+          >
+            {voice.enabled ? (
+              <Volume2 aria-hidden className="size-5" />
+            ) : (
+              <VolumeX aria-hidden className="size-5" />
+            )}
+          </button>
+        )}
 
         <button
           type="button"
