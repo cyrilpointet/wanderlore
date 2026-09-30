@@ -6,6 +6,9 @@ build
 dist
 .turbo
 
+# Test reports
+.vitest
+
 # Secrets
 .env
 .env.local
