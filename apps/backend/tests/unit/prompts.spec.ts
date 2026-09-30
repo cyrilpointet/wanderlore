@@ -1,6 +1,6 @@
 import { test } from '@japa/runner'
 
-import { THREE_MUSKETEERS, locationReferences, skillReferences } from '#services/game/world'
+import { THREE_MUSKETEERS, skillReferences, uniqueLocationReferences } from '#services/game/world'
 import type { NarrationRequest, TurnContext } from '#services/game/prompts/types'
 import {
   ARBITRATION_SCHEMA,
@@ -93,7 +93,7 @@ test.group('Arbitration prompt | user message', () => {
     const message = buildArbitrationMessage(turnContext())
 
     /** A settled turn extracts its movement here, so it needs the closed list too. */
-    for (const location of locationReferences(THREE_MUSKETEERS)) {
+    for (const location of uniqueLocationReferences(THREE_MUSKETEERS)) {
       assert.include(message, location)
     }
   })
@@ -154,7 +154,7 @@ test.group('Narration prompt | mechanical blindness', () => {
   test('carries the location list its effects must pick from', ({ assert }) => {
     const message = buildNarrationMessage(narrationRequest())
 
-    for (const location of locationReferences(THREE_MUSKETEERS)) {
+    for (const location of uniqueLocationReferences(THREE_MUSKETEERS)) {
       assert.include(message, location)
     }
   })

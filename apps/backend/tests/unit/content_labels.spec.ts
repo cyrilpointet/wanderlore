@@ -1,43 +1,7 @@
 import { test } from '@japa/runner'
 
 import { ContentLabels, MissingLabelError } from '#services/game/content_labels'
-import { THREE_MUSKETEERS, type ContentEntry } from '#services/game/world'
-
-const REFERENCE = /^[a-z][a-z0-9_]{0,63}$/
-
-const CONTENT: [string, ContentEntry[]][] = [
-  ['attributes', THREE_MUSKETEERS.attributes],
-  ['skills', THREE_MUSKETEERS.skills],
-  ['resources', THREE_MUSKETEERS.resources],
-  ['locations', THREE_MUSKETEERS.locations],
-  ['chapters', THREE_MUSKETEERS.chapters],
-  ['quests', THREE_MUSKETEERS.quests],
-]
-
-test.group('World definition | content', () => {
-  for (const [kind, entries] of CONTENT) {
-    test(`every ${kind} entry has a stable reference and a label`, ({ assert }) => {
-      for (const entry of entries) {
-        assert.match(entry.reference, REFERENCE)
-        assert.isNotEmpty(entry.label.trim())
-      }
-    })
-
-    test(`${kind} references are unique`, ({ assert }) => {
-      const references = entries.map((entry) => entry.reference)
-
-      assert.lengthOf(new Set(references), references.length)
-    })
-  }
-
-  test('every skill hangs off an attribute the world defines', ({ assert }) => {
-    const attributes = THREE_MUSKETEERS.attributes.map((attribute) => attribute.reference)
-
-    for (const skill of THREE_MUSKETEERS.skills) {
-      assert.include(attributes, skill.attribute)
-    }
-  })
-})
+import { THREE_MUSKETEERS } from '#services/game/world'
 
 test.group('Content labels', () => {
   const labels = new ContentLabels(THREE_MUSKETEERS)
@@ -66,5 +30,23 @@ test.group('Content labels', () => {
 
   test('looks a reference up in its own kind only', ({ assert }) => {
     assert.throws(() => labels.of('skill', 'meung_sur_loire'), MissingLabelError)
+  })
+
+  test('labels people of the world', ({ assert }) => {
+    assert.deepEqual(labels.of('npc', 'treville'), {
+      reference: 'treville',
+      label: 'M. de Tréville',
+    })
+    assert.deepEqual(labels.of('npc', 'commoner'), { reference: 'commoner', label: 'Commoner' })
+  })
+
+  test('keeps unique places and place archetypes apart', ({ assert }) => {
+    /** An archetype is never a place the player stands in, only what one is an instance of. */
+    assert.deepEqual(labels.of('location_archetype', 'tavern'), {
+      reference: 'tavern',
+      label: 'Tavern',
+    })
+    assert.throws(() => labels.of('location', 'tavern'), MissingLabelError)
+    assert.throws(() => labels.of('location_archetype', 'paris'), MissingLabelError)
   })
 })

@@ -15,7 +15,15 @@ export type LabelledValue = Labelled & {
   value: number
 }
 
-export type ContentKind = 'attribute' | 'skill' | 'resource' | 'location' | 'chapter' | 'quest'
+export type ContentKind =
+  | 'attribute'
+  | 'skill'
+  | 'resource'
+  | 'npc'
+  | 'location'
+  | 'location_archetype'
+  | 'chapter'
+  | 'quest'
 
 /**
  * A reference with no label is a bug — state written against a list it does
@@ -53,7 +61,11 @@ export class ContentLabels {
       attribute: index(world.attributes),
       skill: index(world.skills),
       resource: index(world.resources),
-      location: index(world.locations),
+      npc: index(world.npcs),
+      location: index(world.locations.filter((location) => location.kind === 'unique')),
+      location_archetype: index(
+        world.locations.filter((location) => location.kind === 'archetype')
+      ),
       chapter: index(world.chapters),
       quest: index(world.quests),
     }

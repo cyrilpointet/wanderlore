@@ -1,4 +1,4 @@
-import { locationReferences } from '#services/game/world'
+import { uniqueLocationReferences } from '#services/game/world'
 import type { NarrationRequest } from './types.js'
 
 /**
@@ -57,7 +57,7 @@ export function buildNarrationMessage(request: NarrationRequest): string {
        */
       ambiance_fragments: request.world.ambiance,
       /** Closed list: effects.movement must come from it. */
-      available_locations: locationReferences(request.world),
+      available_locations: uniqueLocationReferences(request.world),
     },
     scene_state: request.scene,
     resolution_to_narrate: {

@@ -21,7 +21,7 @@ import {
   StaleTurnError,
   isTurnNumberConflict,
 } from './errors.js'
-import { THREE_MUSKETEERS, locationReferences } from './world.js'
+import { THREE_MUSKETEERS, uniqueLocationReferences } from './world.js'
 import {
   ARBITRATION_SCHEMA,
   ARBITRATION_SYSTEM_PROMPT,
@@ -276,7 +276,7 @@ export class TurnService {
     const context = buildContext(scene, turn.playerInput, turn.language)
     const meta: ValidationMeta = {
       skills: Object.keys(scene.character.skills),
-      locations: locationReferences(THREE_MUSKETEERS),
+      locations: uniqueLocationReferences(THREE_MUSKETEERS),
       hitPointsMax: scene.character.hitPointsMax,
     }
 

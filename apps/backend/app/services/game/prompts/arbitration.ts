@@ -1,4 +1,4 @@
-import { locationReferences, skillReferences } from '#services/game/world'
+import { skillReferences, uniqueLocationReferences } from '#services/game/world'
 import type { TurnContext } from './types.js'
 
 /**
@@ -126,7 +126,7 @@ export function buildArbitrationMessage(context: TurnContext): string {
        */
       available_skills: skillReferences(context.world),
       /** Closed list, like the skills: effects.movement must come from it. */
-      available_locations: locationReferences(context.world),
+      available_locations: uniqueLocationReferences(context.world),
     },
     scene_state: context.scene,
     character: {
