@@ -75,7 +75,8 @@ export type RecentTurn = {
 export type SceneState = {
   location: string | null
   narrative_flags: Record<string, unknown>
-  visited_locations: Record<string, unknown>[]
+  /** Handles of the places this game has been through, oldest first. */
+  visited_locations: string[]
   world_objects: Record<string, unknown>[]
 }
 

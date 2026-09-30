@@ -99,7 +99,6 @@ test.group('Lucid models', (group) => {
       sessionId,
       activeQuests: [{ reference: 'deliver_the_letter', step: 1 }],
       narrativeFlags: { queens_favour_earned: true },
-      visitedLocations: [],
       worldObjects: [],
     })
 
@@ -107,7 +106,6 @@ test.group('Lucid models', (group) => {
 
     assert.deepEqual(reloaded.activeQuests, [{ reference: 'deliver_the_letter', step: 1 }])
     assert.deepEqual(reloaded.narrativeFlags, { queens_favour_earned: true })
-    assert.deepEqual(reloaded.visitedLocations, [])
   })
 
   test('an unwritten jsonb column stays SQL NULL', async ({ assert }) => {

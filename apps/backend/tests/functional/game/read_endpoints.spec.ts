@@ -6,6 +6,8 @@ import Session from '#models/session'
 import TurnLog from '#models/turn_log'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
+import { THREE_MUSKETEERS } from '#services/game/world'
+import { improviseLocation, visitUniqueLocation } from '#services/game/locations'
 import { createUser, useTransaction } from '#tests/helpers/database'
 
 /**
@@ -40,17 +42,35 @@ async function arrangeGame(userId: string, lastActivityAt = DateTime.now()) {
     hitPointsMax: 10,
   })
 
+  await visitUniqueLocation(THREE_MUSKETEERS, session.id, 'meung_sur_loire')
+  const treville = await visitUniqueLocation(THREE_MUSKETEERS, session.id, 'hotel_de_treville')
+
   await WorldState.create({
     sessionId: session.id,
+    currentLocationId: treville.id,
     activeQuests: [
       { reference: 'deliver_the_letter', step: 1, summary: 'Carry the letter to Tréville.' },
     ],
     narrativeFlags: { letter_read: true },
-    visitedLocations: [{ reference: 'meung_sur_loire' }, { reference: 'hotel_de_treville' }],
     worldObjects: [],
   })
 
   return session
+}
+
+/** Moves the game into a new improvised place, as the extraction step will. */
+async function standIn(
+  sessionId: string,
+  place: { definition: string; parent: string; name: string | null }
+) {
+  const instance = await improviseLocation(THREE_MUSKETEERS, sessionId, {
+    ...place,
+    descriptor: 'a smoky room with low beams',
+  })
+
+  await WorldState.query()
+    .where('sessionId', sessionId)
+    .update({ current_location_id: instance.id })
 }
 
 function completedTurn(sessionId: string, turnNumber: number) {
@@ -176,6 +196,29 @@ test.group('GET /sessions/:id', (group) => {
       },
     ])
     assert.isNull(game.pendingTurn)
+  })
+
+  test('names an improvised place by its proper name', async ({ client, assert }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(player.id)
+    await standIn(session.id, { definition: 'town', parent: 'france', name: 'Orléans' })
+
+    const response = await client.get(`/api/v1/sessions/${session.id}`).loginAs(player)
+
+    assert.deepEqual(dataOf(response).location, { reference: 'town_1', label: 'Orléans' })
+  })
+
+  test('names a nameless place by its archetype within its parent', async ({ client, assert }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(player.id)
+    await standIn(session.id, { definition: 'tavern', parent: 'meung_sur_loire', name: null })
+
+    const response = await client.get(`/api/v1/sessions/${session.id}`).loginAs(player)
+    const { location } = dataOf(response)
+
+    /** The descriptor is English and the narrator's: it never reaches the player. */
+    assert.deepEqual(location, { reference: 'tavern_1', label: 'Tavern · Meung-sur-Loire' })
+    assert.notInclude(JSON.stringify(dataOf(response)), 'smoky')
   })
 
   test('never exposes scenario flags', async ({ client, assert }) => {

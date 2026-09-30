@@ -10,6 +10,7 @@ const TABLES = [
   'world_states',
   'turn_log',
   'resolution_rules',
+  'location_instances',
 ]
 
 const ENUM_TYPES = ['user_role', 'session_status', 'turn_status']

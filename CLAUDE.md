@@ -173,6 +173,10 @@ Supabase, Railway…).
   Lucid) — ne jamais l'éditer à la main, ni le reformater : il est réécrit à chaque
   migration. Il est exclu de Prettier via `apps/backend/.prettierignore`. Les modèles de
   `app/models/` étendent les classes qu'il expose et y ajoutent la logique métier.
+  **Migrer avant d'écrire le modèle** : un modèle qui importe une classe de schéma pas
+  encore générée empêche ace de démarrer (`start/transmit.ts` charge `Session` et ses
+  relations), donc de générer le schéma. Pour régénérer sans toucher à la base de dev :
+  `NODE_ENV=test node ace migration:run`.
 - **`apps/backend/.adonisjs/` est généré mais versionné** (hook `init` d'`adonisrc.ts`) :
   `start/routes.ts` importe `#generated/controllers`, et `tsc` ne le régénère pas. Après
   tout changement de route ou de contrôleur, lancer `node ace codegen` et commiter les

@@ -77,7 +77,6 @@ export default {
          * the type.
          */
         narrative_flags: jsonObject,
-        visited_locations: jsonObjectList,
         world_objects: jsonObjectList,
       },
     },

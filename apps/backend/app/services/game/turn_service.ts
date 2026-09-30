@@ -21,6 +21,7 @@ import {
   StaleTurnError,
   isTurnNumberConflict,
 } from './errors.js'
+import { visitUniqueLocation } from './locations.js'
 import { THREE_MUSKETEERS, uniqueLocationReferences } from './world.js'
 import {
   ARBITRATION_SCHEMA,
@@ -348,7 +349,8 @@ export class TurnService {
     const session = await Session.query()
       .where('id', sessionId)
       .preload('characters')
-      .preload('worldState')
+      .preload('worldState', (worldState) => worldState.preload('currentLocation'))
+      .preload('locations', (locations) => locations.orderBy('createdAt', 'asc'))
       .firstOrFail()
 
     const character = session.characters[0]
@@ -472,9 +474,9 @@ function buildContext(
       hit_points_max: scene.character.hitPointsMax,
     },
     scene: {
-      location: scene.worldState.currentLocation,
+      location: scene.worldState.currentLocation?.handle ?? null,
       narrative_flags: scene.worldState.narrativeFlags,
-      visited_locations: scene.worldState.visitedLocations,
+      visited_locations: scene.session.locations.map((location) => location.handle),
       world_objects: scene.worldState.worldObjects,
     },
     recent_buffer: toRecentBuffer(scene.recentTurns),
@@ -501,7 +503,8 @@ function toRecentBuffer(turns: TurnLog[]): RecentTurn[] {
  *
  * Returns what actually changed, which can be less than what was proposed: a
  * delta clamped at zero hit points, or a "movement" to where the character
- * already stands.
+ * already stands. A movement is returned as the handle of the place reached,
+ * which for a unique place is its reference.
  */
 async function applyEffects(
   scene: LoadedScene,
@@ -525,10 +528,13 @@ async function applyEffects(
   }
 
   const movement = effects.movement
-  const moved = movement !== null && movement !== worldState.currentLocation
+  const moved = movement !== null && movement !== worldState.currentLocation?.handle
 
   if (moved) {
-    worldState.visitedLocations = [...worldState.visitedLocations, { reference: movement }]
+    /** A unique place gets its instance on its first visit, and keeps it. */
+    const destination = await visitUniqueLocation(THREE_MUSKETEERS, scene.session.id, movement, trx)
+
+    worldState.currentLocationId = destination.id
   }
 
   if (effects.scenario_flags.length > 0) {

@@ -15,6 +15,14 @@ export type LabelledValue = Labelled & {
   value: number
 }
 
+/** A place as a game holds it: the fields of a location instance its label depends on. */
+export type PlacedLocation = {
+  handle: string
+  definitionReference: string
+  parentReference: string | null
+  name: string | null
+}
+
 export type ContentKind =
   | 'attribute'
   | 'skill'
@@ -91,6 +99,35 @@ export class ContentLabels {
       .map(([reference, value]) => ({ ...this.#find(kind, reference), reference, value }))
       .sort((a, b) => a.rank - b.rank)
       .map(({ reference, label, value }) => ({ reference, label, value }))
+  }
+
+  /**
+   * A place of the game, under its handle. A unique place reads as itself; an
+   * improvised one by its proper name, or else as its archetype within its
+   * parent ("Tavern · Meung-sur-Loire"). The descriptor never leaves: it is
+   * English, for the narrator.
+   */
+  location(place: PlacedLocation): Labelled {
+    if (this.#entries.location.has(place.definitionReference)) {
+      return {
+        reference: place.handle,
+        label: this.#find('location', place.definitionReference).label,
+      }
+    }
+
+    const archetype = this.#find('location_archetype', place.definitionReference)
+
+    if (place.name !== null) {
+      return { reference: place.handle, label: place.name }
+    }
+
+    if (place.parentReference === null) {
+      throw new Error(`Improvised place "${place.handle}" has neither a name nor a parent.`)
+    }
+
+    const parent = this.#find('location', place.parentReference)
+
+    return { reference: place.handle, label: `${archetype.label} · ${parent.label}` }
   }
 
   /** Reference of the attribute a skill hangs off, for grouping the sheet. */

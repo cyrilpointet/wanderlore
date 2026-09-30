@@ -2,6 +2,7 @@ import User from '#models/user'
 import TurnLog from '#models/turn_log'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
+import LocationInstance from '#models/location_instance'
 import { SessionSchema } from '#database/schema'
 import { belongsTo, hasMany, hasOne } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, HasOne } from '@adonisjs/lucid/types/relations'
@@ -31,4 +32,8 @@ export default class Session extends SessionSchema {
 
   @hasMany(() => TurnLog)
   declare turns: HasMany<typeof TurnLog>
+
+  /** The places this game has been through, unique or improvised. */
+  @hasMany(() => LocationInstance)
+  declare locations: HasMany<typeof LocationInstance>
 }

@@ -40,6 +40,61 @@ test.group('Content labels', () => {
     assert.deepEqual(labels.of('npc', 'commoner'), { reference: 'commoner', label: 'Commoner' })
   })
 
+  test('labels a unique place by its definition, under its handle', ({ assert }) => {
+    const place = {
+      handle: 'paris',
+      definitionReference: 'paris',
+      parentReference: null,
+      name: null,
+    }
+
+    assert.deepEqual(labels.location(place), { reference: 'paris', label: 'Paris' })
+  })
+
+  test('labels an improvised place by its proper name', ({ assert }) => {
+    const place = {
+      handle: 'town_1',
+      definitionReference: 'town',
+      parentReference: 'france',
+      name: 'Orléans',
+    }
+
+    assert.deepEqual(labels.location(place), { reference: 'town_1', label: 'Orléans' })
+  })
+
+  test('labels a nameless place by its archetype within its parent', ({ assert }) => {
+    const place = {
+      handle: 'tavern_2',
+      definitionReference: 'tavern',
+      parentReference: 'meung_sur_loire',
+      name: null,
+    }
+
+    assert.deepEqual(labels.location(place), {
+      reference: 'tavern_2',
+      label: 'Tavern · Meung-sur-Loire',
+    })
+  })
+
+  test('fails loudly on a place it cannot label', ({ assert }) => {
+    const place = {
+      handle: 'lair_1',
+      definitionReference: 'lair',
+      parentReference: 'paris',
+      name: null,
+    }
+    const orphan = {
+      handle: 'tavern_1',
+      definitionReference: 'tavern',
+      parentReference: 'nowhere',
+      name: null,
+    }
+
+    assert.throws(() => labels.location(place), MissingLabelError)
+    assert.throws(() => labels.location({ ...place, name: 'The Lair' }), MissingLabelError)
+    assert.throws(() => labels.location(orphan), MissingLabelError)
+  })
+
   test('keeps unique places and place archetypes apart', ({ assert }) => {
     /** An archetype is never a place the player stands in, only what one is an instance of. */
     assert.deepEqual(labels.of('location_archetype', 'tavern'), {

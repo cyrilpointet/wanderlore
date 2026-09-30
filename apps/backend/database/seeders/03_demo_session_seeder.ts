@@ -6,6 +6,7 @@ import Session from '#models/session'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
 import { THREE_MUSKETEERS } from '#services/game/world'
+import { visitUniqueLocation } from '#services/game/locations'
 
 /**
  * A playable game for the test account, so the turn endpoint can be exercised
@@ -59,8 +60,12 @@ export default class extends BaseSeeder {
       progression: {},
     })
 
+    /** The story opens in Meung, the first place the game has been through. */
+    const meung = await visitUniqueLocation(THREE_MUSKETEERS, session.id, 'meung_sur_loire')
+
     await WorldState.create({
       sessionId: session.id,
+      currentLocationId: meung.id,
       activeQuests: [
         {
           reference: 'deliver_the_letter',
@@ -69,7 +74,6 @@ export default class extends BaseSeeder {
         },
       ],
       narrativeFlags: {},
-      visitedLocations: [{ reference: 'meung_sur_loire' }],
       worldObjects: [{ reference: 'letter_to_treville', location: 'carried' }],
     })
   }

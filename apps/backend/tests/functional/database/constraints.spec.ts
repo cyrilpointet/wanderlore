@@ -3,6 +3,7 @@ import { test } from '@japa/runner'
 import {
   PG_CHECK_VIOLATION,
   PG_UNIQUE_VIOLATION,
+  createLocationInstance,
   createResolutionRule,
   createSession,
   createTurn,
@@ -109,6 +110,23 @@ test.group('Schema constraints', (group) => {
     await createResolutionRule('three_musketeers', 'melee_combat')
 
     assert.isString(await createResolutionRule('another_world', 'melee_combat'))
+  })
+
+  test('a handle names one place per game', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    await createLocationInstance(sessionId, 'paris')
+
+    const error = await expectDbError(() => createLocationInstance(sessionId, 'paris'))
+
+    /** The model designates a place by its handle alone: two would make it ambiguous. */
+    assert.equal(error.code, PG_UNIQUE_VIOLATION)
+  })
+
+  test('the same handle is fine in another game', async ({ assert }) => {
+    const userId = await createUser()
+    await createLocationInstance(await createSession(userId), 'paris')
+
+    assert.isString(await createLocationInstance(await createSession(userId), 'paris'))
   })
 
   test('two accounts cannot share an email', async ({ assert }) => {

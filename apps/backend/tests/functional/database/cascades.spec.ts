@@ -4,6 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import {
   countRows,
   createCharacter,
+  createLocationInstance,
   createSession,
   createTurn,
   createUser,
@@ -23,13 +24,18 @@ test.group('Cascading deletes', (group) => {
     const userId = await createUser()
     const sessionId = await createSession(userId)
     await createCharacter(sessionId)
-    await createWorldState(sessionId)
+    /**
+     * The world state points at a place of the same game: both go in the same
+     * statement, so the reference between them never blocks the delete.
+     */
+    await createWorldState(sessionId, await createLocationInstance(sessionId))
     await createTurn(sessionId)
 
     await db.from('sessions').where({ id: sessionId }).delete()
 
     assert.equal(await countRows('characters', { session_id: sessionId }), 0)
     assert.equal(await countRows('world_states', { session_id: sessionId }), 0)
+    assert.equal(await countRows('location_instances', { session_id: sessionId }), 0)
     assert.equal(await countRows('turn_log', { session_id: sessionId }), 0)
   })
 

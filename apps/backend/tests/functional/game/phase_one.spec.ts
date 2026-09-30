@@ -93,7 +93,7 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
     const session = await Session.query()
       .where('id', sessionId)
       .preload('characters')
-      .preload('worldState')
+      .preload('worldState', (worldState) => worldState.preload('currentLocation'))
       .firstOrFail()
     const [character] = session.characters
     const labels = new ContentLabels(THREE_MUSKETEERS)
@@ -107,10 +107,6 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
       ...Object.keys(character.attributes).map((ref): [ContentKind, string] => ['attribute', ref]),
       ...Object.keys(character.skills).map((ref): [ContentKind, string] => ['skill', ref]),
       ...Object.keys(character.resources).map((ref): [ContentKind, string] => ['resource', ref]),
-      ...session.worldState.visitedLocations.map((location): [ContentKind, string] => [
-        'location',
-        location.reference as string,
-      ]),
       ...session.worldState.activeQuests.map((quest): [ContentKind, string] => [
         'quest',
         quest.reference as string,
@@ -120,6 +116,11 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
     for (const [kind, reference] of references) {
       assert.doesNotThrow(() => labels.of(kind, reference), `${kind} "${reference}"`)
     }
+
+    assert.deepEqual(labels.location(session.worldState.currentLocation), {
+      reference: 'meung_sur_loire',
+      label: 'Meung-sur-Loire',
+    })
   })
 
   test('a full turn updates the world and logs what it cost', async ({ assert }) => {
@@ -134,9 +135,12 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
 
     assert.equal(result.narratedText, NARRATION.narration)
 
-    const world = await WorldState.query().where('sessionId', sessionId).firstOrFail()
+    const world = await WorldState.query()
+      .where('sessionId', sessionId)
+      .preload('currentLocation')
+      .firstOrFail()
     assert.propertyVal(world.narrativeFlags, 'letter_delivered', true)
-    assert.deepEqual(world.visitedLocations.at(-1), { reference: 'hotel_de_treville' })
+    assert.equal(world.currentLocation.handle, 'hotel_de_treville')
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
     assert.equal(turn.language, 'en')

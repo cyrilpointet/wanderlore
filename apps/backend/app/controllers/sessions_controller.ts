@@ -26,7 +26,7 @@ export default class SessionsController {
       .where('id', params.id)
       .where('userId', auth.getUserOrFail().id)
       .preload('characters')
-      .preload('worldState')
+      .preload('worldState', (worldState) => worldState.preload('currentLocation'))
       .preload('turns', (turns) => turns.where('status', 'pending'))
       .firstOrFail()
 

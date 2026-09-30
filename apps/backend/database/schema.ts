@@ -59,6 +59,29 @@ export class CharacterSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class LocationInstanceSchema extends BaseModel {
+  static $columns = ['createdAt', 'definitionReference', 'descriptor', 'handle', 'id', 'name', 'parentReference', 'sessionId', 'updatedAt'] as const
+  $columns = LocationInstanceSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare definitionReference: string
+  @column()
+  declare descriptor: string | null
+  @column()
+  declare handle: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare name: string | null
+  @column()
+  declare parentReference: string | null
+  @column()
+  declare sessionId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
 export class ResolutionRuleSchema extends BaseModel {
   static $columns = ['actionType', 'associatedSkill', 'createdAt', 'description', 'id', 'updatedAt', 'worldReference'] as const
   $columns = ResolutionRuleSchema.$columns
@@ -150,12 +173,14 @@ export class UserSchema extends BaseModel {
 }
 
 export class WorldStateSchema extends BaseModel {
-  static $columns = ['activeQuests', 'createdAt', 'id', 'narrativeFlags', 'sessionId', 'updatedAt', 'visitedLocations', 'worldObjects'] as const
+  static $columns = ['activeQuests', 'createdAt', 'currentLocationId', 'id', 'narrativeFlags', 'sessionId', 'updatedAt', 'worldObjects'] as const
   $columns = WorldStateSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare activeQuests: Record<string, unknown>[]
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column()
+  declare currentLocationId: string | null
   @column({ isPrimary: true })
   declare id: string
   @column()
@@ -164,8 +189,6 @@ export class WorldStateSchema extends BaseModel {
   declare sessionId: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
-  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
-  declare visitedLocations: Record<string, unknown>[]
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare worldObjects: Record<string, unknown>[]
 }

@@ -7,6 +7,7 @@ import TurnLog from '#models/turn_log'
 import Session from '#models/session'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
+import LocationInstance from '#models/location_instance'
 import { DiceService } from '#services/dice'
 import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
@@ -71,7 +72,6 @@ async function arrangeScene() {
     sessionId,
     activeQuests: [],
     narrativeFlags: {},
-    visitedLocations: [],
     worldObjects: [],
   })
 
@@ -118,8 +118,10 @@ test.group('TurnService | a settled turn', (group) => {
     assert.isNull(result.rollResult)
 
     await worldState.refresh()
+    await worldState.load('currentLocation')
     assert.deepEqual(worldState.narrativeFlags, { stable_boy_seen: true })
-    assert.deepEqual(worldState.visitedLocations, [{ reference: 'hotel_de_treville' }])
+    assert.equal(worldState.currentLocation.handle, 'hotel_de_treville')
+    assert.deepEqual(result.appliedEffects!.movement, 'hotel_de_treville')
   })
 
   test('logs the turn with its language and token usage', async ({ assert }) => {
@@ -262,6 +264,27 @@ test.group('TurnService | a turn with a roll', (group) => {
     })
 
     assert.isNull(second.appliedEffects!.movement)
+  })
+
+  test('comes back to a unique place without duplicating it', async ({ assert }) => {
+    const { sessionId, userId, worldState } = await arrangeScene()
+    const toLouvre = { ...SETTLED, effects: { ...SETTLED.effects, movement: 'louvre' } }
+
+    await buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I go to Tréville.' })
+    await buildService([toLouvre]).play({ sessionId, userId, playerInput: 'I go to the Louvre.' })
+    await buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I go back.' })
+
+    await worldState.refresh()
+    await worldState.load('currentLocation')
+    const places = await LocationInstance.query()
+      .where('sessionId', sessionId)
+      .orderBy('createdAt', 'asc')
+
+    assert.equal(worldState.currentLocation.handle, 'hotel_de_treville')
+    assert.deepEqual(
+      places.map((place) => place.handle),
+      ['hotel_de_treville', 'louvre']
+    )
   })
 })
 

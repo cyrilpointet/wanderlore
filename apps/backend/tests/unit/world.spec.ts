@@ -118,6 +118,20 @@ test.group('World definition | locations', () => {
     )
   })
 
+  test('no unique place could be mistaken for an improvised one', ({ assert }) => {
+    /**
+     * Both share a game's handles: a unique place is its bare reference, an
+     * improvised one its archetype plus a number (`road_1`).
+     */
+    for (const archetype of locationArchetypeReferences(THREE_MUSKETEERS)) {
+      const handle = new RegExp(`^${archetype}_\\d+$`)
+
+      for (const unique of uniqueLocationReferences(THREE_MUSKETEERS)) {
+        assert.notMatch(unique, handle)
+      }
+    }
+  })
+
   test('splits the catalogue into unique places and archetypes', ({ assert }) => {
     const unique = uniqueLocationReferences(THREE_MUSKETEERS)
     const archetypes = locationArchetypeReferences(THREE_MUSKETEERS)

@@ -7,8 +7,8 @@ import CharacterTransformer from '#transformers/character_transformer'
 /**
  * A game, as the player sees it.
  *
- * Expects `characters` and `worldState` preloaded, and `turns` preloaded with
- * the pending ones only.
+ * Expects `characters` and `worldState` preloaded — the latter with its
+ * `currentLocation` — and `turns` preloaded with the pending ones only.
  */
 export default class SessionTransformer extends BaseTransformer<Session> {
   #labels: ContentLabels
@@ -27,7 +27,8 @@ export default class SessionTransformer extends BaseTransformer<Session> {
     return {
       ...this.#header(),
       character: CharacterTransformer.transform(this.#character(), this.#labels),
-      location: location === null ? null : this.#labels.of('location', location),
+      /** The handle and its label, whether the place is unique or improvised. */
+      location: location ? this.#labels.location(location) : null,
       activeQuests: worldState.activeQuests.map((quest) => ({
         ...this.#labels.of('quest', quest.reference as string),
         summary: typeof quest.summary === 'string' ? quest.summary : null,

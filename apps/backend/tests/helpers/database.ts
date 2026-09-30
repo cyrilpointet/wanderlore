@@ -123,12 +123,37 @@ export async function createCharacter(sessionId: string, name = 'Test Character'
   return row.id
 }
 
-export async function createWorldState(sessionId: string): Promise<string> {
+export async function createWorldState(
+  sessionId: string,
+  currentLocationId: string | null = null
+): Promise<string> {
   const now = new Date()
   const [row] = await db
     .table('world_states')
     .insert({
       session_id: sessionId,
+      current_location_id: currentLocationId,
+      created_at: now,
+      updated_at: now,
+    })
+    .returning('id')
+
+  return row.id
+}
+
+export async function createLocationInstance(
+  sessionId: string,
+  handle = 'paris',
+  overrides: Partial<{ definitionReference: string; parentReference: string | null }> = {}
+): Promise<string> {
+  const now = new Date()
+  const [row] = await db
+    .table('location_instances')
+    .insert({
+      session_id: sessionId,
+      handle,
+      definition_reference: overrides.definitionReference ?? handle,
+      parent_reference: overrides.parentReference ?? null,
       created_at: now,
       updated_at: now,
     })
