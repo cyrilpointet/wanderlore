@@ -202,6 +202,10 @@ Supabase, Railway…).
   colonne (`22P02`). Le `prepare` doit laisser passer `null` intact, sinon un NULL SQL
   devient un `null` JSON. Il se déclare dans `schema_rules.ts` (clé `args`), comme le
   typage.
+- **Les seeders sont préfixés d'un numéro à deux chiffres** (`01_`, `02_`…) : Lucid les
+  joue par ordre de nom de fichier, et un simple `node ace db:seed` doit remplir une base
+  vide. Le contenu de jeu (tous environnements) passe en premier, puis les données de test
+  (`environment = ['development', 'test']`), dans l'ordre de leurs dépendances.
 - **Un service substituable** = un port (interface), une implémentation réelle reçue **par
   le constructeur**, et un singleton de module exporté par défaut — le cache de modules ESM
   suffit. **Jamais le conteneur IoC** : le projet n'en utilise aucun pour ses services, et
@@ -286,7 +290,7 @@ cd apps/backend
 node ace migration:run            # migre et régénère database/schema.ts
 node ace migration:rollback
 node ace migration:fresh          # repart d'une base vide
-node ace db:seed                  # crée l'utilisateur de test
+node ace db:seed                  # contenu de jeu, puis compte et partie de test
 node ace llm:ping                 # vérifie que le provider LLM répond
 
 node ace test                     # suite complète

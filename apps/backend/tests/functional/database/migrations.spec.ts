@@ -2,7 +2,15 @@ import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 import testUtils from '@adonisjs/core/services/test_utils'
 
-const TABLES = ['users', 'auth_access_tokens', 'sessions', 'characters', 'world_states', 'turn_log']
+const TABLES = [
+  'users',
+  'auth_access_tokens',
+  'sessions',
+  'characters',
+  'world_states',
+  'turn_log',
+  'resolution_rules',
+]
 
 const ENUM_TYPES = ['user_role', 'session_status', 'turn_status']
 

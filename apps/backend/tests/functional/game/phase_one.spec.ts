@@ -18,8 +18,8 @@ import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { useTransaction } from '#tests/helpers/database'
 import { playerOf } from '#tests/helpers/turns'
-import TestUserSeeder from '#database/seeders/test_user_seeder'
-import DemoSessionSeeder from '#database/seeders/demo_session_seeder'
+import TestUserSeeder from '#database/seeders/02_test_user_seeder'
+import DemoSessionSeeder from '#database/seeders/03_demo_session_seeder'
 
 /**
  * The exit criterion of Phase 1, exercised on the seeded game rather than on a

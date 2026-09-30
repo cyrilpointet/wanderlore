@@ -59,6 +59,25 @@ export class CharacterSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class ResolutionRuleSchema extends BaseModel {
+  static $columns = ['actionType', 'associatedSkill', 'createdAt', 'description', 'id', 'updatedAt', 'worldReference'] as const
+  $columns = ResolutionRuleSchema.$columns
+  @column()
+  declare actionType: string
+  @column()
+  declare associatedSkill: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare description: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare worldReference: string
+}
+
 export class SessionSchema extends BaseModel {
   static $columns = ['createdAt', 'currentChapter', 'id', 'lastActivityAt', 'status', 'userId'] as const
   $columns = SessionSchema.$columns

@@ -157,6 +157,27 @@ export async function createTurn(
   return row.id
 }
 
+export async function createResolutionRule(
+  worldReference: string,
+  actionType: string,
+  associatedSkill = 'athletics'
+): Promise<string> {
+  const now = new Date()
+  const [row] = await db
+    .table('resolution_rules')
+    .insert({
+      world_reference: worldReference,
+      action_type: actionType,
+      description: 'A rule written by a test.',
+      associated_skill: associatedSkill,
+      created_at: now,
+      updated_at: now,
+    })
+    .returning('id')
+
+  return row.id
+}
+
 export async function countRows(table: string, where: Record<string, unknown>): Promise<number> {
   const result = await db.from(table).where(where).count('* as total').first()
   return Number(result.total)

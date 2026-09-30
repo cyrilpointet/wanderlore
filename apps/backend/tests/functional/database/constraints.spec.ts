@@ -3,6 +3,7 @@ import { test } from '@japa/runner'
 import {
   PG_CHECK_VIOLATION,
   PG_UNIQUE_VIOLATION,
+  createResolutionRule,
   createSession,
   createTurn,
   createUser,
@@ -91,6 +92,23 @@ test.group('Schema constraints', (group) => {
      */
     assert.equal(pendingWithNumber.code, PG_CHECK_VIOLATION)
     assert.equal(completedWithout.code, PG_CHECK_VIOLATION)
+  })
+
+  test('a world holds one rule per action type', async ({ assert }) => {
+    await createResolutionRule('three_musketeers', 'melee_combat')
+
+    const error = await expectDbError(() =>
+      createResolutionRule('three_musketeers', 'melee_combat', 'swordsmanship')
+    )
+
+    /** Two rows would leave resolution picking a skill at random. */
+    assert.equal(error.code, PG_UNIQUE_VIOLATION)
+  })
+
+  test('the same action type is fine in another world', async ({ assert }) => {
+    await createResolutionRule('three_musketeers', 'melee_combat')
+
+    assert.isString(await createResolutionRule('another_world', 'melee_combat'))
   })
 
   test('two accounts cannot share an email', async ({ assert }) => {
