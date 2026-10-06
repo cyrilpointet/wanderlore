@@ -51,6 +51,9 @@ const NEEDS_ROLL = {
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
+/** Rolls on a skill the character does not have — refused, then refused again. */
+const ALCHEMY = { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } }
+
 const NARRATED = {
   narration: 'He weighs you for a long moment, then steps aside.',
   effects: { movement: 'louvre', scenario_flags: [], hit_points_delta: -1 },
@@ -299,9 +302,7 @@ test.group('TurnService | a turn that fails', (group) => {
 
   test('rejects a skill the character does not have', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { play } = buildService([
-      { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
-    ])
+    const { play } = buildService([ALCHEMY, ALCHEMY])
 
     const error = await play({ sessionId, userId, playerInput: 'I brew a potion.' })
       .then(() => null)
@@ -312,9 +313,7 @@ test.group('TurnService | a turn that fails', (group) => {
 
   test('still logs the turn it could not finish', async ({ assert }) => {
     const { sessionId, userId, worldState } = await arrangeScene()
-    const { play } = buildService([
-      { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
-    ])
+    const { play } = buildService([ALCHEMY, ALCHEMY])
 
     await play({ sessionId, userId, playerInput: 'I brew a potion.' }).catch(() => {})
 
@@ -325,7 +324,9 @@ test.group('TurnService | a turn that fails', (group) => {
      * the tokens it already cost, even though nothing was applied.
      */
     assert.equal(turn.playerInput, 'I brew a potion.')
-    assert.lengthOf(turn.llmUsage!, 1)
+    /** Both attempts were paid for, and both refusals are on record. */
+    assert.lengthOf(turn.llmUsage!, 2)
+    assert.lengthOf(turn.rejectedAttempts!, 2)
     assert.isNull(turn.narratedText)
     assert.isNull(turn.appliedEffects)
 
@@ -335,9 +336,7 @@ test.group('TurnService | a turn that fails', (group) => {
 
   test('records why it failed, as the player was told', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { play } = buildService([
-      { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
-    ])
+    const { play } = buildService([ALCHEMY, ALCHEMY])
 
     await play({ sessionId, userId, playerInput: 'I brew a potion.' }).catch(() => {})
 
@@ -352,9 +351,7 @@ test.group('TurnService | a turn that fails', (group) => {
   test("keeps a failed turn out of the next turn's recent buffer", async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
 
-    await buildService([
-      { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } },
-    ])
+    await buildService([ALCHEMY, ALCHEMY])
       .play({ sessionId, userId, playerInput: 'I brew a potion.' })
       .catch(() => {})
 
@@ -672,5 +669,34 @@ test.group('TurnService | time budget', (group) => {
     const played = await service.run(turn.id)
 
     assert.equal(played.status, 'completed')
+  })
+})
+
+test.group('TurnService | second attempt', (group) => {
+  useTransaction(group)
+
+  test('a refused arbitration is asked again, and the turn goes on', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { provider, play } = buildService([ALCHEMY, NEEDS_ROLL, NARRATED])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I talk past the guard.' })
+
+    assert.equal(turn.status, 'completed')
+    assert.lengthOf(provider.requests, 3)
+    assert.include(provider.requests[1].userMessage, '"alchemy"')
+
+    /** The refusal stays on record, and its tokens count in the cost of the turn. */
+    assert.deepEqual(
+      turn.rejectedAttempts!.map((attempt) => [attempt.step, attempt.attempt]),
+      [['arbitration', 1]]
+    )
+    assert.deepEqual(
+      turn.llmUsage!.map((row) => [row.step, row.attempt]),
+      [
+        ['arbitration', 1],
+        ['arbitration', 2],
+        ['narration', 1],
+      ]
+    )
   })
 })

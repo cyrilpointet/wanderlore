@@ -15,6 +15,8 @@ export type RejectionReason = {
   field: string
   rule: string
   message: string
+  /** The values the field had to come from, when it is a closed list. */
+  allowed?: string[]
 }
 
 export type ValidationStep = 'arbitration' | 'narration' | 'extraction'
@@ -240,8 +242,18 @@ function toReasons(error: unknown): RejectionReason[] {
     return [reason('*', 'invalid', (error as Error).message)]
   }
 
-  return messages.map((entry: { field?: string; rule?: string; message?: string }) =>
-    reason(entry.field ?? '*', entry.rule ?? 'invalid', entry.message ?? 'Rejected.')
+  return messages.map(
+    (entry: { field?: string; rule?: string; message?: string; meta?: { choices?: unknown } }) => {
+      const rejected = reason(
+        entry.field ?? '*',
+        entry.rule ?? 'invalid',
+        entry.message ?? 'Rejected.'
+      )
+      const choices = entry.meta?.choices
+
+      /** A closed list names its valid values, so a second attempt can pick one. */
+      return Array.isArray(choices) ? { ...rejected, allowed: choices.map(String) } : rejected
+    }
   )
 }
 

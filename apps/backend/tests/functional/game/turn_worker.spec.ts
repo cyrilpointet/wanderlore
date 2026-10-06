@@ -107,7 +107,8 @@ test.group('TurnWorker', (group) => {
 
   test('logs a turn that fails, and keeps working', async ({ assert, cleanup }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { queue, service, worker } = buildWorker([INVALID, SETTLED])
+    /** Refused twice: a second attempt is all a turn gets. */
+    const { queue, service, worker } = buildWorker([INVALID, INVALID, SETTLED])
     await worker.start()
     cleanup(() => worker.stop())
 

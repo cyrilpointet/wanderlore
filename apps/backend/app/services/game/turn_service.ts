@@ -21,6 +21,7 @@ import {
 } from './errors.js'
 import { visitUniqueLocation } from './locations.js'
 import { TurnBudget } from './turn_budget.js'
+import { callStructured } from './structured_call.js'
 import { THREE_MUSKETEERS, uniqueLocationReferences } from './world.js'
 import {
   ARBITRATION_SCHEMA,
@@ -39,7 +40,6 @@ import {
   type TurnTrace,
   emptyTrace,
   markFailed,
-  recordCall,
   traceColumns,
 } from './turn_trace.js'
 
@@ -303,16 +303,18 @@ export class TurnService {
      */
     this.#events.emit(refOf(turn), { type: 'step_started', step: 'arbitration' })
 
-    const arbitration = await this.#llm.generateJson<unknown>('arbitration', {
-      systemPrompt: ARBITRATION_SYSTEM_PROMPT,
-      userMessage: buildArbitrationMessage(context),
-      jsonSchema: ARBITRATION_SCHEMA as unknown as Record<string, unknown>,
-      signal: budget.signalFor('arbitration', this.#llm.provider),
-    })
-
-    recordCall(trace, arbitration.metadata)
-
-    const decision = await validateArbitration(arbitration.content, meta)
+    /** A refused output gets one more attempt; a transport failure gets none. */
+    const decision = await callStructured(
+      this.#llm,
+      {
+        step: 'arbitration',
+        systemPrompt: ARBITRATION_SYSTEM_PROMPT,
+        userMessage: buildArbitrationMessage(context),
+        jsonSchema: ARBITRATION_SCHEMA as unknown as Record<string, unknown>,
+        validate: (payload) => validateArbitration(payload, meta),
+      },
+      { trace, budget }
+    )
     trace.arbitration = decision
 
     /**
@@ -339,21 +341,27 @@ export class TurnService {
     })
     this.#events.emit(refOf(turn), { type: 'step_started', step: 'narration' })
 
-    const narration = await this.#llm.generateJson<unknown>('narration', {
-      systemPrompt: NARRATION_SYSTEM_PROMPT,
-      userMessage: buildNarrationMessage({
-        ...context,
-        /** A verdict and a qualitative margin. Never the dice or the threshold. */
-        outcome: toNarrationOutcome(resolution),
-        intent_summary: decision.intent.summary,
-      }),
-      jsonSchema: NARRATION_SCHEMA as unknown as Record<string, unknown>,
-      signal: budget.signalFor('narration', this.#llm.provider),
-    })
-
-    recordCall(trace, narration.metadata)
-
-    const narrated = await validateNarration(narration.content, meta)
+    /**
+     * Structured until the narration turns into free text (KAN-37): its
+     * effects are judged like any other structured output, so it gets the
+     * same second attempt.
+     */
+    const narrated = await callStructured(
+      this.#llm,
+      {
+        step: 'narration',
+        systemPrompt: NARRATION_SYSTEM_PROMPT,
+        userMessage: buildNarrationMessage({
+          ...context,
+          /** A verdict and a qualitative margin. Never the dice or the threshold. */
+          outcome: toNarrationOutcome(resolution),
+          intent_summary: decision.intent.summary,
+        }),
+        jsonSchema: NARRATION_SCHEMA as unknown as Record<string, unknown>,
+        validate: (payload) => validateNarration(payload, meta),
+      },
+      { trace, budget }
+    )
     trace.narration = narrated.narration
 
     return narrated.effects

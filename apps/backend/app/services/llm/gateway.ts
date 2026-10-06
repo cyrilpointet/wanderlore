@@ -150,7 +150,7 @@ export class LlmGateway {
 
   #parseJson<TContent>(content: string, step: LlmStep): TContent {
     try {
-      return JSON.parse(stripCodeFence(content)) as TContent
+      return parseJsonAnswer(content) as TContent
     } catch (error) {
       throw new LlmError('invalid_output', 'The model did not return valid JSON.', {
         step,
@@ -176,6 +176,18 @@ export class LlmGateway {
       'llm call completed'
     )
   }
+}
+
+/**
+ * Parses a structured answer the way `generateJson` does, fence included.
+ * Throws a `SyntaxError` when it is not JSON.
+ *
+ * Exposed for a step that must keep an unreadable answer — its raw text and
+ * what it cost — to send it back for a second attempt, which `generateJson`
+ * cannot do once it has thrown.
+ */
+export function parseJsonAnswer(content: string): unknown {
+  return JSON.parse(stripCodeFence(content))
 }
 
 /**

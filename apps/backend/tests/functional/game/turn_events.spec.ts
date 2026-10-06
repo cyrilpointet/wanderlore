@@ -135,7 +135,7 @@ test.group('Turn events | sequence', (group) => {
   })
 
   test('a turn rejected at arbitration ends failed', async ({ assert }) => {
-    const { turn, events } = await playOne([UNKNOWN_SKILL])
+    const { turn, events } = await playOne([UNKNOWN_SKILL, UNKNOWN_SKILL])
 
     assert.deepEqual(events.sequenceOf(turn.id), ['step_started:arbitration', 'turn_failed'])
   })
@@ -206,7 +206,7 @@ test.group('Turn events | sequence', (group) => {
   })
 
   test('exactly one terminal event per turn, whatever the path', async ({ assert }) => {
-    for (const answers of [[SETTLED], [NEEDS_ROLL, NARRATED], [UNKNOWN_SKILL], []]) {
+    for (const answers of [[SETTLED], [NEEDS_ROLL, NARRATED], [UNKNOWN_SKILL, UNKNOWN_SKILL], []]) {
       const { turn, events } = await playOne(answers)
 
       assert.lengthOf(terminals(events.sequenceOf(turn.id)), 1)
@@ -267,7 +267,7 @@ test.group('Turn events | what goes over the wire', (group) => {
   })
 
   test('a failure carries the code and message the player reads', async ({ assert }) => {
-    const { turn, events } = await playOne([UNKNOWN_SKILL])
+    const { turn, events } = await playOne([UNKNOWN_SKILL, UNKNOWN_SKILL])
     const failed = events.recorded.find(({ event }) => event.type === 'turn_failed')!
 
     const message = toMessage(failed.ref, failed.event, labels) as Record<string, any>

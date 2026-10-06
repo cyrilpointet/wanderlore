@@ -6,6 +6,15 @@ import type {
   LlmUsage,
 } from '#services/llm/types'
 
+const RAW = Symbol('raw answer')
+
+/** An answer returned verbatim within a `jsonSequence` — unreadable JSON, say. */
+export type RawAnswer = { [RAW]: string }
+
+export function rawAnswer(text: string): RawAnswer {
+  return { [RAW]: text }
+}
+
 export type FakeLlmProviderOptions = {
   name?: string
   model?: string
@@ -20,7 +29,7 @@ export type FakeLlmProviderOptions = {
    * One JSON answer per call, in order — for a turn that calls the model twice.
    * Wins over `json`. Running past the end throws rather than repeating the
    * last answer, so a pipeline that calls more often than the spec arranged for
-   * fails loudly.
+   * fails loudly. A `rawAnswer()` entry is returned as is, not serialised.
    */
   jsonSequence?: unknown[]
 
@@ -132,7 +141,13 @@ export class FakeLlmProvider implements LlmProvider {
         )
       }
 
-      return JSON.stringify(sequence[index])
+      const answer = sequence[index]
+
+      if (answer !== null && typeof answer === 'object' && RAW in answer) {
+        return (answer as RawAnswer)[RAW]
+      }
+
+      return JSON.stringify(answer)
     }
 
     if (this.#options.json !== undefined) {
