@@ -144,7 +144,7 @@ export class SessionSchema extends BaseModel {
 }
 
 export class TurnLogSchema extends BaseModel {
-  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'failure', 'id', 'idempotencyKey', 'language', 'llmUsage', 'narratedText', 'playerInput', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
+  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'extractionOutput', 'failure', 'id', 'idempotencyKey', 'language', 'llmUsage', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
   $columns = TurnLogSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare alerts: Record<string, unknown>[] | null
@@ -154,6 +154,8 @@ export class TurnLogSchema extends BaseModel {
   declare arbitrationOutput: Record<string, unknown> | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column()
+  declare extractionOutput: Record<string, unknown> | null
   @column()
   declare failure: Record<string, unknown> | null
   @column({ isPrimary: true })
@@ -168,6 +170,8 @@ export class TurnLogSchema extends BaseModel {
   declare narratedText: string | null
   @column()
   declare playerInput: string
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare rejectedAttempts: Record<string, unknown>[] | null
   @column()
   declare rollResult: Record<string, unknown> | null
   @column()

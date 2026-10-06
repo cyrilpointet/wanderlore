@@ -20,6 +20,7 @@ export default rules
 
 export { qualifyMargin, thresholdFor, toNarrationOutcome } from './rules/engine.js'
 export type {
+  AppliedModifier,
   Difficulty,
   MarginLabel,
   NarrationOutcome,

@@ -95,6 +95,14 @@ test.group('RulesEngine | resolution', () => {
     assert.equal(resolution.marginLabel, 'comfortable')
   })
 
+  test('records the modifiers it applied, none before Phase 4', ({ assert }) => {
+    const resolution = buildEngine([3, 5]).resolve(2, 'medium')
+
+    /** The shape is there for the log; nothing moves the total yet. */
+    assert.deepEqual(resolution.appliedModifiers, [])
+    assert.equal(resolution.total, 3 + 5 + 2)
+  })
+
   test('keeps the dice for the turn log', ({ assert }) => {
     const engine = buildEngine([2, 6])
 

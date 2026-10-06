@@ -339,11 +339,13 @@ Log complet de chaque tour, table à plus forte volumétrie du système. Indispe
 | `arbitration_output` | jsonb | sortie complète de l'étape A+B+C (intent, validity, resolution, alerts) |
 | `roll_result` | jsonb | détail du jet le cas échéant (compétence, dé, seuil, résultat, modificateurs appliqués avec leur origine) |
 | `narrated_text` | text | sortie de l'étape D |
+| `extraction_output` | jsonb, nullable | sortie validée de l'étape E, telle que proposée — avant application |
 | `applied_effects` | jsonb | delta réellement appliqué au state après validation (étape E) |
+| `rejected_attempts` | jsonb, nullable | sorties structurées refusées par la validation : étape, numéro de tentative, sortie reçue, motifs du rejet — conservées même quand la tentative suivante réussit |
 | `status` | enum `turn_status` | `pending` / `completed` / `failed` — seul un tour `completed` fait partie de l'histoire |
 | `failure` | jsonb | pour un tour `failed` uniquement : code et message montrés au joueur, étape et règles rejetées pour le diagnostic |
 | `alerts` | jsonb | prompt injection suspectée, hors cadre, etc. |
-| `llm_usage` | jsonb | jetons consommés par appel du tour (entrée, sortie, raisonnement) |
+| `llm_usage` | jsonb | jetons consommés par appel du tour (entrée, sortie, raisonnement), tentatives rejetées comprises ; chaque entrée porte son étape (`arbitration`, `narration`, `extraction`) et son numéro de tentative |
 | `language` | text | langue de la partie pour ce tour |
 | `created_at` | timestamp | — |
 
@@ -369,6 +371,12 @@ avec le tracking de consommation.
   "result": "success"
 }
 ```
+
+**Trace des tentatives rejetées** (tranché en Phase 3) : une colonne dédiée plutôt qu'un
+champ dans la sortie de chaque étape. Une sortie refusée est par définition hors schéma et
+n'a pas sa place parmi les sorties validées, et le taux de rejet se lit en un seul endroit.
+Ses jetons restent dans `llm_usage`, sous le même couple étape / tentative : le coût d'un tour
+est la somme de `llm_usage`, sans double comptage.
 
 Index recommandé : `(session_id, turn_number)` pour la récupération rapide du buffer récent.
 

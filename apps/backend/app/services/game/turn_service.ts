@@ -3,17 +3,14 @@ import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import TurnLog from '#models/turn_log'
-import { describeTurnFailure } from '#exceptions/turn_failure'
 import Session from '#models/session'
 import type Character from '#models/character'
 import type WorldState from '#models/world_state'
 import type { LlmGateway } from '#services/llm/gateway'
-import type { LlmCallMetadata } from '#services/llm/types'
 import type { RulesEngine } from '#services/rules/engine'
 import type { JobQueue } from '#services/queue/types'
 import type { TurnEvents, TurnRef } from '#services/game/turn_events'
 import { toNarrationOutcome } from '#services/rules/engine'
-import type { RollResolution } from '#services/rules/types'
 
 import {
   ConcurrentTurnError,
@@ -33,14 +30,16 @@ import {
   NARRATION_SYSTEM_PROMPT,
   buildNarrationMessage,
 } from './prompts/narration.js'
-import type {
-  ArbitrationOutput,
-  GameLanguage,
-  RecentTurn,
-  TurnContext,
-  TurnEffects,
-} from './prompts/types.js'
+import type { GameLanguage, RecentTurn, TurnContext, TurnEffects } from './prompts/types.js'
 import { type ValidationMeta, validateArbitration, validateNarration } from './turn_validator.js'
+import {
+  type StoredFailure,
+  type TurnTrace,
+  emptyTrace,
+  markFailed,
+  recordCall,
+  traceColumns,
+} from './turn_trace.js'
 
 /**
  * How many past turns travel to the model as the recent buffer.
@@ -293,7 +292,7 @@ export class TurnService {
       jsonSchema: ARBITRATION_SCHEMA as unknown as Record<string, unknown>,
     })
 
-    trace.usage.push(arbitration.metadata)
+    recordCall(trace, arbitration.metadata)
 
     const decision = await validateArbitration(arbitration.content, meta)
     trace.arbitration = decision
@@ -333,7 +332,7 @@ export class TurnService {
       jsonSchema: NARRATION_SCHEMA as unknown as Record<string, unknown>,
     })
 
-    trace.usage.push(narration.metadata)
+    recordCall(trace, narration.metadata)
 
     const narrated = await validateNarration(narration.content, meta)
     trace.narration = narrated.narration
@@ -453,13 +452,6 @@ type LoadedScene = {
   lastTurnNumber: number
 }
 
-type TurnTrace = {
-  arbitration: ArbitrationOutput | null
-  roll: RollResolution | null
-  narration: string | null
-  usage: LlmCallMetadata[]
-}
-
 function buildContext(
   scene: LoadedScene,
   playerInput: string,
@@ -555,107 +547,6 @@ async function applyEffects(
   }
 }
 
-/**
- * Marks a turn failed, with whatever the pipeline had produced and why it
- * stopped. Read afresh: the instance that failed may still be bound to the
- * transaction that rolled back.
- */
-/** Returns the failure written, or `null` if the turn was already settled. */
-async function markFailed(
-  turnId: string,
-  trace: TurnTrace,
-  error: unknown
-): Promise<StoredFailure | null> {
-  const turn = await TurnLog.findOrFail(turnId)
-
-  /** Already settled — by the sweep, most likely. The first outcome stands. */
-  if (turn.status !== 'pending') {
-    return null
-  }
-
-  const failure = toStoredFailure(error)
-
-  turn.merge({
-    ...traceColumns(trace),
-    status: 'failed',
-    /** A failed turn never takes a place in the story. */
-    turnNumber: null,
-    appliedEffects: null,
-    failure,
-  })
-
-  await turn.save()
-
-  return failure
-}
-
 function refOf(turn: TurnLog): TurnRef {
   return { turnId: turn.id, sessionId: turn.sessionId, idempotencyKey: turn.idempotencyKey }
-}
-
-function emptyTrace(): TurnTrace {
-  return { arbitration: null, roll: null, narration: null, usage: [] }
-}
-
-function traceColumns(trace: TurnTrace) {
-  return {
-    arbitrationOutput: trace.arbitration as Record<string, unknown> | null,
-    rollResult: trace.roll as Record<string, unknown> | null,
-    narratedText: trace.narration,
-    alerts: toAlerts(trace.arbitration),
-    /**
-     * Both calls of a turn are recorded, so the real cost of a turn is the sum
-     * of what it actually spent — including the arbitration of a turn that then
-     * failed in narration.
-     */
-    llmUsage: trace.usage.map(toUsageRow),
-  }
-}
-
-/**
- * What the player was told, kept so that reading the turn back tells them the
- * same thing. The step and the rejected rules are for whoever debugs it.
- */
-type StoredFailure = {
-  code: string
-  message: string
-  step?: string
-  reasons?: { field: string; rule: string; message: string }[]
-}
-
-function toStoredFailure(error: unknown): StoredFailure {
-  const failure = describeTurnFailure(error)
-
-  if (!failure) {
-    return { code: 'unexpected_error', message: 'Something went wrong while playing this turn.' }
-  }
-
-  const { status, ...stored } = failure
-
-  return stored
-}
-
-function toAlerts(arbitration: ArbitrationOutput | null): Record<string, unknown>[] | null {
-  if (!arbitration) {
-    return null
-  }
-
-  const raised = Object.entries(arbitration.alert)
-    .filter(([, value]) => value === true)
-    .map(([kind]) => ({ kind }))
-
-  return raised.length > 0 ? raised : null
-}
-
-function toUsageRow(metadata: LlmCallMetadata): Record<string, unknown> {
-  return {
-    step: metadata.step,
-    provider: metadata.provider,
-    model: metadata.model,
-    input_tokens: metadata.usage.inputTokens,
-    output_tokens: metadata.usage.outputTokens,
-    reasoning_tokens: metadata.usage.reasoningTokens,
-    total_tokens: metadata.usage.totalTokens,
-    duration_ms: metadata.durationMs,
-  }
 }

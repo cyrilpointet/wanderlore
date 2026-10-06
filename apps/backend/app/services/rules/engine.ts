@@ -85,6 +85,8 @@ export class RulesEngine {
     return {
       dice: roll.dice,
       skillValue,
+      /** Nothing to apply before Phase 4: the total is dice and skill alone. */
+      appliedModifiers: [],
       total,
       difficulty,
       threshold,

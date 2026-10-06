@@ -106,6 +106,8 @@ export default {
         failure: jsonObject,
         alerts: jsonObjectList,
         llm_usage: jsonObjectList,
+        extraction_output: jsonObject,
+        rejected_attempts: jsonObjectList,
       },
     },
   },

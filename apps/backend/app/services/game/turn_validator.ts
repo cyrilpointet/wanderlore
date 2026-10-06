@@ -17,7 +17,7 @@ export type RejectionReason = {
   message: string
 }
 
-export type ValidationStep = 'arbitration' | 'narration'
+export type ValidationStep = 'arbitration' | 'narration' | 'extraction'
 
 /**
  * A backend validation failure, deliberately distinct from `LlmError`.
