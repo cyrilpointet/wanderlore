@@ -15,6 +15,7 @@ import { THREE_MUSKETEERS } from '#services/game/world'
 import { ContentLabels, type ContentKind } from '#services/game/content_labels'
 import { FakeLlmProvider, type FakeLlmProviderOptions } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
+import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { useTransaction } from '#tests/helpers/database'
 import { playerOf } from '#tests/helpers/turns'
@@ -67,7 +68,8 @@ function buildService(options: FakeLlmProviderOptions, timeoutMs = 1000) {
     new LlmGateway(provider, { requestTimeoutMs: timeoutMs }),
     new RulesEngine(new DiceService(FakeRandomSource.fromFaces([5, 4]))),
     new MemoryQueue(),
-    events
+    events,
+    new FakeClock()
   )
 
   return { provider, service, events, play: playerOf(service) }

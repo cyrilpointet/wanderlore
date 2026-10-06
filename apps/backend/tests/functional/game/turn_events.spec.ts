@@ -17,6 +17,7 @@ import { channelOf, toMessage } from '#services/game/turn_events'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
+import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
 
@@ -82,7 +83,8 @@ function buildService(answers: unknown[], delayMs = 0) {
     new LlmGateway(provider, { requestTimeoutMs: 1000 }),
     new RulesEngine(new DiceService(FakeRandomSource.fromFaces([4, 4]))),
     new MemoryQueue(),
-    events
+    events,
+    new FakeClock()
   )
 
   return { provider, service, events }
@@ -164,7 +166,8 @@ test.group('Turn events | sequence', (group) => {
       new LlmGateway(new FakeLlmProvider({}), { requestTimeoutMs: 1000 }),
       new RulesEngine(new DiceService(FakeRandomSource.fromFaces([4, 4]))),
       new UnreachableQueue(),
-      events
+      events,
+      new FakeClock()
     )
 
     await service

@@ -218,6 +218,10 @@ Supabase, Railway…).
   `app/services/dice.ts`.
 - **Tout tirage aléatoire passe par `import dice from '#services/dice'`** — jamais
   `Math.random()` dans le code métier, sinon le moteur de règles n'est plus testable.
+- **Toute lecture du temps dans le code du tour passe par le port `Clock`**
+  (`#services/clock`, `FakeClock` en test) — jamais `Date.now()` ni `AbortSignal.timeout()`
+  directement. Le budget de 3 minutes d'un tour (`TurnBudget`) part de sa prise en charge
+  par le worker, et chaque appel LLM reçoit un signal borné au temps restant.
 - **Tout appel LLM passe par `import llm from '#services/llm'`** — jamais un provider ni un
   SDK directement. `generateJson()` pour les étapes structurées (A+B+C, E),
   `generateText()` / `streamText()` pour la narration (D).

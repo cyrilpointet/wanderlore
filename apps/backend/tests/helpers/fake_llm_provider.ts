@@ -42,6 +42,12 @@ export type FakeLlmProviderOptions = {
    * signal — see the note on the class.
    */
   delayMs?: number
+
+  /**
+   * Run as each request arrives, before the answer — to make something happen
+   * while a call is in flight, such as time passing on a fake clock.
+   */
+  onRequest?: (request: LlmProviderRequest) => void
 }
 
 /**
@@ -73,6 +79,7 @@ export class FakeLlmProvider implements LlmProvider {
 
   async generate(request: LlmProviderRequest): Promise<LlmResult<string>> {
     this.requests.push(request)
+    this.#options.onRequest?.(request)
 
     await this.#wait(request.signal)
 
@@ -88,6 +95,7 @@ export class FakeLlmProvider implements LlmProvider {
 
   async *stream(request: LlmProviderRequest): AsyncGenerator<string, LlmCallMetadata, void> {
     this.requests.push(request)
+    this.#options.onRequest?.(request)
 
     for (const chunk of this.#options.chunks ?? []) {
       await this.#wait(request.signal)

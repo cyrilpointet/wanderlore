@@ -12,12 +12,15 @@ import { DiceService } from '#services/dice'
 import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
 import { PLAY_TURN_QUEUE, TurnService } from '#services/game/turn_service'
+import { TURN_BUDGET_MS } from '#services/game/turn_budget'
+import type { TurnEvent, TurnRef } from '#services/game/turn_events'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import type { JobQueue } from '#services/queue/types'
 import { ConcurrentTurnError, QueueUnavailableError, StaleTurnError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
-import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
+import { FakeLlmProvider, type FakeLlmProviderOptions } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
+import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
 import { playerOf } from '#tests/helpers/turns'
@@ -86,18 +89,21 @@ function buildService(
   answers: unknown[],
   faces: number[] = [4, 4],
   queue: JobQueue = new MemoryQueue(),
-  delayMs = 0
+  delayMs = 0,
+  onRequest?: FakeLlmProviderOptions['onRequest']
 ) {
-  const provider = new FakeLlmProvider({ jsonSequence: answers, delayMs })
+  const provider = new FakeLlmProvider({ jsonSequence: answers, delayMs, onRequest })
   const events = new RecordingTurnEvents()
+  const clock = new FakeClock()
   const service = new TurnService(
     new LlmGateway(provider, { requestTimeoutMs: 1000 }),
     new RulesEngine(new DiceService(FakeRandomSource.fromFaces(faces))),
     queue,
-    events
+    events,
+    clock
   )
 
-  return { provider, service, queue, events, play: playerOf(service) }
+  return { provider, service, queue, events, clock, play: playerOf(service) }
 }
 
 function submission(sessionId: string, userId: string, playerInput = 'I look around.') {
@@ -591,3 +597,80 @@ class UnreachableQueue extends MemoryQueue {
     throw new Error('connection refused')
   }
 }
+
+test.group('TurnService | time budget', (group) => {
+  useTransaction(group)
+
+  /**
+   * Time passes the moment the roll is resolved: arbitration has answered, and
+   * the narration call has not been made yet.
+   */
+  class TimePassingAtTheRoll extends RecordingTurnEvents {
+    constructor(
+      private clock: FakeClock,
+      private ms: number
+    ) {
+      super()
+    }
+
+    emit(ref: TurnRef, event: TurnEvent): void {
+      super.emit(ref, event)
+
+      if (event.type === 'roll_resolved') {
+        this.clock.advance(this.ms)
+      }
+    }
+  }
+
+  test('a turn out of time fails as a timeout before the next call', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const provider = new FakeLlmProvider({ jsonSequence: [NEEDS_ROLL, NARRATED] })
+    const clock = new FakeClock()
+    const service = new TurnService(
+      new LlmGateway(provider, { requestTimeoutMs: 1000 }),
+      new RulesEngine(new DiceService(FakeRandomSource.fromFaces([4, 4]))),
+      new MemoryQueue(),
+      new TimePassingAtTheRoll(clock, TURN_BUDGET_MS),
+      clock
+    )
+
+    await assert.rejects(() => playerOf(service)({ sessionId, userId, playerInput: 'I talk.' }))
+
+    const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
+
+    /** The narration call never reached the provider, and was never paid for. */
+    assert.lengthOf(provider.requests, 1)
+    assert.equal(turn.failure!.code, 'llm_timeout')
+    assert.equal(turn.failure!.step, 'narration')
+    /** What was played before the time ran out stays on record. */
+    assert.isNotNull(turn.arbitrationOutput)
+    assert.isNotNull(turn.rollResult)
+    assert.lengthOf(turn.llmUsage!, 1)
+  })
+
+  test('a call still running when the time runs out is cut as a timeout', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const built = buildService([SETTLED], [4, 4], new MemoryQueue(), 0, () =>
+      built.clock.advance(TURN_BUDGET_MS)
+    )
+
+    await assert.rejects(() => built.play({ sessionId, userId, playerInput: 'I look around.' }))
+
+    const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
+
+    assert.equal(turn.failure!.code, 'llm_timeout')
+    assert.equal(turn.failure!.step, 'arbitration')
+  })
+
+  test('counts from when the turn is picked up, not from its submission', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { service, clock } = buildService([SETTLED])
+
+    /** Long in the queue: the wait is the sweep's business, not the budget's. */
+    const { turn } = await service.record(submission(sessionId, userId))
+    clock.advance(TURN_BUDGET_MS * 2)
+    const played = await service.run(turn.id)
+
+    assert.equal(played.status, 'completed')
+  })
+})

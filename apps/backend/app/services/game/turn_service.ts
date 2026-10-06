@@ -8,6 +8,7 @@ import type Character from '#models/character'
 import type WorldState from '#models/world_state'
 import type { LlmGateway } from '#services/llm/gateway'
 import type { RulesEngine } from '#services/rules/engine'
+import type { Clock } from '#services/clock'
 import type { JobQueue } from '#services/queue/types'
 import type { TurnEvents, TurnRef } from '#services/game/turn_events'
 import { toNarrationOutcome } from '#services/rules/engine'
@@ -19,6 +20,7 @@ import {
   isTurnNumberConflict,
 } from './errors.js'
 import { visitUniqueLocation } from './locations.js'
+import { TurnBudget } from './turn_budget.js'
 import { THREE_MUSKETEERS, uniqueLocationReferences } from './world.js'
 import {
   ARBITRATION_SCHEMA,
@@ -111,12 +113,20 @@ export class TurnService {
   #rules: RulesEngine
   #queue: JobQueue
   #events: TurnEvents
+  #clock: Clock
 
-  constructor(llm: LlmGateway, rules: RulesEngine, queue: JobQueue, events: TurnEvents) {
+  constructor(
+    llm: LlmGateway,
+    rules: RulesEngine,
+    queue: JobQueue,
+    events: TurnEvents,
+    clock: Clock
+  ) {
     this.#llm = llm
     this.#rules = rules
     this.#queue = queue
     this.#events = events
+    this.#clock = clock
   }
 
   /**
@@ -226,6 +236,8 @@ export class TurnService {
       throw new Error(`Turn ${turnId} is ${turn.status}: only a pending turn can be played.`)
     }
 
+    /** Counted from here, when a worker picks the turn up — not from its submission. */
+    const budget = new TurnBudget(this.#clock)
     const scene = await this.#loadScene(turn.sessionId)
 
     /**
@@ -235,7 +247,7 @@ export class TurnService {
     const trace = emptyTrace()
 
     try {
-      const effects = await this.#runPipeline(turn, scene, trace)
+      const effects = await this.#runPipeline(turn, scene, trace, budget)
 
       await this.#complete(turn, scene, trace, effects)
     } catch (error) {
@@ -272,7 +284,12 @@ export class TurnService {
   }
 
   /** Returns the effects the model proposed, validated but not yet applied. */
-  async #runPipeline(turn: TurnLog, scene: LoadedScene, trace: TurnTrace): Promise<TurnEffects> {
+  async #runPipeline(
+    turn: TurnLog,
+    scene: LoadedScene,
+    trace: TurnTrace,
+    budget: TurnBudget
+  ): Promise<TurnEffects> {
     const context = buildContext(scene, turn.playerInput, turn.language)
     const meta: ValidationMeta = {
       skills: Object.keys(scene.character.skills),
@@ -290,6 +307,7 @@ export class TurnService {
       systemPrompt: ARBITRATION_SYSTEM_PROMPT,
       userMessage: buildArbitrationMessage(context),
       jsonSchema: ARBITRATION_SCHEMA as unknown as Record<string, unknown>,
+      signal: budget.signalFor('arbitration', this.#llm.provider),
     })
 
     recordCall(trace, arbitration.metadata)
@@ -330,6 +348,7 @@ export class TurnService {
         intent_summary: decision.intent.summary,
       }),
       jsonSchema: NARRATION_SCHEMA as unknown as Record<string, unknown>,
+      signal: budget.signalFor('narration', this.#llm.provider),
     })
 
     recordCall(trace, narration.metadata)
