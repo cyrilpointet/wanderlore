@@ -19,6 +19,7 @@ import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { useTransaction } from '#tests/helpers/database'
 import { playerOf } from '#tests/helpers/turns'
+import ResolutionRulesSeeder from '#database/seeders/01_resolution_rules_seeder'
 import TestUserSeeder from '#database/seeders/02_test_user_seeder'
 import DemoSessionSeeder from '#database/seeders/03_demo_session_seeder'
 
@@ -31,11 +32,9 @@ import DemoSessionSeeder from '#database/seeders/03_demo_session_seeder'
  * deliberately outside the suite.
  */
 const ARBITRATION_WITH_ROLL = {
-  intent: { type: 'social_dialogue', target: 'treville', summary: 'Presenting the letter' },
+  intent: { type: 'social_dialogue', target: null, summary: 'Presenting the letter' },
   validity: { factual: true, plausibility: 'plausible', justification: 'The letter is carried.' },
-  resolution: { mode: 'roll_required', skill_used: 'etiquette', difficulty: 'medium' },
-  narration: null,
-  effects: null,
+  resolution: { mode: 'roll_required', action_type: 'social_etiquette', difficulty: 'medium' },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
@@ -51,6 +50,8 @@ const NARRATION = {
 async function seedGame(): Promise<{ userId: string; sessionId: string }> {
   const client = db.connection()
 
+  /** Every seeder a fresh database gets, in the order `db:seed` runs them. */
+  await new ResolutionRulesSeeder(client).run()
   await new TestUserSeeder(client).run()
   await new DemoSessionSeeder(client).run()
 

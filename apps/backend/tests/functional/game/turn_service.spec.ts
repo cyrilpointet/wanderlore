@@ -22,6 +22,7 @@ import { FakeLlmProvider, type FakeLlmProviderOptions } from '#tests/helpers/fak
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
+import { seedResolutionRules } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
 import { playerOf } from '#tests/helpers/turns'
 
@@ -32,27 +33,32 @@ import { playerOf } from '#tests/helpers/turns'
 const SETTLED = {
   intent: { type: 'observation', target: null, summary: 'Looking around the courtyard' },
   validity: { factual: true, plausibility: 'plausible', justification: 'Nothing prevents it.' },
-  resolution: { mode: 'automatic_success', skill_used: null, difficulty: null },
+  resolution: { mode: 'automatic_success', action_type: null, difficulty: null },
+  alert: { prompt_injection_suspected: false, out_of_scope: false },
+}
+
+/** Arbitration never narrates: a settled outcome is staged by its own call. */
+const SETTLED_NARRATION = {
   narration: 'The courtyard is empty but for a stable boy brushing down a grey mare.',
   effects: {
     movement: 'hotel_de_treville',
     scenario_flags: ['stable_boy_seen'],
     hit_points_delta: 0,
   },
-  alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
+
+/** The two answers of a turn played without a roll. */
+const SETTLED_TURN = [SETTLED, SETTLED_NARRATION]
 
 const NEEDS_ROLL = {
-  intent: { type: 'social_dialogue', target: 'guard', summary: 'Talking past the guard' },
+  intent: { type: 'social_dialogue', target: null, summary: 'Talking past the guard' },
   validity: { factual: true, plausibility: 'plausible', justification: 'The guard can be swayed.' },
-  resolution: { mode: 'roll_required', skill_used: 'persuasion', difficulty: 'medium' },
-  narration: null,
-  effects: null,
+  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'medium' },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
-/** Rolls on a skill the character does not have — refused, then refused again. */
-const ALCHEMY = { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' } }
+/** An action type the world does not have — refused, then refused again. */
+const ALCHEMY = { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, action_type: 'alchemy' } }
 
 const NARRATED = {
   narration: 'He weighs you for a long moment, then steps aside.',
@@ -60,6 +66,8 @@ const NARRATED = {
 }
 
 async function arrangeScene() {
+  /** Arbitration picks from the world's action types, read from the database. */
+  await seedResolutionRules()
   const userId = await createUser()
   const sessionId = await createSession(userId)
 
@@ -116,13 +124,17 @@ function submission(sessionId: string, userId: string, playerInput = 'I look aro
 test.group('TurnService | a settled turn', (group) => {
   useTransaction(group)
 
-  test('resolves in a single call and applies its effects', async ({ assert }) => {
+  test('rules, then narrates, and applies its effects', async ({ assert }) => {
     const { sessionId, userId, worldState } = await arrangeScene()
-    const { provider, play } = buildService([SETTLED])
+    const { provider, play } = buildService(SETTLED_TURN)
 
     const result = await play({ sessionId, userId, playerInput: 'I look around.' })
 
-    assert.lengthOf(provider.requests, 1)
+    /** No roll, but no merged call either: arbitration rules, narration stages. */
+    assert.deepEqual(
+      provider.requests.map(({ step }) => step),
+      ['arbitration', 'narration']
+    )
     assert.equal(result.turnNumber, 1)
     assert.isNull(result.rollResult)
 
@@ -135,23 +147,23 @@ test.group('TurnService | a settled turn', (group) => {
 
   test('logs the turn with its language and token usage', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { play } = buildService([SETTLED])
+    const { play } = buildService(SETTLED_TURN)
 
     await play({ sessionId, userId, playerInput: 'I look around.' })
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
 
     assert.equal(turn.language, 'en')
-    assert.equal(turn.narratedText, SETTLED.narration)
-    assert.lengthOf(turn.llmUsage!, 1)
+    assert.equal(turn.narratedText, SETTLED_NARRATION.narration)
+    assert.lengthOf(turn.llmUsage!, 2)
     assert.isNull(turn.rollResult)
   })
 
   test('numbers turns in sequence', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
 
-    await buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I look around.' })
-    const second = await buildService([SETTLED]).play({
+    await buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I look around.' })
+    const second = await buildService(SETTLED_TURN).play({
       sessionId,
       userId,
       playerInput: 'I look again.',
@@ -231,7 +243,7 @@ test.group('TurnService | a turn with a roll', (group) => {
     const { sessionId, userId } = await arrangeScene()
     const { lastActivityAt: before } = await Session.findOrFail(sessionId)
 
-    await buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I look around.' })
+    await buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I look around.' })
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
     assert.equal(turn.status, 'completed')
@@ -265,8 +277,8 @@ test.group('TurnService | a turn with a roll', (group) => {
   test('records no movement to where the character already stands', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
 
-    await buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I look around.' })
-    const second = await buildService([SETTLED]).play({
+    await buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I look around.' })
+    const second = await buildService(SETTLED_TURN).play({
       sessionId,
       userId,
       playerInput: 'I look around again.',
@@ -277,11 +289,14 @@ test.group('TurnService | a turn with a roll', (group) => {
 
   test('comes back to a unique place without duplicating it', async ({ assert }) => {
     const { sessionId, userId, worldState } = await arrangeScene()
-    const toLouvre = { ...SETTLED, effects: { ...SETTLED.effects, movement: 'louvre' } }
+    const toLouvre = [
+      SETTLED,
+      { ...SETTLED_NARRATION, effects: { ...SETTLED_NARRATION.effects, movement: 'louvre' } },
+    ]
 
-    await buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I go to Tréville.' })
-    await buildService([toLouvre]).play({ sessionId, userId, playerInput: 'I go to the Louvre.' })
-    await buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I go back.' })
+    await buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I go to Tréville.' })
+    await buildService(toLouvre).play({ sessionId, userId, playerInput: 'I go to the Louvre.' })
+    await buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I go back.' })
 
     await worldState.refresh()
     await worldState.load('currentLocation')
@@ -355,7 +370,7 @@ test.group('TurnService | a turn that fails', (group) => {
       .play({ sessionId, userId, playerInput: 'I brew a potion.' })
       .catch(() => {})
 
-    const next = buildService([SETTLED])
+    const next = buildService(SETTLED_TURN)
     const result = await next.play({ sessionId, userId, playerInput: 'I look around.' })
 
     /**
@@ -383,7 +398,7 @@ test.group('TurnService | submission', (group) => {
   test('records the turn as pending and queues it, without playing it', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
     const queue = new MemoryQueue()
-    const { provider, service } = buildService([SETTLED], undefined, queue)
+    const { provider, service } = buildService(SETTLED_TURN, undefined, queue)
 
     const { turn } = await service.submit(submission(sessionId, userId))
 
@@ -397,7 +412,7 @@ test.group('TurnService | submission', (group) => {
 
   test('fails the turn at once when it cannot be queued', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { service } = buildService([SETTLED], undefined, new UnreachableQueue())
+    const { service } = buildService(SETTLED_TURN, undefined, new UnreachableQueue())
 
     const error = await service
       .submit(submission(sessionId, userId))
@@ -419,7 +434,7 @@ test.group('TurnService | a repeated submission', (group) => {
   test('returns the same turn and queues it only once', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
     const queue = new MemoryQueue()
-    const { service } = buildService([SETTLED], undefined, queue)
+    const { service } = buildService(SETTLED_TURN, undefined, queue)
     const sent = submission(sessionId, userId)
 
     const first = await service.submit(sent)
@@ -437,7 +452,7 @@ test.group('TurnService | a repeated submission', (group) => {
   test('hands back a played turn as it stands', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
     const queue = new MemoryQueue()
-    const { provider, service } = buildService([SETTLED], undefined, queue)
+    const { provider, service } = buildService(SETTLED_TURN, undefined, queue)
     const sent = submission(sessionId, userId)
 
     const { turn } = await service.submit(sent)
@@ -446,13 +461,14 @@ test.group('TurnService | a repeated submission', (group) => {
 
     assert.equal(again.turn.status, 'completed')
     assert.lengthOf(queue.jobs, 1)
-    assert.lengthOf(provider.requests, 1)
+    /** The two calls of the turn played once, and none for the repeat. */
+    assert.lengthOf(provider.requests, 2)
   })
 
   test('scopes a key to its game', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
     const other = await arrangeScene()
-    const { service } = buildService([SETTLED, SETTLED])
+    const { service } = buildService([...SETTLED_TURN, ...SETTLED_TURN])
     const sent = submission(sessionId, userId)
 
     const first = await service.submit(sent)
@@ -472,7 +488,7 @@ test.group('TurnService | turns left pending', (group) => {
 
   test('expires the turns pending since before the cutoff, and those only', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { service, play } = buildService([SETTLED])
+    const { service, play } = buildService(SETTLED_TURN)
 
     const stale = await service.record(submission(sessionId, userId))
     await db
@@ -541,12 +557,12 @@ test.group('TurnService | two turns racing', (group) => {
      * waiting on the model.
      */
     const [first, second] = await Promise.allSettled([
-      buildService([SETTLED]).play({
+      buildService(SETTLED_TURN).play({
         sessionId,
         userId,
         playerInput: 'I look around.',
       }),
-      buildService([SETTLED]).play({
+      buildService(SETTLED_TURN).play({
         sessionId,
         userId,
         playerInput: 'I look around.',
@@ -567,8 +583,8 @@ test.group('TurnService | two turns racing', (group) => {
     const { sessionId, userId } = await arrangeScene()
 
     await Promise.allSettled([
-      buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I look around.' }),
-      buildService([SETTLED]).play({ sessionId, userId, playerInput: 'I look around.' }),
+      buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I look around.' }),
+      buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I look around.' }),
     ])
 
     const turns = await TurnLog.query().where('sessionId', sessionId).orderBy('status')
@@ -647,7 +663,7 @@ test.group('TurnService | time budget', (group) => {
 
   test('a call still running when the time runs out is cut as a timeout', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const built = buildService([SETTLED], [4, 4], new MemoryQueue(), 0, () =>
+    const built = buildService(SETTLED_TURN, [4, 4], new MemoryQueue(), 0, () =>
       built.clock.advance(TURN_BUDGET_MS)
     )
 
@@ -661,7 +677,7 @@ test.group('TurnService | time budget', (group) => {
 
   test('counts from when the turn is picked up, not from its submission', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { service, clock } = buildService([SETTLED])
+    const { service, clock } = buildService(SETTLED_TURN)
 
     /** Long in the queue: the wait is the sweep's business, not the budget's. */
     const { turn } = await service.record(submission(sessionId, userId))

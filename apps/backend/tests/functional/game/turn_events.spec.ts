@@ -19,6 +19,7 @@ import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
+import { seedResolutionRules } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
 
 /**
@@ -28,17 +29,22 @@ import { createSession, createUser, useTransaction } from '#tests/helpers/databa
 const SETTLED = {
   intent: { type: 'observation', target: null, summary: 'Looking around' },
   validity: { factual: true, plausibility: 'plausible', justification: 'Nothing prevents it.' },
-  resolution: { mode: 'automatic_success', skill_used: null, difficulty: null },
-  narration: 'The street is quiet.',
-  effects: { movement: 'paris', scenario_flags: ['street_seen'], hit_points_delta: 0 },
+  resolution: { mode: 'automatic_success', action_type: null, difficulty: null },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
+/** The two answers of a turn played without a roll: a ruling, then its staging. */
+const SETTLED_TURN = [
+  SETTLED,
+  {
+    narration: 'The street is quiet.',
+    effects: { movement: 'paris', scenario_flags: ['street_seen'], hit_points_delta: 0 },
+  },
+]
+
 const NEEDS_ROLL = {
   ...SETTLED,
-  resolution: { mode: 'roll_required', skill_used: 'persuasion', difficulty: 'medium' },
-  narration: null,
-  effects: null,
+  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'medium' },
 }
 
 const NARRATED = {
@@ -48,10 +54,12 @@ const NARRATED = {
 
 const UNKNOWN_SKILL = {
   ...NEEDS_ROLL,
-  resolution: { ...NEEDS_ROLL.resolution, skill_used: 'alchemy' },
+  resolution: { ...NEEDS_ROLL.resolution, action_type: 'alchemy' },
 }
 
 async function arrangeScene() {
+  /** Arbitration picks from the world's action types, read from the database. */
+  await seedResolutionRules()
   const userId = await createUser()
   const sessionId = await createSession(userId)
 
@@ -113,14 +121,18 @@ function terminals(sequence: string[]) {
 test.group('Turn events | sequence', (group) => {
   useTransaction(group)
 
-  test('without a roll: arbitration, then completed', async ({ assert }) => {
-    const { turn, events } = await playOne([SETTLED])
+  test('without a roll: arbitration, narration, then completed', async ({ assert }) => {
+    const { turn, events } = await playOne(SETTLED_TURN)
 
     /**
-     * Arbitration first even here: whether the turn needs a roll is only known
-     * once that call has answered.
+     * Arbitration only rules, so the turn goes on to its narration whichever
+     * way it ruled — only the roll is skipped.
      */
-    assert.deepEqual(events.sequenceOf(turn.id), ['step_started:arbitration', 'turn_completed'])
+    assert.deepEqual(events.sequenceOf(turn.id), [
+      'step_started:arbitration',
+      'step_started:narration',
+      'turn_completed',
+    ])
   })
 
   test('with a roll: arbitration, roll, narration, then completed', async ({ assert }) => {
@@ -206,7 +218,12 @@ test.group('Turn events | sequence', (group) => {
   })
 
   test('exactly one terminal event per turn, whatever the path', async ({ assert }) => {
-    for (const answers of [[SETTLED], [NEEDS_ROLL, NARRATED], [UNKNOWN_SKILL, UNKNOWN_SKILL], []]) {
+    for (const answers of [
+      SETTLED_TURN,
+      [NEEDS_ROLL, NARRATED],
+      [UNKNOWN_SKILL, UNKNOWN_SKILL],
+      [],
+    ]) {
       const { turn, events } = await playOne(answers)
 
       assert.lengthOf(terminals(events.sequenceOf(turn.id)), 1)
@@ -252,7 +269,7 @@ test.group('Turn events | what goes over the wire', (group) => {
   })
 
   test('nothing mechanical or internal leaves in any event', async ({ assert }) => {
-    const { events } = await playOne([SETTLED])
+    const { events } = await playOne(SETTLED_TURN)
     const second = await playOne([NEEDS_ROLL, NARRATED])
 
     const wire = JSON.stringify(

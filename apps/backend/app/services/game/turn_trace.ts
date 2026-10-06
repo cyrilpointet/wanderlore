@@ -27,9 +27,15 @@ export type RejectedAttempt = {
  * Everything a turn produced, filled as the pipeline progresses so that a turn
  * dying halfway still leaves behind every step it had played.
  */
+/** A roll as logged: the engine's resolution, with the category and skill it was made on. */
+export type TracedRoll = RollResolution & {
+  actionType: string
+  skill: string
+}
+
 export type TurnTrace = {
   arbitration: ArbitrationOutput | null
-  roll: RollResolution | null
+  roll: TracedRoll | null
   narration: string | null
   extraction: Record<string, unknown> | null
   rejectedAttempts: RejectedAttempt[]

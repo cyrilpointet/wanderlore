@@ -14,7 +14,7 @@ import {
   type FakeLlmProviderOptions,
 } from '#tests/helpers/fake_llm_provider'
 
-const META = { skills: ['swordsmanship'], locations: ['louvre', 'paris'], hitPointsMax: 10 }
+const META = { actionTypes: [], npcHandles: [], locations: ['louvre', 'paris'], hitPointsMax: 10 }
 
 const NARRATED = {
   narration: 'The guard steps aside.',

@@ -8,18 +8,21 @@ import {
 } from '#services/game/turn_validator'
 
 const META: ValidationMeta = {
-  skills: ['swordsmanship', 'persuasion'],
+  actionTypes: ['melee_combat', 'social_persuasion'],
+  npcHandles: ['royal_guard_1', 'treville'],
   locations: ['paris', 'louvre'],
   hitPointsMax: 10,
 }
 
 function arbitration(overrides: Record<string, unknown> = {}) {
   return {
-    intent: { type: 'social_dialogue', target: 'guard_02', summary: 'Talking past the guard' },
+    intent: {
+      type: 'social_dialogue',
+      target: 'royal_guard_1',
+      summary: 'Talking past the guard',
+    },
     validity: { factual: true, plausibility: 'plausible', justification: 'The letter is real.' },
-    resolution: { mode: 'roll_required', skill_used: 'persuasion', difficulty: 'medium' },
-    narration: null,
-    effects: null,
+    resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'medium' },
     alert: { prompt_injection_suspected: false, out_of_scope: false },
     ...overrides,
   }
@@ -27,9 +30,7 @@ function arbitration(overrides: Record<string, unknown> = {}) {
 
 function settled(overrides: Record<string, unknown> = {}) {
   return arbitration({
-    resolution: { mode: 'automatic_success', skill_used: null, difficulty: null },
-    narration: 'The guard waves you through without a word.',
-    effects: { movement: 'louvre', scenario_flags: [], hit_points_delta: 0 },
+    resolution: { mode: 'automatic_success', action_type: null, difficulty: null },
     ...overrides,
   })
 }
@@ -63,16 +64,28 @@ function fields(error: TurnValidationError): string[] {
 }
 
 test.group('Turn validator | accepted payloads', () => {
-  test('accepts a roll that names a skill the character has', async ({ assert }) => {
+  test('accepts a roll on an action type of the world', async ({ assert }) => {
     const output = await validateArbitration(arbitration(), META)
 
-    assert.equal(output.resolution.skill_used, 'persuasion')
+    assert.equal(output.resolution.action_type, 'social_persuasion')
+    assert.equal(output.intent.target, 'royal_guard_1')
   })
 
-  test('accepts a settled turn that narrates and states its effects', async ({ assert }) => {
+  test('accepts a settled outcome, which carries neither category nor difficulty', async ({
+    assert,
+  }) => {
     const output = await validateArbitration(settled(), META)
 
-    assert.equal(output.effects?.movement, 'louvre')
+    assert.equal(output.resolution.mode, 'automatic_success')
+  })
+
+  test('accepts an action aimed at no one', async ({ assert }) => {
+    const output = await validateArbitration(
+      arbitration({ intent: { type: 'observation', target: null, summary: 'Looking around' } }),
+      META
+    )
+
+    assert.isNull(output.intent.target)
   })
 
   test('accepts a narration payload', async ({ assert }) => {
@@ -83,11 +96,11 @@ test.group('Turn validator | accepted payloads', () => {
 })
 
 test.group('Turn validator | closed lists', () => {
-  test('rejects a skill the character does not have', async ({ assert }) => {
+  test('rejects an action type the world does not have', async ({ assert }) => {
     const error = await reject(() =>
       validateArbitration(
         arbitration({
-          resolution: { mode: 'roll_required', skill_used: 'alchemy', difficulty: 'medium' },
+          resolution: { mode: 'roll_required', action_type: 'alchemy', difficulty: 'medium' },
         }),
         META
       )
@@ -95,17 +108,49 @@ test.group('Turn validator | closed lists', () => {
 
     /**
      * The invariant the rules document insists on: the model picks from the
-     * list it was handed, it does not invent an entity with mechanical
-     * consequences.
+     * list it was handed, and the list travels with the rejection so a second
+     * attempt can pick from it.
      */
-    assert.include(fields(error), 'resolution.skill_used')
+    const rejected = error.reasons.find(({ field }) => field === 'resolution.action_type')
+    assert.deepEqual(rejected?.allowed, META.actionTypes)
+  })
+
+  test('rejects a skill named in place of an action type', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({
+          resolution: { mode: 'roll_required', action_type: 'persuasion', difficulty: 'medium' },
+        }),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'resolution.action_type')
+  })
+
+  test('rejects a target that is not someone present', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({
+          intent: { type: 'social_dialogue', target: 'the bored guard', summary: 'Talking' },
+        }),
+        META
+      )
+    )
+
+    /** A description or a name could not be resolved to anyone: handles only. */
+    assert.include(fields(error), 'intent.target')
   })
 
   test('rejects a difficulty outside the standard scale', async ({ assert }) => {
     const error = await reject(() =>
       validateArbitration(
         arbitration({
-          resolution: { mode: 'roll_required', skill_used: 'persuasion', difficulty: 'trivial' },
+          resolution: {
+            mode: 'roll_required',
+            action_type: 'social_persuasion',
+            difficulty: 'trivial',
+          },
         }),
         META
       )
@@ -150,62 +195,44 @@ test.group('Turn validator | closed lists', () => {
 })
 
 test.group('Turn validator | roll coherence', () => {
-  test('rejects a narration written before the roll is resolved', async ({ assert }) => {
-    const error = await reject(() =>
-      validateArbitration(arbitration({ narration: 'You slip past easily.' }), META)
-    )
-
-    /**
-     * The whole reason the call splits in two: a model that narrates the
-     * outcome of a roll it does not know has decided it, which is the
-     * backend's job.
-     */
-    assert.include(fields(error), 'narration')
-  })
-
-  test('rejects effects settled before the roll is resolved', async ({ assert }) => {
+  test('rejects a roll with no action type and no difficulty', async ({ assert }) => {
     const error = await reject(() =>
       validateArbitration(
         arbitration({
-          effects: { movement: 'louvre', scenario_flags: [], hit_points_delta: 0 },
+          resolution: { mode: 'roll_required', action_type: null, difficulty: null },
         }),
         META
       )
     )
 
-    assert.include(fields(error), 'effects')
+    assert.includeMembers(fields(error), ['resolution.action_type', 'resolution.difficulty'])
   })
 
-  test('rejects a roll with no skill and no difficulty', async ({ assert }) => {
-    const error = await reject(() =>
-      validateArbitration(
-        arbitration({
-          resolution: { mode: 'roll_required', skill_used: null, difficulty: null },
-        }),
-        META
-      )
-    )
-
-    assert.includeMembers(fields(error), ['resolution.skill_used', 'resolution.difficulty'])
-  })
-
-  test('rejects a settled turn that names a skill anyway', async ({ assert }) => {
+  test('rejects a settled outcome that names a category anyway', async ({ assert }) => {
     const error = await reject(() =>
       validateArbitration(
         settled({
-          resolution: { mode: 'automatic_success', skill_used: 'persuasion', difficulty: null },
+          resolution: {
+            mode: 'automatic_success',
+            action_type: 'social_persuasion',
+            difficulty: 'easy',
+          },
         }),
         META
       )
     )
 
-    assert.include(fields(error), 'resolution.skill_used')
+    assert.includeMembers(fields(error), ['resolution.action_type', 'resolution.difficulty'])
   })
 
-  test('rejects a settled turn that narrates nothing', async ({ assert }) => {
-    const error = await reject(() => validateArbitration(settled({ narration: '   ' }), META))
+  test('drops any narration arbitration slips in', async ({ assert }) => {
+    const output = await validateArbitration(
+      arbitration({ narration: 'You slip past easily.' }),
+      META
+    )
 
-    assert.include(fields(error), 'narration')
+    /** Arbitration rules and nothing else: a stray narration never reaches the log. */
+    assert.notProperty(output, 'narration')
   })
 })
 

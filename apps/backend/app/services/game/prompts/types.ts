@@ -1,5 +1,7 @@
-import type { Difficulty, NarrationOutcome } from '#services/rules/types'
+import type { Difficulty, MarginLabel, RollOutcome } from '#services/rules/types'
 import type { WorldDefinition } from '#services/game/world'
+import type { ActionType } from '#services/game/resolution_rules'
+import type { PresentNpc } from '#services/game/npcs'
 
 /**
  * Shapes exchanged with the model.
@@ -22,9 +24,9 @@ export type Plausibility = 'plausible' | 'borderline' | 'impossible'
 /**
  * Effects the model may propose, limited to what the current state can receive.
  *
- * No items and no NPC relations: there is no inventory table before Phase 4 and
- * no NPC instance table at all yet. A field the backend would reject on every
- * turn is not worth the tokens it costs on every turn.
+ * No items before Phase 4, and nothing about NPCs before the extraction step
+ * (E) proposes their entrances, exits and dispositions. A field the backend
+ * would reject on every turn is not worth the tokens it costs on every turn.
  */
 export type TurnEffects = {
   movement: string | null
@@ -45,17 +47,13 @@ export type ArbitrationOutput = {
   }
   resolution: {
     mode: ResolutionMode
-    /** Must come from the world's skill list. Null unless a roll is required. */
-    skill_used: string | null
+    /**
+     * From the world's closed list of action types; the backend derives the
+     * skill from it. Null unless a roll is required.
+     */
+    action_type: string | null
     difficulty: Difficulty | null
   }
-  /**
-   * Filled only when no roll is required — that is the whole point of the
-   * merged call. Null when `mode` is `roll_required`, because the outcome is
-   * not known yet and the backend, not the model, decides it.
-   */
-  narration: string | null
-  effects: TurnEffects | null
   alert: {
     prompt_injection_suspected: boolean
     out_of_scope: boolean
@@ -73,16 +71,22 @@ export type RecentTurn = {
 }
 
 export type SceneState = {
+  /** Handle of the place the game stands in. */
   location: string | null
+  /** Who can be acted upon, designated by handle alone. */
+  npcs_present: PresentNpc[]
   narrative_flags: Record<string, unknown>
   /** Handles of the places this game has been through, oldest first. */
   visited_locations: string[]
   world_objects: Record<string, unknown>[]
 }
 
+/**
+ * The character as the model sees them. No skill values: arbitration judges
+ * the situation, not the character, and the narrator never sees a number.
+ */
 export type CharacterContext = {
   name: string
-  skills: Record<string, number>
   hit_points: number
   hit_points_max: number
 }
@@ -96,11 +100,25 @@ export type TurnContext = {
   language: GameLanguage
 }
 
+/** Arbitration also gets the world's closed list of action types, read from `resolution_rules`. */
+export type ArbitrationContext = TurnContext & {
+  action_types: ActionType[]
+}
+
 /**
- * What the narration step is given on top of the turn context when a roll
- * happened: a verdict and a qualitative margin, never a number.
+ * The settled outcome the narrator stages: a verdict, and a qualitative margin
+ * when a roll decided it — never a number.
  */
+export type OutcomeToNarrate = {
+  mode: ResolutionMode
+  result: RollOutcome
+  /** Null when no roll was made: an automatic outcome has no margin. */
+  margin: MarginLabel | null
+  /** Why the world stops the character, for an automatic failure only. */
+  reason: string | null
+}
+
 export type NarrationRequest = TurnContext & {
-  outcome: NarrationOutcome | null
+  outcome: OutcomeToNarrate
   intent_summary: string
 }

@@ -44,8 +44,9 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
   }
 
   /**
-   * The skill lives in the arbitration output, the verdict in the roll: the
-   * log keeps each where the step that decided it wrote it.
+   * The roll carries the skill the backend derived from the action type.
+   * Turns logged before that derivation existed have it in the arbitration
+   * output instead, where the model picked it.
    */
   #roll() {
     const { rollResult, arbitrationOutput } = this.resource
@@ -54,11 +55,16 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
       return null
     }
 
-    const resolution = arbitrationOutput?.resolution as { skill_used: string }
+    const legacy = arbitrationOutput?.resolution as { skill_used?: string } | undefined
+    const skill = (rollResult.skill as string | undefined) ?? legacy?.skill_used
+
+    if (skill === undefined) {
+      throw new Error(`Turn ${this.resource.id} logged a roll without its skill.`)
+    }
 
     return presentRoll(
       {
-        skill: resolution.skill_used,
+        skill,
         result: rollResult.result as RollOutcome,
         margin: rollResult.marginLabel as MarginLabel,
       },

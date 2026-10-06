@@ -2,7 +2,6 @@ import { test } from '@japa/runner'
 
 import TurnLog from '#models/turn_log'
 import type { LlmCallMetadata } from '#services/llm/types'
-import type { RollResolution } from '#services/rules/types'
 import type { ArbitrationOutput } from '#services/game/prompts/types'
 import { TurnValidationError } from '#services/game/turn_validator'
 import {
@@ -11,6 +10,7 @@ import {
   recordCall,
   recordRejection,
   traceColumns,
+  type TracedRoll,
   type TurnStep,
   type TurnTrace,
 } from '#services/game/turn_trace'
@@ -19,13 +19,13 @@ import { createSession, createTurn, createUser, useTransaction } from '#tests/he
 const ARBITRATION = {
   intent: { type: 'social_dialogue', target: 'guard', summary: 'Talking past the guard' },
   validity: { factual: true, plausibility: 'plausible', justification: 'The guard can be swayed.' },
-  resolution: { mode: 'roll_required', skill_used: 'persuasion', difficulty: 'medium' },
-  narration: null,
-  effects: null,
+  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'medium' },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 } as unknown as ArbitrationOutput
 
-const ROLL: RollResolution = {
+const ROLL: TracedRoll = {
+  actionType: 'social_persuasion',
+  skill: 'persuasion',
   dice: [4, 5],
   skillValue: 2,
   appliedModifiers: [],

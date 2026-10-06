@@ -17,6 +17,7 @@ import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
+import { seedResolutionRules } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
 
 /**
@@ -26,20 +27,26 @@ import { createSession, createUser, useTransaction } from '#tests/helpers/databa
 const SETTLED = {
   intent: { type: 'observation', target: null, summary: 'Looking around' },
   validity: { factual: true, plausibility: 'plausible', justification: 'Nothing prevents it.' },
-  resolution: { mode: 'automatic_success', skill_used: null, difficulty: null },
-  narration: 'The street is quiet.',
-  effects: { movement: null, scenario_flags: [], hit_points_delta: 0 },
+  resolution: { mode: 'automatic_success', action_type: null, difficulty: null },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
+const SETTLED_NARRATION = {
+  narration: 'The street is quiet.',
+  effects: { movement: null, scenario_flags: [], hit_points_delta: 0 },
+}
+
+/** The two answers of a turn played without a roll. */
+const SETTLED_TURN = [SETTLED, SETTLED_NARRATION]
+
 const INVALID = {
   ...SETTLED,
-  resolution: { mode: 'roll_required', skill_used: 'alchemy', difficulty: 'medium' },
-  narration: null,
-  effects: null,
+  resolution: { mode: 'roll_required', action_type: 'alchemy', difficulty: 'medium' },
 }
 
 async function arrangeScene() {
+  /** Arbitration picks from the world's action types, read from the database. */
+  await seedResolutionRules()
   const userId = await createUser()
   const sessionId = await createSession(userId)
 
@@ -92,7 +99,7 @@ test.group('TurnWorker', (group) => {
 
   test('plays a submitted turn to completion, in the background', async ({ assert, cleanup }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { queue, service, worker } = buildWorker([SETTLED])
+    const { queue, service, worker } = buildWorker(SETTLED_TURN)
     await worker.start()
     cleanup(() => worker.stop())
 
@@ -102,13 +109,13 @@ test.group('TurnWorker', (group) => {
     await turn.refresh()
     assert.equal(turn.status, 'completed')
     assert.equal(turn.turnNumber, 1)
-    assert.equal(turn.narratedText, SETTLED.narration)
+    assert.equal(turn.narratedText, SETTLED_NARRATION.narration)
   })
 
   test('logs a turn that fails, and keeps working', async ({ assert, cleanup }) => {
     const { sessionId, userId } = await arrangeScene()
     /** Refused twice: a second attempt is all a turn gets. */
-    const { queue, service, worker } = buildWorker([INVALID, INVALID, SETTLED])
+    const { queue, service, worker } = buildWorker([INVALID, INVALID, ...SETTLED_TURN])
     await worker.start()
     cleanup(() => worker.stop())
 
@@ -127,7 +134,7 @@ test.group('TurnWorker', (group) => {
 
   test('plays the turns of a game one after the other', async ({ assert, cleanup }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { queue, service, worker } = buildWorker([SETTLED, SETTLED])
+    const { queue, service, worker } = buildWorker([...SETTLED_TURN, ...SETTLED_TURN])
     await worker.start()
     cleanup(() => worker.stop())
 

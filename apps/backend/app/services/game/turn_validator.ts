@@ -41,8 +41,10 @@ export class TurnValidationError extends Error {
 }
 
 export type ValidationMeta = {
-  /** Closed list: the skills this character actually has. */
-  skills: string[]
+  /** Closed list: the action types of the world, read from `resolution_rules`. */
+  actionTypes: string[]
+  /** Closed list: the handles of the people present, the only possible targets. */
+  npcHandles: string[]
   /** Closed list: the places the world defines, and so can label. */
   locations: string[]
   /** Bounds the damage or healing a single turn may claim. */
@@ -73,7 +75,8 @@ const effects = () =>
 const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
   intent: vine.object({
     type: vine.string().regex(REFERENCE),
-    target: vine.string().maxLength(64).nullable(),
+    /** Someone present, by handle — never a name the backend could not resolve. */
+    target: vine.enum((field) => (field.meta as ValidationMeta).npcHandles).nullable(),
     summary: vine.string().maxLength(500),
   }),
   validity: vine.object({
@@ -84,14 +87,12 @@ const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
   resolution: vine.object({
     mode: vine.enum(['automatic_success', 'narrative_automatic_failure', 'roll_required'] as const),
     /**
-     * The closed list the rules document demands: the model may only name a
-     * skill this character has, never one it invented.
+     * The closed list the rules document demands: a category of the world,
+     * never a skill and never one it invented. The backend derives the skill.
      */
-    skill_used: vine.enum((field) => (field.meta as ValidationMeta).skills).nullable(),
+    action_type: vine.enum((field) => (field.meta as ValidationMeta).actionTypes).nullable(),
     difficulty: vine.enum(['easy', 'medium', 'hard', 'very_hard'] as const).nullable(),
   }),
-  narration: vine.string().maxLength(4000).nullable(),
-  effects: effects().nullable(),
   alert: vine.object({
     prompt_injection_suspected: vine.boolean(),
     out_of_scope: vine.boolean(),
@@ -109,7 +110,7 @@ export async function validateArbitration(
 ): Promise<ArbitrationOutput> {
   const output = await run<ArbitrationOutput>('arbitration', arbitrationValidator, payload, meta)
 
-  const reasons = [...coherenceReasons(output), ...effectReasons(output.effects, meta)]
+  const reasons = coherenceReasons(output)
 
   if (reasons.length > 0) {
     throw new TurnValidationError('arbitration', reasons)
@@ -134,69 +135,33 @@ export async function validateNarration(
 }
 
 /**
- * Cross-field coherence, which no per-field schema can express.
- *
- * This is where a merged arbitration call is actually policed: a model that
- * narrates the outcome of a roll it does not know is overstepping, and its
- * text has to be dropped rather than shown.
+ * Cross-field coherence, which no per-field schema can express: a roll needs
+ * a category and a difficulty, and an outcome settled without one has neither.
  */
 function coherenceReasons(output: {
-  resolution: { mode: string; skill_used: string | null; difficulty: string | null }
-  narration: string | null
-  effects: TurnEffects | null
+  resolution: { mode: string; action_type: string | null; difficulty: string | null }
 }): RejectionReason[] {
-  const reasons: RejectionReason[] = []
-  const { mode, skill_used: skill, difficulty } = output.resolution
+  const { mode, action_type: actionType, difficulty } = output.resolution
 
   if (mode === 'roll_required') {
-    if (skill === null) {
-      reasons.push(reason('resolution.skill_used', 'required', 'A roll needs a skill to roll on.'))
-    }
-
-    if (difficulty === null) {
-      reasons.push(
-        reason('resolution.difficulty', 'required', 'A roll needs a difficulty to beat.')
-      )
-    }
-
-    if (output.narration !== null) {
-      reasons.push(
-        reason(
-          'narration',
-          'forbidden',
-          'The outcome of the roll is not known yet, so it cannot be narrated.'
-        )
-      )
-    }
-
-    if (output.effects !== null) {
-      reasons.push(
-        reason('effects', 'forbidden', 'Effects depend on the roll and cannot be settled yet.')
-      )
-    }
-
-    return reasons
+    return [
+      ...(actionType === null
+        ? [reason('resolution.action_type', 'required', 'A roll needs an action type.')]
+        : []),
+      ...(difficulty === null
+        ? [reason('resolution.difficulty', 'required', 'A roll needs a difficulty to beat.')]
+        : []),
+    ]
   }
 
-  if (skill !== null) {
-    reasons.push(reason('resolution.skill_used', 'forbidden', 'No roll, so no skill is rolled on.'))
-  }
-
-  if (difficulty !== null) {
-    reasons.push(reason('resolution.difficulty', 'forbidden', 'No roll, so no difficulty applies.'))
-  }
-
-  if (output.narration === null || output.narration.trim() === '') {
-    reasons.push(
-      reason('narration', 'required', 'The outcome is settled, so the turn must be narrated.')
-    )
-  }
-
-  if (output.effects === null) {
-    reasons.push(reason('effects', 'required', 'A narrated turn must state its effects.'))
-  }
-
-  return reasons
+  return [
+    ...(actionType !== null
+      ? [reason('resolution.action_type', 'forbidden', 'No roll, so no action type applies.')]
+      : []),
+    ...(difficulty !== null
+      ? [reason('resolution.difficulty', 'forbidden', 'No roll, so no difficulty applies.')]
+      : []),
+  ]
 }
 
 /**

@@ -136,14 +136,11 @@ Ses choix d'exécution restent en vigueur (détail : roadmap Phase 2, architectu
 - SSE : un canal par partie, abonné avant la soumission ; jalons (`step_started`,
   `roll_resolved`, `turn_completed`, `turn_failed`) ; rattrapage par lecture du tour.
 
-**Découpage actuel des appels LLM, en deux branches** (hérité de la Phase 1, remplacé en
-Phase 3 par le pipeline séparé) :
-
-- **aucun jet requis** → un seul appel fusionné A+B+C+D, retournant narration + effets ;
-- **jet requis** → arbitrage (A+B+C, sans narration), puis calcul du jet côté backend, puis
-  second appel de narration.
-
-Les effets viennent **toujours** de l'appel de narration : ils dépendent de l'issue du jet.
+**Découpage actuel des appels LLM** (étape intermédiaire de la Phase 3, depuis KAN-36) :
+arbitrage A+B+C (`action_type`, jamais de narration), jet côté backend si requis — compétence
+déduite via `resolution_rules`, une compétence absente de la fiche vaut 0 —, puis un appel
+de narration **encore structuré** qui retourne narration + effets, pour tous les tours. La
+narration passe en texte libre streamé avec KAN-37, et les effets à l'étape E avec KAN-38.
 
 **Phase actuelle : Phase 3 (pipeline complet)**, en préparation. Décisions de cadrage actées
 (détail : roadmap Phase 3, architecture §6ter, §6quater, §7, §8bis) :

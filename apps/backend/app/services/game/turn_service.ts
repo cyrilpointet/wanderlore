@@ -20,6 +20,8 @@ import {
   isTurnNumberConflict,
 } from './errors.js'
 import { visitUniqueLocation } from './locations.js'
+import { type PresentNpc, presentNpcs } from './npcs.js'
+import { actionTypesOf, skillFor } from './resolution_rules.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
 import { THREE_MUSKETEERS, uniqueLocationReferences } from './world.js'
@@ -29,11 +31,19 @@ import {
   buildArbitrationMessage,
 } from './prompts/arbitration.js'
 import {
+  NARRATION_RECENT_TURNS,
   NARRATION_SCHEMA,
   NARRATION_SYSTEM_PROMPT,
   buildNarrationMessage,
 } from './prompts/narration.js'
-import type { GameLanguage, RecentTurn, TurnContext, TurnEffects } from './prompts/types.js'
+import type {
+  ArbitrationOutput,
+  GameLanguage,
+  OutcomeToNarrate,
+  RecentTurn,
+  TurnContext,
+  TurnEffects,
+} from './prompts/types.js'
 import { type ValidationMeta, validateArbitration, validateNarration } from './turn_validator.js'
 import {
   type StoredFailure,
@@ -44,12 +54,10 @@ import {
 } from './turn_trace.js'
 
 /**
- * How many past turns travel to the model as the recent buffer.
- *
- * Re-sent in full on every turn, so it is the dominant cost driver of a long
- * session. The long-term memory that would let it stay small is Phase 7.
+ * A skill missing from the character sheet is one they never learnt: rolled
+ * at zero, so the dice alone carry the attempt.
  */
-const RECENT_TURNS = 5
+const UNTRAINED = 0
 
 /**
  * Phase 1 plays in English. Still passed explicitly at every step rather than
@@ -291,25 +299,28 @@ export class TurnService {
     budget: TurnBudget
   ): Promise<TurnEffects> {
     const context = buildContext(scene, turn.playerInput, turn.language)
+    /** Read on every turn: from Phase 5 the list is the world's own. */
+    const actionTypes = await actionTypesOf(THREE_MUSKETEERS)
     const meta: ValidationMeta = {
-      skills: Object.keys(scene.character.skills),
+      actionTypes: actionTypes.map(({ actionType }) => actionType),
+      npcHandles: scene.npcs.map(({ handle }) => handle),
       locations: uniqueLocationReferences(THREE_MUSKETEERS),
       hitPointsMax: scene.character.hitPointsMax,
     }
 
-    /**
-     * Always arbitration first, roll or no roll: which branch the turn takes
-     * is only known once this call has answered.
-     */
     this.#events.emit(refOf(turn), { type: 'step_started', step: 'arbitration' })
 
-    /** A refused output gets one more attempt; a transport failure gets none. */
+    /**
+     * It rules, and only rules: the outcome is staged by the narration step
+     * whichever way it went. A refused output gets one more attempt; a
+     * transport failure gets none.
+     */
     const decision = await callStructured(
       this.#llm,
       {
         step: 'arbitration',
         systemPrompt: ARBITRATION_SYSTEM_PROMPT,
-        userMessage: buildArbitrationMessage(context),
+        userMessage: buildArbitrationMessage({ ...context, action_types: actionTypes }),
         jsonSchema: ARBITRATION_SCHEMA as unknown as Record<string, unknown>,
         validate: (payload) => validateArbitration(payload, meta),
       },
@@ -317,28 +328,8 @@ export class TurnService {
     )
     trace.arbitration = decision
 
-    /**
-     * No roll: arbitration already narrated and extracted, because the outcome
-     * was settled the moment it ruled. One call, and the turn is done.
-     */
-    if (decision.resolution.mode !== 'roll_required') {
-      trace.narration = decision.narration
+    const outcome = await this.#settle(turn, scene, decision, trace)
 
-      return decision.effects as TurnEffects
-    }
-
-    const resolution = this.#rules.resolve(
-      scene.character.skills[decision.resolution.skill_used as string],
-      decision.resolution.difficulty!
-    )
-
-    trace.roll = resolution
-
-    this.#events.emit(refOf(turn), {
-      type: 'roll_resolved',
-      skill: decision.resolution.skill_used as string,
-      ...toNarrationOutcome(resolution),
-    })
     this.#events.emit(refOf(turn), { type: 'step_started', step: 'narration' })
 
     /**
@@ -354,7 +345,7 @@ export class TurnService {
         userMessage: buildNarrationMessage({
           ...context,
           /** A verdict and a qualitative margin. Never the dice or the threshold. */
-          outcome: toNarrationOutcome(resolution),
+          outcome,
           intent_summary: decision.intent.summary,
         }),
         jsonSchema: NARRATION_SCHEMA as unknown as Record<string, unknown>,
@@ -365,6 +356,43 @@ export class TurnService {
     trace.narration = narrated.narration
 
     return narrated.effects
+  }
+
+  /**
+   * The outcome arbitration's ruling leads to. A roll is made by the backend
+   * alone, on the skill `resolution_rules` ties to the chosen action type;
+   * without a roll, the outcome was certain from the start.
+   */
+  async #settle(
+    turn: TurnLog,
+    scene: LoadedScene,
+    decision: ArbitrationOutput,
+    trace: TurnTrace
+  ): Promise<OutcomeToNarrate> {
+    const { mode, action_type: actionType, difficulty } = decision.resolution
+
+    if (mode !== 'roll_required') {
+      return {
+        mode,
+        result: mode === 'automatic_success' ? 'success' : 'failure',
+        margin: null,
+        reason: mode === 'narrative_automatic_failure' ? decision.validity.justification : null,
+      }
+    }
+
+    const skill = await skillFor(THREE_MUSKETEERS, actionType!)
+    /** A skill the character never learnt is rolled untrained. */
+    const resolution = this.#rules.resolve(scene.character.skills[skill] ?? UNTRAINED, difficulty!)
+
+    trace.roll = { skill, actionType: actionType!, ...resolution }
+
+    this.#events.emit(refOf(turn), {
+      type: 'roll_resolved',
+      skill,
+      ...toNarrationOutcome(resolution),
+    })
+
+    return { mode, ...toNarrationOutcome(resolution), reason: null }
   }
 
   /**
@@ -393,7 +421,7 @@ export class TurnService {
       .where('sessionId', sessionId)
       .withScopes((scopes) => scopes.completed())
       .orderBy('turnNumber', 'desc')
-      .limit(RECENT_TURNS)
+      .limit(NARRATION_RECENT_TURNS)
 
     /** Only completed turns hold a number, so the highest one is the last of the story. */
     const last = await TurnLog.query()
@@ -405,6 +433,7 @@ export class TurnService {
       session,
       character,
       worldState: session.worldState,
+      npcs: await presentNpcs(sessionId),
       /** Oldest first, so the model reads the exchange in the order it happened. */
       recentTurns: turns.reverse(),
       lastTurnNumber: Number(last?.$extras.max ?? 0),
@@ -475,6 +504,11 @@ type LoadedScene = {
   session: Session
   character: Character
   worldState: WorldState
+  npcs: PresentNpc[]
+  /**
+   * As many as the narrator reads, the longer of the two buffers; arbitration
+   * keeps only the last of them.
+   */
   recentTurns: TurnLog[]
   lastTurnNumber: number
 }
@@ -488,12 +522,12 @@ function buildContext(
     world: THREE_MUSKETEERS,
     character: {
       name: scene.character.name,
-      skills: scene.character.skills,
       hit_points: scene.character.hitPoints,
       hit_points_max: scene.character.hitPointsMax,
     },
     scene: {
       location: scene.worldState.currentLocation?.handle ?? null,
+      npcs_present: scene.npcs,
       narrative_flags: scene.worldState.narrativeFlags,
       visited_locations: scene.session.locations.map((location) => location.handle),
       world_objects: scene.worldState.worldObjects,
