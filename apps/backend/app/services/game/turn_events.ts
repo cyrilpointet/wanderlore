@@ -1,7 +1,7 @@
 import type Character from '#models/character'
 import type TurnLog from '#models/turn_log'
 import type { MarginLabel, RollOutcome } from '#services/rules/types'
-import type { ContentLabels } from '#services/game/content_labels'
+import type { ContentLabels, PlacedLocation } from '#services/game/content_labels'
 import CharacterTransformer from '#transformers/character_transformer'
 import TurnTransformer, { presentRoll } from '#transformers/turn_transformer'
 
@@ -23,8 +23,18 @@ export type TurnEvent =
    * fragments are never stored.
    */
   | { type: 'narration_chunk'; text: string }
-  /** Everything the journal and the sheet need, so the front makes no further request. */
-  | { type: 'turn_completed'; turn: TurnLog; character: Character }
+  /**
+   * Everything the journal, the sheet and the place badge need, so the front
+   * makes no further request. There is no milestone for extraction: the
+   * narration already shown stays provisional until this event says the turn
+   * held.
+   */
+  | {
+      type: 'turn_completed'
+      turn: TurnLog
+      character: Character
+      location: PlacedLocation | null
+    }
   | { type: 'turn_failed'; failure: { code: string; message: string } }
 
 /**
@@ -73,6 +83,7 @@ export function toMessage(ref: TurnRef, event: TurnEvent, labels: ContentLabels)
         ...header,
         turn: new TurnTransformer(event.turn, labels).toObject(),
         character: new CharacterTransformer(event.character, labels).toObject(),
+        location: event.location === null ? null : labels.location(event.location),
       }
 
     case 'turn_failed':

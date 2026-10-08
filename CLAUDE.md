@@ -136,14 +136,16 @@ Ses choix d'exécution restent en vigueur (détail : roadmap Phase 2, architectu
 - SSE : un canal par partie, abonné avant la soumission ; jalons (`step_started`,
   `roll_resolved`, `turn_completed`, `turn_failed`) ; rattrapage par lecture du tour.
 
-**Découpage actuel des appels LLM** (étape intermédiaire de la Phase 3) : arbitrage A+B+C
-(`action_type`, jamais de narration) ; jet côté backend si requis — compétence déduite via
-`resolution_rules`, une compétence absente de la fiche vaut 0 — ; narration D en **texte
-libre streamé** (`narration_chunk`) ; puis extraction E, structurée, qui lit la narration et
-renvoie le delta complet (déplacement vers un lieu unique ou improvisé, entrées, sorties,
-noms et dispositions des PNJ, flags, points de vie), validé contre les listes fermées, puis
-appliqué par `applyDelta` (`app/services/game/apply_delta.ts`) dans un ordre fixe :
-déplacement, sorties, entrées, noms et dispositions. Trois appels par tour au minimum.
+**Pipeline d'un tour** (séparé depuis KAN-40, `#runPipeline` dans `turn_service.ts`) :
+arbitrage A+B+C (`action_type`, jamais de narration) → jet côté backend si requis
+(compétence déduite via `resolution_rules`, une compétence absente de la fiche vaut 0) →
+narration D en **texte libre streamé** (`narration_chunk`) → extraction E, structurée, qui lit
+la narration et renvoie le delta complet, validé contre les listes fermées → application par
+`applyDelta` (`app/services/game/apply_delta.ts`) dans la transaction du tour, dans un ordre
+fixe : déplacement, sorties, entrées, noms et dispositions. Trois appels au minimum par tour.
+SSE : `step_started(arbitration)`, `roll_resolved`, `step_started(narration)`, des
+`narration_chunk`, puis un seul `turn_completed` (avec le lieu courant libellé) ou
+`turn_failed` — pas de jalon pour l'extraction.
 
 **Phase actuelle : Phase 3 (pipeline complet)**, en préparation. Décisions de cadrage actées
 (détail : roadmap Phase 3, architecture §6ter, §6quater, §7, §8bis) :

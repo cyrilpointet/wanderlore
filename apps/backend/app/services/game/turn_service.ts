@@ -5,6 +5,7 @@ import TurnLog from '#models/turn_log'
 import Session from '#models/session'
 import type Character from '#models/character'
 import type WorldState from '#models/world_state'
+import LocationInstance from '#models/location_instance'
 import type { LlmGateway } from '#services/llm/gateway'
 import type { RulesEngine } from '#services/rules/engine'
 import type { Clock } from '#services/clock'
@@ -279,7 +280,12 @@ export class TurnService {
     }
 
     /** After the commit: the player is never told of a turn that could still roll back. */
-    this.#events.emit(refOf(turn), { type: 'turn_completed', turn, character: scene.character })
+    this.#events.emit(refOf(turn), {
+      type: 'turn_completed',
+      turn,
+      character: scene.character,
+      location: await this.#whereItStands(scene.worldState),
+    })
 
     return turn
   }
@@ -300,7 +306,15 @@ export class TurnService {
     }
   }
 
-  /** Returns the effects the model proposed, validated but not yet applied. */
+  /**
+   * The separated pipeline: arbitration (A+B+C), the roll when one is needed,
+   * narration (D), extraction (E). Three model calls at least, whichever way
+   * arbitration rules. Each step writes its part of the trace as it goes, so
+   * a turn that fails halfway still logs every step it played.
+   *
+   * Returns the delta extraction read in the narration, validated but not yet
+   * applied: applying it belongs to the turn's transaction.
+   */
   async #runPipeline(
     turn: TurnLog,
     scene: LoadedScene,
@@ -318,29 +332,15 @@ export class TurnService {
       npcDefinitions: npcReferences(THREE_MUSKETEERS),
       hitPointsMax: scene.character.hitPointsMax,
     }
+    const step = { trace, budget }
 
-    this.#events.emit(refOf(turn), { type: 'step_started', step: 'arbitration' })
-
-    /**
-     * It rules, and only rules: the outcome is staged by the narration step
-     * whichever way it went. A refused output gets one more attempt; a
-     * transport failure gets none.
-     */
-    const decision = await callStructured(
-      this.#llm,
-      {
-        step: 'arbitration',
-        systemPrompt: ARBITRATION_SYSTEM_PROMPT,
-        userMessage: buildArbitrationMessage({ ...context, action_types: actionTypes }),
-        jsonSchema: ARBITRATION_SCHEMA as unknown as Record<string, unknown>,
-        validate: (payload) => validateArbitration(payload, meta),
-      },
-      { trace, budget }
+    const decision = await this.#arbitrate(
+      turn,
+      buildArbitrationMessage({ ...context, action_types: actionTypes }),
+      meta,
+      step
     )
-    trace.arbitration = decision
-
     const outcome = await this.#settle(turn, scene, decision, trace)
-
     const narration = await this.#narrate(
       turn,
       buildNarrationMessage({
@@ -353,21 +353,62 @@ export class TurnService {
       budget
     )
 
-    /**
-     * Reads the narration already written: a refused output gets one more
-     * attempt, which never reruns the narration.
-     */
-    return callStructured(
+    return this.#extract(buildExtractionMessage({ ...context, narration }), meta, step)
+  }
+
+  /**
+   * It rules, and only rules: the outcome is staged by the narration step
+   * whichever way it went. A refused output gets one more attempt; a
+   * transport failure gets none.
+   */
+  async #arbitrate(
+    turn: TurnLog,
+    userMessage: string,
+    meta: ValidationMeta,
+    step: { trace: TurnTrace; budget: TurnBudget }
+  ): Promise<ArbitrationOutput> {
+    this.#events.emit(refOf(turn), { type: 'step_started', step: 'arbitration' })
+
+    const decision = await callStructured(
+      this.#llm,
+      {
+        step: 'arbitration',
+        systemPrompt: ARBITRATION_SYSTEM_PROMPT,
+        userMessage,
+        jsonSchema: ARBITRATION_SCHEMA as unknown as Record<string, unknown>,
+        validate: (payload) => validateArbitration(payload, meta),
+      },
+      step
+    )
+    step.trace.arbitration = decision
+
+    return decision
+  }
+
+  /**
+   * Reads the narration already written. A refused output gets one more
+   * attempt, which never reruns the narration. No milestone of its own: the
+   * narration on screen stays provisional until the turn completes.
+   */
+  async #extract(
+    userMessage: string,
+    meta: ValidationMeta,
+    step: { trace: TurnTrace; budget: TurnBudget }
+  ): Promise<TurnEffects> {
+    const effects = await callStructured(
       this.#llm,
       {
         step: 'extraction',
         systemPrompt: EXTRACTION_SYSTEM_PROMPT,
-        userMessage: buildExtractionMessage({ ...context, narration }),
+        userMessage,
         jsonSchema: EXTRACTION_SCHEMA as unknown as Record<string, unknown>,
         validate: (payload) => validateExtraction(payload, meta),
       },
-      { trace, budget }
+      step
     )
+    step.trace.extraction = effects as unknown as Record<string, unknown>
+
+    return effects
   }
 
   /**
@@ -442,6 +483,13 @@ export class TurnService {
     })
 
     return { mode, ...toNarrationOutcome(resolution), reason: null }
+  }
+
+  /** The place the game stands in once the turn is applied, for the badge the front shows. */
+  async #whereItStands(worldState: WorldState): Promise<LocationInstance | null> {
+    return worldState.currentLocationId === null
+      ? null
+      : LocationInstance.find(worldState.currentLocationId)
   }
 
   /**

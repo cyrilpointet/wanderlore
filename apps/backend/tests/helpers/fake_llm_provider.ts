@@ -17,10 +17,14 @@ export function rawAnswer(text: string): RawAnswer {
 
 const STREAMED = Symbol('streamed answer')
 
-/** A free-text answer within a `jsonSequence`, served fragment by fragment by `stream()`. */
-export type StreamedAnswer = { [STREAMED]: string[] }
+/**
+ * A free-text answer within a `jsonSequence`, served fragment by fragment by
+ * `stream()`. An error among the fragments is thrown when reached: a stream
+ * cut halfway.
+ */
+export type StreamedAnswer = { [STREAMED]: (string | Error)[] }
 
-export function streamed(...chunks: string[]): StreamedAnswer {
+export function streamed(...chunks: (string | Error)[]): StreamedAnswer {
   return { [STREAMED]: chunks }
 }
 
@@ -123,6 +127,10 @@ export class FakeLlmProvider implements LlmProvider {
         throw this.#options.error
       }
 
+      if (chunk instanceof Error) {
+        throw chunk
+      }
+
       yield chunk
     }
 
@@ -133,7 +141,7 @@ export class FakeLlmProvider implements LlmProvider {
     return this.#metadata(request)
   }
 
-  #chunks(): string[] {
+  #chunks(): (string | Error)[] {
     const answer = this.#nextInSequence()
 
     if (answer === undefined) {

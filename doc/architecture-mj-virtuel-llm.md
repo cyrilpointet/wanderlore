@@ -841,6 +841,7 @@ narration_chunk { event, turnId, idempotencyKey, text }
 
 - `text` est un fragment **à ajouter** au texte déjà reçu, pas le texte cumulé.
 - Séquence d'un tour : `step_started(arbitration)`, `roll_resolved` s'il y a un jet, `step_started(narration)`, des `narration_chunk`, puis `turn_completed` ou `turn_failed`. L'appel fusionné de la branche sans jet disparaît avec la séparation des étapes : les deux branches streament leur narration.
+- **Pas de `step_started(extraction)`** (tranché en KAN-40). La narration est déjà à l'écran quand l'extraction commence, et elle reste provisoire jusqu'à `turn_completed` : un message d'attente de plus n'apprendrait rien au joueur. `turn_completed` porte, en plus du tour et de la fiche, le **lieu courant libellé** (`{ reference, label }`), pour la pastille de lieu.
 - **La narration diffusée reste provisoire jusqu'à `turn_completed`.** L'extraction (E) et la validation viennent après elle et peuvent échouer. Sur `turn_failed`, le front **retire la narration provisoire** et affiche l'encadré d'échec : le tour n'a pas eu lieu (pas de numéro, pas d'effets), sa narration non plus.
 - Sur `turn_completed`, la narration du tour reçu **remplace** le texte cumulé : c'est la version persistée qui fait foi.
 - La nouvelle tentative de l'étape E ne relance pas la narration : elle travaille sur le texte déjà produit.

@@ -8,6 +8,7 @@ import User from '#models/user'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
 import { DiceService } from '#services/dice'
+import { LlmError } from '#services/llm/errors'
 import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
@@ -377,3 +378,113 @@ class UnreachableQueue extends MemoryQueue {
     throw new Error('connection refused')
   }
 }
+
+test.group('Turn events | the separated pipeline', (group) => {
+  useTransaction(group)
+
+  /** Proposed by extraction, never applied when the turn fails. */
+  const HARMFUL = extracted({
+    movement: 'louvre',
+    scenario_flags: ['guard_angered'],
+    hit_points_delta: -3,
+  })
+
+  const REFUSED = extracted({ movement: 'noble_quarter' })
+
+  async function stateOf(sessionId: string) {
+    const character = await Character.query().where('sessionId', sessionId).firstOrFail()
+    const world = await WorldState.query().where('sessionId', sessionId).firstOrFail()
+
+    return {
+      hitPoints: character.hitPoints,
+      flags: world.narrativeFlags,
+      location: world.currentLocationId,
+    }
+  }
+
+  for (const { step, answers, played } of [
+    {
+      step: 'arbitration',
+      answers: [UNKNOWN_SKILL, UNKNOWN_SKILL],
+      played: { arbitration: false, roll: false, narration: false },
+    },
+    {
+      step: 'narration',
+      answers: [
+        NEEDS_ROLL,
+        streamed(
+          'The guard ',
+          new LlmError('provider_unreachable', 'Connection reset.', {
+            step: 'narration',
+            provider: 'fake',
+          })
+        ),
+      ],
+      played: { arbitration: true, roll: true, narration: false },
+    },
+    {
+      step: 'extraction',
+      answers: [NEEDS_ROLL, streamed(NARRATED_TEXT), REFUSED, REFUSED],
+      played: { arbitration: true, roll: true, narration: true },
+    },
+  ]) {
+    test(`a turn failing at ${step} logs what it played and applies nothing`, async ({
+      assert,
+    }) => {
+      const { turn, events, sessionId } = await playOne(answers)
+
+      await turn.refresh()
+
+      assert.equal(turn.status, 'failed')
+      assert.equal(turn.failure!.step, step)
+      assert.equal(turn.arbitrationOutput !== null, played.arbitration)
+      assert.equal(turn.rollResult !== null, played.roll)
+      assert.equal(turn.narratedText !== null, played.narration)
+      assert.isNull(turn.appliedEffects)
+      assert.deepEqual(await stateOf(sessionId), { hitPoints: 10, flags: {}, location: null })
+      assert.lengthOf(terminals(events.sequenceOf(turn.id)), 1)
+    })
+  }
+
+  test('a cut narration is withdrawn, never logged half-written', async ({ assert }) => {
+    const { turn, events } = await playOne([
+      NEEDS_ROLL,
+      streamed(
+        'The guard ',
+        new LlmError('timeout', 'Too slow.', { step: 'narration', provider: 'fake' })
+      ),
+    ])
+
+    /** The fragment went out provisionally; the failure is what tells the front to drop it. */
+    assert.deepEqual(events.sequenceOf(turn.id).slice(-2), ['narration_chunk', 'turn_failed'])
+    await turn.refresh()
+    assert.isNull(turn.narratedText)
+  })
+
+  test('a completed turn logs the delta extraction read', async ({ assert }) => {
+    const { turn } = await playOne([NEEDS_ROLL, streamed(NARRATED_TEXT), HARMFUL])
+
+    await turn.refresh()
+
+    assert.equal(turn.status, 'completed')
+    assert.deepEqual(turn.extractionOutput!.scenario_flags, ['guard_angered'])
+  })
+
+  test('a completed turn tells where the game now stands, labelled', async ({ assert }) => {
+    const tavern = extracted({
+      movement: { definition: 'tavern', parent: 'paris', descriptor: 'loud and crowded' },
+    })
+    const { events } = await playOne([NEEDS_ROLL, streamed(NARRATED_TEXT), tavern])
+    const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!
+
+    const message = toMessage(
+      completed.ref,
+      completed.event,
+      new ContentLabels(THREE_MUSKETEERS)
+    ) as Record<string, any>
+
+    assert.deepEqual(message.location, { reference: 'tavern_1', label: 'Tavern · Paris' })
+    /** The journal says the same, from the effects as applied. */
+    assert.deepEqual(message.turn.effects.movement, message.location)
+  })
+})
