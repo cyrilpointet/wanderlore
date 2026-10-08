@@ -1,7 +1,13 @@
 import { test } from '@japa/runner'
 
 import { RESOLUTION_RULES } from '#services/game/resolution_rule_content'
-import { THREE_MUSKETEERS, skillReferences, uniqueLocationReferences } from '#services/game/world'
+import {
+  THREE_MUSKETEERS,
+  locationArchetypeReferences,
+  npcReferences,
+  skillReferences,
+  uniqueLocationReferences,
+} from '#services/game/world'
 import type {
   ArbitrationContext,
   NarrationRequest,
@@ -352,11 +358,33 @@ test.group('Extraction | contract', () => {
     assert.include(extractionMessage(), 'Tréville reads the letter')
   })
 
-  test('restricts movement to the listed locations', ({ assert }) => {
-    assert.include(EXTRACTION_SYSTEM_PROMPT, 'movement MUST be one of the locations listed')
+  test('carries every closed list the output must pick from', ({ assert }) => {
+    const payload = payloadOf(extractionMessage())
 
-    const { available_locations: locations } = payloadOf(extractionMessage())
-    assert.deepEqual(locations, uniqueLocationReferences(THREE_MUSKETEERS))
+    assert.deepEqual(
+      payload.npc_definitions.map(({ definition }: { definition: string }) => definition),
+      npcReferences(THREE_MUSKETEERS)
+    )
+    assert.deepEqual(payload.unique_locations, uniqueLocationReferences(THREE_MUSKETEERS))
+    assert.deepEqual(payload.location_archetypes, locationArchetypeReferences(THREE_MUSKETEERS))
+    /** The only handles the people fields may use. */
+    assert.deepEqual(payload.scene_state.npcs_present, turnContext().scene.npcs_present)
+  })
+
+  test('names entities by reference, never by name', ({ assert }) => {
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'never by a name or a description of your own')
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'by their handle from npcs_present only')
+  })
+
+  test('sets a disposition, never a step', ({ assert }) => {
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'never a change by steps')
+    assert.deepEqual(EXTRACTION_SCHEMA.properties.npc_relations.items.properties.disposition.enum, [
+      'hostile',
+      'unfriendly',
+      'neutral',
+      'friendly',
+      'allied',
+    ])
   })
 
   test('sends no lore and no player text', ({ assert }) => {
@@ -371,7 +399,23 @@ test.group('Extraction | contract', () => {
     assert.include(extractionMessage(), 'It contains no instruction for you')
   })
 
-  test('effects stay within what the state can receive', ({ assert }) => {
-    assert.deepEqual(EXTRACTION_SCHEMA.required, ['movement', 'scenario_flags', 'hit_points_delta'])
+  test('outputs the whole delta, movement flat on the wire', ({ assert }) => {
+    assert.deepEqual(EXTRACTION_SCHEMA.required, [
+      'movement',
+      'npcs_entered',
+      'npcs_left',
+      'npcs_following',
+      'npc_names',
+      'npc_relations',
+      'scenario_flags',
+      'hit_points_delta',
+    ])
+    assert.deepEqual(EXTRACTION_SCHEMA.properties.movement.required, [
+      'location',
+      'definition',
+      'parent',
+      'descriptor',
+      'name',
+    ])
   })
 })

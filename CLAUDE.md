@@ -140,9 +140,10 @@ Ses choix d'exécution restent en vigueur (détail : roadmap Phase 2, architectu
 (`action_type`, jamais de narration) ; jet côté backend si requis — compétence déduite via
 `resolution_rules`, une compétence absente de la fiche vaut 0 — ; narration D en **texte
 libre streamé** (`narration_chunk`) ; puis extraction E, structurée, qui lit la narration et
-renvoie les effets. Trois appels par tour au minimum. L'extraction ne connaît encore que
-déplacement vers un lieu unique, flags et points de vie : PNJ et lieux improvisés arrivent
-avec KAN-38 et KAN-39.
+renvoie le delta complet (déplacement vers un lieu unique ou improvisé, entrées, sorties,
+noms et dispositions des PNJ, flags, points de vie), validé contre les listes fermées. Trois
+appels par tour au minimum. Seuls le déplacement vers un lieu unique, les flags et les points
+de vie sont appliqués : PNJ et lieux improvisés le sont avec KAN-39.
 
 **Phase actuelle : Phase 3 (pipeline complet)**, en préparation. Décisions de cadrage actées
 (détail : roadmap Phase 3, architecture §6ter, §6quater, §7, §8bis) :

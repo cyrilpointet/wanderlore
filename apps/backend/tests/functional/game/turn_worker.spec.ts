@@ -16,6 +16,7 @@ import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import { FakeLlmProvider, streamed } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
+import { extracted } from '#tests/helpers/turns'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { seedResolutionRules } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
@@ -37,7 +38,7 @@ const SETTLED_TEXT = 'The street is quiet.'
 const SETTLED_TURN = [
   SETTLED,
   streamed(SETTLED_TEXT),
-  { movement: null, scenario_flags: [], hit_points_delta: 0 },
+  extracted({ movement: null, scenario_flags: [], hit_points_delta: 0 }),
 ]
 
 const INVALID = {

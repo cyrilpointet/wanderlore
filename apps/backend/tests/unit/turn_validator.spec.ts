@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
 
+import { extracted } from '#tests/helpers/turns'
 import {
   TurnValidationError,
   type ValidationMeta,
@@ -10,7 +11,9 @@ import {
 const META: ValidationMeta = {
   actionTypes: ['melee_combat', 'social_persuasion'],
   npcHandles: ['royal_guard_1', 'treville'],
-  locations: ['paris', 'louvre'],
+  locations: ['paris', 'louvre', 'france'],
+  locationArchetypes: ['tavern', 'town'],
+  npcDefinitions: ['treville', 'royal_guard', 'commoner'],
   hitPointsMax: 10,
 }
 
@@ -35,8 +38,8 @@ function settled(overrides: Record<string, unknown> = {}) {
   })
 }
 
-function extraction(overrides: Record<string, unknown> = {}) {
-  return { movement: null, scenario_flags: ['duel_survived'], hit_points_delta: -2, ...overrides }
+function extraction(overrides: Parameters<typeof extracted>[0] = {}) {
+  return extracted({ scenario_flags: ['duel_survived'], hit_points_delta: -2, ...overrides })
 }
 
 /**
@@ -167,7 +170,7 @@ test.group('Turn validator | closed lists', () => {
      * A well-formed reference is not enough: a place outside the list has no
      * label, so it would reach the player as a raw identifier.
      */
-    assert.include(fields(error), 'movement')
+    assert.include(fields(error), 'movement.location')
   })
 
   test('rejects a flag written as a display name', async ({ assert }) => {
@@ -299,5 +302,130 @@ test.group('Turn validator | malformed payloads', () => {
      * rejection from an extraction one.
      */
     assert.equal(error.step, 'extraction')
+  })
+})
+
+test.group('Turn validator | extraction', () => {
+  test('normalises a move to a named place', async ({ assert }) => {
+    const output = await validateExtraction(extraction({ movement: 'louvre' }), META)
+
+    assert.deepEqual(output.movement, { location: 'louvre' })
+  })
+
+  test('accepts a new place of an archetype, within a named one', async ({ assert }) => {
+    const output = await validateExtraction(
+      extraction({
+        movement: {
+          definition: 'town',
+          parent: 'france',
+          descriptor: 'a river town',
+          name: 'Orléans',
+        },
+      }),
+      META
+    )
+
+    assert.deepEqual(output.movement, {
+      definition: 'town',
+      parent: 'france',
+      descriptor: 'a river town',
+      name: 'Orléans',
+    })
+  })
+
+  test('accepts people entering, leaving, naming themselves and changing attitude', async ({
+    assert,
+  }) => {
+    const answer = extraction({
+      npcs_entered: [{ definition: 'commoner', descriptor: 'a washerwoman' }],
+      npcs_left: ['treville'],
+      npc_names: [{ handle: 'royal_guard_1', name: 'Jacques' }],
+      npc_relations: [{ handle: 'royal_guard_1', disposition: 'friendly' }],
+    })
+
+    const output = await validateExtraction(answer, META)
+
+    assert.deepEqual(output.npcs_entered, answer.npcs_entered)
+    assert.deepEqual(output.npc_relations, answer.npc_relations)
+  })
+
+  test('rejects someone entering under a definition the world does not have', async ({
+    assert,
+  }) => {
+    const error = await reject(() =>
+      validateExtraction(
+        extraction({ npcs_entered: [{ definition: 'dragon', descriptor: null }] }),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'npcs_entered.0.definition')
+  })
+
+  test('only designates people present, by handle', async ({ assert }) => {
+    for (const answer of [
+      extraction({ npcs_left: ['royal_guard_2'] }),
+      extraction({ npcs_following: ['the guard'] }),
+      extraction({ npc_names: [{ handle: 'jussac', name: 'Jussac' }] }),
+      extraction({ npc_relations: [{ handle: 'milady', disposition: 'hostile' }] }),
+    ]) {
+      const error = await reject(() => validateExtraction(answer, META))
+
+      assert.isNotEmpty(error.reasons)
+    }
+  })
+
+  test('rejects a new place set in something other than a named location', async ({ assert }) => {
+    const error = await reject(() =>
+      validateExtraction(
+        extraction({ movement: { definition: 'tavern', parent: 'town', descriptor: null } }),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'movement.parent')
+  })
+
+  test('rejects a new place with no parent at all', async ({ assert }) => {
+    const error = await reject(() =>
+      validateExtraction(extraction({ movement: { definition: 'tavern' } }), META)
+    )
+
+    assert.include(fields(error), 'movement.parent')
+  })
+
+  test('rejects a movement that is both forms at once', async ({ assert }) => {
+    const error = await reject(() =>
+      validateExtraction(
+        extraction({ movement: { location: 'paris', definition: 'tavern', parent: 'paris' } }),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'movement')
+  })
+
+  test('rejects a disposition outside the scale, or given as a step', async ({ assert }) => {
+    for (const disposition of ['furious', '+1']) {
+      const error = await reject(() =>
+        validateExtraction(
+          extraction({ npc_relations: [{ handle: 'treville', disposition }] }),
+          META
+        )
+      )
+
+      assert.include(fields(error), 'npc_relations.0.disposition')
+    }
+  })
+
+  test('rejects someone who both leaves and follows', async ({ assert }) => {
+    const error = await reject(() =>
+      validateExtraction(
+        extraction({ movement: 'louvre', npcs_left: ['treville'], npcs_following: ['treville'] }),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'npcs_following')
   })
 })

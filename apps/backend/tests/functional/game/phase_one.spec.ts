@@ -22,7 +22,7 @@ import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { useTransaction } from '#tests/helpers/database'
-import { playerOf } from '#tests/helpers/turns'
+import { extracted, playerOf } from '#tests/helpers/turns'
 import ResolutionRulesSeeder from '#database/seeders/01_resolution_rules_seeder'
 import TestUserSeeder from '#database/seeders/02_test_user_seeder'
 import DemoSessionSeeder from '#database/seeders/03_demo_session_seeder'
@@ -45,11 +45,11 @@ const ARBITRATION_WITH_ROLL = {
 const NARRATION = 'Tréville breaks the seal, reads, and looks up at you with new attention.'
 
 /** What extraction reads in that narration. */
-const EFFECTS = {
+const EFFECTS = extracted({
   movement: 'hotel_de_treville',
   scenario_flags: ['letter_delivered'],
   hit_points_delta: 0,
-}
+})
 
 /** A turn with a roll: ruling, narration, extraction. */
 const TURN = [ARBITRATION_WITH_ROLL, streamed(NARRATION), EFFECTS]

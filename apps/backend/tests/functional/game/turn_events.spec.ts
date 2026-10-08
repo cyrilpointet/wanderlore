@@ -18,6 +18,7 @@ import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import { FakeLlmProvider, streamed } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
+import { extracted } from '#tests/helpers/turns'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { seedResolutionRules } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
@@ -37,7 +38,7 @@ const SETTLED = {
 const SETTLED_TURN = [
   SETTLED,
   streamed('The street is quiet.'),
-  { movement: 'paris', scenario_flags: ['street_seen'], hit_points_delta: 0 },
+  extracted({ movement: 'paris', scenario_flags: ['street_seen'], hit_points_delta: 0 }),
 ]
 
 const NEEDS_ROLL = {
@@ -50,7 +51,7 @@ const NARRATED_TEXT = 'The guard steps aside.'
 /** What follows a roll: the narration, in two fragments, then what extraction reads in it. */
 const NARRATED = [
   streamed('The guard ', 'steps aside.'),
-  { movement: null, scenario_flags: [], hit_points_delta: -2 },
+  extracted({ movement: null, scenario_flags: [], hit_points_delta: -2 }),
 ]
 
 const UNKNOWN_SKILL = {
@@ -157,7 +158,11 @@ test.group('Turn events | sequence', (group) => {
   })
 
   test('a turn rejected at extraction ends failed, after its narration', async ({ assert }) => {
-    const refused = { movement: 'noble_quarter', scenario_flags: [], hit_points_delta: 0 }
+    const refused = extracted({
+      movement: 'noble_quarter',
+      scenario_flags: [],
+      hit_points_delta: 0,
+    })
     const { turn, events } = await playOne([NEEDS_ROLL, streamed(NARRATED_TEXT), refused, refused])
 
     /** The narration went out provisionally; the failure is what tells the front to withdraw it. */

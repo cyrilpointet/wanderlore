@@ -2,7 +2,7 @@ import { BaseTransformer } from '@adonisjs/core/transformers'
 
 import type TurnLog from '#models/turn_log'
 import type { ContentLabels } from '#services/game/content_labels'
-import type { TurnEffects } from '#services/game/prompts/types'
+import type { AppliedEffects } from '#services/game/prompts/types'
 import type { MarginLabel, RollOutcome } from '#services/rules/types'
 
 /**
@@ -34,7 +34,7 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
       effects:
         turn.appliedEffects === null
           ? null
-          : presentEffects(turn.appliedEffects as TurnEffects, this.#labels),
+          : presentEffects(turn.appliedEffects as AppliedEffects, this.#labels),
       /** Code and message only: the rejected rules are for whoever debugs it. */
       failure:
         turn.failure === null
@@ -88,7 +88,7 @@ export function presentRoll(
  * The effects the player is told about: hit points and movement. Scenario flags
  * are internal markers and are dropped here.
  */
-export function presentEffects(effects: TurnEffects, labels: ContentLabels) {
+export function presentEffects(effects: AppliedEffects, labels: ContentLabels) {
   return {
     hitPointsDelta: effects.hit_points_delta,
     movement: effects.movement === null ? null : labels.of('location', effects.movement),

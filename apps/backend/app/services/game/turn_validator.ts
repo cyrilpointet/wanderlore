@@ -1,6 +1,7 @@
 import vine from '@vinejs/vine'
 
-import type { ArbitrationOutput, TurnEffects } from './prompts/types.js'
+import { NPC_DISPOSITIONS } from './world.js'
+import type { ArbitrationOutput, Movement, TurnEffects } from './prompts/types.js'
 
 /**
  * Nothing coming out of the model is trusted.
@@ -45,8 +46,12 @@ export type ValidationMeta = {
   actionTypes: string[]
   /** Closed list: the handles of the people present, the only possible targets. */
   npcHandles: string[]
-  /** Closed list: the places the world defines, and so can label. */
+  /** Closed list: the named places the world defines, and so can label. */
   locations: string[]
+  /** Closed list: the kinds of place an improvised one may be. */
+  locationArchetypes: string[]
+  /** Closed list: who may enter a scene — a named character or an archetype. */
+  npcDefinitions: string[]
   /** Bounds the damage or healing a single turn may claim. */
   hitPointsMax: number
 }
@@ -60,6 +65,15 @@ export type ValidationMeta = {
 const REFERENCE = /^[a-z][a-z0-9_]{0,63}$/
 
 const MAX_FLAGS_PER_TURN = 5
+
+/** More people moving in or out in a single narration means it is not reading the text. */
+const MAX_NPC_CHANGES_PER_TURN = 6
+
+const limitsOf = (field: { meta: unknown }) => field.meta as ValidationMeta
+
+const presentHandle = () => vine.enum((field) => limitsOf(field).npcHandles)
+
+const shortText = (length: number) => vine.string().trim().minLength(1).maxLength(length)
 
 const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
   intent: vine.object({
@@ -90,10 +104,37 @@ const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
 
 const extractionValidator = vine.withMetaData<ValidationMeta>().create({
   /**
-   * A place the model made up would reach the player as a raw reference,
-   * with no label to show and no translation to come.
+   * Flat on the wire, so any provider can describe it: a named place in
+   * `location`, or an archetype in `definition` set in a named `parent`. A
+   * place the model made up would reach the player with no label to show.
    */
-  movement: vine.enum((field) => (field.meta as ValidationMeta).locations).nullable(),
+  movement: vine
+    .object({
+      location: vine.enum((field) => limitsOf(field).locations).nullable(),
+      definition: vine.enum((field) => limitsOf(field).locationArchetypes).nullable(),
+      parent: vine.enum((field) => limitsOf(field).locations).nullable(),
+      descriptor: shortText(200).nullable(),
+      name: shortText(64).nullable(),
+    })
+    .nullable(),
+  npcs_entered: vine
+    .array(
+      vine.object({
+        definition: vine.enum((field) => limitsOf(field).npcDefinitions),
+        descriptor: shortText(200).nullable(),
+      })
+    )
+    .maxLength(MAX_NPC_CHANGES_PER_TURN),
+  /** Only someone present can leave, follow, give a name or change attitude. */
+  npcs_left: vine.array(presentHandle()).maxLength(MAX_NPC_CHANGES_PER_TURN),
+  npcs_following: vine.array(presentHandle()).maxLength(MAX_NPC_CHANGES_PER_TURN),
+  npc_names: vine
+    .array(vine.object({ handle: presentHandle(), name: shortText(64) }))
+    .maxLength(MAX_NPC_CHANGES_PER_TURN),
+  /** A qualitative label, never a score nor a step. */
+  npc_relations: vine
+    .array(vine.object({ handle: presentHandle(), disposition: vine.enum(NPC_DISPOSITIONS) }))
+    .maxLength(MAX_NPC_CHANGES_PER_TURN),
   scenario_flags: vine.array(vine.string().regex(REFERENCE)).maxLength(MAX_FLAGS_PER_TURN),
   hit_points_delta: vine.number().withoutDecimals(),
 })
@@ -117,15 +158,79 @@ export async function validateExtraction(
   payload: unknown,
   meta: ValidationMeta
 ): Promise<TurnEffects> {
-  const output = await run<TurnEffects>('extraction', extractionValidator, payload, meta)
+  const output = await run<RawExtraction>('extraction', extractionValidator, payload, meta)
 
-  const reasons = effectReasons(output, meta)
+  const reasons = [...movementReasons(output.movement), ...effectReasons(output, meta)]
 
   if (reasons.length > 0) {
     throw new TurnValidationError('extraction', reasons)
   }
 
-  return output
+  return { ...output, movement: toMovement(output.movement) }
+}
+
+/** The movement as it travels: every field present, most of them null. */
+type FlatMovement = {
+  location: string | null
+  definition: string | null
+  parent: string | null
+  descriptor: string | null
+  name: string | null
+}
+
+type RawExtraction = Omit<TurnEffects, 'movement'> & { movement: FlatMovement | null }
+
+/**
+ * Exactly one of the two forms: a named place, or an archetype within a named
+ * place. Anything in between could not be placed on the map.
+ */
+function movementReasons(movement: FlatMovement | null): RejectionReason[] {
+  if (movement === null) {
+    return []
+  }
+
+  if (movement.location !== null) {
+    return movement.definition !== null || movement.parent !== null
+      ? [
+          reason(
+            'movement',
+            'ambiguous',
+            'A movement goes either to a named location or to a new place of an archetype, not both.'
+          ),
+        ]
+      : []
+  }
+
+  if (movement.definition === null) {
+    return [
+      reason('movement', 'required', 'A movement needs a location, or a definition and a parent.'),
+    ]
+  }
+
+  return movement.parent === null
+    ? [reason('movement.parent', 'required', 'A new place must sit within a named location.')]
+    : []
+}
+
+/**
+ * A named place carries nothing else: its label and parent are the world's. A
+ * descriptor or a name sent along with it is dropped rather than refused.
+ */
+function toMovement(movement: FlatMovement | null): Movement | null {
+  if (movement === null) {
+    return null
+  }
+
+  if (movement.location !== null) {
+    return { location: movement.location }
+  }
+
+  return {
+    definition: movement.definition!,
+    parent: movement.parent!,
+    descriptor: movement.descriptor,
+    name: movement.name,
+  }
 }
 
 /**
@@ -161,22 +266,28 @@ function coherenceReasons(output: {
 /**
  * Bounds that depend on the character, so they cannot live in the schema.
  */
-function effectReasons(effect: TurnEffects | null, meta: ValidationMeta): RejectionReason[] {
-  if (effect === null) {
-    return []
-  }
+function effectReasons(
+  effect: Pick<TurnEffects, 'hit_points_delta' | 'npcs_left' | 'npcs_following'>,
+  limits: ValidationMeta
+): RejectionReason[] {
+  const reasons: RejectionReason[] = []
 
-  if (Math.abs(effect.hit_points_delta) > meta.hitPointsMax) {
-    return [
+  if (Math.abs(effect.hit_points_delta) > limits.hitPointsMax) {
+    reasons.push(
       reason(
         'hit_points_delta',
         'range',
-        `A single turn cannot move hit points by more than ${meta.hitPointsMax}.`
-      ),
-    ]
+        `A single turn cannot move hit points by more than ${limits.hitPointsMax}.`
+      )
+    )
   }
 
-  return []
+  /** Leaving the scene and following the character out of it cannot both be true. */
+  for (const handle of effect.npcs_following.filter((item) => effect.npcs_left.includes(item))) {
+    reasons.push(reason('npcs_following', 'conflict', `"${handle}" cannot both leave and follow.`))
+  }
+
+  return reasons
 }
 
 async function run<TOutput>(

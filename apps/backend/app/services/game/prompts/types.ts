@@ -1,5 +1,5 @@
 import type { Difficulty, MarginLabel, RollOutcome } from '#services/rules/types'
-import type { WorldDefinition } from '#services/game/world'
+import type { NpcDisposition, WorldDefinition } from '#services/game/world'
 import type { ActionType } from '#services/game/resolution_rules'
 import type { PresentNpc } from '#services/game/npcs'
 
@@ -22,13 +22,39 @@ export type ResolutionMode = 'automatic_success' | 'narrative_automatic_failure'
 export type Plausibility = 'plausible' | 'borderline' | 'impossible'
 
 /**
- * Effects the model may propose, limited to what the current state can receive.
+ * Where the narration took the character: a named place of the world, or a
+ * new place of an archetype, set within a named one.
+ */
+export type Movement =
+  | { location: string }
+  | { definition: string; parent: string; descriptor: string | null; name: string | null }
+
+/**
+ * The state changes extraction read in the narration, validated against the
+ * closed lists — what the backend will apply, not what it applied. Every
+ * entity is named by a reference or a handle, never by a name.
  *
- * No items before Phase 4, and nothing about NPCs before the extraction step
- * (E) proposes their entrances, exits and dispositions. A field the backend
- * would reject on every turn is not worth the tokens it costs on every turn.
+ * No items before Phase 4: a field the backend would reject on every turn is
+ * not worth the tokens it costs on every turn.
  */
 export type TurnEffects = {
+  movement: Movement | null
+  npcs_entered: { definition: string; descriptor: string | null }[]
+  npcs_left: string[]
+  npcs_following: string[]
+  npc_names: { handle: string; name: string }[]
+  /** The new disposition itself, never a step up or down. */
+  npc_relations: { handle: string; disposition: NpcDisposition }[]
+  scenario_flags: string[]
+  hit_points_delta: number
+}
+
+/**
+ * What a turn actually changed, as the player is told: where the character
+ * now stands (a location handle) and how their hit points moved. Can be less
+ * than proposed — damage stops at zero, a move to where one stands is none.
+ */
+export type AppliedEffects = {
   movement: string | null
   scenario_flags: string[]
   hit_points_delta: number

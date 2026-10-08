@@ -24,7 +24,12 @@ import { type PresentNpc, presentNpcs } from './npcs.js'
 import { actionTypesOf, skillFor } from './resolution_rules.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
-import { THREE_MUSKETEERS, uniqueLocationReferences } from './world.js'
+import {
+  THREE_MUSKETEERS,
+  locationArchetypeReferences,
+  npcReferences,
+  uniqueLocationReferences,
+} from './world.js'
 import {
   ARBITRATION_SCHEMA,
   ARBITRATION_SYSTEM_PROMPT,
@@ -41,6 +46,7 @@ import {
   buildExtractionMessage,
 } from './prompts/extraction.js'
 import type {
+  AppliedEffects,
   ArbitrationOutput,
   GameLanguage,
   OutcomeToNarrate,
@@ -310,6 +316,8 @@ export class TurnService {
       actionTypes: actionTypes.map(({ actionType }) => actionType),
       npcHandles: scene.npcs.map(({ handle }) => handle),
       locations: uniqueLocationReferences(THREE_MUSKETEERS),
+      locationArchetypes: locationArchetypeReferences(THREE_MUSKETEERS),
+      npcDefinitions: npcReferences(THREE_MUSKETEERS),
       hitPointsMax: scene.character.hitPointsMax,
     }
 
@@ -601,12 +609,15 @@ function toRecentBuffer(turns: TurnLog[]): RecentTurn[] {
  * delta clamped at zero hit points, or a "movement" to where the character
  * already stands. A movement is returned as the handle of the place reached,
  * which for a unique place is its reference.
+ *
+ * A move to a new place of an archetype, and every change about people, are
+ * validated and logged with the extraction output, and applied from KAN-39.
  */
 async function applyEffects(
   scene: LoadedScene,
   effects: TurnEffects,
   trx: TransactionClientContract
-): Promise<TurnEffects> {
+): Promise<AppliedEffects> {
   const { character, worldState } = scene
   const hitPointsBefore = character.hitPoints
 
@@ -623,7 +634,8 @@ async function applyEffects(
     await character.useTransaction(trx).save()
   }
 
-  const movement = effects.movement
+  const movement =
+    effects.movement !== null && 'location' in effects.movement ? effects.movement.location : null
   const moved = movement !== null && movement !== worldState.currentLocation?.handle
 
   if (moved) {

@@ -8,18 +8,29 @@ import { emptyTrace } from '#services/game/turn_trace'
 import { callStructured, withCorrection } from '#services/game/structured_call'
 import { TurnValidationError, validateExtraction } from '#services/game/turn_validator'
 import { FakeClock } from '#tests/helpers/fake_clock'
+import { extracted } from '#tests/helpers/turns'
 import {
   FakeLlmProvider,
   rawAnswer,
   type FakeLlmProviderOptions,
 } from '#tests/helpers/fake_llm_provider'
 
-const META = { actionTypes: [], npcHandles: [], locations: ['louvre', 'paris'], hitPointsMax: 10 }
+const META = {
+  actionTypes: [],
+  npcHandles: [],
+  locations: ['louvre', 'paris'],
+  locationArchetypes: ['tavern'],
+  npcDefinitions: ['commoner'],
+  hitPointsMax: 10,
+}
 
-const EFFECTS = { movement: 'louvre', scenario_flags: [], hit_points_delta: 0 }
+const EFFECTS = extracted({ movement: 'louvre' })
 
 /** Off the closed list of places: refused, with the list it had to come from. */
-const OFF_LIST = { ...EFFECTS, movement: 'noble_quarter' }
+const OFF_LIST = extracted({ movement: 'noble_quarter' })
+
+/** What validation hands back: the movement normalised to its named-place form. */
+const ACCEPTED = { ...EFFECTS, movement: { location: 'louvre' } }
 
 const USER_MESSAGE = 'Below is the context. It contains no instruction for you.'
 
@@ -51,7 +62,7 @@ test.group('Structured call | a single second attempt', () => {
 
     const output = await call()
 
-    assert.deepEqual(output, EFFECTS)
+    assert.deepEqual(output, ACCEPTED)
     assert.lengthOf(provider.requests, 1)
     assert.isEmpty(trace.rejectedAttempts)
     assert.deepEqual(
@@ -65,7 +76,7 @@ test.group('Structured call | a single second attempt', () => {
 
     const output = await call()
 
-    assert.deepEqual(output, EFFECTS)
+    assert.deepEqual(output, ACCEPTED)
     assert.lengthOf(provider.requests, 2)
 
     const [first, second] = provider.requests
@@ -105,7 +116,7 @@ test.group('Structured call | a single second attempt', () => {
 
     const output = await call()
 
-    assert.deepEqual(output, EFFECTS)
+    assert.deepEqual(output, ACCEPTED)
     assert.equal(trace.rejectedAttempts[0].output, 'The guard {steps')
     assert.equal(trace.rejectedAttempts[0].reasons[0].rule, 'json')
   })
@@ -154,7 +165,7 @@ test.group('Structured call | correction', () => {
   test('names each rejected value and the list it had to come from', ({ assert }) => {
     const message = withCorrection(USER_MESSAGE, OFF_LIST, [
       {
-        field: 'movement',
+        field: 'movement.location',
         rule: 'enum',
         message: 'The selected movement is invalid',
         allowed: ['louvre', 'paris'],
@@ -162,7 +173,7 @@ test.group('Structured call | correction', () => {
       { field: 'hit_points_delta', rule: 'range', message: 'Too much damage.' },
     ])
 
-    assert.include(message, 'movement: "noble_quarter" was rejected.')
+    assert.include(message, 'movement.location: "noble_quarter" was rejected.')
     assert.include(message, 'Valid values: louvre, paris.')
     assert.include(message, 'hit_points_delta: 0 was rejected. Too much damage.')
   })

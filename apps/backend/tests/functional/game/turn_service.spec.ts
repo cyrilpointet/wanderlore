@@ -28,7 +28,7 @@ import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { seedResolutionRules } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
-import { playerOf } from '#tests/helpers/turns'
+import { extracted, playerOf } from '#tests/helpers/turns'
 
 /**
  * The pipeline end to end, with the model and the dice replaced. No network
@@ -45,11 +45,11 @@ const SETTLED = {
 const SETTLED_TEXT = 'The courtyard is empty but for a stable boy brushing down a grey mare.'
 
 /** What extraction reads in it. */
-const SETTLED_EFFECTS = {
+const SETTLED_EFFECTS = extracted({
   movement: 'hotel_de_treville',
   scenario_flags: ['stable_boy_seen'],
   hit_points_delta: 0,
-}
+})
 
 /** The three answers of a turn played without a roll: ruling, narration, extraction. */
 const SETTLED_TURN = [SETTLED, streamed(SETTLED_TEXT), SETTLED_EFFECTS]
@@ -66,7 +66,7 @@ const ALCHEMY = { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, action_
 
 const NARRATED_TEXT = 'He weighs you for a long moment, then steps aside.'
 
-const NARRATED_EFFECTS = { movement: 'louvre', scenario_flags: [], hit_points_delta: -1 }
+const NARRATED_EFFECTS = extracted({ movement: 'louvre', scenario_flags: [], hit_points_delta: -1 })
 
 /** The two answers that follow a roll: the narration, then what extraction reads in it. */
 const NARRATED = [streamed(NARRATED_TEXT), NARRATED_EFFECTS]
@@ -271,7 +271,7 @@ test.group('TurnService | a turn with a roll', (group) => {
     const result = await buildService([
       NEEDS_ROLL,
       streamed(NARRATED_TEXT),
-      { movement: null, scenario_flags: [], hit_points_delta: -3 },
+      extracted({ movement: null, scenario_flags: [], hit_points_delta: -3 }),
     ]).play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
 
     /**
@@ -299,7 +299,11 @@ test.group('TurnService | a turn with a roll', (group) => {
 
   test('comes back to a unique place without duplicating it', async ({ assert }) => {
     const { sessionId, userId, worldState } = await arrangeScene()
-    const toLouvre = [SETTLED, streamed(SETTLED_TEXT), { ...SETTLED_EFFECTS, movement: 'louvre' }]
+    const toLouvre = [
+      SETTLED,
+      streamed(SETTLED_TEXT),
+      extracted({ movement: 'louvre', scenario_flags: ['stable_boy_seen'] }),
+    ]
 
     await buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I go to Tréville.' })
     await buildService(toLouvre).play({ sessionId, userId, playerInput: 'I go to the Louvre.' })
@@ -390,7 +394,11 @@ test.group('TurnService | a turn that fails', (group) => {
 
   test('leaves the state untouched when extraction is refused twice', async ({ assert }) => {
     const { sessionId, userId, character } = await arrangeScene()
-    const refused = { movement: 'noble_quarter', scenario_flags: [], hit_points_delta: -5 }
+    const refused = extracted({
+      movement: 'noble_quarter',
+      scenario_flags: [],
+      hit_points_delta: -5,
+    })
     const { play } = buildService([NEEDS_ROLL, streamed(NARRATED_TEXT), refused, refused])
 
     await play({ sessionId, userId, playerInput: 'I ask him to let me pass.' }).catch(() => {})

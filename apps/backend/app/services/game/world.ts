@@ -63,7 +63,9 @@ export type WorldDefinition = {
 }
 
 /** Qualitative only: the model proposes one of these, never a number. */
-export type NpcDisposition = 'hostile' | 'unfriendly' | 'neutral' | 'friendly' | 'allied'
+export const NPC_DISPOSITIONS = ['hostile', 'unfriendly', 'neutral', 'friendly', 'allied'] as const
+
+export type NpcDisposition = (typeof NPC_DISPOSITIONS)[number]
 
 type DescribedEntry = ContentEntry & {
   /** One line of English for the model, never shown to the player. */
