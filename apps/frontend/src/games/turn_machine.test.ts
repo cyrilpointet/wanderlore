@@ -5,6 +5,7 @@ import {
   concerns,
   initialTurnState,
   isBusy,
+  progressKey,
   turnReducer,
   type TurnAction,
   type TurnMessage,
@@ -61,17 +62,6 @@ describe('turn machine — a turn played to the end', () => {
     expect(isBusy(state)).toBe(true)
   })
 
-  test('a narration fragment keeps the turn going', () => {
-    const narrating = run(
-      submit,
-      accepted,
-      on(message({ event: 'step_started', step: 'narration' })),
-      on(message({ event: 'narration_chunk', text: 'The guard ' }))
-    )
-
-    expect(narrating).toMatchObject({ status: 'in_progress', step: 'narration' })
-  })
-
   test('the 202 names the turn and starts the wait', () => {
     expect(run(submit, accepted)).toMatchObject({
       status: 'in_progress',
@@ -96,6 +86,7 @@ describe('turn machine — a turn played to the end', () => {
           event: 'turn_completed',
           turn: turn({ status: 'completed' }),
           character: CHARACTER,
+          location: null,
         })
       )
     )
@@ -242,6 +233,8 @@ describe('turn machine — refusals of the submission', () => {
       submission: { playerInput: 'Someone else’s action.', idempotencyKey: null, turnId: 'turn-7' },
       step: null,
       roll: null,
+      // Picked up halfway: its narration is not followed live.
+      narration: null,
     })
   })
 
@@ -327,5 +320,90 @@ describe('turn machine — what it ignores', () => {
         retryWithSameKey: true,
       })
     ).toEqual(state)
+  })
+})
+
+describe('turn machine — narration as it is written', () => {
+  const narrating = [submit, accepted, on(message({ event: 'step_started', step: 'narration' }))]
+
+  test('fragments add up, in order, in place of the waiting message', () => {
+    const state = run(
+      ...narrating,
+      on(message({ event: 'narration_chunk', text: 'The guard ' })),
+      on(message({ event: 'narration_chunk', text: 'steps aside.' }))
+    )
+
+    expect(state).toMatchObject({ status: 'in_progress', narration: 'The guard steps aside.' })
+  })
+
+  test('the journal follows the text as it grows', () => {
+    const before = run(...narrating)
+    const after = turnReducer(before, on(message({ event: 'narration_chunk', text: 'The guard ' })))
+
+    expect(progressKey(after)).not.toBe(progressKey(before))
+  })
+
+  test('completion hands over to the turn as persisted', () => {
+    const state = run(
+      ...narrating,
+      on(message({ event: 'narration_chunk', text: 'A provisional draft.' })),
+      on(
+        message({
+          event: 'turn_completed',
+          turn: turn({ status: 'completed' }),
+          character: CHARACTER,
+          location: null,
+        })
+      )
+    )
+
+    // Nothing provisional is left: the journal shows the narration it received.
+    expect(state).toEqual(initialTurnState)
+  })
+
+  test('a failure after fragments withdraws the narration for the failure card', () => {
+    const state = run(
+      ...narrating,
+      on(message({ event: 'narration_chunk', text: 'The guard ' })),
+      on(message({ event: 'turn_failed', failure: { code: 'llm_timeout', message: 'Too slow.' } }))
+    )
+
+    expect(state).toMatchObject({ status: 'failed', failure: { code: 'llm_timeout' } })
+    expect(state).not.toHaveProperty('narration')
+  })
+
+  test('fragments of another turn are ignored', () => {
+    const state = run(
+      ...narrating,
+      on(
+        message(
+          { event: 'narration_chunk', text: 'Someone else’s story.' },
+          { turnId: 'turn-9', idempotencyKey: 'key-9' }
+        )
+      )
+    )
+
+    expect(state).toMatchObject({ narration: '' })
+  })
+
+  test('read back mid-narration, the text stops: it may have holes', () => {
+    const state = run(
+      ...narrating,
+      on(message({ event: 'narration_chunk', text: 'The guard ' })),
+      { type: 'read', turn: turn() },
+      on(message({ event: 'narration_chunk', text: 'steps aside.' }))
+    )
+
+    // Back to the waiting message until `turn_completed` brings the whole text.
+    expect(state).toMatchObject({ status: 'in_progress', narration: null })
+  })
+
+  test('a turn found pending on reopening the screen is not narrated live', () => {
+    const state = run(
+      { type: 'read', turn: turn() },
+      on(message({ event: 'narration_chunk', text: 'halfway through' }))
+    )
+
+    expect(state).toMatchObject({ status: 'in_progress', narration: null })
   })
 })

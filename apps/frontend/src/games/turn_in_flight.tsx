@@ -1,15 +1,16 @@
 import { useTranslation } from 'react-i18next'
 
 import { errorMessage } from '@/i18n/errors'
-import { PlayerAction, RollChip } from './journal'
+import { Narration, PlayerAction, RollChip } from './journal'
 import { emphasisOf } from './turn_errors'
 import type { Failure, TurnState } from './turn_machine'
 import { waitingText } from './waiting'
 
 /**
  * The turn being played, at the end of the journal: the player's words right
- * away, then what the game master is doing, then — if it goes wrong — what
- * happened and how to go on. Gone once the turn joins the journal.
+ * away, then what the game master is doing — or the narration as it is
+ * written — then, if it goes wrong, what happened and how to go on, the
+ * provisional narration withdrawn. Gone once the turn joins the journal.
  */
 export function TurnInFlight({
   state,
@@ -35,7 +36,12 @@ export function TurnInFlight({
         <RollChip roll={state.roll} />
       )}
 
-      {state.status === 'in_progress' && <Waiting text={waitingText(state, t)} />}
+      {state.status === 'in_progress' &&
+        (state.narration ? (
+          <Narration text={state.narration} provisional />
+        ) : (
+          <Waiting text={waitingText(state, t)} />
+        ))}
 
       {(state.status === 'failed' || state.status === 'submit_failed') && (
         <FailureCard failure={state.failure} onRetry={onRetry} onEdit={onEdit} />

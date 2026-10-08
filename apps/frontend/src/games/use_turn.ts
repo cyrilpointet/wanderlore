@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { transmit } from '@/api/transmit'
+import type { ContentLabel } from '@/api/types'
 import { gameQuery, gamesQuery, turnsQuery, type Character, type Game, type Turn } from './queries'
 import { channelOf, readTurn, submitTurn } from './turn_api'
 import { classifySubmitError } from './turn_errors'
@@ -49,9 +50,13 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
     dispatch(action)
   }, [])
 
-  /** A finished turn joins the journal; the sheet follows when the event carried it. */
+  /**
+   * A finished turn joins the journal — its persisted narration in place of
+   * the provisional one — and the sheet and the place badge follow when the
+   * event carried them.
+   */
   const record = useCallback(
-    (turn: Turn, character?: Character) => {
+    (turn: Turn, character?: Character, location?: ContentLabel | null) => {
       queryClient.setQueryData(turnsQuery(gameId).queryKey, (turns) =>
         !turns || turns.some((known) => known.id === turn.id) ? turns : [...turns, turn]
       )
@@ -62,8 +67,7 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
             ? {
                 ...current,
                 character,
-                // The movement the backend applied is where the character now stands.
-                location: turn.effects?.movement ?? current.location,
+                location: location === undefined ? current.location : location,
                 pendingTurn: null,
               }
             : current
@@ -103,7 +107,9 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
   const onMessage = useCallback(
     (message: TurnMessage) => {
       if (!concerns(latest.current, message)) return
-      if (message.event === 'turn_completed') record(message.turn, message.character)
+      if (message.event === 'turn_completed') {
+        record(message.turn, message.character, message.location)
+      }
       act({ type: 'message', message })
     },
     [act, record]

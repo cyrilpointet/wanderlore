@@ -121,10 +121,20 @@ export function RollChip({ roll }: { roll: Roll }) {
   )
 }
 
-/** Shown as text, never as HTML: it comes from an LLM fed with the player's words. */
-export function Narration({ text }: { text: string }) {
+/**
+ * Shown as text, never as HTML: it comes from an LLM fed with the player's words.
+ *
+ * `provisional` while it is still being written. It grows outside any live
+ * region, so a screen reader is not read the whole text again at every
+ * fragment: the waiting message announces the step, and the finished
+ * narration is announced once the turn completes.
+ */
+export function Narration({ text, provisional = false }: { text: string; provisional?: boolean }) {
   return (
-    <div className="flex flex-col gap-4 font-serif text-narration text-text lg:text-narration-lg">
+    <div
+      aria-busy={provisional || undefined}
+      className="flex flex-col gap-4 font-serif text-narration text-text lg:text-narration-lg"
+    >
       {paragraphs(text).map((paragraph, index) => (
         <p key={index}>{paragraph}</p>
       ))}

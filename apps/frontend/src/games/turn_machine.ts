@@ -1,4 +1,5 @@
 import type { Step } from '@/api/enums'
+import type { ContentLabel } from '@/api/types'
 import type { Character, Roll, Turn } from './queries'
 
 /**
@@ -7,7 +8,7 @@ import type { Character, Roll, Turn } from './queries'
  * ```
  * idle ──submit──▶ submitting ──202──▶ in_progress ──turn_completed──▶ idle
  *                     │                   │   ▲
- *                     │                   │   └─ step_started / roll_resolved
+ *                     │                   │   └─ step_started / roll_resolved / narration_chunk
  *                     │                   └──turn_failed──▶ failed ──retry──▶ submitting
  *                     └──network / 4xx / 5xx──▶ submit_failed ──retry──▶ submitting
  * ```
@@ -32,7 +33,20 @@ export type TurnState =
   /** `inputError`: the last submission's text was refused as it stands, shown under the field. */
   | { status: 'idle'; inputError?: Failure }
   | { status: 'submitting'; submission: Submission }
-  | { status: 'in_progress'; submission: Submission; step: Step | null; roll: Roll | null }
+  | {
+      status: 'in_progress'
+      submission: Submission
+      step: Step | null
+      roll: Roll | null
+      /**
+       * The narration as it is written, provisional until `turn_completed`
+       * replaces it with the turn as persisted. `null` when it is not being
+       * followed live: a turn picked up by reading it back may already have
+       * sent fragments the front never saw, and a text with holes is worse
+       * than the waiting message.
+       */
+      narration: string | null
+    }
   | { status: 'failed'; submission: Submission; roll: Roll | null; failure: Failure }
   | {
       status: 'submit_failed'
@@ -52,7 +66,13 @@ export type TurnMessage = { turnId: string; idempotencyKey: string | null } & (
   | ({ event: 'roll_resolved' } & Roll)
   /** A fragment of the narration as it is written, to append to what came before. */
   | { event: 'narration_chunk'; text: string }
-  | { event: 'turn_completed'; turn: Turn; character: Character }
+  /** The turn as persisted, the sheet, and where the game now stands. */
+  | {
+      event: 'turn_completed'
+      turn: Turn
+      character: Character
+      location: ContentLabel | null
+    }
   | { event: 'turn_failed'; failure: Failure }
 )
 
@@ -90,7 +110,7 @@ export function isBusy(state: TurnState): boolean {
 /** Changes whenever the turn in flight shows something new: the journal follows it. */
 export function progressKey(state: TurnState): string {
   if (state.status !== 'in_progress') return state.status
-  return [state.status, state.step, state.roll?.margin].join(':')
+  return [state.status, state.step, state.roll?.margin, state.narration?.length].join(':')
 }
 
 /**
@@ -148,6 +168,7 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
             submission: { ...state.submission, turnId: action.turn.id },
             step: null,
             roll: null,
+            narration: '',
           },
           action.turn
         )
@@ -182,6 +203,7 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
         },
         step: null,
         roll: action.turn.roll,
+        narration: null,
       }
 
     case 'input_changed':
@@ -201,10 +223,12 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
           },
           step: null,
           roll: action.turn.roll,
+          narration: null,
         }
       }
       if (state.status === 'in_progress' && state.submission.turnId === action.turn.id) {
-        return settle(state, action.turn)
+        // Read back because events may have been lost: the fragments seen so far may have holes.
+        return settle({ ...state, narration: null }, action.turn)
       }
       return state
 
@@ -228,6 +252,7 @@ function onMessage(state: TurnState, message: TurnMessage): TurnState {
           submission: { ...state.submission, turnId: message.turnId },
           step: null,
           roll: null,
+          narration: '',
         }
 
   switch (message.event) {
@@ -239,8 +264,8 @@ function onMessage(state: TurnState, message: TurnMessage): TurnState {
         roll: { skill: message.skill, result: message.result, margin: message.margin },
       }
     case 'narration_chunk':
-      // Not shown yet: the turn simply goes on until `turn_completed`.
-      return current
+      if (current.narration === null) return current
+      return { ...current, narration: current.narration + message.text }
     case 'turn_completed':
       return initialTurnState
     case 'turn_failed':
