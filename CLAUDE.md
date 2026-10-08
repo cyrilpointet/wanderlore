@@ -302,6 +302,8 @@ node ace migration:rollback
 node ace migration:fresh          # repart d'une base vide
 node ace db:seed                  # contenu de jeu, puis compte et partie de test
 node ace llm:ping                 # vérifie que le provider LLM répond
+node ace llm:cost --input-per-million=… --output-per-million=…
+                                  # coût réel par tour, partie, étape, langue (lecture seule)
 
 node ace test                     # suite complète
 node ace test unit                # suite unitaire seule (suite en positionnel)
