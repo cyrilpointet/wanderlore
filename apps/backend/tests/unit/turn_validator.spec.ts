@@ -4,7 +4,7 @@ import {
   TurnValidationError,
   type ValidationMeta,
   validateArbitration,
-  validateNarration,
+  validateExtraction,
 } from '#services/game/turn_validator'
 
 const META: ValidationMeta = {
@@ -35,12 +35,8 @@ function settled(overrides: Record<string, unknown> = {}) {
   })
 }
 
-function narration(overrides: Record<string, unknown> = {}) {
-  return {
-    narration: 'The blade turns aside at the last moment.',
-    effects: { movement: null, scenario_flags: ['duel_survived'], hit_points_delta: -2 },
-    ...overrides,
-  }
+function extraction(overrides: Record<string, unknown> = {}) {
+  return { movement: null, scenario_flags: ['duel_survived'], hit_points_delta: -2, ...overrides }
 }
 
 /**
@@ -88,10 +84,10 @@ test.group('Turn validator | accepted payloads', () => {
     assert.isNull(output.intent.target)
   })
 
-  test('accepts a narration payload', async ({ assert }) => {
-    const output = await validateNarration(narration(), META)
+  test('accepts an extraction payload', async ({ assert }) => {
+    const output = await validateExtraction(extraction(), META)
 
-    assert.deepEqual(output.effects.scenario_flags, ['duel_survived'])
+    assert.deepEqual(output.scenario_flags, ['duel_survived'])
   })
 })
 
@@ -161,10 +157,8 @@ test.group('Turn validator | closed lists', () => {
 
   test('rejects a movement to a place the world does not define', async ({ assert }) => {
     const error = await reject(() =>
-      validateNarration(
-        narration({
-          effects: { movement: 'noble_quarter', scenario_flags: [], hit_points_delta: 0 },
-        }),
+      validateExtraction(
+        extraction({ movement: 'noble_quarter', scenario_flags: [], hit_points_delta: 0 }),
         META
       )
     )
@@ -173,15 +167,13 @@ test.group('Turn validator | closed lists', () => {
      * A well-formed reference is not enough: a place outside the list has no
      * label, so it would reach the player as a raw identifier.
      */
-    assert.include(fields(error), 'effects.movement')
+    assert.include(fields(error), 'movement')
   })
 
   test('rejects a flag written as a display name', async ({ assert }) => {
     const error = await reject(() =>
-      validateNarration(
-        narration({
-          effects: { movement: null, scenario_flags: ["Queen's favour"], hit_points_delta: 0 },
-        }),
+      validateExtraction(
+        extraction({ movement: null, scenario_flags: ["Queen's favour"], hit_points_delta: 0 }),
         META
       )
     )
@@ -239,30 +231,28 @@ test.group('Turn validator | roll coherence', () => {
 test.group('Turn validator | bounds', () => {
   test('rejects a hit point swing larger than the character', async ({ assert }) => {
     const error = await reject(() =>
-      validateNarration(
-        narration({
-          effects: { movement: null, scenario_flags: [], hit_points_delta: -11 },
-        }),
+      validateExtraction(
+        extraction({ movement: null, scenario_flags: [], hit_points_delta: -11 }),
         META
       )
     )
 
-    assert.include(fields(error), 'effects.hit_points_delta')
+    assert.include(fields(error), 'hit_points_delta')
   })
 
   test('accepts a swing at exactly the maximum', async ({ assert }) => {
-    const output = await validateNarration(
-      narration({ effects: { movement: null, scenario_flags: [], hit_points_delta: -10 } }),
+    const output = await validateExtraction(
+      extraction({ movement: null, scenario_flags: [], hit_points_delta: -10 }),
       META
     )
 
-    assert.equal(output.effects.hit_points_delta, -10)
+    assert.equal(output.hit_points_delta, -10)
   })
 
   test('rejects a fractional hit point delta', async ({ assert }) => {
     const error = await reject(() =>
-      validateNarration(
-        narration({ effects: { movement: null, scenario_flags: [], hit_points_delta: -1.5 } }),
+      validateExtraction(
+        extraction({ movement: null, scenario_flags: [], hit_points_delta: -1.5 }),
         META
       )
     )
@@ -272,13 +262,11 @@ test.group('Turn validator | bounds', () => {
 
   test('rejects more flags than a single turn may raise', async ({ assert }) => {
     const error = await reject(() =>
-      validateNarration(
-        narration({
-          effects: {
-            movement: null,
-            scenario_flags: ['a_one', 'b_two', 'c_three', 'd_four', 'e_five', 'f_six'],
-            hit_points_delta: 0,
-          },
+      validateExtraction(
+        extraction({
+          movement: null,
+          scenario_flags: ['a_one', 'b_two', 'c_three', 'd_four', 'e_five', 'f_six'],
+          hit_points_delta: 0,
         }),
         META
       )
@@ -304,12 +292,12 @@ test.group('Turn validator | malformed payloads', () => {
   })
 
   test('names the step it rejected', async ({ assert }) => {
-    const error = await reject(() => validateNarration({}, META))
+    const error = await reject(() => validateExtraction({}, META))
 
     /**
      * Carried so the turn log and the player message can tell an arbitration
-     * rejection from a narration one.
+     * rejection from an extraction one.
      */
-    assert.equal(error.step, 'narration')
+    assert.equal(error.step, 'extraction')
   })
 })

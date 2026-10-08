@@ -50,6 +50,8 @@ export type TurnState =
 export type TurnMessage = { turnId: string; idempotencyKey: string | null } & (
   | { event: 'step_started'; step: Step }
   | ({ event: 'roll_resolved' } & Roll)
+  /** A fragment of the narration as it is written, to append to what came before. */
+  | { event: 'narration_chunk'; text: string }
   | { event: 'turn_completed'; turn: Turn; character: Character }
   | { event: 'turn_failed'; failure: Failure }
 )
@@ -236,6 +238,9 @@ function onMessage(state: TurnState, message: TurnMessage): TurnState {
         ...current,
         roll: { skill: message.skill, result: message.result, margin: message.margin },
       }
+    case 'narration_chunk':
+      // Not shown yet: the turn simply goes on until `turn_completed`.
+      return current
     case 'turn_completed':
       return initialTurnState
     case 'turn_failed':

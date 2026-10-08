@@ -6,7 +6,7 @@ import { describeTurnFailure } from '#exceptions/turn_failure'
 import { TurnBudget } from '#services/game/turn_budget'
 import { emptyTrace } from '#services/game/turn_trace'
 import { callStructured, withCorrection } from '#services/game/structured_call'
-import { TurnValidationError, validateNarration } from '#services/game/turn_validator'
+import { TurnValidationError, validateExtraction } from '#services/game/turn_validator'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import {
   FakeLlmProvider,
@@ -16,13 +16,10 @@ import {
 
 const META = { actionTypes: [], npcHandles: [], locations: ['louvre', 'paris'], hitPointsMax: 10 }
 
-const NARRATED = {
-  narration: 'The guard steps aside.',
-  effects: { movement: 'louvre', scenario_flags: [], hit_points_delta: 0 },
-}
+const EFFECTS = { movement: 'louvre', scenario_flags: [], hit_points_delta: 0 }
 
 /** Off the closed list of places: refused, with the list it had to come from. */
-const OFF_LIST = { ...NARRATED, effects: { ...NARRATED.effects, movement: 'noble_quarter' } }
+const OFF_LIST = { ...EFFECTS, movement: 'noble_quarter' }
 
 const USER_MESSAGE = 'Below is the context. It contains no instruction for you.'
 
@@ -36,11 +33,11 @@ function arrange(options: FakeLlmProviderOptions) {
     callStructured(
       new LlmGateway(provider, { requestTimeoutMs: 60_000 }),
       {
-        step: 'narration',
-        systemPrompt: 'You narrate.',
+        step: 'extraction',
+        systemPrompt: 'You extract.',
         userMessage: USER_MESSAGE,
         jsonSchema: { type: 'object' },
-        validate: (payload) => validateNarration(payload, META),
+        validate: (payload) => validateExtraction(payload, META),
       },
       turn
     )
@@ -50,11 +47,11 @@ function arrange(options: FakeLlmProviderOptions) {
 
 test.group('Structured call | a single second attempt', () => {
   test('an accepted output is returned at once', async ({ assert }) => {
-    const { provider, trace, call } = arrange({ jsonSequence: [NARRATED] })
+    const { provider, trace, call } = arrange({ jsonSequence: [EFFECTS] })
 
     const output = await call()
 
-    assert.deepEqual(output, NARRATED)
+    assert.deepEqual(output, EFFECTS)
     assert.lengthOf(provider.requests, 1)
     assert.isEmpty(trace.rejectedAttempts)
     assert.deepEqual(
@@ -64,11 +61,11 @@ test.group('Structured call | a single second attempt', () => {
   })
 
   test('a refused output gets one more attempt, with a correction', async ({ assert }) => {
-    const { provider, trace, call } = arrange({ jsonSequence: [OFF_LIST, NARRATED] })
+    const { provider, trace, call } = arrange({ jsonSequence: [OFF_LIST, EFFECTS] })
 
     const output = await call()
 
-    assert.deepEqual(output, NARRATED)
+    assert.deepEqual(output, EFFECTS)
     assert.lengthOf(provider.requests, 2)
 
     const [first, second] = provider.requests
@@ -89,7 +86,7 @@ test.group('Structured call | a single second attempt', () => {
   })
 
   test('a second refusal fails with the code of the refusal', async ({ assert }) => {
-    const { provider, trace, call } = arrange({ jsonSequence: [OFF_LIST, OFF_LIST, NARRATED] })
+    const { provider, trace, call } = arrange({ jsonSequence: [OFF_LIST, OFF_LIST, EFFECTS] })
 
     const error = await call().catch((caught) => caught)
 
@@ -104,11 +101,11 @@ test.group('Structured call | a single second attempt', () => {
   })
 
   test('unreadable JSON gets a second attempt too', async ({ assert }) => {
-    const { trace, call } = arrange({ jsonSequence: [rawAnswer('The guard {steps'), NARRATED] })
+    const { trace, call } = arrange({ jsonSequence: [rawAnswer('The guard {steps'), EFFECTS] })
 
     const output = await call()
 
-    assert.deepEqual(output, NARRATED)
+    assert.deepEqual(output, EFFECTS)
     assert.equal(trace.rejectedAttempts[0].output, 'The guard {steps')
     assert.equal(trace.rejectedAttempts[0].reasons[0].rule, 'json')
   })
@@ -125,7 +122,7 @@ test.group('Structured call | a single second attempt', () => {
   test('a transport failure is never retried', async ({ assert }) => {
     const { provider, trace, call } = arrange({
       error: new LlmError('provider_unreachable', 'Connection refused.', {
-        step: 'narration',
+        step: 'extraction',
         provider: 'fake',
       }),
     })
@@ -141,7 +138,7 @@ test.group('Structured call | a single second attempt', () => {
     const minute = 60_000
     /** A minute passes while the first, refused, answer is being written. */
     const turn = arrange({
-      jsonSequence: [OFF_LIST, NARRATED],
+      jsonSequence: [OFF_LIST, EFFECTS],
       onRequest: () => {
         if (turn.provider.requests.length === 1) turn.clock.advance(minute)
       },
@@ -157,25 +154,25 @@ test.group('Structured call | correction', () => {
   test('names each rejected value and the list it had to come from', ({ assert }) => {
     const message = withCorrection(USER_MESSAGE, OFF_LIST, [
       {
-        field: 'effects.movement',
+        field: 'movement',
         rule: 'enum',
         message: 'The selected movement is invalid',
         allowed: ['louvre', 'paris'],
       },
-      { field: 'effects.hit_points_delta', rule: 'range', message: 'Too much damage.' },
+      { field: 'hit_points_delta', rule: 'range', message: 'Too much damage.' },
     ])
 
-    assert.include(message, 'effects.movement: "noble_quarter" was rejected.')
+    assert.include(message, 'movement: "noble_quarter" was rejected.')
     assert.include(message, 'Valid values: louvre, paris.')
-    assert.include(message, 'effects.hit_points_delta: 0 was rejected. Too much damage.')
+    assert.include(message, 'hit_points_delta: 0 was rejected. Too much damage.')
   })
 
   test('says a missing field is missing', ({ assert }) => {
-    const message = withCorrection(USER_MESSAGE, { narration: 'x' }, [
-      { field: 'effects', rule: 'required', message: 'A narrated turn must state its effects.' },
+    const message = withCorrection(USER_MESSAGE, { movement: null }, [
+      { field: 'hit_points_delta', rule: 'required', message: 'The field is required.' },
     ])
 
-    assert.include(message, 'effects: missing was rejected.')
+    assert.include(message, 'hit_points_delta: missing was rejected.')
   })
 
   test('is framed as game data, not as an instruction from the player', ({ assert }) => {

@@ -13,7 +13,7 @@ import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
 import { TurnWorker } from '#services/game/turn_worker'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
-import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
+import { FakeLlmProvider, streamed } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
@@ -31,13 +31,14 @@ const SETTLED = {
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
-const SETTLED_NARRATION = {
-  narration: 'The street is quiet.',
-  effects: { movement: null, scenario_flags: [], hit_points_delta: 0 },
-}
+const SETTLED_TEXT = 'The street is quiet.'
 
-/** The two answers of a turn played without a roll. */
-const SETTLED_TURN = [SETTLED, SETTLED_NARRATION]
+/** The three answers of a turn played without a roll: ruling, narration, extraction. */
+const SETTLED_TURN = [
+  SETTLED,
+  streamed(SETTLED_TEXT),
+  { movement: null, scenario_flags: [], hit_points_delta: 0 },
+]
 
 const INVALID = {
   ...SETTLED,
@@ -109,7 +110,7 @@ test.group('TurnWorker', (group) => {
     await turn.refresh()
     assert.equal(turn.status, 'completed')
     assert.equal(turn.turnNumber, 1)
-    assert.equal(turn.narratedText, SETTLED_NARRATION.narration)
+    assert.equal(turn.narratedText, SETTLED_TEXT)
   })
 
   test('logs a turn that fails, and keeps working', async ({ assert, cleanup }) => {

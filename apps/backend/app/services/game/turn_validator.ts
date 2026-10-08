@@ -1,6 +1,6 @@
 import vine from '@vinejs/vine'
 
-import type { ArbitrationOutput, NarrationOutput, TurnEffects } from './prompts/types.js'
+import type { ArbitrationOutput, TurnEffects } from './prompts/types.js'
 
 /**
  * Nothing coming out of the model is trusted.
@@ -61,17 +61,6 @@ const REFERENCE = /^[a-z][a-z0-9_]{0,63}$/
 
 const MAX_FLAGS_PER_TURN = 5
 
-const effects = () =>
-  vine.object({
-    /**
-     * A place the model made up would reach the player as a raw reference,
-     * with no label to show and no translation to come.
-     */
-    movement: vine.enum((field) => (field.meta as ValidationMeta).locations).nullable(),
-    scenario_flags: vine.array(vine.string().regex(REFERENCE)).maxLength(MAX_FLAGS_PER_TURN),
-    hit_points_delta: vine.number().withoutDecimals(),
-  })
-
 const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
   intent: vine.object({
     type: vine.string().regex(REFERENCE),
@@ -99,9 +88,14 @@ const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
   }),
 })
 
-const narrationValidator = vine.withMetaData<ValidationMeta>().create({
-  narration: vine.string().minLength(1).maxLength(4000),
-  effects: effects(),
+const extractionValidator = vine.withMetaData<ValidationMeta>().create({
+  /**
+   * A place the model made up would reach the player as a raw reference,
+   * with no label to show and no translation to come.
+   */
+  movement: vine.enum((field) => (field.meta as ValidationMeta).locations).nullable(),
+  scenario_flags: vine.array(vine.string().regex(REFERENCE)).maxLength(MAX_FLAGS_PER_TURN),
+  hit_points_delta: vine.number().withoutDecimals(),
 })
 
 export async function validateArbitration(
@@ -119,16 +113,16 @@ export async function validateArbitration(
   return output
 }
 
-export async function validateNarration(
+export async function validateExtraction(
   payload: unknown,
   meta: ValidationMeta
-): Promise<NarrationOutput> {
-  const output = await run<NarrationOutput>('narration', narrationValidator, payload, meta)
+): Promise<TurnEffects> {
+  const output = await run<TurnEffects>('extraction', extractionValidator, payload, meta)
 
-  const reasons = effectReasons(output.effects, meta)
+  const reasons = effectReasons(output, meta)
 
   if (reasons.length > 0) {
-    throw new TurnValidationError('narration', reasons)
+    throw new TurnValidationError('extraction', reasons)
   }
 
   return output
@@ -175,7 +169,7 @@ function effectReasons(effect: TurnEffects | null, meta: ValidationMeta): Reject
   if (Math.abs(effect.hit_points_delta) > meta.hitPointsMax) {
     return [
       reason(
-        'effects.hit_points_delta',
+        'hit_points_delta',
         'range',
         `A single turn cannot move hit points by more than ${meta.hitPointsMax}.`
       ),

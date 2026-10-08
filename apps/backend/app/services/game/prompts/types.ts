@@ -60,11 +60,6 @@ export type ArbitrationOutput = {
   }
 }
 
-export type NarrationOutput = {
-  narration: string
-  effects: TurnEffects
-}
-
 export type RecentTurn = {
   role: 'player' | 'narration'
   text: string
@@ -121,4 +116,9 @@ export type OutcomeToNarrate = {
 export type NarrationRequest = TurnContext & {
   outcome: OutcomeToNarrate
   intent_summary: string
+}
+
+/** What extraction reads: the narration as written, and the scene it happened in. */
+export type ExtractionRequest = Pick<TurnContext, 'world' | 'scene' | 'character'> & {
+  narration: string
 }

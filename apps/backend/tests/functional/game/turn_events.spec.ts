@@ -15,7 +15,7 @@ import { ContentLabels } from '#services/game/content_labels'
 import { THREE_MUSKETEERS } from '#services/game/world'
 import { channelOf, toMessage } from '#services/game/turn_events'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
-import { FakeLlmProvider } from '#tests/helpers/fake_llm_provider'
+import { FakeLlmProvider, streamed } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
@@ -33,13 +33,11 @@ const SETTLED = {
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
-/** The two answers of a turn played without a roll: a ruling, then its staging. */
+/** The three answers of a turn played without a roll: ruling, narration, extraction. */
 const SETTLED_TURN = [
   SETTLED,
-  {
-    narration: 'The street is quiet.',
-    effects: { movement: 'paris', scenario_flags: ['street_seen'], hit_points_delta: 0 },
-  },
+  streamed('The street is quiet.'),
+  { movement: 'paris', scenario_flags: ['street_seen'], hit_points_delta: 0 },
 ]
 
 const NEEDS_ROLL = {
@@ -47,10 +45,13 @@ const NEEDS_ROLL = {
   resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'medium' },
 }
 
-const NARRATED = {
-  narration: 'The guard steps aside.',
-  effects: { movement: null, scenario_flags: [], hit_points_delta: -2 },
-}
+const NARRATED_TEXT = 'The guard steps aside.'
+
+/** What follows a roll: the narration, in two fragments, then what extraction reads in it. */
+const NARRATED = [
+  streamed('The guard ', 'steps aside.'),
+  { movement: null, scenario_flags: [], hit_points_delta: -2 },
+]
 
 const UNKNOWN_SKILL = {
   ...NEEDS_ROLL,
@@ -131,17 +132,20 @@ test.group('Turn events | sequence', (group) => {
     assert.deepEqual(events.sequenceOf(turn.id), [
       'step_started:arbitration',
       'step_started:narration',
+      'narration_chunk',
       'turn_completed',
     ])
   })
 
   test('with a roll: arbitration, roll, narration, then completed', async ({ assert }) => {
-    const { turn, events } = await playOne([NEEDS_ROLL, NARRATED])
+    const { turn, events } = await playOne([NEEDS_ROLL, ...NARRATED])
 
     assert.deepEqual(events.sequenceOf(turn.id), [
       'step_started:arbitration',
       'roll_resolved',
       'step_started:narration',
+      'narration_chunk',
+      'narration_chunk',
       'turn_completed',
     ])
   })
@@ -152,19 +156,48 @@ test.group('Turn events | sequence', (group) => {
     assert.deepEqual(events.sequenceOf(turn.id), ['step_started:arbitration', 'turn_failed'])
   })
 
-  test('a turn rejected at narration ends failed, after its roll', async ({ assert }) => {
-    const { turn, events } = await playOne([NEEDS_ROLL, { narration: '', effects: null }])
+  test('a turn rejected at extraction ends failed, after its narration', async ({ assert }) => {
+    const refused = { movement: 'noble_quarter', scenario_flags: [], hit_points_delta: 0 }
+    const { turn, events } = await playOne([NEEDS_ROLL, streamed(NARRATED_TEXT), refused, refused])
 
+    /** The narration went out provisionally; the failure is what tells the front to withdraw it. */
     assert.deepEqual(events.sequenceOf(turn.id), [
       'step_started:arbitration',
       'roll_resolved',
       'step_started:narration',
+      'narration_chunk',
       'turn_failed',
     ])
   })
 
+  test('the narration goes out fragment by fragment, and is persisted whole', async ({
+    assert,
+  }) => {
+    const { turn, events } = await playOne([NEEDS_ROLL, ...NARRATED])
+
+    const chunks = events.recorded.flatMap(({ event }) =>
+      event.type === 'narration_chunk' ? [event.text] : []
+    )
+
+    assert.deepEqual(chunks, ['The guard ', 'steps aside.'])
+    await turn.refresh()
+    assert.equal(turn.narratedText, chunks.join(''))
+  })
+
+  test('a fragment goes over the wire as text to append', async ({ assert }) => {
+    const { events } = await playOne([NEEDS_ROLL, ...NARRATED])
+    const chunk = events.recorded.find(({ event }) => event.type === 'narration_chunk')!
+
+    assert.deepEqual(toMessage(chunk.ref, chunk.event, new ContentLabels(THREE_MUSKETEERS)), {
+      event: 'narration_chunk',
+      turnId: chunk.ref.turnId,
+      idempotencyKey: chunk.ref.idempotencyKey,
+      text: 'The guard ',
+    })
+  })
+
   test('every event names its turn and the key the front generated', async ({ assert }) => {
-    const { turn, events, sessionId, idempotencyKey } = await playOne([NEEDS_ROLL, NARRATED])
+    const { turn, events, sessionId, idempotencyKey } = await playOne([NEEDS_ROLL, ...NARRATED])
 
     for (const { ref } of events.recorded) {
       assert.deepEqual(ref, { turnId: turn.id, sessionId, idempotencyKey })
@@ -194,7 +227,7 @@ test.group('Turn events | sequence', (group) => {
 
   test('an expired turn ends failed, once, even if it was still playing', async ({ assert }) => {
     const { userId, sessionId } = await arrangeScene()
-    const { provider, service, events } = buildService([NEEDS_ROLL, NARRATED], 50)
+    const { provider, service, events } = buildService([NEEDS_ROLL, ...NARRATED], 50)
     const { turn } = await service.record({
       sessionId,
       userId,
@@ -220,7 +253,7 @@ test.group('Turn events | sequence', (group) => {
   test('exactly one terminal event per turn, whatever the path', async ({ assert }) => {
     for (const answers of [
       SETTLED_TURN,
-      [NEEDS_ROLL, NARRATED],
+      [NEEDS_ROLL, ...NARRATED],
       [UNKNOWN_SKILL, UNKNOWN_SKILL],
       [],
     ]) {
@@ -239,7 +272,7 @@ test.group('Turn events | what goes over the wire', (group) => {
   test('a roll carries its labelled skill and qualitative outcome, never a number', async ({
     assert,
   }) => {
-    const { turn, events } = await playOne([NEEDS_ROLL, NARRATED])
+    const { turn, events } = await playOne([NEEDS_ROLL, ...NARRATED])
     const roll = events.recorded.find(({ event }) => event.type === 'roll_resolved')!
 
     const message = toMessage(roll.ref, roll.event, labels)
@@ -255,13 +288,13 @@ test.group('Turn events | what goes over the wire', (group) => {
   })
 
   test('a completed turn carries the journal entry and the updated sheet', async ({ assert }) => {
-    const { events } = await playOne([NEEDS_ROLL, NARRATED])
+    const { events } = await playOne([NEEDS_ROLL, ...NARRATED])
     const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!
 
     const message = toMessage(completed.ref, completed.event, labels) as Record<string, any>
 
     /** Enough to update both without a further request. */
-    assert.equal(message.turn.narration, NARRATED.narration)
+    assert.equal(message.turn.narration, NARRATED_TEXT)
     assert.equal(message.turn.status, 'completed')
     assert.deepEqual(message.turn.effects, { hitPointsDelta: -2, movement: null })
     assert.equal(message.character.hitPoints, 8)
@@ -270,7 +303,7 @@ test.group('Turn events | what goes over the wire', (group) => {
 
   test('nothing mechanical or internal leaves in any event', async ({ assert }) => {
     const { events } = await playOne(SETTLED_TURN)
-    const second = await playOne([NEEDS_ROLL, NARRATED])
+    const second = await playOne([NEEDS_ROLL, ...NARRATED])
 
     const wire = JSON.stringify(
       [...events.recorded, ...second.events.recorded].map(({ ref, event }) =>

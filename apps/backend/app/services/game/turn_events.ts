@@ -6,7 +6,8 @@ import CharacterTransformer from '#transformers/character_transformer'
 import TurnTransformer, { presentRoll } from '#transformers/turn_transformer'
 
 /**
- * The milestones of a turn the player is told about while it plays.
+ * What the player is told about a turn while it plays: its milestones, and
+ * the narration as it is written.
  *
  * Milestones only, not every technical step: the front turns them into waiting
  * messages, and an event it could not show would be noise. Emitted by the turn
@@ -16,6 +17,12 @@ export type TurnEvent =
   | { type: 'step_started'; step: 'arbitration' | 'narration' }
   /** The skill, the verdict and a qualitative margin — never the dice, the threshold or the skill value. */
   | { type: 'roll_resolved'; skill: string; result: RollOutcome; margin: MarginLabel }
+  /**
+   * A fragment of the narration as it is written, to append to what came
+   * before. Provisional until `turn_completed`: the turn may still fail, and
+   * fragments are never stored.
+   */
+  | { type: 'narration_chunk'; text: string }
   /** Everything the journal and the sheet need, so the front makes no further request. */
   | { type: 'turn_completed'; turn: TurnLog; character: Character }
   | { type: 'turn_failed'; failure: { code: string; message: string } }
@@ -57,6 +64,9 @@ export function toMessage(ref: TurnRef, event: TurnEvent, labels: ContentLabels)
 
     case 'roll_resolved':
       return { ...header, ...presentRoll(event, labels) }
+
+    case 'narration_chunk':
+      return { ...header, text: event.text }
 
     case 'turn_completed':
       return {

@@ -15,6 +15,15 @@ export function rawAnswer(text: string): RawAnswer {
   return { [RAW]: text }
 }
 
+const STREAMED = Symbol('streamed answer')
+
+/** A free-text answer within a `jsonSequence`, served fragment by fragment by `stream()`. */
+export type StreamedAnswer = { [STREAMED]: string[] }
+
+export function streamed(...chunks: string[]): StreamedAnswer {
+  return { [STREAMED]: chunks }
+}
+
 export type FakeLlmProviderOptions = {
   name?: string
   model?: string
@@ -29,7 +38,8 @@ export type FakeLlmProviderOptions = {
    * One JSON answer per call, in order — for a turn that calls the model twice.
    * Wins over `json`. Running past the end throws rather than repeating the
    * last answer, so a pipeline that calls more often than the spec arranged for
-   * fails loudly. A `rawAnswer()` entry is returned as is, not serialised.
+   * fails loudly. A `rawAnswer()` entry is returned as is, not serialised; a
+   * `streamed()` entry answers a `stream()` call — and only that.
    */
   jsonSequence?: unknown[]
 
@@ -106,7 +116,7 @@ export class FakeLlmProvider implements LlmProvider {
     this.requests.push(request)
     this.#options.onRequest?.(request)
 
-    for (const chunk of this.#options.chunks ?? []) {
+    for (const chunk of this.#chunks()) {
       await this.#wait(request.signal)
 
       if (this.#options.error) {
@@ -123,28 +133,59 @@ export class FakeLlmProvider implements LlmProvider {
     return this.#metadata(request)
   }
 
+  #chunks(): string[] {
+    const answer = this.#nextInSequence()
+
+    if (answer === undefined) {
+      return this.#options.chunks ?? []
+    }
+
+    if (answer !== null && typeof answer === 'object' && STREAMED in answer) {
+      return (answer as StreamedAnswer)[STREAMED]
+    }
+
+    throw new Error(
+      'FakeLlmProvider was asked to stream, but the answer arranged is not streamed().'
+    )
+  }
+
+  /** The answer arranged for the call being made, or `undefined` with no sequence. */
+  #nextInSequence(): unknown {
+    const sequence = this.#options.jsonSequence
+
+    if (sequence === undefined) {
+      return undefined
+    }
+
+    /** `requests` was pushed before this ran, so it doubles as the call index. */
+    const index = this.requests.length - 1
+
+    if (index >= sequence.length) {
+      throw new Error(
+        `FakeLlmProvider ran out of answers after ${sequence.length} call(s). ` +
+          'Arrange as many answers as the code under test makes calls.'
+      )
+    }
+
+    return sequence[index]
+  }
+
   #content(): string {
     if (this.#options.raw !== undefined) {
       return this.#options.raw
     }
 
-    const sequence = this.#options.jsonSequence
-
-    if (sequence !== undefined) {
-      /** `requests` was pushed before this ran, so it doubles as the call index. */
-      const index = this.requests.length - 1
-
-      if (index >= sequence.length) {
-        throw new Error(
-          `FakeLlmProvider ran out of answers after ${sequence.length} call(s). ` +
-            'Arrange as many answers as the code under test makes calls.'
-        )
-      }
-
-      const answer = sequence[index]
+    if (this.#options.jsonSequence !== undefined) {
+      const answer = this.#nextInSequence()
 
       if (answer !== null && typeof answer === 'object' && RAW in answer) {
         return (answer as RawAnswer)[RAW]
+      }
+
+      if (answer !== null && typeof answer === 'object' && STREAMED in answer) {
+        throw new Error(
+          'FakeLlmProvider was asked for a whole answer, but a streamed() one is arranged.'
+        )
       }
 
       return JSON.stringify(answer)

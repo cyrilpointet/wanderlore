@@ -18,7 +18,11 @@ import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import type { JobQueue } from '#services/queue/types'
 import { ConcurrentTurnError, QueueUnavailableError, StaleTurnError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
-import { FakeLlmProvider, type FakeLlmProviderOptions } from '#tests/helpers/fake_llm_provider'
+import {
+  FakeLlmProvider,
+  streamed,
+  type FakeLlmProviderOptions,
+} from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
@@ -38,17 +42,17 @@ const SETTLED = {
 }
 
 /** Arbitration never narrates: a settled outcome is staged by its own call. */
-const SETTLED_NARRATION = {
-  narration: 'The courtyard is empty but for a stable boy brushing down a grey mare.',
-  effects: {
-    movement: 'hotel_de_treville',
-    scenario_flags: ['stable_boy_seen'],
-    hit_points_delta: 0,
-  },
+const SETTLED_TEXT = 'The courtyard is empty but for a stable boy brushing down a grey mare.'
+
+/** What extraction reads in it. */
+const SETTLED_EFFECTS = {
+  movement: 'hotel_de_treville',
+  scenario_flags: ['stable_boy_seen'],
+  hit_points_delta: 0,
 }
 
-/** The two answers of a turn played without a roll. */
-const SETTLED_TURN = [SETTLED, SETTLED_NARRATION]
+/** The three answers of a turn played without a roll: ruling, narration, extraction. */
+const SETTLED_TURN = [SETTLED, streamed(SETTLED_TEXT), SETTLED_EFFECTS]
 
 const NEEDS_ROLL = {
   intent: { type: 'social_dialogue', target: null, summary: 'Talking past the guard' },
@@ -60,10 +64,12 @@ const NEEDS_ROLL = {
 /** An action type the world does not have — refused, then refused again. */
 const ALCHEMY = { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, action_type: 'alchemy' } }
 
-const NARRATED = {
-  narration: 'He weighs you for a long moment, then steps aside.',
-  effects: { movement: 'louvre', scenario_flags: [], hit_points_delta: -1 },
-}
+const NARRATED_TEXT = 'He weighs you for a long moment, then steps aside.'
+
+const NARRATED_EFFECTS = { movement: 'louvre', scenario_flags: [], hit_points_delta: -1 }
+
+/** The two answers that follow a roll: the narration, then what extraction reads in it. */
+const NARRATED = [streamed(NARRATED_TEXT), NARRATED_EFFECTS]
 
 async function arrangeScene() {
   /** Arbitration picks from the world's action types, read from the database. */
@@ -130,10 +136,10 @@ test.group('TurnService | a settled turn', (group) => {
 
     const result = await play({ sessionId, userId, playerInput: 'I look around.' })
 
-    /** No roll, but no merged call either: arbitration rules, narration stages. */
+    /** No roll, but no merged call either: arbitration rules, narration stages, extraction reads. */
     assert.deepEqual(
       provider.requests.map(({ step }) => step),
-      ['arbitration', 'narration']
+      ['arbitration', 'narration', 'extraction']
     )
     assert.equal(result.turnNumber, 1)
     assert.isNull(result.rollResult)
@@ -154,8 +160,8 @@ test.group('TurnService | a settled turn', (group) => {
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
 
     assert.equal(turn.language, 'en')
-    assert.equal(turn.narratedText, SETTLED_NARRATION.narration)
-    assert.lengthOf(turn.llmUsage!, 2)
+    assert.equal(turn.narratedText, SETTLED_TEXT)
+    assert.lengthOf(turn.llmUsage!, 3)
     assert.isNull(turn.rollResult)
   })
 
@@ -176,9 +182,9 @@ test.group('TurnService | a settled turn', (group) => {
 test.group('TurnService | a turn with a roll', (group) => {
   useTransaction(group)
 
-  test('calls the model twice and resolves the roll in between', async ({ assert }) => {
+  test('rolls between arbitration and narration, then extracts', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { provider, play } = buildService([NEEDS_ROLL, NARRATED])
+    const { provider, play } = buildService([NEEDS_ROLL, ...NARRATED])
 
     const result = await play({
       sessionId,
@@ -186,15 +192,18 @@ test.group('TurnService | a turn with a roll', (group) => {
       playerInput: 'I ask him to let me pass.',
     })
 
-    assert.lengthOf(provider.requests, 2)
-    assert.equal(result.narratedText, NARRATED.narration)
+    assert.deepEqual(
+      provider.requests.map(({ step }) => step),
+      ['arbitration', 'narration', 'extraction']
+    )
+    assert.equal(result.narratedText, NARRATED_TEXT)
     assert.equal(result.rollResult!.result, 'success')
     assert.equal(result.rollResult!.marginLabel, 'comfortable')
   })
 
   test('never sends the mechanics to the narrator', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { provider, play } = buildService([NEEDS_ROLL, NARRATED])
+    const { provider, play } = buildService([NEEDS_ROLL, ...NARRATED])
 
     await play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
 
@@ -207,10 +216,10 @@ test.group('TurnService | a turn with a roll', (group) => {
     assert.notInclude(narrationMessage, 'persuasion')
   })
 
-  test('logs both calls and the dice that were rolled', async ({ assert }) => {
+  test('logs every call and the dice that were rolled', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
 
-    await buildService([NEEDS_ROLL, NARRATED]).play({
+    await buildService([NEEDS_ROLL, ...NARRATED]).play({
       sessionId,
       userId,
       playerInput: 'I ask him to let me pass.',
@@ -222,14 +231,14 @@ test.group('TurnService | a turn with a roll', (group) => {
      * The real cost of a turn is what it actually spent, across every call it
      * made.
      */
-    assert.lengthOf(turn.llmUsage!, 2)
+    assert.lengthOf(turn.llmUsage!, 3)
     assert.deepEqual(turn.rollResult!.dice, [4, 4])
   })
 
   test('applies the hit point loss the narration described', async ({ assert }) => {
     const { sessionId, userId, character } = await arrangeScene()
 
-    await buildService([NEEDS_ROLL, NARRATED]).play({
+    await buildService([NEEDS_ROLL, ...NARRATED]).play({
       sessionId,
       userId,
       playerInput: 'I ask him to let me pass.',
@@ -261,7 +270,8 @@ test.group('TurnService | a turn with a roll', (group) => {
 
     const result = await buildService([
       NEEDS_ROLL,
-      { ...NARRATED, effects: { movement: null, scenario_flags: [], hit_points_delta: -3 } },
+      streamed(NARRATED_TEXT),
+      { movement: null, scenario_flags: [], hit_points_delta: -3 },
     ]).play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
 
     /**
@@ -289,10 +299,7 @@ test.group('TurnService | a turn with a roll', (group) => {
 
   test('comes back to a unique place without duplicating it', async ({ assert }) => {
     const { sessionId, userId, worldState } = await arrangeScene()
-    const toLouvre = [
-      SETTLED,
-      { ...SETTLED_NARRATION, effects: { ...SETTLED_NARRATION.effects, movement: 'louvre' } },
-    ]
+    const toLouvre = [SETTLED, streamed(SETTLED_TEXT), { ...SETTLED_EFFECTS, movement: 'louvre' }]
 
     await buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I go to Tréville.' })
     await buildService(toLouvre).play({ sessionId, userId, playerInput: 'I go to the Louvre.' })
@@ -381,9 +388,10 @@ test.group('TurnService | a turn that fails', (group) => {
     assert.equal(result.turnNumber, 1)
   })
 
-  test('leaves the state untouched when the narration call fails', async ({ assert }) => {
+  test('leaves the state untouched when extraction is refused twice', async ({ assert }) => {
     const { sessionId, userId, character } = await arrangeScene()
-    const { play } = buildService([NEEDS_ROLL, { narration: '', effects: NARRATED.effects }])
+    const refused = { movement: 'noble_quarter', scenario_flags: [], hit_points_delta: -5 }
+    const { play } = buildService([NEEDS_ROLL, streamed(NARRATED_TEXT), refused, refused])
 
     await play({ sessionId, userId, playerInput: 'I ask him to let me pass.' }).catch(() => {})
 
@@ -461,8 +469,8 @@ test.group('TurnService | a repeated submission', (group) => {
 
     assert.equal(again.turn.status, 'completed')
     assert.lengthOf(queue.jobs, 1)
-    /** The two calls of the turn played once, and none for the repeat. */
-    assert.lengthOf(provider.requests, 2)
+    /** The calls of the turn played once, and none for the repeat. */
+    assert.lengthOf(provider.requests, 3)
   })
 
   test('scopes a key to its game', async ({ assert }) => {
@@ -515,7 +523,7 @@ test.group('TurnService | turns left pending', (group) => {
 
   test('drops the outcome of a turn expired while it was being played', async ({ assert }) => {
     const { sessionId, userId, character } = await arrangeScene()
-    const { provider, service } = buildService([NEEDS_ROLL, NARRATED], undefined, undefined, 50)
+    const { provider, service } = buildService([NEEDS_ROLL, ...NARRATED], undefined, undefined, 50)
     const { turn } = await service.record(submission(sessionId, userId))
 
     const playing = service
@@ -637,7 +645,7 @@ test.group('TurnService | time budget', (group) => {
 
   test('a turn out of time fails as a timeout before the next call', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const provider = new FakeLlmProvider({ jsonSequence: [NEEDS_ROLL, NARRATED] })
+    const provider = new FakeLlmProvider({ jsonSequence: [NEEDS_ROLL, ...NARRATED] })
     const clock = new FakeClock()
     const service = new TurnService(
       new LlmGateway(provider, { requestTimeoutMs: 1000 }),
@@ -693,12 +701,12 @@ test.group('TurnService | second attempt', (group) => {
 
   test('a refused arbitration is asked again, and the turn goes on', async ({ assert }) => {
     const { sessionId, userId } = await arrangeScene()
-    const { provider, play } = buildService([ALCHEMY, NEEDS_ROLL, NARRATED])
+    const { provider, play } = buildService([ALCHEMY, NEEDS_ROLL, ...NARRATED])
 
     const turn = await play({ sessionId, userId, playerInput: 'I talk past the guard.' })
 
     assert.equal(turn.status, 'completed')
-    assert.lengthOf(provider.requests, 3)
+    assert.lengthOf(provider.requests, 4)
     assert.include(provider.requests[1].userMessage, '"alchemy"')
 
     /** The refusal stays on record, and its tokens count in the cost of the turn. */
@@ -712,6 +720,7 @@ test.group('TurnService | second attempt', (group) => {
         ['arbitration', 1],
         ['arbitration', 2],
         ['narration', 1],
+        ['extraction', 1],
       ]
     )
   })

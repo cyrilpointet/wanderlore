@@ -136,11 +136,13 @@ Ses choix d'exécution restent en vigueur (détail : roadmap Phase 2, architectu
 - SSE : un canal par partie, abonné avant la soumission ; jalons (`step_started`,
   `roll_resolved`, `turn_completed`, `turn_failed`) ; rattrapage par lecture du tour.
 
-**Découpage actuel des appels LLM** (étape intermédiaire de la Phase 3, depuis KAN-36) :
-arbitrage A+B+C (`action_type`, jamais de narration), jet côté backend si requis — compétence
-déduite via `resolution_rules`, une compétence absente de la fiche vaut 0 —, puis un appel
-de narration **encore structuré** qui retourne narration + effets, pour tous les tours. La
-narration passe en texte libre streamé avec KAN-37, et les effets à l'étape E avec KAN-38.
+**Découpage actuel des appels LLM** (étape intermédiaire de la Phase 3) : arbitrage A+B+C
+(`action_type`, jamais de narration) ; jet côté backend si requis — compétence déduite via
+`resolution_rules`, une compétence absente de la fiche vaut 0 — ; narration D en **texte
+libre streamé** (`narration_chunk`) ; puis extraction E, structurée, qui lit la narration et
+renvoie les effets. Trois appels par tour au minimum. L'extraction ne connaît encore que
+déplacement vers un lieu unique, flags et points de vie : PNJ et lieux improvisés arrivent
+avec KAN-38 et KAN-39.
 
 **Phase actuelle : Phase 3 (pipeline complet)**, en préparation. Décisions de cadrage actées
 (détail : roadmap Phase 3, architecture §6ter, §6quater, §7, §8bis) :

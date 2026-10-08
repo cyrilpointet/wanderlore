@@ -32,10 +32,14 @@ import {
 } from './prompts/arbitration.js'
 import {
   NARRATION_RECENT_TURNS,
-  NARRATION_SCHEMA,
   NARRATION_SYSTEM_PROMPT,
   buildNarrationMessage,
 } from './prompts/narration.js'
+import {
+  EXTRACTION_SCHEMA,
+  EXTRACTION_SYSTEM_PROMPT,
+  buildExtractionMessage,
+} from './prompts/extraction.js'
 import type {
   ArbitrationOutput,
   GameLanguage,
@@ -44,12 +48,13 @@ import type {
   TurnContext,
   TurnEffects,
 } from './prompts/types.js'
-import { type ValidationMeta, validateArbitration, validateNarration } from './turn_validator.js'
+import { type ValidationMeta, validateArbitration, validateExtraction } from './turn_validator.js'
 import {
   type StoredFailure,
   type TurnTrace,
   emptyTrace,
   markFailed,
+  recordCall,
   traceColumns,
 } from './turn_trace.js'
 
@@ -330,32 +335,70 @@ export class TurnService {
 
     const outcome = await this.#settle(turn, scene, decision, trace)
 
-    this.#events.emit(refOf(turn), { type: 'step_started', step: 'narration' })
+    const narration = await this.#narrate(
+      turn,
+      buildNarrationMessage({
+        ...context,
+        /** A verdict and a qualitative margin. Never the dice or the threshold. */
+        outcome,
+        intent_summary: decision.intent.summary,
+      }),
+      trace,
+      budget
+    )
 
     /**
-     * Structured until the narration turns into free text (KAN-37): its
-     * effects are judged like any other structured output, so it gets the
-     * same second attempt.
+     * Reads the narration already written: a refused output gets one more
+     * attempt, which never reruns the narration.
      */
-    const narrated = await callStructured(
+    return callStructured(
       this.#llm,
       {
-        step: 'narration',
-        systemPrompt: NARRATION_SYSTEM_PROMPT,
-        userMessage: buildNarrationMessage({
-          ...context,
-          /** A verdict and a qualitative margin. Never the dice or the threshold. */
-          outcome,
-          intent_summary: decision.intent.summary,
-        }),
-        jsonSchema: NARRATION_SCHEMA as unknown as Record<string, unknown>,
-        validate: (payload) => validateNarration(payload, meta),
+        step: 'extraction',
+        systemPrompt: EXTRACTION_SYSTEM_PROMPT,
+        userMessage: buildExtractionMessage({ ...context, narration }),
+        jsonSchema: EXTRACTION_SCHEMA as unknown as Record<string, unknown>,
+        validate: (payload) => validateExtraction(payload, meta),
       },
       { trace, budget }
     )
-    trace.narration = narrated.narration
+  }
 
-    return narrated.effects
+  /**
+   * Free text, sent to the player fragment by fragment as it is written.
+   * Nothing of it is stored until the turn completes: the fragments are
+   * provisional, and the text persisted is exactly their concatenation.
+   *
+   * Free text, so there is nothing to validate and no second attempt: an
+   * empty answer or a cut stream fails the turn like any transport failure.
+   */
+  async #narrate(
+    turn: TurnLog,
+    userMessage: string,
+    trace: TurnTrace,
+    budget: TurnBudget
+  ): Promise<string> {
+    this.#events.emit(refOf(turn), { type: 'step_started', step: 'narration' })
+
+    const stream = this.#llm.streamText('narration', {
+      systemPrompt: NARRATION_SYSTEM_PROMPT,
+      userMessage,
+      signal: budget.signalFor('narration', this.#llm.provider),
+    })
+
+    let narration = ''
+    let next = await stream.next()
+
+    while (!next.done) {
+      narration += next.value
+      this.#events.emit(refOf(turn), { type: 'narration_chunk', text: next.value })
+      next = await stream.next()
+    }
+
+    recordCall(trace, next.value)
+    trace.narration = narration
+
+    return narration
   }
 
   /**

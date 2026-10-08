@@ -61,6 +61,17 @@ describe('turn machine — a turn played to the end', () => {
     expect(isBusy(state)).toBe(true)
   })
 
+  test('a narration fragment keeps the turn going', () => {
+    const narrating = run(
+      submit,
+      accepted,
+      on(message({ event: 'step_started', step: 'narration' })),
+      on(message({ event: 'narration_chunk', text: 'The guard ' }))
+    )
+
+    expect(narrating).toMatchObject({ status: 'in_progress', step: 'narration' })
+  })
+
   test('the 202 names the turn and starts the wait', () => {
     expect(run(submit, accepted)).toMatchObject({
       status: 'in_progress',

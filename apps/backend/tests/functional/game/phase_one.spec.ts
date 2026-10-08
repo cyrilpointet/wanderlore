@@ -13,7 +13,11 @@ import { TurnService } from '#services/game/turn_service'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import { THREE_MUSKETEERS } from '#services/game/world'
 import { ContentLabels, type ContentKind } from '#services/game/content_labels'
-import { FakeLlmProvider, type FakeLlmProviderOptions } from '#tests/helpers/fake_llm_provider'
+import {
+  FakeLlmProvider,
+  streamed,
+  type FakeLlmProviderOptions,
+} from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
@@ -38,14 +42,17 @@ const ARBITRATION_WITH_ROLL = {
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
-const NARRATION = {
-  narration: 'Tréville breaks the seal, reads, and looks up at you with new attention.',
-  effects: {
-    movement: 'hotel_de_treville',
-    scenario_flags: ['letter_delivered'],
-    hit_points_delta: 0,
-  },
+const NARRATION = 'Tréville breaks the seal, reads, and looks up at you with new attention.'
+
+/** What extraction reads in that narration. */
+const EFFECTS = {
+  movement: 'hotel_de_treville',
+  scenario_flags: ['letter_delivered'],
+  hit_points_delta: 0,
 }
+
+/** A turn with a roll: ruling, narration, extraction. */
+const TURN = [ARBITRATION_WITH_ROLL, streamed(NARRATION), EFFECTS]
 
 async function seedGame(): Promise<{ userId: string; sessionId: string }> {
   const client = db.connection()
@@ -128,7 +135,7 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
 
   test('a full turn updates the world and logs what it cost', async ({ assert }) => {
     const { userId, sessionId } = await seedGame()
-    const { play } = buildService({ jsonSequence: [ARBITRATION_WITH_ROLL, NARRATION] })
+    const { play } = buildService({ jsonSequence: TURN })
 
     const result = await play({
       sessionId,
@@ -136,7 +143,7 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
       playerInput: 'I present my father’s letter to Monsieur de Tréville.',
     })
 
-    assert.equal(result.narratedText, NARRATION.narration)
+    assert.equal(result.narratedText, NARRATION)
 
     const world = await WorldState.query()
       .where('sessionId', sessionId)
@@ -148,20 +155,20 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
     assert.equal(turn.language, 'en')
     assert.equal(turn.turnNumber, 1)
-    assert.lengthOf(turn.llmUsage!, 2)
+    assert.lengthOf(turn.llmUsage!, 3)
     assert.isNotNull(turn.rollResult)
   })
 
   test('the recent buffer carries the previous turn into the next one', async ({ assert }) => {
     const { userId, sessionId } = await seedGame()
 
-    await buildService({ jsonSequence: [ARBITRATION_WITH_ROLL, NARRATION] }).play({
+    await buildService({ jsonSequence: TURN }).play({
       sessionId,
       userId,
       playerInput: 'I present the letter.',
     })
 
-    const next = buildService({ jsonSequence: [ARBITRATION_WITH_ROLL, NARRATION] })
+    const next = buildService({ jsonSequence: TURN })
     await next.play({ sessionId, userId, playerInput: 'I ask about my father.' })
 
     /**
@@ -169,7 +176,7 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
      * the whole point of keeping a buffer before long-term memory exists.
      */
     assert.include(next.provider.requests[0].userMessage, 'I present the letter.')
-    assert.include(next.provider.requests[0].userMessage, NARRATION.narration)
+    assert.include(next.provider.requests[0].userMessage, NARRATION)
   })
 })
 
