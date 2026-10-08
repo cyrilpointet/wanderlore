@@ -85,12 +85,23 @@ export function presentRoll(
 }
 
 /**
- * The effects the player is told about: hit points and movement. Scenario flags
- * are internal markers and are dropped here.
+ * The effects the player is told about: hit points and movement. Scenario
+ * flags and the changes about people are internal and stay out.
+ *
+ * A movement is logged as the place reached, references only, and labelled
+ * here; turns logged before improvised places existed hold a bare handle,
+ * which was always a named place's own reference.
  */
 export function presentEffects(effects: AppliedEffects, labels: ContentLabels) {
+  const movement = effects.movement as AppliedEffects['movement'] | string
+
   return {
     hitPointsDelta: effects.hit_points_delta,
-    movement: effects.movement === null ? null : labels.of('location', effects.movement),
+    movement:
+      movement === null
+        ? null
+        : typeof movement === 'string'
+          ? labels.of('location', movement)
+          : labels.location(movement),
   }
 }

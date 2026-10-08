@@ -148,7 +148,12 @@ test.group('TurnService | a settled turn', (group) => {
     await worldState.load('currentLocation')
     assert.deepEqual(worldState.narrativeFlags, { stable_boy_seen: true })
     assert.equal(worldState.currentLocation.handle, 'hotel_de_treville')
-    assert.deepEqual(result.appliedEffects!.movement, 'hotel_de_treville')
+    assert.deepEqual(result.appliedEffects!.movement, {
+      handle: 'hotel_de_treville',
+      definitionReference: 'hotel_de_treville',
+      parentReference: null,
+      name: null,
+    })
   })
 
   test('logs the turn with its language and token usage', async ({ assert }) => {

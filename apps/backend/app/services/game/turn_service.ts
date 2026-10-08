@@ -1,6 +1,5 @@
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
-import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import TurnLog from '#models/turn_log'
 import Session from '#models/session'
@@ -19,7 +18,7 @@ import {
   StaleTurnError,
   isTurnNumberConflict,
 } from './errors.js'
-import { visitUniqueLocation } from './locations.js'
+import { applyDelta } from './apply_delta.js'
 import { type PresentNpc, presentNpcs } from './npcs.js'
 import { actionTypesOf, skillFor } from './resolution_rules.js'
 import { TurnBudget } from './turn_budget.js'
@@ -46,7 +45,6 @@ import {
   buildExtractionMessage,
 } from './prompts/extraction.js'
 import type {
-  AppliedEffects,
   ArbitrationOutput,
   GameLanguage,
   OutcomeToNarrate,
@@ -522,7 +520,16 @@ export class TurnService {
           throw new StaleTurnError(turn.id)
         }
 
-        const applied = await applyEffects(scene, effects, trx)
+        const applied = await applyDelta(
+          {
+            world: THREE_MUSKETEERS,
+            sessionId: scene.session.id,
+            character: scene.character,
+            worldState: scene.worldState,
+          },
+          effects,
+          trx
+        )
 
         scene.session.lastActivityAt = DateTime.now()
         await scene.session.useTransaction(trx).save()
@@ -599,68 +606,6 @@ function toRecentBuffer(turns: TurnLog[]): RecentTurn[] {
 
     return entries
   })
-}
-
-/**
- * Applies the validated delta. Everything here is deterministic: the model
- * proposed, the backend decides what the numbers actually become.
- *
- * Returns what actually changed, which can be less than what was proposed: a
- * delta clamped at zero hit points, or a "movement" to where the character
- * already stands. A movement is returned as the handle of the place reached,
- * which for a unique place is its reference.
- *
- * A move to a new place of an archetype, and every change about people, are
- * validated and logged with the extraction output, and applied from KAN-39.
- */
-async function applyEffects(
-  scene: LoadedScene,
-  effects: TurnEffects,
-  trx: TransactionClientContract
-): Promise<AppliedEffects> {
-  const { character, worldState } = scene
-  const hitPointsBefore = character.hitPoints
-
-  if (effects.hit_points_delta !== 0) {
-    /**
-     * Clamped rather than trusted: validation bounds the size of the swing, not
-     * where it lands.
-     */
-    character.hitPoints = Math.max(
-      0,
-      Math.min(character.hitPointsMax, character.hitPoints + effects.hit_points_delta)
-    )
-
-    await character.useTransaction(trx).save()
-  }
-
-  const movement =
-    effects.movement !== null && 'location' in effects.movement ? effects.movement.location : null
-  const moved = movement !== null && movement !== worldState.currentLocation?.handle
-
-  if (moved) {
-    /** A unique place gets its instance on its first visit, and keeps it. */
-    const destination = await visitUniqueLocation(THREE_MUSKETEERS, scene.session.id, movement, trx)
-
-    worldState.currentLocationId = destination.id
-  }
-
-  if (effects.scenario_flags.length > 0) {
-    worldState.narrativeFlags = {
-      ...worldState.narrativeFlags,
-      ...Object.fromEntries(effects.scenario_flags.map((flag) => [flag, true])),
-    }
-  }
-
-  if (moved || effects.scenario_flags.length > 0) {
-    await worldState.useTransaction(trx).save()
-  }
-
-  return {
-    movement: moved ? movement : null,
-    scenario_flags: effects.scenario_flags,
-    hit_points_delta: character.hitPoints - hitPointsBefore,
-  }
 }
 
 function refOf(turn: TurnLog): TurnRef {

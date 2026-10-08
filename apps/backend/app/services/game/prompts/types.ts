@@ -50,14 +50,32 @@ export type TurnEffects = {
 }
 
 /**
- * What a turn actually changed, as the player is told: where the character
- * now stands (a location handle) and how their hit points moved. Can be less
- * than proposed — damage stops at zero, a move to where one stands is none.
+ * The place a movement reached, as logged: references and the proper name of
+ * an improvised place — never a label, which is worked out when it is read.
+ * Enough to label it without reading the instance back.
+ */
+export type PlacedMovement = {
+  handle: string
+  definitionReference: string
+  parentReference: string | null
+  name: string | null
+}
+
+/**
+ * What a turn actually changed. Can be less than proposed — damage stops at
+ * zero, a move to where one stands is none, a dead character stays dead. Only
+ * the movement and the hit points are shown to the player; the rest is for
+ * the log.
  */
 export type AppliedEffects = {
-  movement: string | null
+  movement: PlacedMovement | null
   scenario_flags: string[]
   hit_points_delta: number
+  /** Handles of those who came in, as the backend numbered them. */
+  npcs_entered: string[]
+  npcs_left: string[]
+  npc_names: { handle: string; name: string }[]
+  npc_relations: { handle: string; disposition: NpcDisposition }[]
 }
 
 export type ArbitrationOutput = {
