@@ -154,3 +154,41 @@ test.group('Cost report | per language', () => {
     )
   })
 })
+
+test.group('Cost report | per model', () => {
+  const flash = { ...call('narration', 1, 1000, 200), model: 'gemini-2.5-flash' }
+  const pro = { ...call('narration', 1, 1000, 200), model: 'gemini-2.5-pro' }
+
+  test('lists every model the log holds, whatever the filter', ({ assert }) => {
+    const rows = [turn({ llmUsage: [flash] }), turn({ llmUsage: [pro] })]
+
+    assert.deepEqual(costReport(rows).models, ['gemini-2.5-flash', 'gemini-2.5-pro'])
+    assert.deepEqual(costReport(rows, null, 'gemini-2.5-pro').models, [
+      'gemini-2.5-flash',
+      'gemini-2.5-pro',
+    ])
+  })
+
+  test('counts only the calls, and the turns, of the model asked for', ({ assert }) => {
+    const rows = [
+      turn({ llmUsage: [flash, flash] }),
+      turn({ llmUsage: [pro] }),
+      turn({ llmUsage: [pro], sessionId: 'game-2' }),
+    ]
+
+    const report = costReport(rows, null, 'gemini-2.5-pro')
+
+    /** The flash-only turn is not a pro turn at all: it does not lower the average. */
+    assert.equal(report.turns.total, 2)
+    assert.equal(report.games, 2)
+    assert.equal(report.overall.calls, 2)
+    assert.equal(report.perTurn.totalTokens, 1200)
+  })
+
+  test('a model the log never used gives an empty report', ({ assert }) => {
+    const report = costReport([turn({ llmUsage: [flash] })], null, 'gpt-4o')
+
+    assert.equal(report.turns.total, 0)
+    assert.equal(report.perTurn.totalTokens, 0)
+  })
+})

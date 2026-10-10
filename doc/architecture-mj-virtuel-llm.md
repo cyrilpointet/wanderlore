@@ -389,10 +389,15 @@ Règles impératives :
   réagit dans la même narration, selon son caractère et en proportion :
   une personne insultée réplique, menace ou devient hostile ; un témoin
   de violence fuit ou appelle à l'aide.
-- Une réaction peut ouvrir une menace, jamais la résoudre contre le
-  joueur. Un personnage peut attaquer ; savoir si l'attaque porte revient
-  à la prochaine action du joueur. La narration se termine sur cette
-  menace plutôt que de la trancher.
+- Une réaction peut ouvrir une menace, jamais la résoudre de sa propre
+  initiative. Un personnage peut attaquer ; savoir si l'attaque porte
+  revient à la prochaine action du joueur. La narration se termine sur
+  cette menace plutôt que de la trancher.
+- Une attaque ouverte avant cette action est tranchée par le résultat :
+  sur une réussite, le personnage l'évite ; sur un échec, elle porte et
+  il est blessé — légèrement sur un échec mineur ou automatique,
+  gravement sur un échec critique. La blessure est dite clairement ;
+  perdre son arme peut s'y ajouter, jamais la remplacer.
 - Ton doit rester fidèle au ton de l'univers indiqué.
 - Longueur cible : 2 à 5 phrases, sauf si le résultat est un moment
   clé du scénario (auquel cas tu peux développer davantage).

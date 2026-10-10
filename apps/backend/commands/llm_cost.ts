@@ -7,7 +7,8 @@ import type { CommandOptions } from '@adonisjs/core/types/ace'
  *
  * Read-only. Prices are never written in code: they change with the provider,
  * the model and the contract, so they come in as options, per million tokens.
- * Without them the report gives tokens only.
+ * Without them the report gives tokens only. `--model` keeps one model's calls
+ * only, so two models can be compared on the same log.
  */
 export default class LlmCost extends BaseCommand {
   static commandName = 'llm:cost'
@@ -19,6 +20,9 @@ export default class LlmCost extends BaseCommand {
 
   @flags.number({ description: 'Price of a million output tokens (reasoning billed alike)' })
   declare outputPerMillion?: number
+
+  @flags.string({ description: 'Count only the calls made with this model' })
+  declare model?: string
 
   async run() {
     const { default: db } = await import('@adonisjs/lucid/services/db')
@@ -41,8 +45,22 @@ export default class LlmCost extends BaseCommand {
         llmUsage: row.llm_usage,
         rejectedAttempts: row.rejected_attempts,
       })),
-      pricing
+      pricing,
+      this.model ?? null
     )
+
+    this.logger.info(`Models in the log: ${report.models.join(', ') || 'none'}`)
+
+    if (this.model !== undefined) {
+      this.logger.info(`Counting only ${this.model}.`)
+
+      if (!report.models.includes(this.model)) {
+        this.logger.warning(`No call made with ${this.model} in the log.`)
+      }
+    } else if (report.models.length > 1) {
+      /** Prices are per model: one pricing over several models is wrong for all but one. */
+      this.logger.warning('Several models are mixed in these figures: pass --model to pick one.')
+    }
 
     if (pricing === null) {
       this.logger.info(

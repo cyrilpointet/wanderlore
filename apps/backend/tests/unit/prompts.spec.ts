@@ -419,3 +419,23 @@ test.group('Extraction | contract', () => {
     ])
   })
 })
+
+test.group('Prompts | an attack left open', () => {
+  test('arbitration settles it with a roll, whatever the player declares', ({ assert }) => {
+    assert.include(
+      ARBITRATION_SYSTEM_PROMPT,
+      'is settled by this action, whatever the player declares'
+    )
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'Such an action is always a roll')
+  })
+
+  test('the narrator lets it land on a failure, never on an NPC’s initiative', ({ assert }) => {
+    assert.include(NARRATION_SYSTEM_PROMPT, 'never settles it on its own initiative')
+    assert.include(NARRATION_SYSTEM_PROMPT, 'On a failure, it lands and the character is hurt')
+    assert.include(NARRATION_SYSTEM_PROMPT, 'never instead of it')
+  })
+
+  test('extraction never reads a stated wound as no damage', ({ assert }) => {
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'A wound the narration states is never 0')
+  })
+})

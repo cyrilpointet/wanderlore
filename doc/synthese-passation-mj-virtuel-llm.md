@@ -162,7 +162,7 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - Dégâts dérivés directement de la marge de réussite du jet d'attaque — pas de second jet séparé.
 - Combat modélisé comme une simple répétition du pipeline standard (pas de sous-système dédié).
 - **Liberté du joueur** : le MJ ne refuse jamais une action parce qu'elle est imprudente, immorale ou interdite dans l'univers — il la résout et en fait assumer les conséquences. Seul l'impossible matériel mène à un échec automatique, et le personnage y tente quand même l'action. Voir règles, section 10.
-- **Réaction des PNJ** : tout personnage touché par une action réagit dans la même narration. Une réaction peut ouvrir une menace, jamais la trancher contre le joueur — c'est son action suivante, et le jet qui la résout, qui en décide. Voir règles, section 10.
+- **Réaction des PNJ** : tout personnage touché par une action réagit dans la même narration. Une réaction peut ouvrir une menace, jamais la trancher contre le joueur — c'est son action suivante, et le jet qui la résout, qui en décide. Une attaque ouverte est toujours tranchée par l'action suivante, quelle qu'elle soit, par un jet : sur un échec, elle porte et blesse. Voir règles, section 10.
 
 ### Multi-langue
 

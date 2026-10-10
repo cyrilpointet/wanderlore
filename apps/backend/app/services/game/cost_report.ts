@@ -46,6 +46,8 @@ export type StepReport = Totals & {
 }
 
 export type CostReport = {
+  /** Every model the log holds calls for, whatever the filter. */
+  models: string[]
   turns: { total: number; completed: number; failed: number }
   games: number
   overall: Totals
@@ -65,14 +67,24 @@ type Call = {
   rejected: boolean
 }
 
-export function costReport(rows: LoggedTurn[], pricing: Pricing | null = null): CostReport {
+/**
+ * With a `model`, only that model's calls count, and only the turns that made
+ * one: comparing two models means comparing the turns each one played.
+ */
+export function costReport(
+  rows: LoggedTurn[],
+  pricing: Pricing | null = null,
+  model: string | null = null
+): CostReport {
   /** Turns still being played have not finished spending. */
-  const settled = rows.filter((row) => row.status !== 'pending')
+  const finished = rows.filter((row) => row.status !== 'pending')
+  const settled = model === null ? finished : finished.flatMap((row) => onlyModel(row, model))
   const calls = settled.flatMap(callsOf)
   const games = new Set(settled.map((row) => row.sessionId)).size
   const overall = totalsOf(calls, pricing)
 
   return {
+    models: modelsOf(finished),
     turns: {
       total: settled.length,
       completed: settled.filter((row) => row.status === 'completed').length,
@@ -85,6 +97,19 @@ export function costReport(rows: LoggedTurn[], pricing: Pricing | null = null): 
     perStep: stepsOf(calls, pricing),
     perLanguage: languagesOf(settled, pricing),
   }
+}
+
+/** The turn with only the calls of `model`, or nothing if it made none. */
+function onlyModel(row: LoggedTurn, model: string): LoggedTurn[] {
+  const usage = (row.llmUsage ?? []).filter((call) => call.model === model)
+
+  return usage.length === 0 ? [] : [{ ...row, llmUsage: usage }]
+}
+
+function modelsOf(rows: LoggedTurn[]): string[] {
+  const models = rows.flatMap((row) => (row.llmUsage ?? []).map((call) => call.model))
+
+  return [...new Set(models.filter((model): model is string => typeof model === 'string'))].sort()
 }
 
 /**
