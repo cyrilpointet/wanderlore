@@ -18,6 +18,7 @@ import {
   ARBITRATION_RECENT_TURNS,
   ARBITRATION_SCHEMA,
   ARBITRATION_SYSTEM_PROMPT,
+  OUT_OF_CHARACTER,
   buildArbitrationMessage,
   lastTurns,
 } from '#services/game/prompts/arbitration'
@@ -81,6 +82,7 @@ function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationR
     ...turnContext(),
     outcome: { mode: 'roll_required', result: 'success', margin: 'comfortable', reason: null },
     intent_summary: 'Persuading the guard with a letter of recommendation',
+    aside: false,
     ...overrides,
   }
 }
@@ -321,6 +323,7 @@ test.group('Narration | context sent', () => {
       result: 'failure',
       margin: null,
       reason: 'Nothing crosses to London overnight.',
+      aside: false,
     })
   })
 
@@ -437,5 +440,38 @@ test.group('Prompts | an attack left open', () => {
 
   test('extraction never reads a stated wound as no damage', ({ assert }) => {
     assert.include(EXTRACTION_SYSTEM_PROMPT, 'A wound the narration states is never 0')
+  })
+})
+
+test.group('Prompts | manual testing fixes', () => {
+  test('extraction never takes the character into the place they leave', ({ assert }) => {
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'never the place they leave')
+    assert.include(
+      EXTRACTION_SYSTEM_PROMPT,
+      'A place merely described or talked about is not a movement'
+    )
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'movement is null itself')
+  })
+
+  test('extraction keeps a name apart from a descriptor', ({ assert }) => {
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'it is never their name')
+    assert.deepEqual(EXTRACTION_SCHEMA.properties.npcs_entered.items.required, [
+      'definition',
+      'descriptor',
+      'name',
+    ])
+  })
+
+  test('arbitration tells an aside to the game master from an action', ({ assert }) => {
+    assert.include(ARBITRATION_SYSTEM_PROMPT, `set intent.type to "${OUT_OF_CHARACTER}"`)
+  })
+
+  test('the narrator answers an aside without moving the story', ({ assert }) => {
+    assert.include(NARRATION_SYSTEM_PROMPT, 'without moving the story on')
+
+    const { resolution_to_narrate: outcome } = payloadOf(
+      buildNarrationMessage(narrationRequest({ aside: true }))
+    )
+    assert.isTrue(outcome.aside)
   })
 })

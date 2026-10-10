@@ -1,6 +1,7 @@
 import vine from '@vinejs/vine'
 
 import { NPC_DISPOSITIONS } from './world.js'
+import { OUT_OF_CHARACTER } from './prompts/arbitration.js'
 import type { ArbitrationOutput, Movement, TurnEffects } from './prompts/types.js'
 
 /**
@@ -122,6 +123,8 @@ const extractionValidator = vine.withMetaData<ValidationMeta>().create({
       vine.object({
         definition: vine.enum((field) => limitsOf(field).npcDefinitions),
         descriptor: shortText(200).nullable(),
+        /** Optional on the wire: an entry with no name is a nameless one. */
+        name: shortText(64).nullable().optional(),
       })
     )
     .maxLength(MAX_NPC_CHANGES_PER_TURN),
@@ -166,7 +169,11 @@ export async function validateExtraction(
     throw new TurnValidationError('extraction', reasons)
   }
 
-  return { ...output, movement: toMovement(output.movement) }
+  return {
+    ...output,
+    movement: toMovement(output.movement),
+    npcs_entered: output.npcs_entered.map((entry) => ({ ...entry, name: entry.name ?? null })),
+  }
 }
 
 /** The movement as it travels: every field present, most of them null. */
@@ -178,14 +185,28 @@ type FlatMovement = {
   name: string | null
 }
 
-type RawExtraction = Omit<TurnEffects, 'movement'> & { movement: FlatMovement | null }
+type RawExtraction = Omit<TurnEffects, 'movement' | 'npcs_entered'> & {
+  movement: FlatMovement | null
+  npcs_entered: { definition: string; descriptor: string | null; name?: string | null }[]
+}
+
+/**
+ * Every field null, sent where `null` was meant: no movement. Refusing it
+ * would push a second attempt into inventing one.
+ */
+function isEmpty(movement: FlatMovement | null): boolean {
+  return (
+    movement === null ||
+    (movement.location === null && movement.definition === null && movement.parent === null)
+  )
+}
 
 /**
  * Exactly one of the two forms: a named place, or an archetype within a named
  * place. Anything in between could not be placed on the map.
  */
 function movementReasons(movement: FlatMovement | null): RejectionReason[] {
-  if (movement === null) {
+  if (movement === null || isEmpty(movement)) {
     return []
   }
 
@@ -217,7 +238,7 @@ function movementReasons(movement: FlatMovement | null): RejectionReason[] {
  * descriptor or a name sent along with it is dropped rather than refused.
  */
 function toMovement(movement: FlatMovement | null): Movement | null {
-  if (movement === null) {
+  if (movement === null || isEmpty(movement)) {
     return null
   }
 
@@ -238,9 +259,17 @@ function toMovement(movement: FlatMovement | null): Movement | null {
  * a category and a difficulty, and an outcome settled without one has neither.
  */
 function coherenceReasons(output: {
+  intent: { type: string; target: string | null }
   resolution: { mode: string; action_type: string | null; difficulty: string | null }
 }): RejectionReason[] {
   const { mode, action_type: actionType, difficulty } = output.resolution
+
+  /** An aside to the game master is no action: nothing to roll, nobody targeted. */
+  if (output.intent.type === OUT_OF_CHARACTER && mode !== 'automatic_success') {
+    return [
+      reason('resolution.mode', 'aside', 'An aside to the game master is an automatic success.'),
+    ]
+  }
 
   if (mode === 'roll_required') {
     return [

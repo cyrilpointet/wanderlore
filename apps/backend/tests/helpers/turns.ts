@@ -40,7 +40,7 @@ type WireMovement = {
 export function extracted(
   answer: {
     movement?: string | Partial<WireMovement> | null
-    npcs_entered?: { definition: string; descriptor: string | null }[]
+    npcs_entered?: { definition: string; descriptor: string | null; name?: string | null }[]
     npcs_left?: string[]
     npcs_following?: string[]
     npc_names?: { handle: string; name: string }[]

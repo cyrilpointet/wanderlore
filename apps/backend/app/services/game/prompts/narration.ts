@@ -28,6 +28,7 @@ Hard rules:
 - The characters present are listed in the scene with their disposition: keep them in character. Never introduce characters, places, objects or events that contradict the world material and scene state provided.
 - Never mention game mechanics — no dice, no thresholds, no skills, no numbers. Everything stays diegetic.
 - Never rule on what changes in the game state, and never list effects: a separate step reads them from your text. Only tell the story.
+- When resolution_to_narrate.aside is true, the player spoke to you, the game master, rather than acting: answer them briefly and plainly, from what the story has already established, without moving the story on — nobody moves, nobody acts, nothing happens.
 - Target length is 2 to 5 sentences, longer only for a genuine turning point.
 
 About language and format:
@@ -60,6 +61,7 @@ export function buildNarrationMessage(request: NarrationRequest): string {
       result: request.outcome.result,
       margin: request.outcome.margin,
       reason: request.outcome.reason,
+      aside: request.aside,
     },
     memory: {
       recent_buffer: lastTurns(request.recent_buffer, NARRATION_RECENT_TURNS),

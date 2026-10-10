@@ -20,11 +20,15 @@ Hard rules:
 
 Movement:
 - movement is null when the character stays where they are or moves within the same place: from a common room to its stable is not a movement. A change of scene to a different place is one.
+- movement is where the character arrives, never the place they leave: walking out of an inn does not take them into that inn. When the narration only says they leave, without showing where they arrive, movement is null.
+- A place merely described or talked about is not a movement: saying where a town lies does not take the character there.
+- When there is no movement, movement is null itself — never an object whose fields are all null.
 - To a named place: set movement.location to one of unique_locations, and leave the other movement fields null.
 - To any other place: set movement.definition to one of location_archetypes and movement.parent to the unique location that contains it, with a short English descriptor and its proper name if the narration gives one (for example "Orléans"); movement.location stays null.
 
 People:
-- npcs_entered lists the people who come into the scene and can be interacted with: each with a definition from npc_definitions and a short English descriptor telling them apart ("a baker's apprentice with flour on his sleeves"). Someone merely mentioned does not enter. Use a generic definition for anyone the list does not name.
+- npcs_entered lists the people who come into the scene and can be interacted with: each with a definition from npc_definitions, a short English descriptor telling them apart ("a baker's apprentice with flour on his sleeves"), and their proper name if the narration gives one, else null. Someone merely mentioned does not enter. Use a generic definition for anyone the list does not name.
+- A descriptor describes how someone looks or what they do; it is never their name. A name goes in name.
 - npcs_left, npcs_following, npc_names and npc_relations designate people already present, by their handle from npcs_present only.
 - npcs_following lists those who come along when the character changes place. Leave it empty when there is no movement.
 - npc_names records a proper name a present person reveals in the narration.
@@ -59,8 +63,12 @@ export const EXTRACTION_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
-        properties: { definition: { type: 'string' }, descriptor: nullableString },
-        required: ['definition', 'descriptor'],
+        properties: {
+          definition: { type: 'string' },
+          descriptor: nullableString,
+          name: nullableString,
+        },
+        required: ['definition', 'descriptor', 'name'],
       },
     },
     npcs_left: handleList,

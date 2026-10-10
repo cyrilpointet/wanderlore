@@ -488,3 +488,32 @@ test.group('Turn events | the separated pipeline', (group) => {
     assert.deepEqual(message.turn.effects.movement, message.location)
   })
 })
+
+test.group('Turn events | an aside to the game master', (group) => {
+  useTransaction(group)
+
+  const ASIDE = {
+    ...SETTLED,
+    intent: { type: 'out_of_character', target: null, summary: 'Asks where Meung lies' },
+  }
+
+  test('is answered, and nothing is extracted from the answer', async ({ assert }) => {
+    /** No third answer arranged: calling extraction would run out of answers and fail. */
+    const { turn, events, sessionId } = await playOne([
+      ASIDE,
+      streamed('Meung lies a day’s ride south, on the Loire.'),
+    ])
+
+    await turn.refresh()
+    const world = await WorldState.query().where('sessionId', sessionId).firstOrFail()
+
+    assert.equal(turn.status, 'completed')
+    assert.deepEqual(
+      turn.llmUsage!.map((row) => row.step),
+      ['arbitration', 'narration']
+    )
+    assert.isNull(turn.extractionOutput)
+    assert.isNull(world.currentLocationId)
+    assert.equal(terminals(events.sequenceOf(turn.id)).at(-1), 'turn_completed')
+  })
+})

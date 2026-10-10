@@ -174,12 +174,34 @@ test.group('Applying a delta | people', (group) => {
       scene,
       delta({
         movement: { location: 'louvre' },
-        npcs_entered: [{ definition: 'royal_guard', descriptor: 'a guard at the gate' }],
+        npcs_entered: [
+          { definition: 'royal_guard', descriptor: 'a guard at the gate', name: null },
+        ],
       })
     )
 
     assert.deepEqual(applied.npcs_entered, ['royal_guard_1'])
     assert.equal(await statusOf(scene.sessionId, 'royal_guard_1'), 'present')
+  })
+
+  test('someone who gives their name as they come in keeps it', async ({ assert }) => {
+    const scene = await arrangeScene()
+
+    await apply(
+      scene,
+      delta({
+        npcs_entered: [
+          { definition: 'merchant', descriptor: 'a stout innkeeper', name: 'Jean Dubois' },
+        ],
+      })
+    )
+
+    const innkeeper = await NpcInstance.query()
+      .where({ sessionId: scene.sessionId, handle: 'merchant_1' })
+      .firstOrFail()
+
+    assert.equal(innkeeper.name, 'Jean Dubois')
+    assert.equal(innkeeper.descriptor, 'a stout innkeeper')
   })
 
   test('an archetype entering twice is two people', async ({ assert }) => {
@@ -189,8 +211,8 @@ test.group('Applying a delta | people', (group) => {
       scene,
       delta({
         npcs_entered: [
-          { definition: 'cardinal_guard', descriptor: 'a guard with a scar' },
-          { definition: 'cardinal_guard', descriptor: 'a young guard, visibly bored' },
+          { definition: 'cardinal_guard', descriptor: 'a guard with a scar', name: null },
+          { definition: 'cardinal_guard', descriptor: 'a young guard, visibly bored', name: null },
         ],
       })
     )
@@ -210,7 +232,7 @@ test.group('Applying a delta | people', (group) => {
     const applied = await apply(
       scene,
       delta({
-        npcs_entered: [{ definition: 'jussac', descriptor: null }],
+        npcs_entered: [{ definition: 'jussac', descriptor: null, name: null }],
         scenario_flags: ['ghost_seen'],
       })
     )

@@ -39,7 +39,7 @@ export type Movement =
  */
 export type TurnEffects = {
   movement: Movement | null
-  npcs_entered: { definition: string; descriptor: string | null }[]
+  npcs_entered: { definition: string; descriptor: string | null; name: string | null }[]
   npcs_left: string[]
   npcs_following: string[]
   npc_names: { handle: string; name: string }[]
@@ -160,6 +160,8 @@ export type OutcomeToNarrate = {
 export type NarrationRequest = TurnContext & {
   outcome: OutcomeToNarrate
   intent_summary: string
+  /** The player spoke to the game master rather than acting: answer, do not move the story. */
+  aside: boolean
 }
 
 /** What extraction reads: the narration as written, and the scene it happened in. */

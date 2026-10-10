@@ -345,7 +345,9 @@ test.group('Turn validator | extraction', () => {
 
     const output = await validateExtraction(answer, META)
 
-    assert.deepEqual(output.npcs_entered, answer.npcs_entered)
+    assert.deepEqual(output.npcs_entered, [
+      { definition: 'commoner', descriptor: 'a washerwoman', name: null },
+    ])
     assert.deepEqual(output.npc_relations, answer.npc_relations)
   })
 
@@ -427,5 +429,51 @@ test.group('Turn validator | extraction', () => {
     )
 
     assert.include(fields(error), 'npcs_following')
+  })
+})
+
+test.group('Turn validator | manual testing fixes', () => {
+  test('a movement with every field null is no movement, not a refusal', async ({ assert }) => {
+    const output = await validateExtraction(
+      extraction({ movement: { location: null, definition: null, parent: null } }),
+      META
+    )
+
+    assert.isNull(output.movement)
+  })
+
+  test('someone entering may carry a name, kept apart from the descriptor', async ({ assert }) => {
+    const output = await validateExtraction(
+      extraction({
+        npcs_entered: [{ definition: 'commoner', descriptor: 'a stout innkeeper', name: 'Jean' }],
+      }),
+      META
+    )
+
+    assert.deepEqual(output.npcs_entered, [
+      { definition: 'commoner', descriptor: 'a stout innkeeper', name: 'Jean' },
+    ])
+  })
+
+  test('an entry sent without a name is a nameless one', async ({ assert }) => {
+    const output = await validateExtraction(
+      extraction({ npcs_entered: [{ definition: 'commoner', descriptor: 'a porter' }] }),
+      META
+    )
+
+    assert.isNull(output.npcs_entered[0].name)
+  })
+
+  test('an aside to the game master is never a roll', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({
+          intent: { type: 'out_of_character', target: null, summary: 'Asks where Meung lies' },
+        }),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'resolution.mode')
   })
 })

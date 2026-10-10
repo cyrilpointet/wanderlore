@@ -10,6 +10,11 @@ export type NpcEntry = {
   definition: string
   /** Free English text with no mechanical reach: "the one with the scar". */
   descriptor: string | null
+  /**
+   * A proper name the narration gave as they came in. Kept on a new instance;
+   * a unique character met again keeps the name it already had.
+   */
+  name?: string | null
 }
 
 /**
@@ -106,6 +111,7 @@ export async function enterScene(
       handle,
       definitionReference: definition.reference,
       descriptor: entry.descriptor,
+      name: entry.name ?? null,
       disposition: definition.defaultDisposition,
       status: 'present',
     },

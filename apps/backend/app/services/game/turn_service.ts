@@ -31,6 +31,7 @@ import {
   uniqueLocationReferences,
 } from './world.js'
 import {
+  OUT_OF_CHARACTER,
   ARBITRATION_SCHEMA,
   ARBITRATION_SYSTEM_PROMPT,
   buildArbitrationMessage,
@@ -68,6 +69,18 @@ import {
  * at zero, so the dice alone carry the attempt.
  */
 const UNTRAINED = 0
+
+/** The delta of a turn that changes nothing. */
+const NO_CHANGE: TurnEffects = {
+  movement: null,
+  npcs_entered: [],
+  npcs_left: [],
+  npcs_following: [],
+  npc_names: [],
+  npc_relations: [],
+  scenario_flags: [],
+  hit_points_delta: 0,
+}
 
 /**
  * Phase 1 plays in English. Still passed explicitly at every step rather than
@@ -341,6 +354,7 @@ export class TurnService {
       step
     )
     const outcome = await this.#settle(turn, scene, decision, trace)
+    const aside = decision.intent.type === OUT_OF_CHARACTER
     const narration = await this.#narrate(
       turn,
       buildNarrationMessage({
@@ -348,10 +362,19 @@ export class TurnService {
         /** A verdict and a qualitative margin. Never the dice or the threshold. */
         outcome,
         intent_summary: decision.intent.summary,
+        aside,
       }),
       trace,
       budget
     )
+
+    /**
+     * An aside to the game master changes nothing: the backend decides so,
+     * rather than trusting extraction to read nothing into the answer.
+     */
+    if (aside) {
+      return NO_CHANGE
+    }
 
     return this.#extract(buildExtractionMessage({ ...context, narration }), meta, step)
   }

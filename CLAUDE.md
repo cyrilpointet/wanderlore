@@ -142,7 +142,9 @@ arbitrage A+B+C (`action_type`, jamais de narration) → jet côté backend si r
 narration D en **texte libre streamé** (`narration_chunk`) → extraction E, structurée, qui lit
 la narration et renvoie le delta complet, validé contre les listes fermées → application par
 `applyDelta` (`app/services/game/apply_delta.ts`) dans la transaction du tour, dans un ordre
-fixe : déplacement, sorties, entrées, noms et dispositions. Trois appels au minimum par tour.
+fixe : déplacement, sorties, entrées, noms et dispositions. Trois appels au minimum par tour,
+sauf pour un **aparté au MJ** (`intent.type: out_of_character`) : narré en réponse brève,
+sans extraction ni changement d'état.
 SSE : `step_started(arbitration)`, `roll_resolved`, `step_started(narration)`, des
 `narration_chunk`, puis un seul `turn_completed` (avec le lieu courant libellé) ou
 `turn_failed` — pas de jalon pour l'extraction.
