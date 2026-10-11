@@ -18,6 +18,8 @@ import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import type { JobQueue } from '#services/queue/types'
 import { ConcurrentTurnError, QueueUnavailableError, StaleTurnError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
+import { createItem, equipItem } from '#services/game/inventory'
+import { THREE_MUSKETEERS } from '#services/game/world'
 import {
   FakeLlmProvider,
   streamed,
@@ -735,5 +737,87 @@ test.group('TurnService | second attempt', (group) => {
         ['extraction', 1],
       ]
     )
+  })
+})
+
+/** The letter for Tréville passed off as a circumstance, which would count it twice. */
+const LETTER_AS_CIRCUMSTANCE = {
+  ...NEEDS_ROLL,
+  resolution: {
+    ...NEEDS_ROLL.resolution,
+    contextual_modifiers: [{ source: 'letter_to_treville', effect: 'major_bonus' }],
+  },
+}
+
+/** A genuine circumstance of the turn, priced by the backend. */
+const FAVOURABLE = {
+  ...NEEDS_ROLL,
+  resolution: {
+    ...NEEDS_ROLL.resolution,
+    contextual_modifiers: [{ source: 'favorable_reputation', effect: 'minor_bonus' }],
+  },
+}
+
+/** D'Artagnan's letter and his father's sword, drawn. */
+async function arrangeArmedScene() {
+  const scene = await arrangeScene()
+  const holder = { type: 'character' as const, id: scene.character.id }
+
+  await createItem(
+    THREE_MUSKETEERS,
+    scene.sessionId,
+    { definition: 'letter_to_treville', descriptor: null, quantity: 1 },
+    holder
+  )
+  const sword = await createItem(
+    THREE_MUSKETEERS,
+    scene.sessionId,
+    { definition: 'rapier', descriptor: "his father's old sword", quantity: 1 },
+    holder
+  )
+  await equipItem(THREE_MUSKETEERS, sword)
+
+  return { ...scene, sword }
+}
+
+test.group('TurnService | items and circumstances', (group) => {
+  useTransaction(group)
+
+  test('arbitration sees the items of the scene', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeArmedScene()
+    const { provider, play } = buildService(SETTLED_TURN)
+
+    await play({ sessionId, userId, playerInput: 'I look around.' })
+
+    const arbitration = provider.requests[0].userMessage
+    assert.include(arbitration, '"reference": "letter_to_treville"')
+    assert.include(arbitration, '"label": "Rapier"')
+  })
+
+  test('an item passed off as a circumstance gets one more attempt', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeArmedScene()
+    const { provider, play } = buildService([LETTER_AS_CIRCUMSTANCE, FAVOURABLE, ...NARRATED])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
+
+    assert.equal(turn.status, 'completed')
+    assert.lengthOf(turn.rejectedAttempts!, 1)
+    assert.include(provider.requests[1].userMessage, 'letter_to_treville')
+  })
+
+  test('refused twice, the turn fails and nothing moves', async ({ assert }) => {
+    const { sessionId, userId, character } = await arrangeArmedScene()
+    const { play } = buildService([LETTER_AS_CIRCUMSTANCE, LETTER_AS_CIRCUMSTANCE])
+
+    const error = await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
+      .then(() => null)
+      .catch((caught) => caught)
+
+    assert.instanceOf(error, TurnValidationError)
+    await character.refresh()
+    assert.equal(character.hitPoints, 10)
+    const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
+    assert.equal(turn.status, 'failed')
+    assert.isNull(turn.appliedEffects)
   })
 })

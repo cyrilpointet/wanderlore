@@ -14,6 +14,7 @@ const META: ValidationMeta = {
   locations: ['paris', 'louvre', 'france'],
   locationArchetypes: ['tavern', 'town'],
   npcDefinitions: ['treville', 'royal_guard', 'commoner'],
+  itemsInScene: ['letter_to_treville', 'rapier', 'rapier_1'],
   hitPointsMax: 10,
 }
 
@@ -475,5 +476,97 @@ test.group('Turn validator | manual testing fixes', () => {
     )
 
     assert.include(fields(error), 'resolution.mode')
+  })
+})
+
+test.group('Turn validator | contextual modifiers', () => {
+  function withModifiers(modifiers: unknown) {
+    return arbitration({
+      resolution: {
+        mode: 'roll_required',
+        action_type: 'social_persuasion',
+        difficulty: 'medium',
+        contextual_modifiers: modifiers,
+      },
+    })
+  }
+
+  test('accepts up to three labelled circumstances', async ({ assert }) => {
+    const modifiers = [
+      { source: 'favorable_reputation', effect: 'major_bonus' },
+      { source: 'late_hour', effect: 'minor_penalty' },
+      { source: 'pouring_rain', effect: 'minor_penalty' },
+    ]
+
+    const output = await validateArbitration(withModifiers(modifiers), META)
+
+    assert.deepEqual(output.resolution.contextual_modifiers, modifiers)
+  })
+
+  test('reads a missing list as no circumstance', async ({ assert }) => {
+    const output = await validateArbitration(arbitration(), META)
+
+    assert.deepEqual(output.resolution.contextual_modifiers, [])
+  })
+
+  test('refuses a fourth circumstance', async ({ assert }) => {
+    const four = ['a', 'b', 'c', 'd'].map((letter) => ({
+      source: `circumstance_${letter}`,
+      effect: 'minor_bonus',
+    }))
+
+    const error = await reject(() => validateArbitration(withModifiers(four), META))
+
+    assert.include(fields(error), 'resolution.contextual_modifiers')
+  })
+
+  test('refuses a value where a label belongs', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(withModifiers([{ source: 'favorable_reputation', effect: 3 }]), META)
+    )
+
+    assert.include(fields(error), 'resolution.contextual_modifiers.0.effect')
+  })
+
+  test('refuses a source that is not a stable reference', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(
+        withModifiers([{ source: 'The guard likes him', effect: 'minor_bonus' }]),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'resolution.contextual_modifiers.0.source')
+  })
+
+  test('refuses an item passed off as a circumstance', async ({ assert }) => {
+    /** The backend counts the letter from the inventory; priced here too, it would count twice. */
+    const byDefinition = await reject(() =>
+      validateArbitration(
+        withModifiers([{ source: 'letter_to_treville', effect: 'major_bonus' }]),
+        META
+      )
+    )
+    const byHandle = await reject(() =>
+      validateArbitration(withModifiers([{ source: 'rapier_1', effect: 'minor_bonus' }]), META)
+    )
+
+    assert.deepEqual([byDefinition.reasons[0].rule, byHandle.reasons[0].rule], ['item', 'item'])
+  })
+
+  test('drops the circumstances of an outcome settled without a roll', async ({ assert }) => {
+    const output = await validateArbitration(
+      settled({
+        resolution: {
+          mode: 'automatic_success',
+          action_type: null,
+          difficulty: null,
+          contextual_modifiers: [{ source: 'favorable_reputation', effect: 'minor_bonus' }],
+        },
+      }),
+      META
+    )
+
+    assert.deepEqual(output.resolution.contextual_modifiers, [])
   })
 })

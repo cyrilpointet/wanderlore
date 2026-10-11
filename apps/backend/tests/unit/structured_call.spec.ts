@@ -21,6 +21,7 @@ const META = {
   locations: ['louvre', 'paris'],
   locationArchetypes: ['tavern'],
   npcDefinitions: ['commoner'],
+  itemsInScene: [],
   hitPointsMax: 10,
 }
 

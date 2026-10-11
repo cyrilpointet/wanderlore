@@ -1,5 +1,8 @@
 import vine from '@vinejs/vine'
 
+import { CONTEXTUAL_EFFECTS } from '#services/rules/types'
+import { MAX_CONTEXTUAL_MODIFIERS } from '#services/rules/engine'
+
 import { NPC_DISPOSITIONS } from './world.js'
 import { OUT_OF_CHARACTER } from './prompts/arbitration.js'
 import type { ArbitrationOutput, Movement, TurnEffects } from './prompts/types.js'
@@ -53,6 +56,11 @@ export type ValidationMeta = {
   locationArchetypes: string[]
   /** Closed list: who may enter a scene — a named character or an archetype. */
   npcDefinitions: string[]
+  /**
+   * The items of the scene, by definition and by handle: none of them may
+   * pass for a circumstance, or it would count twice.
+   */
+  itemsInScene: string[]
   /** Bounds the damage or healing a single turn may claim. */
   hitPointsMax: number
 }
@@ -96,6 +104,19 @@ const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
      */
     action_type: vine.enum((field) => (field.meta as ValidationMeta).actionTypes).nullable(),
     difficulty: vine.enum(['easy', 'medium', 'hard', 'very_hard'] as const).nullable(),
+    /**
+     * Labels, never values; three at most. Optional on the wire: a model that
+     * leaves it out saw no circumstance worth one.
+     */
+    contextual_modifiers: vine
+      .array(
+        vine.object({
+          source: vine.string().regex(REFERENCE),
+          effect: vine.enum(CONTEXTUAL_EFFECTS),
+        })
+      )
+      .maxLength(MAX_CONTEXTUAL_MODIFIERS)
+      .optional(),
   }),
   alert: vine.object({
     prompt_injection_suspected: vine.boolean(),
@@ -146,15 +167,51 @@ export async function validateArbitration(
   payload: unknown,
   meta: ValidationMeta
 ): Promise<ArbitrationOutput> {
-  const output = await run<ArbitrationOutput>('arbitration', arbitrationValidator, payload, meta)
+  const output = await run<RawArbitration>('arbitration', arbitrationValidator, payload, meta)
+  const modifiers = output.resolution.contextual_modifiers ?? []
 
-  const reasons = coherenceReasons(output)
+  const reasons = [...coherenceReasons(output), ...modifierReasons(modifiers, meta)]
 
   if (reasons.length > 0) {
     throw new TurnValidationError('arbitration', reasons)
   }
 
-  return output
+  return {
+    ...output,
+    resolution: {
+      ...output.resolution,
+      /**
+       * No roll, nothing to modify: circumstances sent with a settled outcome
+       * are dropped rather than refused, which would only cost a second call.
+       */
+      contextual_modifiers: output.resolution.mode === 'roll_required' ? modifiers : [],
+    },
+  }
+}
+
+type RawArbitration = Omit<ArbitrationOutput, 'resolution'> & {
+  resolution: Omit<ArbitrationOutput['resolution'], 'contextual_modifiers'> & {
+    contextual_modifiers?: ArbitrationOutput['resolution']['contextual_modifiers']
+  }
+}
+
+/**
+ * An item passed off as a circumstance would be counted twice — once by the
+ * backend from the inventory, once as the model priced it.
+ */
+function modifierReasons(
+  modifiers: ArbitrationOutput['resolution']['contextual_modifiers'],
+  meta: ValidationMeta
+): RejectionReason[] {
+  return modifiers
+    .filter(({ source }) => meta.itemsInScene.includes(source))
+    .map(({ source }) =>
+      reason(
+        'resolution.contextual_modifiers',
+        'item',
+        `"${source}" is an item: items are counted by the backend, never as a circumstance.`
+      )
+    )
 }
 
 export async function validateExtraction(

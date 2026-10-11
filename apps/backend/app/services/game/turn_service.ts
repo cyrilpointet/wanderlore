@@ -21,6 +21,7 @@ import {
 } from './errors.js'
 import { applyDelta } from './apply_delta.js'
 import { type PresentNpc, presentNpcs } from './npcs.js'
+import { type ItemsInScene, itemsInScene } from './inventory.js'
 import { actionTypesOf, skillFor } from './resolution_rules.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
@@ -343,6 +344,7 @@ export class TurnService {
       locations: uniqueLocationReferences(THREE_MUSKETEERS),
       locationArchetypes: locationArchetypeReferences(THREE_MUSKETEERS),
       npcDefinitions: npcReferences(THREE_MUSKETEERS),
+      itemsInScene: itemReferencesOf(scene.items),
       hitPointsMax: scene.character.hitPointsMax,
     }
     const step = { trace, budget }
@@ -554,6 +556,10 @@ export class TurnService {
       character,
       worldState: session.worldState,
       npcs: await presentNpcs(sessionId),
+      items: await itemsInScene(sessionId, {
+        characterId: character.id,
+        locationInstanceId: session.worldState.currentLocationId,
+      }),
       /** Oldest first, so the model reads the exchange in the order it happened. */
       recentTurns: turns.reverse(),
       lastTurnNumber: Number(last?.$extras.max ?? 0),
@@ -634,6 +640,7 @@ type LoadedScene = {
   character: Character
   worldState: WorldState
   npcs: PresentNpc[]
+  items: ItemsInScene
   /**
    * As many as the narrator reads, the longer of the two buffers; arbitration
    * keeps only the last of them.
@@ -659,11 +666,23 @@ function buildContext(
       npcs_present: scene.npcs,
       narrative_flags: scene.worldState.narrativeFlags,
       visited_locations: scene.session.locations.map((location) => location.handle),
+      items: scene.items,
     },
     recent_buffer: toRecentBuffer(scene.recentTurns),
     player_input: playerInput,
     language,
   }
+}
+
+/** Every way an item of the scene can be named: its definition, and its handle if it has one. */
+function itemReferencesOf(items: ItemsInScene): string[] {
+  const held = [...items.character, ...items.npcs.flatMap((npc) => npc.items), ...items.location]
+
+  return [
+    ...new Set(
+      held.flatMap(({ definition, handle }) => (handle ? [definition, handle] : [definition]))
+    ),
+  ]
 }
 
 function toRecentBuffer(turns: TurnLog[]): RecentTurn[] {

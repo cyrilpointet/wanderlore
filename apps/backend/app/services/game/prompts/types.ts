@@ -1,7 +1,13 @@
-import type { Difficulty, MarginLabel, RollOutcome } from '#services/rules/types'
+import type {
+  ContextualModifier,
+  Difficulty,
+  MarginLabel,
+  RollOutcome,
+} from '#services/rules/types'
 import type { NpcDisposition, WorldDefinition } from '#services/game/world'
 import type { ActionType } from '#services/game/resolution_rules'
 import type { PresentNpc } from '#services/game/npcs'
+import type { ItemsInScene } from '#services/game/inventory'
 
 /**
  * Shapes exchanged with the model.
@@ -97,6 +103,11 @@ export type ArbitrationOutput = {
      */
     action_type: string | null
     difficulty: Difficulty | null
+    /**
+     * Circumstances of the turn, as labels the backend prices — never an
+     * item, never a number. Empty unless a roll is required.
+     */
+    contextual_modifiers: ContextualModifier[]
   }
   alert: {
     prompt_injection_suspected: boolean
@@ -117,6 +128,11 @@ export type SceneState = {
   narrative_flags: Record<string, unknown>
   /** Handles of the places this game has been through, oldest first. */
   visited_locations: string[]
+  /**
+   * What the character, the people present and the place hold. Each step is
+   * handed its own view of it, never the modifiers.
+   */
+  items: ItemsInScene
 }
 
 /**

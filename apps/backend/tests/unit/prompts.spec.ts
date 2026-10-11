@@ -14,6 +14,7 @@ import type {
   RecentTurn,
   TurnContext,
 } from '#services/game/prompts/types'
+import type { ItemsInScene } from '#services/game/inventory'
 import {
   ARBITRATION_RECENT_TURNS,
   ARBITRATION_SCHEMA,
@@ -48,6 +49,50 @@ const SIX_TURNS: RecentTurn[] = [1, 2, 3, 4, 5, 6].flatMap((turn) => [
   { role: 'narration' as const, text: `narration ${turn}` },
 ])
 
+/** The character's letter and sword, a guard's dagger, and a stool in the room. */
+const ITEMS: ItemsInScene = {
+  character: [
+    {
+      handle: 'letter_to_treville',
+      definition: 'letter_to_treville',
+      descriptor: null,
+      quantity: 1,
+      equipped: false,
+    },
+    {
+      handle: 'rapier_1',
+      definition: 'rapier',
+      descriptor: "his father's old sword",
+      quantity: 1,
+      equipped: true,
+    },
+    { handle: null, definition: 'lead_shot', descriptor: null, quantity: 6, equipped: false },
+  ],
+  npcs: [
+    {
+      handle: 'royal_guard_1',
+      items: [
+        {
+          handle: 'dagger_1',
+          definition: 'dagger',
+          descriptor: null,
+          quantity: 1,
+          equipped: false,
+        },
+      ],
+    },
+  ],
+  location: [
+    {
+      handle: 'improvised_weapon_1',
+      definition: 'improvised_weapon',
+      descriptor: 'a three-legged stool',
+      quantity: 1,
+      equipped: false,
+    },
+  ],
+}
+
 function turnContext(overrides: Partial<TurnContext> = {}): TurnContext {
   return {
     world: THREE_MUSKETEERS,
@@ -64,6 +109,7 @@ function turnContext(overrides: Partial<TurnContext> = {}): TurnContext {
       ],
       narrative_flags: {},
       visited_locations: ['meung_sur_loire', 'hotel_de_treville'],
+      items: ITEMS,
     },
     recent_buffer: [{ role: 'narration', text: 'A guard bars your way.' }],
     player_input: 'I show him my letter and ask to pass.',
@@ -112,6 +158,12 @@ test.group('Arbitration | system contract', () => {
     assert.notInclude(ARBITRATION_SYSTEM_PROMPT, 'skill_used')
   })
 
+  test('weighs circumstances in labels, three at most, never an item', ({ assert }) => {
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'At most three')
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'An item is never a contextual modifier')
+    assert.notInclude(ARBITRATION_SYSTEM_PROMPT, 'Do not propose modifiers of any kind')
+  })
+
   test('judges the difficulty on the situation, not the character', ({ assert }) => {
     assert.include(ARBITRATION_SYSTEM_PROMPT, 'Judge the difficulty on the situation alone')
   })
@@ -131,8 +183,26 @@ test.group('Arbitration | output schema', () => {
   test('resolves on an action type and a difficulty, never on a skill', ({ assert }) => {
     const { resolution } = ARBITRATION_SCHEMA.properties
 
-    assert.deepEqual(resolution.required, ['mode', 'action_type', 'difficulty'])
+    assert.deepEqual(resolution.required, [
+      'mode',
+      'action_type',
+      'difficulty',
+      'contextual_modifiers',
+    ])
     assert.notProperty(resolution.properties, 'skill_used')
+  })
+
+  test('qualifies a circumstance by a label, never by a value', ({ assert }) => {
+    const modifier = ARBITRATION_SCHEMA.properties.resolution.properties.contextual_modifiers.items
+
+    assert.deepEqual(modifier.required, ['source', 'effect'])
+    assert.notProperty(modifier.properties, 'value')
+    assert.deepEqual(modifier.properties.effect.enum, [
+      'major_bonus',
+      'minor_bonus',
+      'minor_penalty',
+      'major_penalty',
+    ])
   })
 
   test('constrains difficulty to the standard scale', ({ assert }) => {
@@ -181,6 +251,29 @@ test.group('Arbitration | context sent', () => {
 
     assert.equal(scene.location, 'hotel_de_treville')
     assert.deepEqual(scene.npcs_present, turnContext().scene.npcs_present)
+  })
+
+  test('carries the items of the scene by holder, as references and labels', ({ assert }) => {
+    const { items_in_scene: items } = payloadOf(buildArbitrationMessage(arbitrationContext()))
+
+    assert.deepEqual(items, {
+      character: [
+        { reference: 'letter_to_treville', label: 'Letter for M. de Tréville' },
+        { reference: 'rapier', label: 'Rapier' },
+        { reference: 'lead_shot', label: 'Lead shot' },
+      ],
+      npcs: [{ handle: 'royal_guard_1', items: [{ reference: 'dagger', label: 'Dagger' }] }],
+      location: [{ reference: 'improvised_weapon', label: 'Improvised weapon' }],
+    })
+  })
+
+  test('never hands over what an item is worth, nor its state', ({ assert }) => {
+    const message = buildArbitrationMessage(arbitrationContext())
+
+    /** Nothing the model could price, nor the narrator's descriptor. */
+    for (const leak of ['modifiers', 'condition', 'quantity', 'equipped', 'three-legged stool']) {
+      assert.notInclude(message, leak)
+    }
   })
 
   test('keeps only the last two turns of the buffer', ({ assert }) => {

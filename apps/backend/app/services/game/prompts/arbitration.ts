@@ -1,3 +1,7 @@
+import { ContentLabels } from '#services/game/content_labels'
+import type { ItemsInScene } from '#services/game/inventory'
+import type { WorldDefinition } from '#services/game/world'
+
 import type { ArbitrationContext, RecentTurn } from './types.js'
 
 /**
@@ -41,8 +45,12 @@ Hard rules:
 - An action that plainly contradicts the world rules provided, or that is impossible with the elements available, is an automatic failure — not a roll. The character still makes the attempt; the world is what stops it. Say why in validity.justification.
 - When a roll is required, resolution.action_type MUST be one of the action types listed in world_context.action_types: pick the one whose description best covers the action. Never invent an action type. It is null unless the mode is roll_required, and so is resolution.difficulty.
 - Judge the difficulty on the situation alone: the opposition, the circumstances, the stakes. The character's own ability is not yours to weigh — the roll confronts the two.
-- Never produce a numeric rule value: no dice, no threshold, no modifier, no skill score. You work with qualitative labels only. The backend owns every number.
-- Do not propose modifiers of any kind. They do not exist at this stage of the game.
+- Never produce a numeric rule value: no dice, no threshold, no modifier value, no skill score. You work with qualitative labels only. The backend owns every number.
+- resolution.contextual_modifiers lists the circumstances of this very turn that make the roll easier or harder: a position, a reputation, an attire, the moment, the weather. At most three, each with a short English source in snake_case and an effect: major_bonus, minor_bonus, minor_penalty or major_penalty. Leave it empty when nothing stands out, and always when no roll is required.
+
+Items:
+- items_in_scene lists what the character holds, what each person present holds, and what lies in the place. The character can only use what they hold. Taking, asking for or stealing what someone else holds, or picking up what lies in the place, is an action like any other.
+- An item is never a contextual modifier, and you never weigh what an item is worth: the backend counts the items the character holds. Holding an item only decides whether the action is possible.
 - Do not narrate the outcome and do not describe its consequences: a separate step stages it once the outcome is settled.
 
 Player agency:
@@ -93,8 +101,22 @@ export const ARBITRATION_SCHEMA = {
         },
         action_type: { type: ['string', 'null'] },
         difficulty: { type: ['string', 'null'], enum: ['easy', 'medium', 'hard', 'very_hard'] },
+        contextual_modifiers: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              source: { type: 'string' },
+              effect: {
+                type: 'string',
+                enum: ['major_bonus', 'minor_bonus', 'minor_penalty', 'major_penalty'],
+              },
+            },
+            required: ['source', 'effect'],
+          },
+        },
       },
-      required: ['mode', 'action_type', 'difficulty'],
+      required: ['mode', 'action_type', 'difficulty', 'contextual_modifiers'],
     },
     alert: {
       type: 'object',
@@ -138,6 +160,12 @@ export function buildArbitrationMessage(context: ArbitrationContext): string {
       narrative_flags: context.scene.narrative_flags,
     },
     /**
+     * By holder, by reference and English label: enough to judge whether the
+     * character has what the action needs. No modifier, quantity, state or
+     * descriptor — nothing the model could price.
+     */
+    items_in_scene: itemsForArbitration(context.world, context.scene.items),
+    /**
      * Who acts, and how hurt they are — never their skill values. The
      * difficulty is judged on the situation; the roll confronts it with the
      * character.
@@ -153,6 +181,20 @@ export function buildArbitrationMessage(context: ArbitrationContext): string {
   }
 
   return `${FRAMING}\n\n${JSON.stringify(payload, null, 2)}\n\nAnalyse this action and return your decision under the defined schema.`
+}
+
+type ArbitrationItem = { reference: string; label: string }
+
+function itemsForArbitration(world: WorldDefinition, items: ItemsInScene) {
+  const labels = new ContentLabels(world)
+  const view = (held: ItemsInScene['character']): ArbitrationItem[] =>
+    held.map(({ definition }) => labels.of('item', definition))
+
+  return {
+    character: view(items.character),
+    npcs: items.npcs.map((npc) => ({ handle: npc.handle, items: view(npc.items) })),
+    location: view(items.location),
+  }
 }
 
 /** The entries of the last `turns` exchanges, each opened by the player's action. */
