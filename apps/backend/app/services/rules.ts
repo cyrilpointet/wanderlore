@@ -19,8 +19,13 @@ const rules = new RulesEngine(dice)
 export default rules
 
 export { qualifyMargin, thresholdFor, toNarrationOutcome } from './rules/engine.js'
+export { itemModifiers } from './rules/modifiers.js'
+export { resolveDamage } from './rules/damage.js'
 export type {
   AppliedModifier,
+  DamageResolution,
+  ModifierSource,
+  ModifierTarget,
   Difficulty,
   MarginLabel,
   NarrationOutcome,

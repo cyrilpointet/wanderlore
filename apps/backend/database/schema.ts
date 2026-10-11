@@ -112,7 +112,7 @@ export class LocationInstanceSchema extends BaseModel {
 }
 
 export class NpcInstanceSchema extends BaseModel {
-  static $columns = ['createdAt', 'definitionReference', 'descriptor', 'disposition', 'handle', 'id', 'name', 'sessionId', 'status', 'updatedAt'] as const
+  static $columns = ['createdAt', 'definitionReference', 'descriptor', 'disposition', 'handle', 'hitPoints', 'id', 'name', 'sessionId', 'status', 'updatedAt'] as const
   $columns = NpcInstanceSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -124,6 +124,8 @@ export class NpcInstanceSchema extends BaseModel {
   declare disposition: 'hostile' | 'unfriendly' | 'neutral' | 'friendly' | 'allied'
   @column()
   declare handle: string
+  @column()
+  declare hitPoints: number | null
   @column({ isPrimary: true })
   declare id: string
   @column()

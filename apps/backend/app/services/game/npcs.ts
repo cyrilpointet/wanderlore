@@ -67,11 +67,11 @@ export class DeadNpcError extends Error {
  * - an archetype gets a new instance, numbered by the backend within the game
  *   (`cardinal_guard_1`, `cardinal_guard_2`), never by the model.
  *
- * A new instance starts with the disposition its definition declares, and a
- * unique character met for the first time comes in with the items they hold
- * from the start. Turns of
- * a game are played one at a time, so counting is enough to number; the
- * unique `(session_id, handle)` is the last line of defence.
+ * A new instance starts with the disposition and the hit points its
+ * definition declares, and a unique character met for the first time comes in
+ * with the items they hold from the start. Turns of a game are played one at a
+ * time, so counting is enough to number; the unique `(session_id, handle)` is
+ * the last line of defence.
  */
 export async function enterScene(
   world: WorldDefinition,
@@ -118,6 +118,7 @@ export async function enterScene(
       name: entry.name ?? null,
       disposition: definition.defaultDisposition,
       status: 'present',
+      hitPoints: definition.combat.hitPointsMax,
     },
     { client }
   )

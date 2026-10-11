@@ -30,6 +30,30 @@ export type AppliedModifier = {
   value: number
 }
 
+/** What an item modifier aims at: a skill a roll tests, or the damage a hit deals. */
+export type ModifierTarget = { target: 'skill'; skill: string } | { target: 'damage' }
+
+/**
+ * An item as the rules read it: the reference of its definition, whether its
+ * holder has it equipped, and the fixed modifiers the definition declares.
+ * No label, no holder: the engine knows nothing of worlds or games.
+ */
+export type ModifierSource = {
+  reference: string
+  equipped: boolean
+  modifiers: (ModifierTarget & { value: number; condition: 'owned' | 'equipped' })[]
+}
+
+/**
+ * The damage a hit deals: half the margin, rounded up, at least one, plus
+ * the bonus of the weapon — itself an item modifier aimed at damage.
+ */
+export type DamageResolution = {
+  hit: number
+  appliedModifiers: AppliedModifier[]
+  total: number
+}
+
 /**
  * Everything a resolved roll produced.
  *

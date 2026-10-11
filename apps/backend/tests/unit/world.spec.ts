@@ -89,6 +89,37 @@ test.group('World definition | npcs', () => {
   })
 })
 
+test.group('World definition | combat profiles', () => {
+  const skills = THREE_MUSKETEERS.skills.map((skill) => skill.reference)
+  const weapons = THREE_MUSKETEERS.items
+    .filter((item) => item.modifiers.some((modifier) => modifier.target === 'damage'))
+    .map((item) => item.reference)
+
+  test('every skill of a profile is a skill of the world, at a sheet value', ({ assert }) => {
+    for (const npc of THREE_MUSKETEERS.npcs) {
+      for (const [skill, value] of Object.entries(npc.combat.skills)) {
+        assert.include(skills, skill, npc.reference)
+        assert.isTrue(Number.isInteger(value) && value >= 0 && value <= 5, npc.reference)
+      }
+    }
+  })
+
+  test('everyone can take a blow', ({ assert }) => {
+    for (const npc of THREE_MUSKETEERS.npcs) {
+      assert.isTrue(Number.isInteger(npc.combat.hitPointsMax), npc.reference)
+      assert.isAbove(npc.combat.hitPointsMax, 0, npc.reference)
+    }
+  })
+
+  test('an ordinary weapon is an item that deals damage', ({ assert }) => {
+    for (const npc of THREE_MUSKETEERS.npcs) {
+      if (npc.combat.weapon !== null) {
+        assert.include(weapons, npc.combat.weapon, npc.reference)
+      }
+    }
+  })
+})
+
 test.group('World definition | locations', () => {
   const uniques = THREE_MUSKETEERS.locations.filter(
     (location): location is Extract<LocationDefinition, { kind: 'unique' }> =>

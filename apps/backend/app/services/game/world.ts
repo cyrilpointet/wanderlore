@@ -85,7 +85,24 @@ type DescribedEntry = ContentEntry & {
  */
 export type NpcDefinition = DescribedEntry & {
   defaultDisposition: NpcDisposition
+  combat: CombatProfile
 } & ({ kind: 'unique' } | { kind: 'archetype'; generic: boolean })
+
+/**
+ * What a person brings to a fight, in the same shape as a character's sheet,
+ * so one engine resolves everyone. Never sent to the model.
+ */
+export type CombatProfile = {
+  /** Skill values by reference; a skill left out is worth 0, as for a character. */
+  skills: Record<string, number>
+  hitPointsMax: number
+  /**
+   * The ordinary weapon they fight with: an item definition carrying a damage
+   * bonus, not an item they hold — it cannot be taken from them. A special
+   * weapon is held, as an item, and outranks it once fights are wired (Phase 8).
+   */
+  weapon: string | null
+}
 
 /**
  * A place of the world. A unique place declares the place that contains it;
@@ -197,6 +214,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'M. de Tréville',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { swordsmanship: 4, persuasion: 3, intimidation: 3, observation: 3 },
+        hitPointsMax: 14,
+        weapon: 'rapier',
+      },
       description:
         "Captain of the King's Musketeers, a Gascon who rose by his sword and guards his men jealously.",
     },
@@ -205,6 +227,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Athos',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { swordsmanship: 5, observation: 3, etiquette: 3 },
+        hitPointsMax: 14,
+        weapon: 'rapier',
+      },
       description:
         'A musketeer of noble bearing, melancholic and sparing with words, feared with a blade.',
     },
@@ -213,6 +240,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Porthos',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { swordsmanship: 4, athletics: 4, intimidation: 3 },
+        hitPointsMax: 16,
+        weapon: 'rapier',
+      },
       description: 'A musketeer, vain, loud and generous, as strong as he is proud of his baldric.',
     },
     {
@@ -220,6 +252,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Aramis',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { swordsmanship: 4, deception: 3, scholarship: 3 },
+        hitPointsMax: 12,
+        weapon: 'rapier',
+      },
       description:
         'A musketeer with the manners of an abbé, discreet about his letters and his affairs of the heart.',
     },
@@ -228,6 +265,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Planchet',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { stealth: 2, athletics: 2, observation: 2 },
+        hitPointsMax: 8,
+        weapon: null,
+      },
       description: 'A resourceful Picard lackey, looking for a master who pays.',
     },
     {
@@ -235,6 +277,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Rochefort',
       kind: 'unique',
       defaultDisposition: 'unfriendly',
+      combat: {
+        skills: { swordsmanship: 4, deception: 3, intimidation: 3 },
+        hitPointsMax: 13,
+        weapon: 'rapier',
+      },
       description:
         "The Cardinal's man, a gentleman with a scar on his temple and a contemptuous smile.",
     },
@@ -243,6 +290,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Milady',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { deception: 5, persuasion: 4, stealth: 3 },
+        hitPointsMax: 9,
+        weapon: 'dagger',
+      },
       description:
         "A pale, beautiful Englishwoman with a charming manner, and the Cardinal's most dangerous agent.",
     },
@@ -251,6 +303,7 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Jussac',
       kind: 'unique',
       defaultDisposition: 'unfriendly',
+      combat: { skills: { swordsmanship: 4, intimidation: 2 }, hitPointsMax: 12, weapon: 'rapier' },
       description: "An officer of the Cardinal's Guards, quick to provoke any musketeer.",
     },
     {
@@ -258,6 +311,7 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'M. Bonacieux',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: { skills: { deception: 1, observation: 1 }, hitPointsMax: 7, weapon: null },
       description: 'A timid, grasping mercer who lets rooms in the Rue des Fossoyeurs.',
     },
     {
@@ -265,6 +319,7 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Constance Bonacieux',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: { skills: { stealth: 2, persuasion: 2 }, hitPointsMax: 7, weapon: null },
       description: "The mercer's young wife, linen-maid and confidante of the Queen.",
     },
     {
@@ -272,6 +327,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Cardinal Richelieu',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { persuasion: 4, deception: 4, observation: 4, intimidation: 4 },
+        hitPointsMax: 9,
+        weapon: null,
+      },
       description: 'First minister of France, patient, cold and informed of everything.',
     },
     {
@@ -279,6 +339,7 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'King Louis XIII',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: { skills: { etiquette: 4, marksmanship: 2 }, hitPointsMax: 10, weapon: null },
       description:
         'The King of France, easily bored, proud of his musketeers, wary of his minister.',
     },
@@ -287,6 +348,7 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Queen Anne of Austria',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: { skills: { etiquette: 4, persuasion: 3 }, hitPointsMax: 8, weapon: null },
       description: 'The Queen of France, Spanish-born, watched closely by the Cardinal.',
     },
     {
@@ -294,6 +356,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       label: 'Duke of Buckingham',
       kind: 'unique',
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { swordsmanship: 3, persuasion: 4, etiquette: 4 },
+        hitPointsMax: 11,
+        weapon: 'rapier',
+      },
       description:
         'The English favourite, dazzling and reckless, in love with the Queen of France.',
     },
@@ -304,6 +371,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       kind: 'archetype',
       generic: false,
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { swordsmanship: 3, athletics: 2, marksmanship: 2 },
+        hitPointsMax: 11,
+        weapon: 'rapier',
+      },
       description:
         "A soldier of the King's Musketeers in his blue cloak, proud, idle and quarrelsome.",
     },
@@ -313,6 +385,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       kind: 'archetype',
       generic: false,
       defaultDisposition: 'unfriendly',
+      combat: {
+        skills: { swordsmanship: 3, intimidation: 2, marksmanship: 2 },
+        hitPointsMax: 11,
+        weapon: 'rapier',
+      },
       description:
         "A soldier of the Cardinal's Guards in his red cloak, eager to catch a duellist.",
     },
@@ -322,6 +399,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       kind: 'archetype',
       generic: false,
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { swordsmanship: 2, observation: 2 },
+        hitPointsMax: 10,
+        weapon: 'common_sword',
+      },
       description: "A soldier of the King's Guards posted at the palace doors.",
     },
 
@@ -331,6 +413,7 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
+      combat: { skills: { athletics: 1 }, hitPointsMax: 7, weapon: null },
       description: "Anyone of the common people: a shopkeeper's boy, a washerwoman, a porter.",
     },
     {
@@ -339,6 +422,7 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
+      combat: { skills: { persuasion: 2, observation: 1 }, hitPointsMax: 7, weapon: null },
       description: 'A trader, shopkeeper or innkeeper with something to sell.',
     },
     {
@@ -347,6 +431,7 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
+      combat: { skills: { stealth: 1, observation: 1 }, hitPointsMax: 7, weapon: null },
       description: "A lackey, maid or groom in someone else's service.",
     },
     {
@@ -355,6 +440,7 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
+      combat: { skills: { etiquette: 3, swordsmanship: 2 }, hitPointsMax: 9, weapon: 'rapier' },
       description: 'A gentleman or lady of rank, touchy about precedence.',
     },
     {
@@ -363,6 +449,7 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
+      combat: { skills: { scholarship: 3, persuasion: 2 }, hitPointsMax: 7, weapon: null },
       description: 'A priest, monk or abbé.',
     },
     {
@@ -371,6 +458,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
+      combat: {
+        skills: { swordsmanship: 2, marksmanship: 2, athletics: 2 },
+        hitPointsMax: 10,
+        weapon: 'common_sword',
+      },
       description: 'An armed man in service: a town watchman, a trooper, a sentry.',
     },
     {
@@ -379,6 +471,11 @@ export const THREE_MUSKETEERS: WorldDefinition = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'unfriendly',
+      combat: {
+        skills: { swordsmanship: 2, intimidation: 2, stealth: 2 },
+        hitPointsMax: 9,
+        weapon: 'dagger',
+      },
       description: 'A brawler, cutpurse or hired blade who lives outside the law.',
     },
   ],

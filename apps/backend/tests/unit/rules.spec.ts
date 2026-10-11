@@ -9,6 +9,9 @@ import {
   toNarrationOutcome,
 } from '#services/rules/engine'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
+import { itemModifiers } from '#services/rules/modifiers'
+import { resolveDamage } from '#services/rules/damage'
+import type { ModifierSource } from '#services/rules/types'
 
 /**
  * These specs import the engine module, never `#services/rules`: the barrel
@@ -147,5 +150,103 @@ test.group('RulesEngine | narration boundary', () => {
     assert.deepEqual(Object.keys(outcome).sort(), ['margin', 'result'])
     assert.equal(outcome.result, 'success')
     assert.equal(outcome.margin, 'critical_success')
+  })
+})
+
+const RAPIER: ModifierSource = {
+  reference: 'rapier',
+  equipped: true,
+  modifiers: [
+    { target: 'skill', skill: 'swordsmanship', value: 1, condition: 'equipped' },
+    { target: 'damage', value: 2, condition: 'equipped' },
+  ],
+}
+
+const LETTER: ModifierSource = {
+  reference: 'letter_to_treville',
+  equipped: false,
+  modifiers: [{ target: 'skill', skill: 'persuasion', value: 1, condition: 'owned' }],
+}
+
+const MUSKET: ModifierSource = {
+  reference: 'musket',
+  equipped: true,
+  modifiers: [
+    { target: 'damage', value: 4, condition: 'equipped' },
+    { target: 'skill', skill: 'stealth', value: -1, condition: 'equipped' },
+  ],
+}
+
+test.group('Rules | item modifiers', () => {
+  test('an owned item counts as soon as it is held', ({ assert }) => {
+    assert.deepEqual(itemModifiers([LETTER], { target: 'skill', skill: 'persuasion' }), [
+      { source: 'item', origin: 'letter_to_treville', value: 1 },
+    ])
+  })
+
+  test('an equipped modifier counts only while the item is equipped', ({ assert }) => {
+    const sheathed = { ...RAPIER, equipped: false }
+
+    assert.lengthOf(itemModifiers([sheathed], { target: 'skill', skill: 'swordsmanship' }), 0)
+    assert.deepEqual(itemModifiers([RAPIER], { target: 'skill', skill: 'swordsmanship' }), [
+      { source: 'item', origin: 'rapier', value: 1 },
+    ])
+  })
+
+  test('only what aims at the target counts', ({ assert }) => {
+    const sources = [RAPIER, LETTER, MUSKET]
+
+    assert.deepEqual(itemModifiers(sources, { target: 'skill', skill: 'stealth' }), [
+      { source: 'item', origin: 'musket', value: -1 },
+    ])
+    assert.deepEqual(itemModifiers(sources, { target: 'skill', skill: 'etiquette' }), [])
+    /** A damage bonus never moves a roll, a skill modifier never adds damage. */
+    assert.deepEqual(
+      itemModifiers(sources, { target: 'damage' }).map((modifier) => modifier.origin),
+      ['rapier', 'musket']
+    )
+  })
+
+  test('a definition counts once, however many copies are held', ({ assert }) => {
+    const spare = { ...RAPIER, equipped: false }
+
+    assert.deepEqual(itemModifiers([spare, RAPIER, spare], { target: 'damage' }), [
+      { source: 'item', origin: 'rapier', value: 2 },
+    ])
+  })
+})
+
+test.group('Rules | damage', () => {
+  /** The hit itself: half the margin, rounded up, at least one. */
+  const hits: [number, number][] = [
+    [0, 1],
+    [1, 1],
+    [2, 1],
+    [3, 2],
+    [4, 2],
+    [5, 3],
+  ]
+
+  for (const [margin, hit] of hits) {
+    test(`a margin of ${margin} hits for ${hit} bare-handed`, ({ assert }) => {
+      assert.deepEqual(resolveDamage(margin, []), { hit, appliedModifiers: [], total: hit })
+    })
+  }
+
+  test('the weapon adds its bonus to the hit', ({ assert }) => {
+    /** The example of the rules: a rapier (+2) and a margin of +4 deal 2 + 2. */
+    assert.deepEqual(resolveDamage(4, [RAPIER, LETTER]), {
+      hit: 2,
+      appliedModifiers: [{ source: 'item', origin: 'rapier', value: 2 }],
+      total: 4,
+    })
+  })
+
+  test('a weapon merely carried adds nothing', ({ assert }) => {
+    assert.equal(resolveDamage(4, [{ ...RAPIER, equipped: false }]).total, 2)
+  })
+
+  test('a failed attack is no hit at all', ({ assert }) => {
+    assert.throws(() => resolveDamage(-1, [RAPIER]), RangeError)
   })
 })
