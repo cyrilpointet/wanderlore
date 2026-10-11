@@ -342,6 +342,12 @@ test.group('Recent buffer', () => {
 })
 
 test.group('Narration | free text', () => {
+  test('names items without ruling on what happens to them', ({ assert }) => {
+    assert.include(NARRATION_SYSTEM_PROMPT, 'items_in_scene')
+    assert.include(NARRATION_SYSTEM_PROMPT, 'not necessarily in sight')
+    assert.include(NARRATION_SYSTEM_PROMPT, 'Never decide what that changes in the game')
+  })
+
   test('answers in plain prose, with no JSON and no effects', ({ assert }) => {
     assert.include(NARRATION_SYSTEM_PROMPT, 'Answer with the narration text alone')
     assert.include(NARRATION_SYSTEM_PROMPT, 'never list effects')
@@ -385,6 +391,36 @@ test.group('Narration | context sent', () => {
 
     assert.equal(scene.location, 'hotel_de_treville')
     assert.deepEqual(scene.npcs_present, turnContext().scene.npcs_present)
+  })
+
+  test('names the items of the scene, with the descriptors of improvised ones', ({ assert }) => {
+    const { items_in_scene: items } = payloadOf(buildNarrationMessage(narrationRequest()))
+
+    assert.deepEqual(items, {
+      character: [
+        { name: 'Letter for M. de Tréville', description: null },
+        { name: 'Rapier', description: "his father's old sword" },
+        { name: 'Lead shot', description: null },
+      ],
+      npcs: [{ handle: 'royal_guard_1', items: [{ name: 'Dagger', description: null }] }],
+      location: [{ name: 'Improvised weapon', description: 'a three-legged stool' }],
+    })
+  })
+
+  test('never sends what an item is worth, how many, or whether it is drawn', ({ assert }) => {
+    const message = buildNarrationMessage(narrationRequest())
+
+    for (const leak of ['modifiers', 'quantity', 'equipped', 'rapier_1', 'lead_shot']) {
+      assert.notInclude(message, leak)
+    }
+  })
+
+  test('a gone item is not in the scene to be named', ({ assert }) => {
+    /** The scene is read without gone items; nothing else is ever added. */
+    const scene = { ...turnContext().scene, items: { character: [], npcs: [], location: [] } }
+    const { items_in_scene: items } = payloadOf(buildNarrationMessage(narrationRequest({ scene })))
+
+    assert.deepEqual(items, { character: [], npcs: [], location: [] })
   })
 
   test('no longer carries the list of places', ({ assert }) => {
