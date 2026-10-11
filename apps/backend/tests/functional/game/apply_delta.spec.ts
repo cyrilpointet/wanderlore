@@ -5,13 +5,15 @@ import Character from '#models/character'
 import NpcInstance from '#models/npc_instance'
 import WorldState from '#models/world_state'
 import LocationInstance from '#models/location_instance'
+import InventoryItem from '#models/inventory_item'
+import { createItem } from '#services/game/inventory'
 import { applyDelta } from '#services/game/apply_delta'
 import { ContentLabels } from '#services/game/content_labels'
 import { visitUniqueLocation } from '#services/game/locations'
 import { enterScene } from '#services/game/npcs'
 import type { TurnEffects } from '#services/game/prompts/types'
 import { THREE_MUSKETEERS } from '#services/game/world'
-import { createSession, createUser, useTransaction } from '#tests/helpers/database'
+import { countRows, createSession, createUser, useTransaction } from '#tests/helpers/database'
 
 /** A delta that changes nothing: a spec names only what it is about. */
 function delta(overrides: Partial<TurnEffects> = {}): TurnEffects {
@@ -296,5 +298,217 @@ test.group('Applying a delta | the character', (group) => {
     assert.equal(applied.hit_points_delta, -2)
     await scene.character.refresh()
     assert.equal(scene.character.hitPoints, 0)
+  })
+})
+
+/** Where an item stands now: its holder, quantity and state. */
+async function itemOf(sessionId: string, handle: string) {
+  return InventoryItem.query().where({ sessionId, handle }).firstOrFail()
+}
+
+test.group('Applying a delta | items', (group) => {
+  useTransaction(group)
+
+  const character = { holder: 'character' as const }
+  const location = { holder: 'location' as const }
+
+  test('creates items, a copy numbered by the backend and a stack added up', async ({ assert }) => {
+    const scene = await arrangeScene()
+    const stool = {
+      definition: 'improvised_weapon',
+      descriptor: 'a three-legged stool',
+      quantity: 1,
+      holder: character,
+      equipped: true,
+    }
+    const food = { ...stool, definition: 'food', descriptor: null, quantity: 2, equipped: false }
+
+    await apply(scene, delta({ items_created: [food] }))
+    const applied = await apply(scene, delta({ items_created: [stool, food] }))
+
+    const made = await itemOf(scene.sessionId, 'improvised_weapon_1')
+    const stack = await InventoryItem.query()
+      .where({ sessionId: scene.sessionId, definitionReference: 'food' })
+      .firstOrFail()
+    assert.deepEqual([made.state, made.descriptor], ['equipped', 'a three-legged stool'])
+    assert.equal(stack.quantity, 4)
+    assert.deepEqual(applied.items.created, [
+      {
+        item: 'improvised_weapon_1',
+        definition: 'improvised_weapon',
+        quantity: 1,
+        holder: character,
+      },
+      { item: 'food', definition: 'food', quantity: 2, holder: character },
+    ])
+    assert.deepEqual(applied.items.equipped, [
+      { item: 'improvised_weapon_1', definition: 'improvised_weapon' },
+    ])
+  })
+
+  test('someone takes the letter, leaves with it, and comes back with it', async ({ assert }) => {
+    const scene = await arrangeScene()
+    await createItem(
+      THREE_MUSKETEERS,
+      scene.sessionId,
+      { definition: 'letter_to_treville', descriptor: null, quantity: 1 },
+      { type: 'character', id: scene.character.id }
+    )
+    await enterScene(THREE_MUSKETEERS, scene.sessionId, {
+      definition: 'rochefort',
+      descriptor: null,
+    })
+    const rochefort = { holder: 'npc' as const, handle: 'rochefort' }
+
+    const applied = await apply(
+      scene,
+      delta({
+        items_transferred: [
+          { item: 'letter_to_treville', from: character, to: rochefort, quantity: 1 },
+        ],
+      })
+    )
+    await apply(scene, delta({ npcs_left: ['rochefort'] }))
+    await apply(
+      scene,
+      delta({ npcs_entered: [{ definition: 'rochefort', descriptor: null, name: null }] })
+    )
+
+    const letter = await itemOf(scene.sessionId, 'letter_to_treville')
+    const instance = await NpcInstance.query()
+      .where({ sessionId: scene.sessionId, handle: 'rochefort' })
+      .firstOrFail()
+    assert.equal(letter.npcInstanceId, instance.id)
+    assert.isNull(letter.characterId)
+    /** Logged with what labels the holder later, without reading the instance back. */
+    assert.deepEqual(applied.items.transferred[0].to, {
+      holder: 'npc',
+      handle: 'rochefort',
+      definitionReference: 'rochefort',
+      name: null,
+    })
+  })
+
+  test('hidden in the place the turn began in, found again on the way back', async ({ assert }) => {
+    const scene = await arrangeScene()
+    await createItem(
+      THREE_MUSKETEERS,
+      scene.sessionId,
+      { definition: 'letter_to_treville', descriptor: null, quantity: 1 },
+      { type: 'character', id: scene.character.id }
+    )
+
+    /** Hidden in Paris on the way out: the location is where the turn began. */
+    await apply(
+      scene,
+      delta({
+        movement: { location: 'louvre' },
+        items_transferred: [
+          { item: 'letter_to_treville', from: character, to: location, quantity: 1 },
+        ],
+      })
+    )
+    await apply(scene, delta({ movement: { location: 'paris' } }))
+    await apply(
+      scene,
+      delta({
+        items_transferred: [
+          { item: 'letter_to_treville', from: location, to: character, quantity: 1 },
+        ],
+      })
+    )
+
+    const letter = await itemOf(scene.sessionId, 'letter_to_treville')
+    assert.equal(letter.characterId, scene.character.id)
+    assert.equal(await countRows('inventory_items', { session_id: scene.sessionId }), 1)
+  })
+
+  test('a unique character entering brings what they hold from the start', async ({ assert }) => {
+    const scene = await arrangeScene()
+
+    await apply(
+      scene,
+      delta({ npcs_entered: [{ definition: 'buckingham', descriptor: null, name: null }] })
+    )
+
+    const studs = await itemOf(scene.sessionId, 'queens_diamond_studs')
+    assert.isNotNull(studs.npcInstanceId)
+  })
+
+  test('uses up part of a stack, then the rest', async ({ assert }) => {
+    const scene = await arrangeScene()
+    await createItem(
+      THREE_MUSKETEERS,
+      scene.sessionId,
+      { definition: 'lead_shot', descriptor: null, quantity: 3 },
+      { type: 'character', id: scene.character.id }
+    )
+    const fire = (quantity: number) =>
+      delta({ items_destroyed: [{ item: 'lead_shot', holder: character, quantity }] })
+
+    await apply(scene, fire(1))
+    const shot = await InventoryItem.query()
+      .where({ sessionId: scene.sessionId, definitionReference: 'lead_shot' })
+      .firstOrFail()
+    assert.equal(shot.quantity, 2)
+
+    await apply(scene, fire(2))
+    await shot.refresh()
+    assert.deepEqual([shot.quantity, shot.state], [0, 'gone'])
+  })
+
+  test('draws and puts away a weapon', async ({ assert }) => {
+    const scene = await arrangeScene()
+    await createItem(
+      THREE_MUSKETEERS,
+      scene.sessionId,
+      { definition: 'rapier', descriptor: null, quantity: 1 },
+      { type: 'character', id: scene.character.id }
+    )
+
+    await apply(scene, delta({ items_equipped: ['rapier_1'] }))
+    const sword = await itemOf(scene.sessionId, 'rapier_1')
+    assert.equal(sword.state, 'equipped')
+
+    const applied = await apply(scene, delta({ items_unequipped: ['rapier_1'] }))
+    await sword.refresh()
+    assert.equal(sword.state, 'carried')
+    assert.deepEqual(applied.items.unequipped, [{ item: 'rapier_1', definition: 'rapier' }])
+  })
+
+  test('nothing of it stays when the turn fails after applying it', async ({ assert }) => {
+    const scene = await arrangeScene()
+    const worldState = await WorldState.query()
+      .where('sessionId', scene.sessionId)
+      .preload('currentLocation')
+      .firstOrFail()
+
+    await db
+      .transaction(async (trx) => {
+        await applyDelta(
+          {
+            world: THREE_MUSKETEERS,
+            sessionId: scene.sessionId,
+            character: scene.character,
+            worldState,
+          },
+          delta({
+            items_created: [
+              {
+                definition: 'rope',
+                descriptor: null,
+                quantity: 1,
+                holder: character,
+                equipped: false,
+              },
+            ],
+          }),
+          trx
+        )
+        throw new Error('The turn was expired while it was being applied.')
+      })
+      .catch(() => {})
+
+    assert.equal(await countRows('inventory_items', { session_id: scene.sessionId }), 0)
   })
 })

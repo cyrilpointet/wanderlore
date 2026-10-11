@@ -95,10 +95,35 @@ export type PlacedMovement = {
 }
 
 /**
+ * Who held or now holds an item, as logged: references and the proper name
+ * of someone present or of an improvised place — enough to label them later
+ * without reading an instance back.
+ */
+export type AppliedHolder =
+  | { holder: 'character' }
+  | { holder: 'npc'; handle: string; definitionReference: string; name: string | null }
+  | { holder: 'location'; place: PlacedMovement }
+
+/** What happened to items, as applied: handles the backend gave, holders, quantities. */
+export type AppliedItems = {
+  created: { item: string; definition: string; quantity: number; holder: AppliedHolder }[]
+  transferred: {
+    item: string
+    definition: string
+    quantity: number
+    from: AppliedHolder
+    to: AppliedHolder
+  }[]
+  destroyed: { item: string; definition: string; quantity: number; holder: AppliedHolder }[]
+  equipped: { item: string; definition: string }[]
+  unequipped: { item: string; definition: string }[]
+}
+
+/**
  * What a turn actually changed. Can be less than proposed — damage stops at
- * zero, a move to where one stands is none, a dead character stays dead. Only
- * the movement and the hit points are shown to the player; the rest is for
- * the log.
+ * zero, a move to where one stands is none, a dead character stays dead. The
+ * movement, the hit points and what happened to the character's items are
+ * shown to the player; the rest is for the log.
  */
 export type AppliedEffects = {
   movement: PlacedMovement | null
@@ -109,6 +134,8 @@ export type AppliedEffects = {
   npcs_left: string[]
   npc_names: { handle: string; name: string }[]
   npc_relations: { handle: string; disposition: NpcDisposition }[]
+  /** Absent from turns played before Phase 4. */
+  items: AppliedItems
 }
 
 export type ArbitrationOutput = {
