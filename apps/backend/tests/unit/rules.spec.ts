@@ -98,10 +98,9 @@ test.group('RulesEngine | resolution', () => {
     assert.equal(resolution.marginLabel, 'comfortable')
   })
 
-  test('records the modifiers it applied, none before Phase 4', ({ assert }) => {
+  test('without modifiers, the total is the dice and the skill alone', ({ assert }) => {
     const resolution = buildEngine([3, 5]).resolve(2, 'medium')
 
-    /** The shape is there for the log; nothing moves the total yet. */
     assert.deepEqual(resolution.appliedModifiers, [])
     assert.equal(resolution.total, 3 + 5 + 2)
   })
@@ -248,5 +247,96 @@ test.group('Rules | damage', () => {
 
   test('a failed attack is no hit at all', ({ assert }) => {
     assert.throws(() => resolveDamage(-1, [RAPIER]), RangeError)
+  })
+})
+
+test.group('RulesEngine | modifiers', () => {
+  test('prices each circumstance from its label', ({ assert }) => {
+    const resolution = buildEngine([3, 3]).resolve(2, 'medium', {
+      skill: 'persuasion',
+      contextual: [
+        { source: 'favorable_reputation', effect: 'major_bonus' },
+        { source: 'late_hour', effect: 'minor_bonus' },
+        { source: 'unsuitable_attire', effect: 'major_penalty' },
+      ],
+      items: [],
+    })
+
+    assert.deepEqual(resolution.appliedModifiers, [
+      { source: 'contextual', origin: 'favorable_reputation', value: 2 },
+      { source: 'contextual', origin: 'late_hour', value: 1 },
+      { source: 'contextual', origin: 'unsuitable_attire', value: -2 },
+    ])
+    assert.equal(resolution.total, 3 + 3 + 2 + 1)
+  })
+
+  test('keeps the two families apart, and both move the total and the margin', ({ assert }) => {
+    /** 4 + 2 + 3 = 9, a narrow success bare; +1 (circumstance) +1 (letter) = 11. */
+    const resolution = buildEngine([4, 2]).resolve(3, 'medium', {
+      skill: 'persuasion',
+      contextual: [{ source: 'favorable_reputation', effect: 'minor_bonus' }],
+      items: [LETTER, RAPIER],
+    })
+
+    assert.deepEqual(resolution.appliedModifiers, [
+      { source: 'contextual', origin: 'favorable_reputation', value: 1 },
+      { source: 'item', origin: 'letter_to_treville', value: 1 },
+    ])
+    assert.equal(resolution.total, 11)
+    assert.equal(resolution.margin, 2)
+    assert.equal(resolution.marginLabel, 'comfortable')
+  })
+
+  test('reads the item modifiers against the skill rolled', ({ assert }) => {
+    const sword = buildEngine([4, 4]).resolve(2, 'hard', {
+      skill: 'swordsmanship',
+      contextual: [],
+      items: [RAPIER, LETTER],
+    })
+    const sheathed = buildEngine([4, 4]).resolve(2, 'hard', {
+      skill: 'swordsmanship',
+      contextual: [],
+      items: [{ ...RAPIER, equipped: false }],
+    })
+
+    /** The rapier's damage bonus never weighs on the roll itself. */
+    assert.deepEqual(sword.appliedModifiers, [{ source: 'item', origin: 'rapier', value: 1 }])
+    assert.deepEqual(sheathed.appliedModifiers, [])
+  })
+
+  test('a malus lowers the total', ({ assert }) => {
+    const resolution = buildEngine([5, 5]).resolve(1, 'medium', {
+      skill: 'stealth',
+      contextual: [],
+      items: [MUSKET],
+    })
+
+    assert.equal(resolution.total, 10)
+  })
+
+  test('never takes more than three circumstances', ({ assert }) => {
+    const four = Array.from({ length: 4 }, (_, index) => ({
+      source: `circumstance_${index}`,
+      effect: 'minor_bonus' as const,
+    }))
+
+    assert.throws(
+      () =>
+        buildEngine([3, 3]).resolve(0, 'easy', { skill: 'athletics', contextual: four, items: [] }),
+      RangeError
+    )
+  })
+
+  test('the narrator still only learns the result and the margin label', ({ assert }) => {
+    const resolution = buildEngine([6, 6]).resolve(3, 'easy', {
+      skill: 'persuasion',
+      contextual: [{ source: 'favorable_reputation', effect: 'major_bonus' }],
+      items: [LETTER],
+    })
+
+    assert.deepEqual(toNarrationOutcome(resolution), {
+      result: 'success',
+      margin: 'critical_success',
+    })
   })
 })

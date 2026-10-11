@@ -18,17 +18,27 @@ const rules = new RulesEngine(dice)
 
 export default rules
 
-export { qualifyMargin, thresholdFor, toNarrationOutcome } from './rules/engine.js'
+export {
+  MAX_CONTEXTUAL_MODIFIERS,
+  contextualValue,
+  qualifyMargin,
+  thresholdFor,
+  toNarrationOutcome,
+} from './rules/engine.js'
+export { CONTEXTUAL_EFFECTS } from './rules/types.js'
 export { itemModifiers } from './rules/modifiers.js'
 export { resolveDamage } from './rules/damage.js'
 export type {
   AppliedModifier,
+  ContextualEffect,
+  ContextualModifier,
   DamageResolution,
   ModifierSource,
   ModifierTarget,
   Difficulty,
   MarginLabel,
   NarrationOutcome,
+  RollModifiers,
   RollOutcome,
   RollResolution,
 } from './rules/types.js'

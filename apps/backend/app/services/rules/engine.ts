@@ -1,8 +1,13 @@
 import type { DiceService } from '#services/dice'
+import { itemModifiers } from './modifiers.js'
 import type {
+  AppliedModifier,
+  ContextualEffect,
+  ContextualModifier,
   Difficulty,
   MarginLabel,
   NarrationOutcome,
+  RollModifiers,
   RollOutcome,
   RollResolution,
 } from './types.js'
@@ -51,6 +56,29 @@ export function qualifyMargin(margin: number): MarginLabel {
   return 'critical_failure'
 }
 
+/**
+ * What a circumstance is worth, section 5.1 of the rules document. Fixed here,
+ * so the same circumstance weighs the same from one turn to the next.
+ */
+const CONTEXTUAL_VALUES: Record<ContextualEffect, number> = {
+  major_bonus: 2,
+  minor_bonus: 1,
+  minor_penalty: -1,
+  major_penalty: -2,
+}
+
+/**
+ * More would inflate the score until the difficulty means nothing. The
+ * arbitration output is checked against it first; this is the last guard.
+ */
+export const MAX_CONTEXTUAL_MODIFIERS = 3
+
+export function contextualValue(effect: ContextualEffect): number {
+  return CONTEXTUAL_VALUES[effect]
+}
+
+const NO_MODIFIERS: RollModifiers = { skill: '', contextual: [], items: [] }
+
 export function outcomeFor(margin: number): RollOutcome {
   return margin >= 0 ? 'success' : 'failure'
 }
@@ -59,11 +87,9 @@ export function outcomeFor(margin: number): RollOutcome {
  * Deterministic resolution of a single roll.
  *
  * Everything the LLM is allowed to influence stops at the arbitration step: it
- * proposes a skill and a difficulty, the backend computes the rest.
- *
- * Phase 1 knows a single kind of roll and **no modifier at all** — neither
- * contextual nor from equipment. Those arrive in Phase 4 and belong in the sum
- * below, not in the caller.
+ * proposes an action type, a difficulty and labelled circumstances; the
+ * backend prices the circumstances, reads the item modifiers from what the
+ * roller holds, and computes the rest.
  */
 export class RulesEngine {
   #dice: DiceService
@@ -76,17 +102,31 @@ export class RulesEngine {
    * The skill value is taken as given: which skills exist and what they may be
    * worth is per-world data validated at character creation, not here.
    */
-  resolve(skillValue: number, difficulty: Difficulty): RollResolution {
+  resolve(
+    skillValue: number,
+    difficulty: Difficulty,
+    modifiers: RollModifiers = NO_MODIFIERS
+  ): RollResolution {
+    if (modifiers.contextual.length > MAX_CONTEXTUAL_MODIFIERS) {
+      throw new RangeError(
+        `${modifiers.contextual.length} contextual modifiers on one roll: ${MAX_CONTEXTUAL_MODIFIERS} at most.`
+      )
+    }
+
+    const appliedModifiers: AppliedModifier[] = [
+      ...modifiers.contextual.map(contextual),
+      ...itemModifiers(modifiers.items, { target: 'skill', skill: modifiers.skill }),
+    ]
     const roll = this.#dice.roll2d6()
     const threshold = thresholdFor(difficulty)
-    const total = roll.total + skillValue
+    const total =
+      roll.total + skillValue + appliedModifiers.reduce((sum, { value }) => sum + value, 0)
     const margin = total - threshold
 
     return {
       dice: roll.dice,
       skillValue,
-      /** Nothing to apply before Phase 4: the total is dice and skill alone. */
-      appliedModifiers: [],
+      appliedModifiers,
       total,
       difficulty,
       threshold,
@@ -95,6 +135,10 @@ export class RulesEngine {
       marginLabel: qualifyMargin(margin),
     }
   }
+}
+
+function contextual({ source, effect }: ContextualModifier): AppliedModifier {
+  return { source: 'contextual', origin: source, value: contextualValue(effect) }
 }
 
 /**

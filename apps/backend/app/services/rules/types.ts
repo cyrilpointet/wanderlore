@@ -30,6 +30,25 @@ export type AppliedModifier = {
   value: number
 }
 
+/**
+ * How much a circumstance weighs on a roll, as arbitration qualifies it. A
+ * label, never a number: the backend prices it (rules, section 5.1).
+ */
+export const CONTEXTUAL_EFFECTS = [
+  'major_bonus',
+  'minor_bonus',
+  'minor_penalty',
+  'major_penalty',
+] as const
+
+export type ContextualEffect = (typeof CONTEXTUAL_EFFECTS)[number]
+
+/** A circumstance of the turn: "favorable_reputation", "unsuitable_attire". */
+export type ContextualModifier = {
+  source: string
+  effect: ContextualEffect
+}
+
 /** What an item modifier aims at: a skill a roll tests, or the damage a hit deals. */
 export type ModifierTarget = { target: 'skill'; skill: string } | { target: 'damage' }
 
@@ -55,6 +74,16 @@ export type DamageResolution = {
 }
 
 /**
+ * What moves a roll besides the dice and the skill: the circumstances
+ * arbitration saw, and the items of whoever rolls, read against the skill.
+ */
+export type RollModifiers = {
+  skill: string
+  contextual: ContextualModifier[]
+  items: ModifierSource[]
+}
+
+/**
  * Everything a resolved roll produced.
  *
  * The numeric fields exist for `turn_log`, which records what actually
@@ -64,9 +93,8 @@ export type RollResolution = {
   dice: [number, number]
   skillValue: number
   /**
-   * Every modifier counted, with its origin. Empty until Phase 4 brings item
-   * and contextual modifiers; posted now so the log of a roll already has
-   * its full shape.
+   * Every modifier counted, with its origin: the circumstances first, then
+   * the items. The log always tells which side moved the total.
    */
   appliedModifiers: AppliedModifier[]
   /** `2d6 + skill value + modifiers`. */
