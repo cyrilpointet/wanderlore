@@ -659,7 +659,6 @@ function buildContext(
       npcs_present: scene.npcs,
       narrative_flags: scene.worldState.narrativeFlags,
       visited_locations: scene.session.locations.map((location) => location.handle),
-      world_objects: scene.worldState.worldObjects,
     },
     recent_buffer: toRecentBuffer(scene.recentTurns),
     player_input: playerInput,

@@ -12,9 +12,17 @@ const TABLES = [
   'resolution_rules',
   'location_instances',
   'npc_instances',
+  'inventory_items',
 ]
 
-const ENUM_TYPES = ['user_role', 'session_status', 'turn_status', 'npc_disposition', 'npc_status']
+const ENUM_TYPES = [
+  'user_role',
+  'session_status',
+  'turn_status',
+  'npc_disposition',
+  'npc_status',
+  'item_state',
+]
 
 async function existingTables(): Promise<string[]> {
   const { rows } = await db.rawQuery("select tablename from pg_tables where schemaname = 'public'")

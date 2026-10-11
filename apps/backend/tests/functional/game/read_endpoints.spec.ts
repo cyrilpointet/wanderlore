@@ -52,7 +52,6 @@ async function arrangeGame(userId: string, lastActivityAt = DateTime.now()) {
       { reference: 'deliver_the_letter', step: 1, summary: 'Carry the letter to Tréville.' },
     ],
     narrativeFlags: { letter_read: true },
-    worldObjects: [],
   })
 
   return session

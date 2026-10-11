@@ -184,6 +184,36 @@ export async function createNpcInstance(
   return row.id
 }
 
+export async function createInventoryItem(
+  sessionId: string,
+  holder: { characterId?: string; npcInstanceId?: string; locationInstanceId?: string },
+  overrides: Partial<{
+    handle: string | null
+    definitionReference: string
+    quantity: number
+    state: string
+  }> = {}
+): Promise<string> {
+  const now = new Date()
+  const [row] = await db
+    .table('inventory_items')
+    .insert({
+      session_id: sessionId,
+      character_id: holder.characterId ?? null,
+      npc_instance_id: holder.npcInstanceId ?? null,
+      location_instance_id: holder.locationInstanceId ?? null,
+      handle: overrides.handle === undefined ? 'rapier_1' : overrides.handle,
+      definition_reference: overrides.definitionReference ?? 'rapier',
+      ...(overrides.quantity === undefined ? {} : { quantity: overrides.quantity }),
+      ...(overrides.state ? { state: overrides.state } : {}),
+      created_at: now,
+      updated_at: now,
+    })
+    .returning('id')
+
+  return row.id
+}
+
 export async function createTurn(
   sessionId: string,
   turnNumber: number | null = 1,

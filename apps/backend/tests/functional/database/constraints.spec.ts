@@ -4,6 +4,8 @@ import {
   PG_CHECK_VIOLATION,
   PG_INVALID_TEXT_REPRESENTATION,
   PG_UNIQUE_VIOLATION,
+  createCharacter,
+  createInventoryItem,
   createLocationInstance,
   createNpcInstance,
   createResolutionRule,
@@ -153,6 +155,86 @@ test.group('Schema constraints', (group) => {
 
     assert.equal(score.code, PG_INVALID_TEXT_REPRESENTATION)
     assert.equal(unknownStatus.code, PG_INVALID_TEXT_REPRESENTATION)
+  })
+
+  test('an item has exactly one holder while it exists', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    const characterId = await createCharacter(sessionId)
+    const npcInstanceId = await createNpcInstance(sessionId)
+
+    const nobody = await expectDbError(() => createInventoryItem(sessionId, {}))
+    const twoHolders = await expectDbError(() =>
+      createInventoryItem(sessionId, { characterId, npcInstanceId })
+    )
+
+    assert.equal(nobody.code, PG_CHECK_VIOLATION)
+    assert.equal(twoHolders.code, PG_CHECK_VIOLATION)
+    /** Gone, it may keep its last holder or none. */
+    assert.isString(
+      await createInventoryItem(sessionId, {}, { state: 'gone', quantity: 0, handle: 'rapier_9' })
+    )
+  })
+
+  test('only the character equips an item', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    const npcInstanceId = await createNpcInstance(sessionId)
+
+    const error = await expectDbError(() =>
+      createInventoryItem(sessionId, { npcInstanceId }, { state: 'equipped' })
+    )
+
+    assert.equal(error.code, PG_CHECK_VIOLATION)
+  })
+
+  test('an item that exists counts at least one', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    const characterId = await createCharacter(sessionId)
+
+    const empty = await expectDbError(() =>
+      createInventoryItem(sessionId, { characterId }, { quantity: 0 })
+    )
+    const leftover = await expectDbError(() =>
+      createInventoryItem(sessionId, { characterId }, { quantity: 2, state: 'gone' })
+    )
+
+    assert.equal(empty.code, PG_CHECK_VIOLATION)
+    assert.equal(leftover.code, PG_CHECK_VIOLATION)
+  })
+
+  test('a handle names one item per game, whoever holds it', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    const characterId = await createCharacter(sessionId)
+    const locationInstanceId = await createLocationInstance(sessionId)
+    await createInventoryItem(sessionId, { characterId })
+
+    const error = await expectDbError(() => createInventoryItem(sessionId, { locationInstanceId }))
+
+    assert.equal(error.code, PG_UNIQUE_VIOLATION)
+  })
+
+  test('a holder keeps one stack per definition', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    const characterId = await createCharacter(sessionId)
+    const npcInstanceId = await createNpcInstance(sessionId)
+    const stack = { handle: null, definitionReference: 'lead_shot', quantity: 5 }
+    await createInventoryItem(sessionId, { characterId }, stack)
+
+    const error = await expectDbError(() => createInventoryItem(sessionId, { characterId }, stack))
+
+    assert.equal(error.code, PG_UNIQUE_VIOLATION)
+    /** The same stack is fine with someone else. */
+    assert.isString(await createInventoryItem(sessionId, { npcInstanceId }, stack))
+  })
+
+  test('an item state is one of three, nothing else', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    const characterId = await createCharacter(sessionId)
+
+    const error = await expectDbError(() =>
+      createInventoryItem(sessionId, { characterId }, { state: 'broken' })
+    )
+
+    assert.equal(error.code, PG_INVALID_TEXT_REPRESENTATION)
   })
 
   test('two accounts cannot share an email', async ({ assert }) => {

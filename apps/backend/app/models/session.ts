@@ -4,6 +4,7 @@ import Character from '#models/character'
 import WorldState from '#models/world_state'
 import LocationInstance from '#models/location_instance'
 import NpcInstance from '#models/npc_instance'
+import InventoryItem from '#models/inventory_item'
 import { SessionSchema } from '#database/schema'
 import { belongsTo, hasMany, hasOne } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, HasOne } from '@adonisjs/lucid/types/relations'
@@ -41,4 +42,8 @@ export default class Session extends SessionSchema {
   /** The people this game has met, present or not: an instance is never deleted. */
   @hasMany(() => NpcInstance)
   declare npcs: HasMany<typeof NpcInstance>
+
+  /** Every item of the game, whoever holds it, gone ones included. */
+  @hasMany(() => InventoryItem)
+  declare items: HasMany<typeof InventoryItem>
 }

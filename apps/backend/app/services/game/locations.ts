@@ -2,6 +2,8 @@ import type { QueryClientContract } from '@adonisjs/lucid/types/database'
 
 import LocationInstance from '#models/location_instance'
 
+import { placeInitialItems } from './inventory.js'
+
 import {
   type WorldDefinition,
   locationArchetypeReferences,
@@ -38,7 +40,8 @@ export class UnknownLocationError extends Error {
 /**
  * The instance of a unique place in a game: created on its first visit, with
  * the reference itself for handle, and found again on every later one. A
- * unique place is never duplicated.
+ * unique place is never duplicated. On the first visit, the unique items kept
+ * there from the start come into being with it.
  */
 export async function visitUniqueLocation(
   world: WorldDefinition,
@@ -50,11 +53,23 @@ export async function visitUniqueLocation(
     throw new UnknownLocationError(world.reference, reference, 'unique places')
   }
 
-  return LocationInstance.firstOrCreate(
+  const instance = await LocationInstance.firstOrCreate(
     { sessionId, handle: reference },
     { definitionReference: reference, parentReference: null },
     { client }
   )
+
+  if (instance.$isLocal) {
+    await placeInitialItems(
+      world,
+      sessionId,
+      { type: 'location', id: instance.id },
+      reference,
+      client
+    )
+  }
+
+  return instance
 }
 
 /**

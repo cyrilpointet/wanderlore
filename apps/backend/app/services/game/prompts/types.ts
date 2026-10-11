@@ -117,7 +117,6 @@ export type SceneState = {
   narrative_flags: Record<string, unknown>
   /** Handles of the places this game has been through, oldest first. */
   visited_locations: string[]
-  world_objects: Record<string, unknown>[]
 }
 
 /**

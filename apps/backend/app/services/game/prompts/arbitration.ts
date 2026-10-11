@@ -136,7 +136,6 @@ export function buildArbitrationMessage(context: ArbitrationContext): string {
       /** intent.target must be one of these handles. */
       npcs_present: context.scene.npcs_present,
       narrative_flags: context.scene.narrative_flags,
-      world_objects: context.scene.world_objects,
     },
     /**
      * Who acts, and how hurt they are — never their skill values. The

@@ -99,7 +99,6 @@ test.group('Lucid models', (group) => {
       sessionId,
       activeQuests: [{ reference: 'deliver_the_letter', step: 1 }],
       narrativeFlags: { queens_favour_earned: true },
-      worldObjects: [],
     })
 
     const reloaded = await WorldState.findOrFail(created.id)

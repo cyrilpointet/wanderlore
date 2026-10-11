@@ -81,7 +81,6 @@ async function arrangeScene() {
     sessionId,
     activeQuests: [],
     narrativeFlags: {},
-    worldObjects: [],
   })
 
   return { userId, sessionId }

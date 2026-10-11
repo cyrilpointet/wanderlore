@@ -217,7 +217,7 @@ lieux ; en base à partir de la Phase 5. Chaque définition porte :
 | `handle` | varchar, nullable | exemplaire non empilable : identifiant stable dans la partie, attribué par le backend (la référence pour un unique, `rapier_2` pour un archétype) ; null pour un empilable |
 | `definition_reference` | varchar | référence de la définition instanciée |
 | `descriptor` | text, nullable | description courte en anglais d'un objet improvisé, réservée au narrateur, jamais traduite ni affichée |
-| `quantity` | int | ≥ 1 ; toujours 1 pour un exemplaire non empilable |
+| `quantity` | int | ≥ 1 tant que l'objet existe, toujours 1 pour un exemplaire non empilable ; 0 une fois `gone` (CHECK) |
 | `state` | enum `item_state` | `carried` / `equipped` / `gone` |
 | `created_at` / `updated_at` | timestamptz | — |
 

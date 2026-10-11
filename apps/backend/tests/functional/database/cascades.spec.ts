@@ -4,6 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import {
   countRows,
   createCharacter,
+  createInventoryItem,
   createLocationInstance,
   createNpcInstance,
   createSession,
@@ -24,14 +25,19 @@ test.group('Cascading deletes', (group) => {
   test('deleting a session removes everything that belongs to it', async ({ assert }) => {
     const userId = await createUser()
     const sessionId = await createSession(userId)
-    await createCharacter(sessionId)
+    const characterId = await createCharacter(sessionId)
     /**
      * The world state points at a place of the same game: both go in the same
      * statement, so the reference between them never blocks the delete.
      */
-    await createWorldState(sessionId, await createLocationInstance(sessionId))
-    await createNpcInstance(sessionId)
+    const locationInstanceId = await createLocationInstance(sessionId)
+    await createWorldState(sessionId, locationInstanceId)
+    const npcInstanceId = await createNpcInstance(sessionId)
     await createTurn(sessionId)
+    /** Items under each kind of holder: every path to the session has to cascade. */
+    await createInventoryItem(sessionId, { characterId })
+    await createInventoryItem(sessionId, { npcInstanceId }, { handle: 'rapier_2' })
+    await createInventoryItem(sessionId, { locationInstanceId }, { handle: 'rapier_3' })
 
     await db.from('sessions').where({ id: sessionId }).delete()
 
@@ -40,6 +46,7 @@ test.group('Cascading deletes', (group) => {
     assert.equal(await countRows('location_instances', { session_id: sessionId }), 0)
     assert.equal(await countRows('npc_instances', { session_id: sessionId }), 0)
     assert.equal(await countRows('turn_log', { session_id: sessionId }), 0)
+    assert.equal(await countRows('inventory_items', { session_id: sessionId }), 0)
   })
 
   test('deleting a user removes their sessions and everything below', async ({ assert }) => {

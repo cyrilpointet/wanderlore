@@ -63,6 +63,15 @@ export default {
       },
     },
 
+    inventory_items: {
+      columns: {
+        state: {
+          tsType: "'carried' | 'equipped' | 'gone'",
+          decorators: column,
+        },
+      },
+    },
+
     sessions: {
       columns: {
         status: {
@@ -90,7 +99,6 @@ export default {
          * the type.
          */
         narrative_flags: jsonObject,
-        world_objects: jsonObjectList,
       },
     },
 

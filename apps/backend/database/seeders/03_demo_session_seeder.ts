@@ -7,6 +7,7 @@ import Character from '#models/character'
 import WorldState from '#models/world_state'
 import { THREE_MUSKETEERS } from '#services/game/world'
 import { visitUniqueLocation } from '#services/game/locations'
+import { createItem, equipItem } from '#services/game/inventory'
 
 /**
  * A playable game for the test account, so the turn endpoint can be exercised
@@ -45,7 +46,7 @@ export default class extends BaseSeeder {
       lastActivityAt: DateTime.now(),
     })
 
-    await Character.create({
+    const character = await Character.create({
       sessionId: session.id,
       name: "d'Artagnan",
       attributes: { physical: 3, mental: 2, social: 3 },
@@ -74,8 +75,33 @@ export default class extends BaseSeeder {
         },
       ],
       narrativeFlags: {},
-      worldObjects: [{ reference: 'letter_to_treville', location: 'carried' }],
     })
+
+    /**
+     * What d'Artagnan leaves Gascony with: his father's letter for Tréville,
+     * and his father's old sword at his side. His purse is a resource, not an
+     * item.
+     */
+    const holder = { type: 'character' as const, id: character.id }
+
+    await createItem(
+      THREE_MUSKETEERS,
+      session.id,
+      { definition: 'letter_to_treville', descriptor: null, quantity: 1 },
+      holder
+    )
+
+    const sword = await createItem(
+      THREE_MUSKETEERS,
+      session.id,
+      {
+        definition: 'rapier',
+        descriptor: "his father's old sword, long and a little out of fashion",
+        quantity: 1,
+      },
+      holder
+    )
+    await equipItem(THREE_MUSKETEERS, sword)
   }
 }
 

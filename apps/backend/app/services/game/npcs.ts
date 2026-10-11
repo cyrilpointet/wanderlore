@@ -2,6 +2,8 @@ import type { QueryClientContract } from '@adonisjs/lucid/types/database'
 
 import NpcInstance from '#models/npc_instance'
 
+import { placeInitialItems } from './inventory.js'
+
 import type { NpcDisposition, WorldDefinition } from './world.js'
 
 /** Someone entering the scene, as the extraction step will propose it. */
@@ -65,7 +67,9 @@ export class DeadNpcError extends Error {
  * - an archetype gets a new instance, numbered by the backend within the game
  *   (`cardinal_guard_1`, `cardinal_guard_2`), never by the model.
  *
- * A new instance starts with the disposition its definition declares. Turns of
+ * A new instance starts with the disposition its definition declares, and a
+ * unique character met for the first time comes in with the items they hold
+ * from the start. Turns of
  * a game are played one at a time, so counting is enough to number; the
  * unique `(session_id, handle)` is the last line of defence.
  */
@@ -105,7 +109,7 @@ export async function enterScene(
       ? definition.reference
       : `${definition.reference}_${(await countOf(sessionId, definition.reference, client)) + 1}`
 
-  return NpcInstance.create(
+  const instance = await NpcInstance.create(
     {
       sessionId,
       handle,
@@ -117,6 +121,18 @@ export async function enterScene(
     },
     { client }
   )
+
+  if (definition.kind === 'unique') {
+    await placeInitialItems(
+      world,
+      sessionId,
+      { type: 'npc', id: instance.id },
+      definition.reference,
+      client
+    )
+  }
+
+  return instance
 }
 
 /**

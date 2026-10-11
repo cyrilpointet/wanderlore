@@ -64,7 +64,6 @@ function turnContext(overrides: Partial<TurnContext> = {}): TurnContext {
       ],
       narrative_flags: {},
       visited_locations: ['meung_sur_loire', 'hotel_de_treville'],
-      world_objects: [],
     },
     recent_buffer: [{ role: 'narration', text: 'A guard bars your way.' }],
     player_input: 'I show him my letter and ask to pass.',
