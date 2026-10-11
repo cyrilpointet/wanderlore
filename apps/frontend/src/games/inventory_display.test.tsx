@@ -74,6 +74,27 @@ describe('Character sheet | inventory tab', () => {
     expect(textOf(markup)).not.toContain('Letter for M. de Tréville')
   })
 
+  test('keeps where the story stands for its own tab', () => {
+    const quest = {
+      reference: 'deliver_the_letter',
+      label: 'Deliver the letter',
+      summary: 'Carry the letter to Tréville.',
+    }
+    const withQuest = { ...game([]), activeQuests: [quest] }
+
+    const character = textOf(renderToStaticMarkup(<CharacterSheet game={withQuest} />))
+    const situation = textOf(
+      renderToStaticMarkup(<CharacterSheet game={withQuest} initialTab="situation" />)
+    )
+
+    expect(character).toContain('Situation')
+    expect(character).not.toContain('Paris')
+    expect(character).not.toContain('Deliver the letter')
+    expect(situation).toContain('Paris')
+    expect(situation).toContain('Deliver the letter')
+    expect(situation).not.toContain('Persuasion')
+  })
+
   test('says so when the character carries nothing', () => {
     const markup = renderToStaticMarkup(<CharacterSheet game={game([])} initialTab="inventory" />)
 

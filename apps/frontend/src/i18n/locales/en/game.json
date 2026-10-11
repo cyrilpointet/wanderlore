@@ -26,14 +26,14 @@
     "hitPoints": "Hit points",
     "attributesAndSkills": "Attributes & skills",
     "resources": "Resources",
-    "situation": "Situation",
     "location": "Location",
     "quest": "Quest",
     "noLocation": "Unknown",
     "tabs": {
       "label": "Character sheet sections",
       "character": "Character",
-      "inventory": "Inventory"
+      "inventory": "Inventory",
+      "situation": "Situation"
     },
     "inventory": {
       "empty": "You carry nothing.",

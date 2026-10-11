@@ -6,14 +6,14 @@ import { HitPointGauge } from './hit_point_gauge'
 import { groupSkills, showsQuantity } from './presentation'
 import type { Character, Game } from './queries'
 
-const TABS = ['character', 'inventory'] as const
+const TABS = ['character', 'inventory', 'situation'] as const
 
 type Tab = (typeof TABS)[number]
 
 /**
  * The player's sheet, read-only: their values are shown as they are, as at
  * the table. The name and the hit points stay in view; the rest is split in
- * two tabs, the character and what they carry.
+ * three tabs: the character, what they carry, and where the story stands.
  */
 export function CharacterSheet({
   game,
@@ -28,12 +28,17 @@ export function CharacterSheet({
   const { character } = game
   const [tab, setTab] = useState<Tab>(initialTab)
   const ids = useId()
-  const tabs = useRef<Record<Tab, HTMLButtonElement | null>>({ character: null, inventory: null })
+  const tabs = useRef<Record<Tab, HTMLButtonElement | null>>({
+    character: null,
+    inventory: null,
+    situation: null,
+  })
 
-  /** Arrow keys move between the two tabs, as a tab list expects. */
+  /** Arrow keys move to the previous or next tab, wrapping around, as a tab list expects. */
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-    const next: Tab = tab === 'character' ? 'inventory' : 'character'
+    const step = event.key === 'ArrowRight' ? 1 : TABS.length - 1
+    const next = TABS[(TABS.indexOf(tab) + step) % TABS.length] ?? tab
     setTab(next)
     tabs.current[next]?.focus()
   }
@@ -104,11 +109,9 @@ export function CharacterSheet({
         aria-labelledby={`${ids}-${tab}-tab`}
         className="-mt-2 flex flex-col gap-8"
       >
-        {tab === 'character' ? (
-          <CharacterTab game={game} />
-        ) : (
-          <InventoryTab inventory={character.inventory} />
-        )}
+        {tab === 'character' && <CharacterTab character={character} />}
+        {tab === 'inventory' && <InventoryTab inventory={character.inventory} />}
+        {tab === 'situation' && <SituationTab game={game} />}
       </div>
     </div>
   )
@@ -148,10 +151,9 @@ function InventoryTab({ inventory }: { inventory: Character['inventory'] }) {
   )
 }
 
-/** Who they are and where the story stands. */
-function CharacterTab({ game }: { game: Game }) {
+/** Who they are: attributes, skills and resources. */
+function CharacterTab({ character }: { character: Character }) {
   const { t } = useTranslation('game')
-  const { character } = game
 
   return (
     <>
@@ -195,28 +197,33 @@ function CharacterTab({ game }: { game: Game }) {
           </dl>
         </Section>
       )}
-
-      <Section title={t('sheet.situation')}>
-        <div className="flex flex-col gap-5">
-          <div>
-            <h4 className="text-label text-subtle">{t('sheet.location')}</h4>
-            <p className="mt-1 flex items-center gap-2 text-body text-text">
-              <MapPin aria-hidden className="size-4 shrink-0 text-muted" />
-              {game.location?.label ?? t('sheet.noLocation')}
-            </p>
-          </div>
-          {game.activeQuests.map((quest) => (
-            <div key={quest.reference}>
-              <h4 className="text-label text-subtle">{t('sheet.quest')}</h4>
-              <p className="mt-1 text-body text-text">{quest.label}</p>
-              {quest.summary && (
-                <p className="mt-1.5 font-serif text-body text-muted">{quest.summary}</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </Section>
     </>
+  )
+}
+
+/** Where the story stands: the place and the quests under way. */
+function SituationTab({ game }: { game: Game }) {
+  const { t } = useTranslation('game')
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h3 className="text-label text-subtle">{t('sheet.location')}</h3>
+        <p className="mt-1 flex items-center gap-2 text-body text-text">
+          <MapPin aria-hidden className="size-4 shrink-0 text-muted" />
+          {game.location?.label ?? t('sheet.noLocation')}
+        </p>
+      </div>
+      {game.activeQuests.map((quest) => (
+        <div key={quest.reference}>
+          <h3 className="text-label text-subtle">{t('sheet.quest')}</h3>
+          <p className="mt-1 text-body text-text">{quest.label}</p>
+          {quest.summary && (
+            <p className="mt-1.5 font-serif text-body text-muted">{quest.summary}</p>
+          )}
+        </div>
+      ))}
+    </div>
   )
 }
 
