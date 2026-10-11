@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 
 import i18n from './index'
 import { errorMessage } from './errors'
-import { GAME_STATUSES, MARGINS, RESULTS, STEPS, TURN_STATUSES } from '@/api/enums'
+import { GAME_STATUSES, ITEM_CHANGES, MARGINS, RESULTS, STEPS, TURN_STATUSES } from '@/api/enums'
 
 describe('i18n', () => {
   test.each([
@@ -11,6 +11,7 @@ describe('i18n', () => {
     ['step', STEPS],
     ['result', RESULTS],
     ['margin', MARGINS],
+    ['itemChange', ITEM_CHANGES],
   ])('labels every %s value', (group, values) => {
     for (const value of values) {
       expect(i18n.exists(`${group}.${value}`, { ns: 'enums' }), `${group}.${value}`).toBe(true)

@@ -16,8 +16,12 @@ export const MARGINS = [
   'critical_failure',
 ] as const
 
+/** What happened to one of the character's items during a turn. */
+export const ITEM_CHANGES = ['gained', 'lost', 'used_up', 'equipped', 'unequipped'] as const
+
 export type GameStatus = (typeof GAME_STATUSES)[number]
 export type TurnStatus = (typeof TURN_STATUSES)[number]
 export type Step = (typeof STEPS)[number]
 export type Result = (typeof RESULTS)[number]
 export type Margin = (typeof MARGINS)[number]
+export type ItemChange = (typeof ITEM_CHANGES)[number]

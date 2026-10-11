@@ -1,4 +1,4 @@
-import type { Character, LabelledValue } from './queries'
+import type { Character, InventoryItem, LabelledValue } from './queries'
 
 /**
  * Purely visual derivations — layout, never game logic (front spec,
@@ -32,4 +32,12 @@ export function paragraphs(narration: string): string[] {
 export function gaugePercent(current: number, max: number): number {
   if (max <= 0) return 0
   return Math.min(100, Math.max(0, (current / max) * 100))
+}
+
+/**
+ * A stack shows how many there are, even one; a copy is one of a kind and
+ * shows no count.
+ */
+export function showsQuantity(item: Pick<InventoryItem, 'handle' | 'quantity'>): boolean {
+  return item.handle === null || item.quantity > 1
 }

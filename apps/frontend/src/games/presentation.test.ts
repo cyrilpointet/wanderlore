@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { gaugePercent, groupSkills, paragraphs } from './presentation'
+import { gaugePercent, groupSkills, paragraphs, showsQuantity } from './presentation'
 
 describe('groupSkills', () => {
   test('puts each skill under its attribute, keeping the order received', () => {
@@ -48,5 +48,13 @@ describe('gaugePercent', () => {
     [3, 0, 0],
   ])('%i / %i fills %i%%', (current, max, percent) => {
     expect(gaugePercent(current, max)).toBe(percent)
+  })
+})
+
+describe('showsQuantity', () => {
+  test('a stack shows how many, even one; a copy shows none', () => {
+    expect(showsQuantity({ handle: null, quantity: 1 })).toBe(true)
+    expect(showsQuantity({ handle: null, quantity: 6 })).toBe(true)
+    expect(showsQuantity({ handle: 'rapier_1', quantity: 1 })).toBe(false)
   })
 })

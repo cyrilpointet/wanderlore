@@ -5,6 +5,7 @@ import { transmit } from '@/api/transmit'
 import type { ContentLabel } from '@/api/types'
 import { gameQuery, gamesQuery, turnsQuery, type Character, type Game, type Turn } from './queries'
 import { channelOf, readTurn, submitTurn } from './turn_api'
+import { withCompletedTurn } from './game_cache'
 import { classifySubmitError } from './turn_errors'
 import {
   concerns,
@@ -63,14 +64,7 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
 
       if (character) {
         queryClient.setQueryData(gameQuery(gameId).queryKey, (current) =>
-          current
-            ? {
-                ...current,
-                character,
-                location: location === undefined ? current.location : location,
-                pendingTurn: null,
-              }
-            : current
+          current ? withCompletedTurn(current, character, location) : current
         )
       } else {
         // Read back rather than received: the sheet is not in the turn, so ask for it.

@@ -14,11 +14,13 @@
     "newMessage": "New message",
     "welcome": "Your story begins. What do you do?",
     "sending": "Sending…",
-    "considering": "The game master considers your action"
+    "considering": "The game master considers your action",
+    "rollWith": "{{skill}} · {{outcome}} · with {{items, list}}"
   },
   "effects": {
     "hitPoints": "{{delta, number(signDisplay: exceptZero)}} HP",
-    "movement": "You arrive at {{location}}"
+    "movement": "You arrive at {{location}}",
+    "quantity": "{{item}} ×{{count, number}}"
   },
   "sheet": {
     "hitPoints": "Hit points",
@@ -27,7 +29,17 @@
     "situation": "Situation",
     "location": "Location",
     "quest": "Quest",
-    "noLocation": "Unknown"
+    "noLocation": "Unknown",
+    "tabs": {
+      "label": "Character sheet sections",
+      "character": "Character",
+      "inventory": "Inventory"
+    },
+    "inventory": {
+      "empty": "You carry nothing.",
+      "quantity": "×{{count, number}}",
+      "equipped": "Equipped"
+    }
   },
   "composer": {
     "label": "Your action",

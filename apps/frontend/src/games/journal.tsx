@@ -1,10 +1,10 @@
-import { ArrowDown, Dice5, Heart, MapPin } from 'lucide-react'
+import { ArrowDown, Dice5, Heart, MapPin, Package } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { Margin } from '@/api/enums'
 import { paragraphs } from './presentation'
-import type { Game, Roll, Turn } from './queries'
+import type { Game, ItemChangeEffect, Roll, Turn } from './queries'
 import { useStickToBottom } from './use_stick_to_bottom'
 
 /**
@@ -101,7 +101,8 @@ const MARGIN_EMPHASIS: Record<Margin, string> = {
 
 /**
  * Which skill was rolled and how it went — never a number. The colour only
- * doubles the words, it never carries the outcome alone.
+ * doubles the words, it never carries the outcome alone. When an item weighed
+ * on the roll, it is named, never with what it was worth.
  */
 export function RollChip({ roll }: { roll: Roll }) {
   const { t } = useTranslation('game')
@@ -112,10 +113,16 @@ export function RollChip({ roll }: { roll: Roll }) {
         className={`inline-flex items-center gap-2 rounded-sm border px-3 py-1 text-label ${ROLL_TONE[roll.result]} ${MARGIN_EMPHASIS[roll.margin]}`}
       >
         <Dice5 aria-hidden className="size-4 shrink-0" />
-        {t('journal.roll', {
-          skill: roll.skill.label,
-          outcome: t(`margin.${roll.margin}`, { ns: 'enums' }),
-        })}
+        {roll.items.length > 0
+          ? t('journal.rollWith', {
+              skill: roll.skill.label,
+              outcome: t(`margin.${roll.margin}`, { ns: 'enums' }),
+              items: roll.items.map((item) => item.label),
+            })
+          : t('journal.roll', {
+              skill: roll.skill.label,
+              outcome: t(`margin.${roll.margin}`, { ns: 'enums' }),
+            })}
       </span>
     </p>
   )
@@ -146,7 +153,9 @@ export function Narration({ text, provisional = false }: { text: string; provisi
 export function Effects({ effects }: { effects: NonNullable<Turn['effects']> }) {
   const { t } = useTranslation('game')
 
-  if (effects.hitPointsDelta === 0 && !effects.movement) return null
+  if (effects.hitPointsDelta === 0 && !effects.movement && effects.items.length === 0) {
+    return null
+  }
 
   return (
     <ul className="flex flex-wrap gap-x-6 gap-y-2 text-label">
@@ -162,7 +171,33 @@ export function Effects({ effects }: { effects: NonNullable<Turn['effects']> }) 
           {t('effects.movement', { location: effects.movement.label })}
         </li>
       )}
+      {effects.items.map((change, index) => (
+        <li key={index} className="flex items-center gap-1.5 text-muted">
+          <Package aria-hidden className="size-4" />
+          <ItemChangeText change={change} />
+        </li>
+      ))}
     </ul>
+  )
+}
+
+/** "You get the sword from Bernajoux", "Lead shot ×2 goes to the tavern". */
+function ItemChangeText({ change }: { change: ItemChangeEffect }) {
+  const { t } = useTranslation('game')
+  const item =
+    change.quantity > 1
+      ? t('effects.quantity', { item: change.item.label, count: change.quantity })
+      : change.item.label
+
+  return (
+    <>
+      {t(`itemChange.${change.change}`, {
+        ns: 'enums',
+        item,
+        counterpart: change.counterpart?.label,
+        context: change.counterpart ? 'counterpart' : undefined,
+      })}
+    </>
   )
 }
 

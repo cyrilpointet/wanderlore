@@ -1,18 +1,42 @@
-import type { ReactNode } from 'react'
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { MapPin } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { HitPointGauge } from './hit_point_gauge'
-import { groupSkills } from './presentation'
-import type { Game } from './queries'
+import { groupSkills, showsQuantity } from './presentation'
+import type { Character, Game } from './queries'
+
+const TABS = ['character', 'inventory'] as const
+
+type Tab = (typeof TABS)[number]
 
 /**
  * The player's sheet, read-only: their values are shown as they are, as at
- * the table. Built as one panel so Phase 4 can add an inventory tab to it.
+ * the table. The name and the hit points stay in view; the rest is split in
+ * two tabs, the character and what they carry.
  */
-export function CharacterSheet({ game, headingId }: { game: Game; headingId?: string }) {
+export function CharacterSheet({
+  game,
+  headingId,
+  initialTab = 'character',
+}: {
+  game: Game
+  headingId?: string
+  initialTab?: Tab
+}) {
   const { t } = useTranslation('game')
   const { character } = game
+  const [tab, setTab] = useState<Tab>(initialTab)
+  const ids = useId()
+  const tabs = useRef<Record<Tab, HTMLButtonElement | null>>({ character: null, inventory: null })
+
+  /** Arrow keys move between the two tabs, as a tab list expects. */
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    const next: Tab = tab === 'character' ? 'inventory' : 'character'
+    setTab(next)
+    tabs.current[next]?.focus()
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -44,6 +68,93 @@ export function CharacterSheet({ game, headingId }: { game: Game; headingId?: st
         />
       </section>
 
+      <div
+        role="tablist"
+        aria-label={t('sheet.tabs.label')}
+        className="flex gap-6 border-b border-border"
+      >
+        {TABS.map((name) => (
+          <button
+            key={name}
+            ref={(element) => {
+              tabs.current[name] = element
+            }}
+            type="button"
+            role="tab"
+            id={`${ids}-${name}-tab`}
+            aria-selected={tab === name}
+            aria-controls={`${ids}-${name}`}
+            tabIndex={tab === name ? 0 : -1}
+            onClick={() => setTab(name)}
+            onKeyDown={onKeyDown}
+            className={`-mb-px border-b-2 pb-2 text-label transition-colors ${
+              tab === name
+                ? 'border-accent text-text'
+                : 'border-transparent text-muted hover:text-text'
+            }`}
+          >
+            {t(`sheet.tabs.${name}`)}
+          </button>
+        ))}
+      </div>
+
+      <div
+        role="tabpanel"
+        id={`${ids}-${tab}`}
+        aria-labelledby={`${ids}-${tab}-tab`}
+        className="-mt-2 flex flex-col gap-8"
+      >
+        {tab === 'character' ? (
+          <CharacterTab game={game} />
+        ) : (
+          <InventoryTab inventory={character.inventory} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** What they carry, as the backend labels it: no value, no description of the narrator's. */
+function InventoryTab({ inventory }: { inventory: Character['inventory'] }) {
+  const { t } = useTranslation('game')
+
+  if (inventory.length === 0) {
+    return <p className="text-body text-muted">{t('sheet.inventory.empty')}</p>
+  }
+
+  return (
+    <ul className="flex flex-col gap-2.5">
+      {inventory.map((entry, index) => (
+        <li
+          key={entry.handle ?? `${entry.item.reference}-${index}`}
+          className="flex items-baseline justify-between gap-4 text-body text-text"
+        >
+          <span>
+            {entry.item.label}
+            {showsQuantity(entry) && (
+              <span className="ml-2 text-label text-muted tabular-nums">
+                {t('sheet.inventory.quantity', { count: entry.quantity })}
+              </span>
+            )}
+          </span>
+          {entry.equipped && (
+            <span className="shrink-0 rounded-sm border border-accent/50 px-2 py-0.5 text-meta text-accent uppercase">
+              {t('sheet.inventory.equipped')}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** Who they are and where the story stands. */
+function CharacterTab({ game }: { game: Game }) {
+  const { t } = useTranslation('game')
+  const { character } = game
+
+  return (
+    <>
       <Section title={t('sheet.attributesAndSkills')}>
         <dl className="flex flex-col gap-5">
           {groupSkills(character).map((attribute) => (
@@ -105,7 +216,7 @@ export function CharacterSheet({ game, headingId }: { game: Game; headingId?: st
           ))}
         </div>
       </Section>
-    </div>
+    </>
   )
 }
 

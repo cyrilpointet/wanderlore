@@ -261,7 +261,12 @@ function onMessage(state: TurnState, message: TurnMessage): TurnState {
     case 'roll_resolved':
       return {
         ...current,
-        roll: { skill: message.skill, result: message.result, margin: message.margin },
+        roll: {
+          skill: message.skill,
+          result: message.result,
+          margin: message.margin,
+          items: message.items,
+        },
       }
     case 'narration_chunk':
       if (current.narration === null) return current

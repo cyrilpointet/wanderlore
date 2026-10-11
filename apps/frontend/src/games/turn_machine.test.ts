@@ -99,7 +99,15 @@ describe('turn machine — a turn played to the end', () => {
       submit,
       accepted,
       on(message({ event: 'step_started', step: 'arbitration' })),
-      on(message({ event: 'roll_resolved', skill: SKILL, result: 'success', margin: 'narrow' })),
+      on(
+        message({
+          event: 'roll_resolved',
+          skill: SKILL,
+          result: 'success',
+          margin: 'narrow',
+          items: [],
+        })
+      ),
       on(message({ event: 'step_started', step: 'narration' }))
     )
 
@@ -142,6 +150,7 @@ describe('turn machine — failures', () => {
           skill: SKILL,
           result: 'failure',
           margin: 'minor_failure',
+          items: [],
         })
       ),
       on(message({ event: 'turn_failed', failure }))

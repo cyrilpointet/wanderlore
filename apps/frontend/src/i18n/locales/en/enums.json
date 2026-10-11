@@ -23,5 +23,14 @@
     "narrow": "Narrow success",
     "minor_failure": "Failure",
     "critical_failure": "Critical failure"
+  },
+  "itemChange": {
+    "gained": "You gain {{item}}",
+    "gained_counterpart": "You get {{item}} from {{counterpart}}",
+    "lost": "You no longer have {{item}}",
+    "lost_counterpart": "{{item}} goes to {{counterpart}}",
+    "used_up": "You use up {{item}}",
+    "equipped": "You equip {{item}}",
+    "unequipped": "You put away {{item}}"
   }
 }

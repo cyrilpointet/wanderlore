@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
-import type { GameStatus, Margin, Result, TurnStatus } from '@/api/enums'
+import type { GameStatus, ItemChange, Margin, Result, TurnStatus } from '@/api/enums'
 import type { ContentLabel } from '@/api/types'
 
 /**
@@ -35,6 +35,19 @@ export type Character = {
   /** Each skill names the reference of its attribute. */
   skills: (LabelledValue & { attribute: string })[]
   resources: LabelledValue[]
+  /** What the character holds. What others hold is never sent. */
+  inventory: InventoryItem[]
+}
+
+/**
+ * An item the character holds. A stack has no handle; an improvised item
+ * reads as its archetype. What an item is worth never leaves the backend.
+ */
+export type InventoryItem = {
+  handle: string | null
+  item: ContentLabel
+  quantity: number
+  equipped: boolean
 }
 
 /** A game as its own screen shows it: the full sheet and where the story stands. */
@@ -50,6 +63,16 @@ export type Roll = {
   skill: ContentLabel
   result: Result
   margin: Margin
+  /** The items that weighed on the roll — which, never by how much. */
+  items: ContentLabel[]
+}
+
+/** What happened to one of the character's items, with whom when someone was involved. */
+export type ItemChangeEffect = {
+  change: ItemChange
+  item: ContentLabel
+  quantity: number
+  counterpart: ContentLabel | null
 }
 
 export type Turn = {
@@ -63,6 +86,7 @@ export type Turn = {
   effects: {
     hitPointsDelta: number
     movement: ContentLabel | null
+    items: ItemChangeEffect[]
   } | null
   failure: { code: string; message: string } | null
 }
