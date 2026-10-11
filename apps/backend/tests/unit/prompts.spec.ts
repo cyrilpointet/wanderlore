@@ -481,6 +481,7 @@ test.group('Extraction | contract', () => {
     return buildExtractionMessage({
       ...turnContext(),
       narration: 'Tréville reads the letter and waves you upstairs.',
+      creatable_items: ['improvised_weapon', 'rope', 'food'],
     })
   }
 
@@ -500,6 +501,38 @@ test.group('Extraction | contract', () => {
     assert.deepEqual(payload.location_archetypes, locationArchetypeReferences(THREE_MUSKETEERS))
     /** The only handles the people fields may use. */
     assert.deepEqual(payload.scene_state.npcs_present, turnContext().scene.npcs_present)
+  })
+
+  test('carries the items of the scene by holder, as identifiers with how many', ({ assert }) => {
+    const { items_in_scene: items } = payloadOf(extractionMessage())
+
+    assert.deepEqual(items, {
+      character: [
+        { item: 'letter_to_treville', label: 'Letter for M. de Tréville', quantity: 1 },
+        { item: 'rapier_1', label: 'Rapier', quantity: 1 },
+        { item: 'lead_shot', label: 'Lead shot', quantity: 6 },
+      ],
+      npcs: [
+        { handle: 'royal_guard_1', items: [{ item: 'dagger_1', label: 'Dagger', quantity: 1 }] },
+      ],
+      location: [{ item: 'improvised_weapon_1', label: 'Improvised weapon', quantity: 1 }],
+    })
+  })
+
+  test('offers only the definitions an item may come into being from', ({ assert }) => {
+    const { item_definitions: definitions } = payloadOf(extractionMessage())
+
+    assert.deepEqual(
+      definitions.map(({ definition }: { definition: string }) => definition),
+      ['improvised_weapon', 'rope', 'food']
+    )
+    /** What an item is worth never reaches the model. */
+    assert.notInclude(extractionMessage(), 'modifiers')
+  })
+
+  test('moves an item rather than destroying and recreating it', ({ assert }) => {
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'never a destruction followed by a creation')
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'does not change hands and does not come into being')
   })
 
   test('names entities by reference, never by name', ({ assert }) => {
@@ -540,6 +573,11 @@ test.group('Extraction | contract', () => {
       'npc_relations',
       'scenario_flags',
       'hit_points_delta',
+      'items_created',
+      'items_transferred',
+      'items_destroyed',
+      'items_equipped',
+      'items_unequipped',
     ])
     assert.deepEqual(EXTRACTION_SCHEMA.properties.movement.required, [
       'location',

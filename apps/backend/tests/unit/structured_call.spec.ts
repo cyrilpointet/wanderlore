@@ -22,6 +22,10 @@ const META = {
   locationArchetypes: ['tavern'],
   npcDefinitions: ['commoner'],
   itemsInScene: [],
+  sceneItems: [],
+  creatableItems: [],
+  itemKinds: [],
+  hasLocation: true,
   hitPointsMax: 10,
 }
 

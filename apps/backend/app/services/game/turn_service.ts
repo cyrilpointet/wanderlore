@@ -21,7 +21,7 @@ import {
 } from './errors.js'
 import { applyDelta } from './apply_delta.js'
 import { type PresentNpc, presentNpcs } from './npcs.js'
-import { type ItemsInScene, itemsInScene } from './inventory.js'
+import { type ItemsInScene, creatableItems, itemsInScene, sceneItemsOf } from './inventory.js'
 import { actionTypesOf, skillFor } from './resolution_rules.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
@@ -81,6 +81,11 @@ const NO_CHANGE: TurnEffects = {
   npc_relations: [],
   scenario_flags: [],
   hit_points_delta: 0,
+  items_created: [],
+  items_transferred: [],
+  items_destroyed: [],
+  items_equipped: [],
+  items_unequipped: [],
 }
 
 /**
@@ -345,6 +350,15 @@ export class TurnService {
       locationArchetypes: locationArchetypeReferences(THREE_MUSKETEERS),
       npcDefinitions: npcReferences(THREE_MUSKETEERS),
       itemsInScene: itemReferencesOf(scene.items),
+      sceneItems: sceneItemsOf(scene.items),
+      creatableItems: scene.creatableItems,
+      itemKinds: THREE_MUSKETEERS.items.map((item) => ({
+        reference: item.reference,
+        unique: item.kind === 'unique',
+        stackable: item.kind === 'archetype' && item.stackable,
+        equippable: item.equippable,
+      })),
+      hasLocation: scene.worldState.currentLocationId !== null,
       hitPointsMax: scene.character.hitPointsMax,
     }
     const step = { trace, budget }
@@ -378,7 +392,11 @@ export class TurnService {
       return NO_CHANGE
     }
 
-    return this.#extract(buildExtractionMessage({ ...context, narration }), meta, step)
+    return this.#extract(
+      buildExtractionMessage({ ...context, narration, creatable_items: scene.creatableItems }),
+      meta,
+      step
+    )
   }
 
   /**
@@ -560,6 +578,7 @@ export class TurnService {
         characterId: character.id,
         locationInstanceId: session.worldState.currentLocationId,
       }),
+      creatableItems: await creatableItems(THREE_MUSKETEERS, sessionId),
       /** Oldest first, so the model reads the exchange in the order it happened. */
       recentTurns: turns.reverse(),
       lastTurnNumber: Number(last?.$extras.max ?? 0),
@@ -641,6 +660,7 @@ type LoadedScene = {
   worldState: WorldState
   npcs: PresentNpc[]
   items: ItemsInScene
+  creatableItems: string[]
   /**
    * As many as the narrator reads, the longer of the two buffers; arbitration
    * keeps only the last of them.

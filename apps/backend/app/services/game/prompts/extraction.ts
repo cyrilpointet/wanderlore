@@ -1,3 +1,5 @@
+import { ContentLabels } from '#services/game/content_labels'
+import type { HeldItem } from '#services/game/inventory'
 import { locationArchetypeReferences, uniqueLocationReferences } from '#services/game/world'
 import type { ExtractionRequest } from './types.js'
 
@@ -34,6 +36,15 @@ People:
 - npc_names records a proper name a present person reveals in the narration.
 - npc_relations sets the new disposition of a present person whose attitude changed: hostile, unfriendly, neutral, friendly or allied. Always the new disposition itself, never a change by steps.
 
+Items:
+- items_in_scene lists the items of the scene by holder: what the character holds, what each person present holds, and what lies in the place where the scene began. Each one has an "item" identifier: name it by that identifier, never by a name.
+- A holder is {"holder": "character", "handle": null}, {"holder": "npc", "handle": <a handle from npcs_present>} or {"holder": "location", "handle": null}, the location being the place where the scene began.
+- items_transferred lists the items that change hands: taken, given, stolen, hidden, dropped, picked up from where they lay. Each with its item, from (who holds it now), to, and the quantity that moves. Moving an item is never a destruction followed by a creation.
+- items_created lists the items that come into being: bought, found, picked up from nowhere listed. The definition comes from item_definitions only; use a generic one for anything improvised, with a short English descriptor ("a three-legged stool"). Set equipped to true when the character wields or wears it at once.
+- items_destroyed lists the items used up or destroyed: a shot fired, food eaten, a letter burnt, with its holder and the quantity.
+- items_equipped and items_unequipped list the identifiers of the character's own items they draw or wear, or put away.
+- An item merely described, seen or mentioned does not change hands and does not come into being.
+
 Other changes:
 - scenario_flags are short English references in snake_case for notable story events (for example letter_delivered). Never a sentence, never a display name.
 - hit_points_delta is the change to the character's hit points the narration describes: negative for harm, positive for healing, 0 when nothing happened to them.
@@ -44,6 +55,16 @@ Answer only with the given JSON schema, with no text outside it.`
 const nullableString = { type: ['string', 'null'] }
 
 const handleList = { type: 'array', items: { type: 'string' } }
+
+/** Flat, so any provider can describe it: the handle is null unless the holder is someone present. */
+const holder = {
+  type: 'object',
+  properties: {
+    holder: { type: 'string', enum: ['character', 'npc', 'location'] },
+    handle: nullableString,
+  },
+  required: ['holder', 'handle'],
+}
 
 export const EXTRACTION_SCHEMA = {
   type: 'object',
@@ -97,6 +118,43 @@ export const EXTRACTION_SCHEMA = {
     },
     scenario_flags: { type: 'array', items: { type: 'string' } },
     hit_points_delta: { type: 'integer' },
+    items_created: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          definition: { type: 'string' },
+          descriptor: nullableString,
+          quantity: { type: 'integer' },
+          holder,
+          equipped: { type: 'boolean' },
+        },
+        required: ['definition', 'descriptor', 'quantity', 'holder', 'equipped'],
+      },
+    },
+    items_transferred: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          item: { type: 'string' },
+          from: holder,
+          to: holder,
+          quantity: { type: 'integer' },
+        },
+        required: ['item', 'from', 'to', 'quantity'],
+      },
+    },
+    items_destroyed: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { item: { type: 'string' }, holder, quantity: { type: 'integer' } },
+        required: ['item', 'holder', 'quantity'],
+      },
+    },
+    items_equipped: handleList,
+    items_unequipped: handleList,
   },
   required: [
     'movement',
@@ -107,6 +165,11 @@ export const EXTRACTION_SCHEMA = {
     'npc_relations',
     'scenario_flags',
     'hit_points_delta',
+    'items_created',
+    'items_transferred',
+    'items_destroyed',
+    'items_equipped',
+    'items_unequipped',
   ],
 } as const satisfies Record<string, unknown>
 
@@ -130,7 +193,33 @@ export function buildExtractionMessage(request: ExtractionRequest): string {
     })),
     unique_locations: uniqueLocationReferences(request.world),
     location_archetypes: locationArchetypeReferences(request.world),
+    /**
+     * The items it may move, destroy or equip, by holder, with how many: a
+     * copy by handle, a stack by definition. No modifier, ever.
+     */
+    items_in_scene: itemsForExtraction(request),
+    /** The only definitions an item may come into being from. */
+    item_definitions: request.world.items
+      .filter((item) => request.creatable_items.includes(item.reference))
+      .map((item) => ({ definition: item.reference, description: item.description })),
   }
 
   return `${FRAMING}\n\n${JSON.stringify(payload, null, 2)}\n\nExtract the state changes this narration describes under the defined schema.`
+}
+
+function itemsForExtraction(request: ExtractionRequest) {
+  const labels = new ContentLabels(request.world)
+  const view = (held: HeldItem[]) =>
+    held.map(({ handle, definition, quantity }) => ({
+      item: handle ?? definition,
+      label: labels.of('item', definition).label,
+      quantity,
+    }))
+  const items = request.scene.items
+
+  return {
+    character: view(items.character),
+    npcs: items.npcs.map((npc) => ({ handle: npc.handle, items: view(npc.items) })),
+    location: view(items.location),
+  }
 }

@@ -1,6 +1,6 @@
 import { test } from '@japa/runner'
 
-import { extracted } from '#tests/helpers/turns'
+import { CHARACTER, LOCATION, extracted, npc } from '#tests/helpers/turns'
 import {
   TurnValidationError,
   type ValidationMeta,
@@ -15,6 +15,43 @@ const META: ValidationMeta = {
   locationArchetypes: ['tavern', 'town'],
   npcDefinitions: ['treville', 'royal_guard', 'commoner'],
   itemsInScene: ['letter_to_treville', 'rapier', 'rapier_1'],
+  /** The character's letter, sword and shot, the guard's dagger, a rope in the room. */
+  sceneItems: [
+    {
+      item: 'letter_to_treville',
+      definition: 'letter_to_treville',
+      holder: { holder: 'character' },
+      quantity: 1,
+    },
+    { item: 'rapier_1', definition: 'rapier', holder: { holder: 'character' }, quantity: 1 },
+    { item: 'lead_shot', definition: 'lead_shot', holder: { holder: 'character' }, quantity: 6 },
+    {
+      item: 'dagger_1',
+      definition: 'dagger',
+      holder: { holder: 'npc', handle: 'royal_guard_1' },
+      quantity: 1,
+    },
+    { item: 'rope_1', definition: 'rope', holder: { holder: 'location' }, quantity: 1 },
+  ],
+  creatableItems: [
+    'improvised_weapon',
+    'common_sword',
+    'food',
+    'lead_shot',
+    'queens_diamond_studs',
+  ],
+  itemKinds: [
+    { reference: 'letter_to_treville', unique: true, stackable: false, equippable: false },
+    { reference: 'queens_diamond_studs', unique: true, stackable: false, equippable: false },
+    { reference: 'rapier', unique: false, stackable: false, equippable: true },
+    { reference: 'dagger', unique: false, stackable: false, equippable: true },
+    { reference: 'rope', unique: false, stackable: false, equippable: false },
+    { reference: 'improvised_weapon', unique: false, stackable: false, equippable: true },
+    { reference: 'common_sword', unique: false, stackable: false, equippable: true },
+    { reference: 'food', unique: false, stackable: true, equippable: false },
+    { reference: 'lead_shot', unique: false, stackable: true, equippable: false },
+  ],
+  hasLocation: true,
   hitPointsMax: 10,
 }
 
@@ -568,5 +605,187 @@ test.group('Turn validator | contextual modifiers', () => {
     )
 
     assert.deepEqual(output.resolution.contextual_modifiers, [])
+  })
+})
+
+test.group('Turn validator | items', () => {
+  const stool = {
+    definition: 'improvised_weapon',
+    descriptor: 'a three-legged stool',
+    quantity: 1,
+    holder: CHARACTER,
+    equipped: true,
+  }
+
+  test('reads items changing hands, coming into being and going, by holder', async ({ assert }) => {
+    const effects = await validateExtraction(
+      extracted({
+        items_created: [stool],
+        items_transferred: [
+          { item: 'letter_to_treville', from: CHARACTER, to: npc('royal_guard_1'), quantity: 1 },
+          { item: 'rope_1', from: LOCATION, to: CHARACTER, quantity: 1 },
+          { item: 'lead_shot', from: CHARACTER, to: LOCATION, quantity: 2 },
+        ],
+        items_destroyed: [{ item: 'lead_shot', holder: CHARACTER, quantity: 1 }],
+        items_unequipped: ['rapier_1'],
+      }),
+      META
+    )
+
+    assert.deepEqual(effects.items_created, [{ ...stool, holder: { holder: 'character' } }])
+    assert.deepEqual(effects.items_transferred[0], {
+      item: 'letter_to_treville',
+      from: { holder: 'character' },
+      to: { holder: 'npc', handle: 'royal_guard_1' },
+      quantity: 1,
+    })
+    assert.deepEqual(effects.items_destroyed, [
+      { item: 'lead_shot', holder: { holder: 'character' }, quantity: 1 },
+    ])
+    assert.deepEqual(effects.items_unequipped, ['rapier_1'])
+  })
+
+  test('refuses an item outside the list it may come from', async ({ assert }) => {
+    /** The exit criterion: nothing appears that the list does not hold. */
+    const invented = await reject(() =>
+      validateExtraction(
+        extracted({ items_created: [{ ...stool, definition: 'magic_ring', equipped: false }] }),
+        META
+      )
+    )
+    const alreadyHeld = await reject(() =>
+      validateExtraction(
+        extracted({
+          items_created: [{ ...stool, definition: 'letter_to_treville', equipped: false }],
+        }),
+        META
+      )
+    )
+
+    assert.include(fields(invented), 'items_created.0.definition')
+    assert.include(fields(alreadyHeld), 'items_created.0.definition')
+  })
+
+  test('refuses an item its holder does not hold, or a holder out of the scene', async ({
+    assert,
+  }) => {
+    const notHeld = await reject(() =>
+      validateExtraction(
+        extracted({
+          items_transferred: [
+            { item: 'dagger_1', from: CHARACTER, to: npc('royal_guard_1'), quantity: 1 },
+          ],
+        }),
+        META
+      )
+    )
+    const absent = await reject(() =>
+      validateExtraction(
+        extracted({
+          items_transferred: [
+            { item: 'letter_to_treville', from: CHARACTER, to: npc('rochefort'), quantity: 1 },
+          ],
+        }),
+        META
+      )
+    )
+
+    assert.include(fields(notHeld), 'items_transferred.0.item')
+    assert.deepEqual(notHeld.reasons[0].allowed, ['letter_to_treville', 'rapier_1', 'lead_shot'])
+    assert.include(fields(absent), 'items_transferred.0.to')
+  })
+
+  test('never moves or uses up more than is held', async ({ assert }) => {
+    const error = await reject(() =>
+      validateExtraction(
+        extracted({
+          items_transferred: [{ item: 'lead_shot', from: CHARACTER, to: LOCATION, quantity: 4 }],
+          items_destroyed: [{ item: 'lead_shot', holder: CHARACTER, quantity: 3 }],
+        }),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'items')
+  })
+
+  test('counts a copy one at a time, and changes it once', async ({ assert }) => {
+    const many = await reject(() =>
+      validateExtraction(extracted({ items_created: [{ ...stool, quantity: 2 }] }), META)
+    )
+    const twice = await reject(() =>
+      validateExtraction(
+        extracted({
+          items_transferred: [{ item: 'rapier_1', from: CHARACTER, to: LOCATION, quantity: 1 }],
+          items_destroyed: [{ item: 'rapier_1', holder: CHARACTER, quantity: 1 }],
+        }),
+        META
+      )
+    )
+
+    assert.include(fields(many), 'items_created.0.quantity')
+    assert.include(fields(twice), 'items_destroyed.0')
+  })
+
+  test('a unique item comes into being once', async ({ assert }) => {
+    const studs = { ...stool, definition: 'queens_diamond_studs', equipped: false }
+
+    const error = await reject(() =>
+      validateExtraction(extracted({ items_created: [studs, studs] }), META)
+    )
+
+    assert.include(fields(error), 'items_created.1')
+  })
+
+  test('only the character equips, and only what can be equipped', async ({ assert }) => {
+    const givenAway = await reject(() =>
+      validateExtraction(
+        extracted({
+          items_transferred: [{ item: 'rapier_1', from: CHARACTER, to: LOCATION, quantity: 1 }],
+          items_equipped: ['rapier_1'],
+        }),
+        META
+      )
+    )
+    const letter = await reject(() =>
+      validateExtraction(extracted({ items_equipped: ['letter_to_treville'] }), META)
+    )
+    const forSomeoneElse = await reject(() =>
+      validateExtraction(
+        extracted({ items_created: [{ ...stool, holder: npc('royal_guard_1') }] }),
+        META
+      )
+    )
+
+    assert.include(fields(givenAway), 'items_equipped.0')
+    assert.include(fields(letter), 'items_equipped.0')
+    assert.include(fields(forSomeoneElse), 'items_created.0.equipped')
+  })
+
+  test('an item picked up this turn can be drawn at once', async ({ assert }) => {
+    const effects = await validateExtraction(
+      extracted({
+        items_transferred: [
+          { item: 'dagger_1', from: npc('royal_guard_1'), to: CHARACTER, quantity: 1 },
+        ],
+        items_equipped: ['dagger_1'],
+      }),
+      META
+    )
+
+    assert.deepEqual(effects.items_equipped, ['dagger_1'])
+  })
+
+  test('a scene that began nowhere has no place to hold anything', async ({ assert }) => {
+    const error = await reject(() =>
+      validateExtraction(
+        extracted({
+          items_transferred: [{ item: 'lead_shot', from: CHARACTER, to: LOCATION, quantity: 1 }],
+        }),
+        { ...META, hasLocation: false }
+      )
+    )
+
+    assert.include(fields(error), 'items_transferred.0.to')
   })
 })

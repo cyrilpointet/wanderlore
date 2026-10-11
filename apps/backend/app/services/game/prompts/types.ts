@@ -36,12 +36,23 @@ export type Movement =
   | { definition: string; parent: string; descriptor: string | null; name: string | null }
 
 /**
+ * Who holds an item, as extraction names them: the character, someone
+ * present by handle, or the place the turn began in — the only place whose
+ * items it was shown.
+ */
+export type ItemHolderRef =
+  { holder: 'character' } | { holder: 'npc'; handle: string } | { holder: 'location' }
+
+/**
+ * An item of the scene, as extraction designates it: a copy by its handle, a
+ * stack by its definition — told apart by who holds it.
+ */
+export type ItemOperation = { item: string; quantity: number }
+
+/**
  * The state changes extraction read in the narration, validated against the
  * closed lists — what the backend will apply, not what it applied. Every
  * entity is named by a reference or a handle, never by a name.
- *
- * No items before Phase 4: a field the backend would reject on every turn is
- * not worth the tokens it costs on every turn.
  */
 export type TurnEffects = {
   movement: Movement | null
@@ -53,6 +64,22 @@ export type TurnEffects = {
   npc_relations: { handle: string; disposition: NpcDisposition }[]
   scenario_flags: string[]
   hit_points_delta: number
+  /** Items coming into being, from the closed list of definitions. */
+  items_created: {
+    definition: string
+    descriptor: string | null
+    quantity: number
+    holder: ItemHolderRef
+    /** Drawn or worn at once — the character's, and an equippable item, only. */
+    equipped: boolean
+  }[]
+  /** Items changing hands: taken, given, hidden, dropped, picked up. Never a loss. */
+  items_transferred: (ItemOperation & { from: ItemHolderRef; to: ItemHolderRef })[]
+  /** Items used up or destroyed. */
+  items_destroyed: (ItemOperation & { holder: ItemHolderRef })[]
+  /** Handles of the character's copies they draw or wear, or put away. */
+  items_equipped: string[]
+  items_unequipped: string[]
 }
 
 /**
@@ -182,4 +209,9 @@ export type NarrationRequest = TurnContext & {
 /** What extraction reads: the narration as written, and the scene it happened in. */
 export type ExtractionRequest = Pick<TurnContext, 'world' | 'scene' | 'character'> & {
   narration: string
+  /**
+   * The closed list of definitions an item may come into being from:
+   * archetypes, and unique items the game has not met and nobody holds.
+   */
+  creatable_items: string[]
 }

@@ -29,8 +29,8 @@ import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { seedResolutionRules } from '#tests/helpers/content'
-import { createSession, createUser, useTransaction } from '#tests/helpers/database'
-import { extracted, playerOf } from '#tests/helpers/turns'
+import { countRows, createSession, createUser, useTransaction } from '#tests/helpers/database'
+import { CHARACTER, extracted, playerOf } from '#tests/helpers/turns'
 
 /**
  * The pipeline end to end, with the model and the dice replaced. No network
@@ -803,6 +803,47 @@ test.group('TurnService | items and circumstances', (group) => {
     assert.equal(turn.status, 'completed')
     assert.lengthOf(turn.rejectedAttempts!, 1)
     assert.include(provider.requests[1].userMessage, 'letter_to_treville')
+  })
+
+  test('an item outside the list never comes into being', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeArmedScene()
+    const ring = extracted({
+      items_created: [
+        {
+          definition: 'magic_ring',
+          descriptor: 'a ring that glows',
+          quantity: 1,
+          holder: CHARACTER,
+          equipped: false,
+        },
+      ],
+    })
+    const { provider, play } = buildService([NEEDS_ROLL, streamed(NARRATED_TEXT), ring, ring])
+
+    const error = await play({ sessionId, userId, playerInput: 'I search for a magic ring.' })
+      .then(() => null)
+      .catch((caught) => caught)
+
+    assert.instanceOf(error, TurnValidationError)
+    /** The corrective message names the definitions it may pick from. */
+    assert.include(provider.requests[3].userMessage, 'improvised_weapon')
+    /** The letter and the sword, nothing more. */
+    assert.equal(await countRows('inventory_items', { session_id: sessionId }), 2)
+  })
+
+  test('extraction sees the items of the scene and what may come into being', async ({
+    assert,
+  }) => {
+    const { sessionId, userId } = await arrangeArmedScene()
+    const { provider, play } = buildService(SETTLED_TURN)
+
+    await play({ sessionId, userId, playerInput: 'I look around.' })
+
+    const extraction = provider.requests[2].userMessage
+    assert.include(extraction, '"item": "rapier_1"')
+    assert.include(extraction, '"definition": "improvised_weapon"')
+    /** Held from the start by Buckingham: it comes with him, never from nowhere. */
+    assert.notInclude(extraction, '"definition": "queens_diamond_studs"')
   })
 
   test('refused twice, the turn fails and nothing moves', async ({ assert }) => {

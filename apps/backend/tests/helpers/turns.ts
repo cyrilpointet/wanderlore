@@ -24,6 +24,13 @@ export function playerOf(service: TurnService) {
   }
 }
 
+/** A holder as the model names it: the handle only matters for someone present. */
+export type WireHolder = { holder: 'character' | 'npc' | 'location'; handle: string | null }
+
+export const CHARACTER: WireHolder = { holder: 'character', handle: null }
+export const LOCATION: WireHolder = { holder: 'location', handle: null }
+export const npc = (handle: string): WireHolder => ({ holder: 'npc', handle })
+
 type WireMovement = {
   location: string | null
   definition: string | null
@@ -47,6 +54,17 @@ export function extracted(
     npc_relations?: { handle: string; disposition: string }[]
     scenario_flags?: string[]
     hit_points_delta?: number
+    items_created?: {
+      definition: string
+      descriptor: string | null
+      quantity: number
+      holder: WireHolder
+      equipped: boolean
+    }[]
+    items_transferred?: { item: string; from: WireHolder; to: WireHolder; quantity: number }[]
+    items_destroyed?: { item: string; holder: WireHolder; quantity: number }[]
+    items_equipped?: string[]
+    items_unequipped?: string[]
   } = {}
 ) {
   const { movement = null, ...rest } = answer
@@ -72,6 +90,11 @@ export function extracted(
     npc_relations: [],
     scenario_flags: [],
     hit_points_delta: 0,
+    items_created: [],
+    items_transferred: [],
+    items_destroyed: [],
+    items_equipped: [],
+    items_unequipped: [],
     ...rest,
   }
 }

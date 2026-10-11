@@ -24,6 +24,11 @@ function delta(overrides: Partial<TurnEffects> = {}): TurnEffects {
     npc_relations: [],
     scenario_flags: [],
     hit_points_delta: 0,
+    items_created: [],
+    items_transferred: [],
+    items_destroyed: [],
+    items_equipped: [],
+    items_unequipped: [],
     ...overrides,
   }
 }

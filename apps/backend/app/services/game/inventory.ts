@@ -4,6 +4,7 @@ import InventoryItem from '#models/inventory_item'
 import NpcInstance from '#models/npc_instance'
 
 import type { ItemDefinition, WorldDefinition } from './world.js'
+import type { ItemHolderRef } from './prompts/types.js'
 
 /**
  * Who holds an item: the character, someone of the game, or a place. Always
@@ -426,6 +427,57 @@ export async function itemsInScene(
       )
       .map(toHeldItem),
   }
+}
+
+/**
+ * An item of the scene as extraction may designate it — a copy by its handle,
+ * a stack by its definition — with who holds it and how many.
+ */
+export type SceneItem = {
+  item: string
+  definition: string
+  holder: ItemHolderRef
+  quantity: number
+}
+
+export function sceneItemsOf(items: ItemsInScene): SceneItem[] {
+  const of = (holder: ItemHolderRef) => (held: HeldItem) => ({
+    item: held.handle ?? held.definition,
+    definition: held.definition,
+    holder,
+    quantity: held.quantity,
+  })
+
+  return [
+    ...items.character.map(of({ holder: 'character' })),
+    ...items.npcs.flatMap((npc) => npc.items.map(of({ holder: 'npc', handle: npc.handle }))),
+    ...items.location.map(of({ holder: 'location' })),
+  ]
+}
+
+/**
+ * The definitions an item may come into being from in this game: every
+ * archetype, and the unique items it has not met yet and that nobody holds
+ * from the start — those come with their holder.
+ */
+export async function creatableItems(
+  world: WorldDefinition,
+  sessionId: string,
+  client?: QueryClientContract
+): Promise<string[]> {
+  const existing = await InventoryItem.query({ client })
+    .where('sessionId', sessionId)
+    .whereNotNull('handle')
+    .select('handle')
+  const met = new Set(existing.map((item) => item.handle))
+
+  return world.items
+    .filter((definition) =>
+      definition.kind === 'archetype'
+        ? true
+        : definition.initialHolder === null && !met.has(definition.reference)
+    )
+    .map((definition) => definition.reference)
 }
 
 function toHeldItem(item: InventoryItem): HeldItem {

@@ -5,7 +5,8 @@ import { MAX_CONTEXTUAL_MODIFIERS } from '#services/rules/engine'
 
 import { NPC_DISPOSITIONS } from './world.js'
 import { OUT_OF_CHARACTER } from './prompts/arbitration.js'
-import type { ArbitrationOutput, Movement, TurnEffects } from './prompts/types.js'
+import type { SceneItem } from './inventory.js'
+import type { ArbitrationOutput, ItemHolderRef, Movement, TurnEffects } from './prompts/types.js'
 
 /**
  * Nothing coming out of the model is trusted.
@@ -61,8 +62,23 @@ export type ValidationMeta = {
    * pass for a circumstance, or it would count twice.
    */
   itemsInScene: string[]
+  /** The items of the scene extraction may move, destroy or equip, and who holds them. */
+  sceneItems: SceneItem[]
+  /** Closed list: the definitions an item may come into being from. */
+  creatableItems: string[]
+  /** What the rules of the inventory need to know of each definition. */
+  itemKinds: ItemKind[]
+  /** Whether the turn began somewhere: a place to drop things in, or pick them up from. */
+  hasLocation: boolean
   /** Bounds the damage or healing a single turn may claim. */
   hitPointsMax: number
+}
+
+export type ItemKind = {
+  reference: string
+  unique: boolean
+  stackable: boolean
+  equippable: boolean
 }
 
 /**
@@ -78,7 +94,22 @@ const MAX_FLAGS_PER_TURN = 5
 /** More people moving in or out in a single narration means it is not reading the text. */
 const MAX_NPC_CHANGES_PER_TURN = 6
 
+/** More items changing in a single narration means it is not reading the text. */
+const MAX_ITEM_CHANGES_PER_TURN = 6
+
+/** A stack bought or found in one go — a purse of shot, a basket of food. */
+const MAX_ITEM_QUANTITY = 50
+
 const limitsOf = (field: { meta: unknown }) => field.meta as ValidationMeta
+
+/** Flat on the wire: the handle only means something for someone present. */
+const wireHolder = () =>
+  vine.object({
+    holder: vine.enum(['character', 'npc', 'location'] as const),
+    handle: vine.string().trim().nullable(),
+  })
+
+const quantity = () => vine.number().withoutDecimals().min(1).max(MAX_ITEM_QUANTITY)
 
 const presentHandle = () => vine.enum((field) => limitsOf(field).npcHandles)
 
@@ -161,6 +192,33 @@ const extractionValidator = vine.withMetaData<ValidationMeta>().create({
     .maxLength(MAX_NPC_CHANGES_PER_TURN),
   scenario_flags: vine.array(vine.string().regex(REFERENCE)).maxLength(MAX_FLAGS_PER_TURN),
   hit_points_delta: vine.number().withoutDecimals(),
+  /** Only from the closed list: an item the model invented would have no effect and no label. */
+  items_created: vine
+    .array(
+      vine.object({
+        definition: vine.enum((field) => limitsOf(field).creatableItems),
+        descriptor: shortText(200).nullable(),
+        quantity: quantity(),
+        holder: wireHolder(),
+        equipped: vine.boolean(),
+      })
+    )
+    .maxLength(MAX_ITEM_CHANGES_PER_TURN),
+  items_transferred: vine
+    .array(
+      vine.object({
+        item: vine.string().trim(),
+        from: wireHolder(),
+        to: wireHolder(),
+        quantity: quantity(),
+      })
+    )
+    .maxLength(MAX_ITEM_CHANGES_PER_TURN),
+  items_destroyed: vine
+    .array(vine.object({ item: vine.string().trim(), holder: wireHolder(), quantity: quantity() }))
+    .maxLength(MAX_ITEM_CHANGES_PER_TURN),
+  items_equipped: vine.array(vine.string().trim()).maxLength(MAX_ITEM_CHANGES_PER_TURN),
+  items_unequipped: vine.array(vine.string().trim()).maxLength(MAX_ITEM_CHANGES_PER_TURN),
 })
 
 export async function validateArbitration(
@@ -219,8 +277,13 @@ export async function validateExtraction(
   meta: ValidationMeta
 ): Promise<TurnEffects> {
   const output = await run<RawExtraction>('extraction', extractionValidator, payload, meta)
+  const items = readItems(output, meta)
 
-  const reasons = [...movementReasons(output.movement), ...effectReasons(output, meta)]
+  const reasons = [
+    ...movementReasons(output.movement),
+    ...effectReasons(output, meta),
+    ...items.reasons,
+  ]
 
   if (reasons.length > 0) {
     throw new TurnValidationError('extraction', reasons)
@@ -228,6 +291,7 @@ export async function validateExtraction(
 
   return {
     ...output,
+    ...items.effects,
     movement: toMovement(output.movement),
     npcs_entered: output.npcs_entered.map((entry) => ({ ...entry, name: entry.name ?? null })),
   }
@@ -242,9 +306,223 @@ type FlatMovement = {
   name: string | null
 }
 
-type RawExtraction = Omit<TurnEffects, 'movement' | 'npcs_entered'> & {
+type WireHolder = { holder: 'character' | 'npc' | 'location'; handle: string | null }
+
+type ItemFields =
+  'items_created' | 'items_transferred' | 'items_destroyed' | 'items_equipped' | 'items_unequipped'
+
+type RawExtraction = Omit<TurnEffects, 'movement' | 'npcs_entered' | ItemFields> & {
   movement: FlatMovement | null
   npcs_entered: { definition: string; descriptor: string | null; name?: string | null }[]
+  items_created: (Omit<TurnEffects['items_created'][number], 'holder'> & {
+    holder: WireHolder
+  })[]
+  items_transferred: { item: string; from: WireHolder; to: WireHolder; quantity: number }[]
+  items_destroyed: { item: string; holder: WireHolder; quantity: number }[]
+  items_equipped: string[]
+  items_unequipped: string[]
+}
+
+/**
+ * Item changes checked against the scene as the turn began: every item named
+ * is held by the holder named, never more of it moves or goes than there is,
+ * a copy changes once at most, and only the character equips what can be
+ * equipped. Holders come back as references the backend can resolve.
+ */
+function readItems(
+  output: RawExtraction,
+  meta: ValidationMeta
+): { reasons: RejectionReason[]; effects: Pick<TurnEffects, ItemFields> } {
+  const reasons: RejectionReason[] = []
+  const kindOf = (definition: string) =>
+    meta.itemKinds.find((kind) => kind.reference === definition)
+
+  const holderOf = (wire: WireHolder, field: string): ItemHolderRef | null => {
+    if (wire.holder === 'character') {
+      return { holder: 'character' }
+    }
+
+    if (wire.holder === 'location') {
+      if (meta.hasLocation) {
+        return { holder: 'location' }
+      }
+
+      reasons.push(
+        reason(field, 'location', 'The scene began nowhere: there is no place to hold it.')
+      )
+      return null
+    }
+
+    if (wire.handle !== null && meta.npcHandles.includes(wire.handle)) {
+      return { holder: 'npc', handle: wire.handle }
+    }
+
+    reasons.push({
+      ...reason(field, 'enum', `"${wire.handle}" is not someone present.`),
+      allowed: meta.npcHandles,
+    })
+    return null
+  }
+
+  /** The item a holder has, as the scene began; refused when they have no such thing. */
+  const heldBy = (item: string, holder: ItemHolderRef | null, field: string) => {
+    if (holder === null) {
+      return null
+    }
+
+    const held = meta.sceneItems.filter((entry) => sameHolder(entry.holder, holder))
+    const found = held.find((entry) => entry.item === item)
+
+    if (found === undefined) {
+      reasons.push({
+        ...reason(field, 'enum', `"${item}" is not held by ${describe(holder)}.`),
+        allowed: held.map((entry) => entry.item),
+      })
+    }
+
+    return found ?? null
+  }
+
+  const checkCount = (definition: string, count: number, field: string) => {
+    if (count > 1 && !kindOf(definition)?.stackable) {
+      reasons.push(reason(field, 'quantity', `"${definition}" counts by copy: one at a time.`))
+    }
+  }
+
+  const created = output.items_created.flatMap((entry, index) => {
+    const field = `items_created.${index}`
+    const holder = holderOf(entry.holder, `${field}.holder`)
+    const kind = kindOf(entry.definition)
+
+    checkCount(entry.definition, entry.quantity, `${field}.quantity`)
+
+    if (entry.equipped && (holder?.holder !== 'character' || !kind?.equippable)) {
+      reasons.push(
+        reason(`${field}.equipped`, 'equip', 'Only the character equips, and only what can be.')
+      )
+    }
+
+    if (
+      kind?.unique &&
+      output.items_created.findIndex((other) => other.definition === entry.definition) !== index
+    ) {
+      reasons.push(reason(field, 'unique', `"${entry.definition}" exists once.`))
+    }
+
+    return holder === null ? [] : [{ ...entry, holder }]
+  })
+
+  /** How much of each item each holder gives away or uses up, against what they hold. */
+  const outflow = new Map<SceneItem, number>()
+  const changedCopies = new Set<string>()
+  const track = (held: SceneItem | null, count: number, field: string) => {
+    if (held === null) {
+      return
+    }
+
+    checkCount(held.definition, count, `${field}.quantity`)
+    outflow.set(held, (outflow.get(held) ?? 0) + count)
+
+    if (!kindOf(held.definition)?.stackable) {
+      if (changedCopies.has(held.item)) {
+        reasons.push(reason(field, 'conflict', `"${held.item}" changes only once in a turn.`))
+      }
+      changedCopies.add(held.item)
+    }
+  }
+
+  const transferred = output.items_transferred.flatMap((entry, index) => {
+    const field = `items_transferred.${index}`
+    const from = holderOf(entry.from, `${field}.from`)
+    const to = holderOf(entry.to, `${field}.to`)
+
+    if (from !== null && to !== null && sameHolder(from, to)) {
+      reasons.push(reason(field, 'conflict', 'An item cannot be handed to whoever holds it.'))
+    }
+
+    track(heldBy(entry.item, from, `${field}.item`), entry.quantity, field)
+
+    return from === null || to === null ? [] : [{ ...entry, from, to }]
+  })
+
+  const destroyed = output.items_destroyed.flatMap((entry, index) => {
+    const field = `items_destroyed.${index}`
+    const holder = holderOf(entry.holder, `${field}.holder`)
+
+    track(heldBy(entry.item, holder, `${field}.item`), entry.quantity, field)
+
+    return holder === null ? [] : [{ ...entry, holder }]
+  })
+
+  for (const [held, count] of outflow) {
+    if (count > held.quantity) {
+      reasons.push(
+        reason(
+          'items',
+          'quantity',
+          `${count} of "${held.item}" cannot leave ${describe(held.holder)}, who has ${held.quantity}.`
+        )
+      )
+    }
+  }
+
+  /** The copies the character holds once the hand-overs are done, and that still exist. */
+  const characterCopies = new Set(
+    [
+      ...meta.sceneItems
+        .filter((entry) => entry.holder.holder === 'character')
+        .map(({ item }) => item),
+      ...transferred.filter(({ to }) => to.holder === 'character').map(({ item }) => item),
+    ].filter(
+      (item) =>
+        !transferred.some((entry) => entry.item === item && entry.to.holder !== 'character') &&
+        !destroyed.some((entry) => entry.item === item)
+    )
+  )
+
+  const equipping = (list: string[], name: 'items_equipped' | 'items_unequipped') =>
+    list.filter((item, index) => {
+      const definition = meta.sceneItems.find((entry) => entry.item === item)?.definition
+      const kind = definition === undefined ? undefined : kindOf(definition)
+
+      if (!characterCopies.has(item) || kind?.stackable || !kind?.equippable) {
+        reasons.push({
+          ...reason(`${name}.${index}`, 'equip', `"${item}" is no copy the character can equip.`),
+          allowed: [...characterCopies],
+        })
+        return false
+      }
+
+      return true
+    })
+
+  const equipped = equipping(output.items_equipped, 'items_equipped')
+  const unequipped = equipping(output.items_unequipped, 'items_unequipped')
+
+  for (const item of equipped.filter((entry) => unequipped.includes(entry))) {
+    reasons.push(reason('items_unequipped', 'conflict', `"${item}" cannot be drawn and put away.`))
+  }
+
+  return {
+    reasons,
+    effects: {
+      items_created: created,
+      items_transferred: transferred,
+      items_destroyed: destroyed,
+      items_equipped: equipped,
+      items_unequipped: unequipped,
+    },
+  }
+}
+
+function sameHolder(a: ItemHolderRef, b: ItemHolderRef): boolean {
+  return (
+    a.holder === b.holder && (a.holder !== 'npc' || (b.holder === 'npc' && a.handle === b.handle))
+  )
+}
+
+function describe(holder: ItemHolderRef): string {
+  return holder.holder === 'npc' ? `"${holder.handle}"` : `the ${holder.holder}`
 }
 
 /**
