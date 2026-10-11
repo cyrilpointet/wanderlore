@@ -18,7 +18,9 @@ import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import type { JobQueue } from '#services/queue/types'
 import { ConcurrentTurnError, QueueUnavailableError, StaleTurnError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
-import { createItem, equipItem } from '#services/game/inventory'
+import { createItem, equipItem, unequipItem } from '#services/game/inventory'
+import { enterScene } from '#services/game/npcs'
+import InventoryItem from '#models/inventory_item'
 import { THREE_MUSKETEERS } from '#services/game/world'
 import {
   FakeLlmProvider,
@@ -860,5 +862,134 @@ test.group('TurnService | items and circumstances', (group) => {
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
     assert.equal(turn.status, 'failed')
     assert.isNull(turn.appliedEffects)
+  })
+})
+
+/** A sword thrust: melee_combat, rolled on swordsmanship (2 on this sheet). */
+const THRUST = {
+  ...NEEDS_ROLL,
+  intent: { type: 'attack', target: null, summary: 'Lunging at the guard' },
+  resolution: { mode: 'roll_required', action_type: 'melee_combat', difficulty: 'medium' },
+}
+
+/** The modifiers logged with the roll of a turn. */
+function modifiersOf(turn: TurnLog) {
+  return turn.rollResult!.appliedModifiers as { source: string; origin: string; value: number }[]
+}
+
+test.group('TurnService | items in the roll', (group) => {
+  useTransaction(group)
+
+  test('the letter held weighs on persuasion, and says where it came from', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeArmedScene()
+    const { play } = buildService([NEEDS_ROLL, ...NARRATED])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
+
+    /** 4 + 4, persuasion 3, the letter +1: 12 against 9. */
+    assert.deepEqual(modifiersOf(turn), [
+      { source: 'item', origin: 'letter_to_treville', value: 1 },
+    ])
+    assert.equal(turn.rollResult!.total, 12)
+    assert.equal(turn.rollResult!.margin, 3)
+  })
+
+  test('given to someone else, the letter no longer counts', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeArmedScene()
+    const rochefort = await enterScene(THREE_MUSKETEERS, sessionId, {
+      definition: 'rochefort',
+      descriptor: null,
+    })
+    const letter = await InventoryItem.query()
+      .where({ sessionId, handle: 'letter_to_treville' })
+      .firstOrFail()
+    letter.merge({ characterId: null, npcInstanceId: rochefort.id })
+    await letter.save()
+    const { play } = buildService([NEEDS_ROLL, ...NARRATED])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I plead with the guard.' })
+
+    assert.deepEqual(modifiersOf(turn), [])
+    assert.equal(turn.rollResult!.total, 4 + 4 + 3)
+    assert.equal(letter.npcInstanceId, rochefort.id)
+  })
+
+  test('the rapier counts on swordsmanship only while drawn', async ({ assert }) => {
+    const { sessionId, userId, sword } = await arrangeArmedScene()
+    const drawn = await buildService([THRUST, ...NARRATED]).play({
+      sessionId,
+      userId,
+      playerInput: 'I lunge.',
+    })
+
+    await unequipItem(sword)
+    const sheathed = await buildService([THRUST, ...NARRATED]).play({
+      sessionId,
+      userId,
+      playerInput: 'I lunge again.',
+    })
+
+    /** Its damage bonus never weighs on the roll itself. */
+    assert.deepEqual(modifiersOf(drawn), [{ source: 'item', origin: 'rapier', value: 1 }])
+    assert.deepEqual(modifiersOf(sheathed), [])
+  })
+
+  test('a circumstance and an item are traced side by side', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeArmedScene()
+    const { play } = buildService([FAVOURABLE, ...NARRATED])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
+
+    assert.deepEqual(modifiersOf(turn), [
+      { source: 'contextual', origin: 'favorable_reputation', value: 1 },
+      { source: 'item', origin: 'letter_to_treville', value: 1 },
+    ])
+    assert.equal(turn.rollResult!.total, 4 + 4 + 3 + 1 + 1)
+  })
+
+  test('the narrator never learns a number of the roll', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeArmedScene()
+    const { provider, play } = buildService([FAVOURABLE, ...NARRATED])
+
+    await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
+
+    const narration = provider.requests[1].userMessage
+    for (const leak of ['appliedModifiers', 'favorable_reputation', '"value"', 'threshold']) {
+      assert.notInclude(narration, leak)
+    }
+  })
+
+  test('the player is told which items weighed, and what they now hold', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeArmedScene()
+    const { events, play } = buildService([NEEDS_ROLL, ...NARRATED])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
+
+    const rolled = events.recorded.find(({ event }) => event.type === 'roll_resolved')!.event
+    const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!.event
+    assert.deepInclude(rolled, { items: ['letter_to_treville'] })
+    assert.notProperty(rolled, 'appliedModifiers')
+    assert.equal(turn.status, 'completed')
+    assert.deepEqual(
+      completed.type === 'turn_completed'
+        ? completed.inventory.map(({ definition }) => definition)
+        : [],
+      ['letter_to_treville', 'rapier']
+    )
+  })
+
+  test('an aside to the game master moves no item', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeArmedScene()
+    const aside = {
+      ...SETTLED,
+      intent: { type: 'out_of_character', target: null, summary: 'Asking where Paris lies' },
+    }
+    const { provider, play } = buildService([aside, streamed('Paris lies north, days away.')])
+
+    await play({ sessionId, userId, playerInput: 'Where is Paris, again?' })
+
+    /** No extraction at all: two calls. */
+    assert.lengthOf(provider.requests, 2)
+    assert.equal(await countRows('inventory_items', { session_id: sessionId }), 2)
   })
 })

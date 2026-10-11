@@ -3,6 +3,8 @@ import type { QueryClientContract } from '@adonisjs/lucid/types/database'
 import InventoryItem from '#models/inventory_item'
 import NpcInstance from '#models/npc_instance'
 
+import type { ModifierSource } from '#services/rules/types'
+
 import type { ItemDefinition, WorldDefinition } from './world.js'
 import type { ItemHolderRef } from './prompts/types.js'
 
@@ -478,6 +480,33 @@ export async function creatableItems(
         : definition.initialHolder === null && !met.has(definition.reference)
     )
     .map((definition) => definition.reference)
+}
+
+/** What the character holds now, oldest first — the sheet's inventory. */
+export async function characterItems(
+  characterId: string,
+  client?: QueryClientContract
+): Promise<HeldItem[]> {
+  const items = await InventoryItem.query({ client })
+    .where('characterId', characterId)
+    .whereNot('state', 'gone')
+    .orderBy('createdAt', 'asc')
+    .orderBy('definitionReference', 'asc')
+    .orderBy('handle', 'asc')
+
+  return items.map(toHeldItem)
+}
+
+/**
+ * Items as the rules read them: the definition's reference and modifiers,
+ * and whether the holder has it equipped. Labels and holders stay behind.
+ */
+export function modifierSources(world: WorldDefinition, items: HeldItem[]): ModifierSource[] {
+  return items.map((item) => ({
+    reference: item.definition,
+    equipped: item.equipped,
+    modifiers: findDefinition(world, item.definition).modifiers,
+  }))
 }
 
 function toHeldItem(item: InventoryItem): HeldItem {

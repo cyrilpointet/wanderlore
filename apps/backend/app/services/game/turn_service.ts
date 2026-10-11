@@ -12,6 +12,7 @@ import type { Clock } from '#services/clock'
 import type { JobQueue } from '#services/queue/types'
 import type { TurnEvents, TurnRef } from '#services/game/turn_events'
 import { toNarrationOutcome } from '#services/rules/engine'
+import type { AppliedModifier } from '#services/rules/types'
 
 import {
   ConcurrentTurnError,
@@ -21,7 +22,14 @@ import {
 } from './errors.js'
 import { applyDelta } from './apply_delta.js'
 import { type PresentNpc, presentNpcs } from './npcs.js'
-import { type ItemsInScene, creatableItems, itemsInScene, sceneItemsOf } from './inventory.js'
+import {
+  type ItemsInScene,
+  characterItems,
+  creatableItems,
+  itemsInScene,
+  modifierSources,
+  sceneItemsOf,
+} from './inventory.js'
 import { actionTypesOf, skillFor } from './resolution_rules.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
@@ -303,6 +311,7 @@ export class TurnService {
       type: 'turn_completed',
       turn,
       character: scene.character,
+      inventory: await characterItems(scene.character.id),
       location: await this.#whereItStands(scene.worldState),
     })
 
@@ -493,8 +502,10 @@ export class TurnService {
 
   /**
    * The outcome arbitration's ruling leads to. A roll is made by the backend
-   * alone, on the skill `resolution_rules` ties to the chosen action type;
-   * without a roll, the outcome was certain from the start.
+   * alone, on the skill `resolution_rules` ties to the chosen action type,
+   * with the circumstances arbitration labelled and the modifiers of the
+   * items the character holds; without a roll, the outcome was certain from
+   * the start.
    */
   async #settle(
     turn: TurnLog,
@@ -515,14 +526,25 @@ export class TurnService {
 
     const skill = await skillFor(THREE_MUSKETEERS, actionType!)
     /** A skill the character never learnt is rolled untrained. */
-    const resolution = this.#rules.resolve(scene.character.skills[skill] ?? UNTRAINED, difficulty!)
+    const resolution = this.#rules.resolve(
+      scene.character.skills[skill] ?? UNTRAINED,
+      difficulty!,
+      {
+        skill,
+        contextual: decision.resolution.contextual_modifiers,
+        /** The character's own, never what someone else or the place holds. */
+        items: modifierSources(THREE_MUSKETEERS, scene.items.character),
+      }
+    )
 
+    /** Every modifier with its origin, contextual and item side by side, for the log. */
     trace.roll = { skill, actionType: actionType!, ...resolution }
 
     this.#events.emit(refOf(turn), {
       type: 'roll_resolved',
       skill,
       ...toNarrationOutcome(resolution),
+      items: itemsThatWeighed(resolution.appliedModifiers),
     })
 
     return { mode, ...toNarrationOutcome(resolution), reason: null }
@@ -692,6 +714,13 @@ function buildContext(
     player_input: playerInput,
     language,
   }
+}
+
+/** The definitions of the items that moved a roll: which, never by how much. */
+function itemsThatWeighed(modifiers: AppliedModifier[]): string[] {
+  return [
+    ...new Set(modifiers.filter(({ source }) => source === 'item').map(({ origin }) => origin)),
+  ]
 }
 
 /** Every way an item of the scene can be named: its definition, and its handle if it has one. */

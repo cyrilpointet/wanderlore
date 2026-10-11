@@ -2,6 +2,7 @@ import type Character from '#models/character'
 import type TurnLog from '#models/turn_log'
 import type { MarginLabel, RollOutcome } from '#services/rules/types'
 import type { ContentLabels, PlacedLocation } from '#services/game/content_labels'
+import type { HeldItem } from '#services/game/inventory'
 import CharacterTransformer from '#transformers/character_transformer'
 import TurnTransformer, { presentRoll } from '#transformers/turn_transformer'
 
@@ -15,8 +16,18 @@ import TurnTransformer, { presentRoll } from '#transformers/turn_transformer'
  */
 export type TurnEvent =
   | { type: 'step_started'; step: 'arbitration' | 'narration' }
-  /** The skill, the verdict and a qualitative margin — never the dice, the threshold or the skill value. */
-  | { type: 'roll_resolved'; skill: string; result: RollOutcome; margin: MarginLabel }
+  /**
+   * The skill, the verdict and a qualitative margin — never the dice, the
+   * threshold or the skill value. The items that weighed on the roll, by
+   * definition, never with what they were worth.
+   */
+  | {
+      type: 'roll_resolved'
+      skill: string
+      result: RollOutcome
+      margin: MarginLabel
+      items: string[]
+    }
   /**
    * A fragment of the narration as it is written, to append to what came
    * before. Provisional until `turn_completed`: the turn may still fail, and
@@ -33,6 +44,8 @@ export type TurnEvent =
       type: 'turn_completed'
       turn: TurnLog
       character: Character
+      /** What the character holds once the turn is applied. */
+      inventory: HeldItem[]
       location: PlacedLocation | null
     }
   | { type: 'turn_failed'; failure: { code: string; message: string } }
