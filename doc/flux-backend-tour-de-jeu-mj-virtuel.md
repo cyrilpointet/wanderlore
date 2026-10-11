@@ -171,10 +171,10 @@ flowchart LR
 
 | Étape | Lore | State | Mémoire | Catalogues |
 |---|---|---|---|---|
-| A+B+C | Règles ciblées par les tags | Scène : lieu courant, PNJ présents, objets pertinents (références anglaises, **sans valeurs mécaniques ni valeurs de compétence**) | Résumé anglais + buffer court (2 derniers tours, langue du joueur) | `action_types` avec descriptions |
-| Calcul du jet | — | Compétence du personnage, inventaire complet avec effets mécaniques | — | `resolution_rules` |
-| D | Ambiance liée au lieu | Scène complète | Résumé + buffer récent (2–4 tours, langue du joueur) | Noms d'affichage dans la langue de la partie, glossaire |
-| E | Aucun | Handles présents, schéma des effets autorisés (pas les valeurs actuelles) | Aucune | Listes fermées de définitions (PNJ, lieux, objets, flags) |
+| A+B+C | Règles ciblées par les tags | Scène : lieu courant, PNJ présents, objets en scène par détenteur — personnage, PNJ présents, lieu (références et libellés anglais, **sans valeurs mécaniques ni valeurs de compétence**) | Résumé anglais + buffer court (2 derniers tours, langue du joueur) | `action_types` avec descriptions |
+| Calcul du jet | — | Compétence du personnage, objets du personnage avec effets mécaniques | — | `resolution_rules`, définitions d'objets |
+| D | Ambiance liée au lieu | Scène complète, objets en scène par détenteur (libellé dans la langue de la partie, descripteur) | Résumé + buffer récent (2–4 tours, langue du joueur) | Noms d'affichage dans la langue de la partie, glossaire |
+| E | Aucun | Handles présents, objets en scène par détenteur, schéma des effets autorisés (pas les valeurs actuelles) | Aucune | Listes fermées de définitions (PNJ, lieux, objets, flags) |
 
 Toutes les sélections sont déterministes : aucune n'est déléguée au LLM.
 
@@ -220,9 +220,10 @@ flowchart TD
 - **L'arbitrage ne narre jamais** et ne produit aucun chiffre de règle [archi §6].
 - **`action_type`**, pas de compétence : le backend déduit la compétence via
   `resolution_rules` [BDD].
-- **Au plus 2 à 3 modificateurs contextuels**, jamais un modificateur d'objet [règles §5].
-  *À trancher en Phase 4 : le chiffrage des modificateurs contextuels (valeur proposée par le
-  LLM, ou label qualitatif converti par le backend).*
+- **Au plus 3 modificateurs contextuels**, jamais un modificateur d'objet [règles §5]. Le LLM
+  propose un label qualitatif (`minor_bonus`, `major_bonus`, `minor_penalty`, `major_penalty`),
+  converti par le backend (+1, +2, -1, -2) — tranché en Phase 4. Un modificateur dont la source
+  est un objet en scène est rejeté.
 - **`alert.prompt_injection_suspected`** est enregistré dans `turn_log.alerts`. L'action
   suspecte est traitée comme invalide, mais **la sécurité ne repose pas sur cette détection** :
   le confinement est assuré par la validation backend, qui ne fait jamais confiance au modèle
@@ -238,8 +239,8 @@ flowchart TD
 flowchart TD
     A([action_type, difficulty,<br/>contextual_modifiers]) --> B[(resolution_rules :<br/>action_type → compétence)]
     B --> C[Valeur de compétence<br/>du personnage]
-    A --> K[Plafonner les modificateurs<br/>contextuels : 2 à 3 au plus]
-    B --> I[(Inventaire : objets dont un<br/>modificateur cible la compétence<br/>et dont la condition owned /<br/>equipped est satisfaite)]
+    A --> K[Modificateurs contextuels :<br/>3 au plus, label → valeur<br/>±1 / ±2]
+    B --> I[(Objets du personnage dont un<br/>modificateur cible la compétence<br/>et dont la condition owned /<br/>equipped est satisfaite<br/>une fois par définition)]
     C --> T["Total = 2d6 + compétence<br/>+ modificateurs contextuels<br/>+ modificateurs d'objets"]
     K --> T
     I --> T
@@ -251,8 +252,9 @@ flowchart TD
     L --> O([Vers la narration :<br/>result + marge qualitative seulement])
 ```
 
-- **Dégâts** (combat, Phase 8) : dégâts de base de l'arme + marge ÷ 2 arrondie au supérieur,
-  sans second jet [règles §7].
+- **Dégâts** : dégâts du coup (marge ÷ 2 arrondie au supérieur, au moins 1) + bonus de
+  l'arme, sans second jet [règles §7]. La fonction est posée en Phase 4 ; son branchement dans
+  le tour (désigner attaquant et cible) attend la Phase 8.
 - **Combat** : aucun sous-système dédié ; un round est un tour normal de ce pipeline, avec le
   même moteur pour le joueur et les PNJ [règles §8]. *À trancher en Phase 8 : la cible d'un jet
   opposé contre un PNJ improvisé pas encore instancié* [roadmap P8].
@@ -286,7 +288,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     A([Texte narré + listes fermées]) --> B{{E — sortie JSON<br/>§5.1}}
-    B --> C["Delta proposé :<br/>movement, npcs_entered, npcs_left,<br/>npcs_following, npc_names,<br/>npc_relations, scenario_flags,<br/>hit_points_delta, items_gained,<br/>items_lost"]
+    B --> C["Delta proposé :<br/>movement, npcs_entered, npcs_left,<br/>npcs_following, npc_names,<br/>npc_relations, scenario_flags,<br/>hit_points_delta, items_created,<br/>items_transferred, items_destroyed,<br/>items_equipped, items_unequipped"]
     C --> D([Delta validé<br/>vers l'application])
 ```
 
@@ -306,7 +308,7 @@ flowchart TD
     N --> O[Sorties de PNJ → absent]
     O --> P[Entrées de PNJ<br/>unique : repassé present<br/>unique mort : refusé<br/>archétype : nouvelle instance]
     P --> Q[Noms appris, dispositions]
-    Q --> R[Inventaire : gains et pertes<br/>unique jamais dupliqué<br/>stackable : quantité]
+    Q --> R[Objets : placement initial,<br/>créations, transferts entre<br/>détenteurs, destructions, équipement<br/>unique jamais dupliqué<br/>stackable : quantité]
     R --> S[Flags, points de vie]
     S --> T[Attribuer le numéro de tour<br/>unicité session_id + turn_number]
     T --> U[(turn_log : applied_effects,<br/>status = completed)]
@@ -458,10 +460,8 @@ flowchart LR
 
 Repris des points ouverts des autres documents, sans les résoudre :
 
-- **Chiffrage des modificateurs contextuels** : valeur proposée par le LLM (règles §5.1) ou
-  label qualitatif converti par le backend (principe « le LLM ne manipule jamais de valeur
-  numérique » du document de base de données) — Phase 4.
-- **Schéma de l'inventaire** (`stackable`, détenteur d'un objet, durabilité, charges) — Phase 4.
+- **Durabilité et charges des objets** — différées en Phase 4, consommables par la quantité.
+- **Branchement des dégâts dans le tour** (attaquant, cible) — Phase 8.
 - **Seuils de déclenchement du résumé narratif** — Phase 7.
 - **Conditions de fin de partie et jets opposés contre un PNJ improvisé** — Phase 8.
 - **Modération de contenu** au-delà du prompt injection — Phase 9.

@@ -76,11 +76,11 @@ Trame narrative type, rattachée à un univers.
 | `synopsis` | text | résumé général |
 | `chapter_structure` | jsonb | liste ordonnée de chapitres/beats, objectifs, conditions de progression |
 | ~~`planned_npcs`~~ | — | remplacé par la table `npc_definitions` (Phase 5), qui porte aussi les PNJ de l'univers — voir architecture, section 6ter |
-| `item_catalog` | jsonb | **catalogue fermé** des objets acquérables : référence stable, effets mécaniques, noms d'affichage par langue — *forme à revoir en Phase 4 : définitions à deux niveaux (univers et scénario), comme les PNJ* |
+| `item_catalog` | jsonb | **catalogue fermé** des objets acquérables : référence stable, effets mécaniques, noms d'affichage par langue — *remplacé en Phase 5 par des définitions d'objets à deux niveaux (univers et scénario), de même forme que les définitions en dur de la Phase 4 (voir `inventory_items`) ; table dédiée ou colonne, à trancher en Phase 5* |
 | `glossary` | jsonb | noms propres (lieux, PNJ, factions) et leurs traductions par langue |
 | `branch_points` | jsonb | points de bascule / choix narratifs possibles |
 
-**`item_catalog`** est la source de vérité des objets que l'étape d'extraction peut accorder.
+**Le catalogue des définitions d'objets** est la source de vérité des objets que l'étape d'extraction peut faire apparaître.
 Le LLM ne peut pas créer d'entrée d'inventaire : un objet inventé n'aurait ni effets
 mécaniques, ni référence stable, ni traduction. Le narrateur reste libre de décrire ce qu'il
 veut — il ne peut simplement pas faire apparaître quelque chose de mécaniquement actif.
@@ -186,57 +186,86 @@ Le personnage joué dans une partie donnée.
 
 ### `inventory_items`
 
-Objets possédés par le personnage.
+Objets d'une partie, où qu'ils soient : chez le personnage, aux mains d'un PNJ ou rangés dans
+un lieu. Une ligne est une **instance** qui pointe vers une **définition** d'objet et ne porte
+que l'état propre à l'instance. Voir architecture, section 6bis.
 
-> **Schéma à revoir à l'ouverture de la Phase 4.** Le principe est tranché (architecture,
-> section 6bis) : une ligne d'inventaire est une **instance** qui pointe vers une définition
-> d'objet (univers ou scénario, `unique` ou `archetype`) et ne porte que l'état propre à
-> l'instance — quantité, `equipped` / `carried`, descripteur, plus tard durabilité et
-> charges. Les colonnes `display_names`, `descriptions` et `mechanical_effects` ci-dessous
-> passeront donc sur la définition. Le tableau reste en l'état jusqu'à ce que le schéma soit
-> tranché.
+**Définitions d'objets.** En dur dans la définition d'univers en Phase 4, comme les PNJ et les
+lieux ; en base à partir de la Phase 5. Chaque définition porte :
+
+| Champ | Contenu |
+|---|---|
+| `reference` | **référence stable en anglais** (ex. `letter_to_treville`) — c'est elle que manipulent le code et le LLM |
+| `label` | libellé anglais affiché au joueur ; les noms par langue arrivent en Phase 5 avec tout le contenu |
+| `description` | une ligne d'anglais pour le modèle, jamais affichée |
+| `kind` | `unique` (une instance au plus par partie) ou `archetype` |
+| `generic` | archétype servant aux objets improvisés (`improvised_weapon`, `rope`…) |
+| `stackable` | archétype interchangeable : une ligne par détenteur, avec une quantité |
+| `equippable` | peut passer `equipped` |
+| `modifiers` | modificateurs fixes, chacun ciblant une compétence ou les dégâts, avec une condition |
+| `initial_holder` | pour un unique seulement, facultatif : le PNJ unique ou le lieu unique qui le détient au départ |
+
+**Schéma de la table** (tranché à l'ouverture de la Phase 4) :
 
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant technique de la ligne |
-| `character_id` | FK → characters | personnage parent |
-| `item_reference` | text | **référence stable en anglais** (ex. `recommendation_letter`) — c'est elle que manipulent le code et le LLM |
-| `display_names` | jsonb | noms d'affichage par langue, vus par le joueur et employés par le narrateur |
-| `descriptions` | jsonb | descriptions par langue |
-| `mechanical_effects` | jsonb | bonus/malus liés à l'objet, appliqués à des compétences précises |
-| `quantity` | int | quantité |
-| `state` | text | `equipped` / `carried` / `other` |
+| `session_id` | FK → sessions | partie parente |
+| `character_id` | FK → characters, nullable | détenteur : le personnage |
+| `npc_instance_id` | FK → npc_instances, nullable | détenteur : un PNJ |
+| `location_instance_id` | FK → location_instances, nullable | détenteur : un lieu |
+| `handle` | varchar, nullable | exemplaire non empilable : identifiant stable dans la partie, attribué par le backend (la référence pour un unique, `rapier_2` pour un archétype) ; null pour un empilable |
+| `definition_reference` | varchar | référence de la définition instanciée |
+| `descriptor` | text, nullable | description courte en anglais d'un objet improvisé, réservée au narrateur, jamais traduite ni affichée |
+| `quantity` | int | ≥ 1 ; toujours 1 pour un exemplaire non empilable |
+| `state` | enum `item_state` | `carried` / `equipped` / `gone` |
+| `created_at` / `updated_at` | timestamptz | — |
 
-**Pourquoi séparer `item_reference` et `display_names`** : sans référence stable, rien
-n'empêche le LLM de désigner le même objet par « the letter », puis « recommendation letter »,
-puis — en partie non anglophone — par son nom traduit. La référence est l'identité de l'objet
-pour le code ; les noms d'affichage sont ce que voit l'humain. Voir le document d'architecture,
-section 6bis.
+- **Exactement un détenteur** (CHECK), sauf pour un objet `gone`. Trois vraies clés étrangères
+  plutôt qu'un couple polymorphe `holder_type` / `holder_id`, qui n'aurait aucune intégrité
+  référentielle.
+- **L'identité d'un objet ne dépend pas de son détenteur** : un exemplaire garde son handle
+  quand il change de mains, et ce handle est unique dans la partie. Un empilable compte au plus
+  une ligne par détenteur et par définition (index uniques partiels) : vingt balles données à un
+  PNJ font deux lignes, une quantité de chaque côté.
+- **Changer de détenteur n'est pas perdre.** Donner, voler, cacher, poser, ramasser sont des
+  transferts. `gone` est réservé à l'objet détruit ou consommé ; une ligne n'est jamais
+  supprimée, comme un PNJ passe `absent`.
+- **`equipped` est réservé au personnage** en Phase 4 (CHECK) ; l'équipement d'un PNJ arrive
+  avec ses jets, en Phase 8.
+- **Placement initial** : un unique doté d'un `initial_holder` est instancié avec lui à la
+  première instanciation de ce détenteur (entrée en scène du PNJ, première visite du lieu) ;
+  sans détenteur initial, il est instancié à son premier gain.
+- **À la mort d'un PNJ**, ses objets passent dans l'inventaire du lieu courant : un PNJ mort
+  sort de la scène, et le pillage devient un transfert depuis le lieu.
+- **Durabilité et charges** : différées. Le modèle d'instance permettra de les ajouter par un
+  `alterTable` le moment venu.
 
-**Exemple de contenu `display_names`** :
+**Pourquoi séparer référence et nom affiché** : sans référence stable, rien n'empêche le LLM
+de désigner le même objet par « the letter », puis « recommendation letter », puis — en partie
+non anglophone — par son nom traduit. La référence est l'identité de l'objet pour le code ; le
+libellé est ce que voit l'humain. Une ligne d'instance ne stocke **aucun nom** : le passage aux
+noms par langue, en Phase 5, ne demandera aucune migration de données de parties. À l'étape de
+narration, **seule la langue de la partie est injectée**, jamais la table complète des
+traductions.
+
+**Structure de `modifiers`** : liste de modificateurs fixes, chacun ciblant une compétence ou
+les dégâts, avec une condition d'activation.
+
 ```json
-{ "en": "Recommendation letter", "fr": "Lettre de recommandation" }
+[
+  { "target_skill": "persuasion", "value": 2, "condition": "owned", "description": "Recognised official seal" },
+  { "target_skill": "swordsmanship", "value": 1, "condition": "equipped", "description": "Well-balanced blade" },
+  { "target": "damage", "value": 2, "condition": "equipped", "description": "Rapier point" },
+  { "target_skill": "stealth", "value": -2, "condition": "equipped", "description": "Heavy, noisy armour" }
+]
 ```
 
-À l'étape de narration, **seule la langue de la partie est injectée**, jamais la table
-complète : le coût en jetons reste identique que le produit supporte deux langues ou dix.
-
-**Structure de `mechanical_effects`** : liste de modificateurs fixes, chacun ciblant une compétence, avec une condition d'activation.
-
-```json
-{
-  "modifiers": [
-    { "target_skill": "persuasion", "value": 2, "condition": "owned", "description": "Sceau officiel reconnu" },
-    { "target_skill": "melee_combat", "value": 1, "condition": "equipped", "description": "Lame bien équilibrée" },
-    { "target_skill": "stealth", "value": -2, "condition": "equipped", "description": "Armure lourde, bruyante" }
-  ]
-}
-```
-
-- `condition: "owned"` — le bonus s'applique dès que l'objet est en inventaire, sans besoin d'être activement porté (ex: un document, une lettre).
-- `condition: "equipped"` — le bonus ne s'applique que si `state = "equipped"` pour cette ligne d'inventaire (ex: une arme, une armure).
-- Le champ `description` **interne à un modificateur reste en anglais** et n'est jamais traduit : il sert l'audit et le debug (« pourquoi ce bonus s'applique-t-il ? »). Le texte destiné au joueur est celui de `descriptions`, sur l'objet lui-même. Sans cette distinction, on finit par traduire des données de debug.
-- Ces valeurs sont **exclusivement calculées par le backend** au moment du jet (jointure entre la compétence utilisée et les objets du personnage qui la ciblent) — elles ne transitent jamais par un appel LLM et ne sont jamais proposées ou réinterprétées par le modèle.
+- `condition: "owned"` — le bonus s'applique dès que l'objet est détenu (`carried` ou `equipped`), sans besoin d'être activement porté (ex : un document, une lettre).
+- `condition: "equipped"` — le bonus ne s'applique que si l'instance est `equipped` (ex : une arme, une armure).
+- Les modificateurs d'une même définition ne comptent **qu'une fois par jet**, quel que soit le nombre d'exemplaires détenus.
+- Le champ `description` **interne à un modificateur reste en anglais** et n'est jamais traduit : il sert l'audit et le debug (« pourquoi ce bonus s'applique-t-il ? »). Sans cette distinction, on finit par traduire des données de debug.
+- Ces valeurs sont **exclusivement calculées par le backend** au moment du jet ou des dégâts, à partir des objets du détenteur — elles ne transitent jamais par un appel LLM et ne sont jamais proposées ou réinterprétées par le modèle.
 
 ### `world_states`
 
@@ -250,7 +279,7 @@ complète : le coût en jetons reste identique que le produit supporte deux lang
 | `narrative_flags` | jsonb | événements/booléens déclenchés (ex: `"noble_zone_access_granted": true`) |
 | ~~`visited_locations`~~ | — | **remplacé en Phase 3** par `current_location_id` et la table `location_instances`, qui forme la liste des lieux visités |
 | `current_location_id` | FK → location_instances | lieu courant de la partie (Phase 3) |
-| `world_objects` | jsonb | objets visibles dans le monde mais non ramassés (distincts de l'inventaire) |
+| ~~`world_objects`~~ | — | **retiré en Phase 4** : les objets du monde sont les lignes d'`inventory_items` détenues par un lieu ou un PNJ |
 | `updated_at` | timestamp | — |
 
 ### `location_instances`
@@ -285,7 +314,8 @@ Catalogue fermé des PNJ, qui remplace la liste en dur de la Phase 3. Forme pré
 `world_id`, `scenario_id` (nullable — une définition de scénario de même référence surcharge
 celle de l'univers), `reference`, `kind` (`unique` / `archetype`), `generic` (archétype
 générique servant aux PNJ improvisés), `description`, `default_disposition`, puis le profil
-de combat (Phase 4, d'abord en dur). Unicité sur `(world_id, scenario_id, reference)`. Voir
+de combat (Phase 4, d'abord en dur : compétences, points de vie maximum, arme ordinaire —
+voir règles, section 8). Unicité sur `(world_id, scenario_id, reference)`. Voir
 architecture, section 6ter.
 
 ### `npc_instances`
@@ -316,8 +346,11 @@ est une instance d'archétype générique. Voir architecture, section 6ter.
 - La disposition initiale vient de la définition. L'extraction propose une disposition
   absolue, jamais un delta chiffré.
 
-**Colonnes prévues plus tard** : points de vie de l'instance (Phase 4, avec les profils de
-combat sur les définitions) ; `revealed_information` (jsonb, ce que ce PNJ a révélé au
+**Ajouté en Phase 4** : `hit_points` (int, nullable), initialisé depuis le profil de combat de
+la définition à l'instanciation ; null sur une instance antérieure, lu comme « indemne ». Les
+objets qu'un PNJ détient sont des lignes d'`inventory_items`.
+
+**Colonnes prévues plus tard** : `revealed_information` (jsonb, ce que ce PNJ a révélé au
 joueur), quand un tour le lira ; `last_location`, si la mémoire long terme (Phase 7) rappelle
 les PNJ connus d'un lieu.
 
@@ -424,10 +457,11 @@ Résumés hiérarchiques générés par le job asynchrone.
 
 ```
 worlds ──┬── lore_fragments
-         ├── scenarios ──── sessions ──┬── characters ──── inventory_items
-         └── resolution_rules          │
-               (world ou scenario)     ├── world_states (1:1)
-                                        ├── npc_instances
+         ├── scenarios ──── sessions ──┬── characters ─────────┐
+         └── resolution_rules          │                       │
+               (world ou scenario)     ├── npc_instances ──────┼── inventory_items
+                                        ├── location_instances ─┘   (un détenteur parmi trois)
+                                        ├── world_states (1:1)
                                         ├── turn_log
                                         └── narrative_summaries
 
@@ -453,5 +487,5 @@ users ──── usage_quotas (optionnel)
 - Choix définitif du mécanisme RAG : pgvector intégré vs vector store externe (Pinecone, Qdrant, etc.).
 - Politique de rétention/archivage de `turn_log` pour les parties terminées anciennes.
 - Emplacement définitif du glossaire de noms propres : `scenarios.glossary` comme proposé ici, ou au niveau de `worlds` pour ce qui est commun à tous les scénarios d'un univers.
-- Faut-il indexer `inventory_items.item_reference` — dépend du volume d'objets par personnage, probablement inutile avant la Phase 8.
+- Faut-il indexer `inventory_items.definition_reference` — dépend du volume d'objets par partie, probablement inutile avant la Phase 8.
 - Stratégie de migration de schéma pour les colonnes jsonb (versionnement de structure interne si le format évolue avec de nouveaux univers).

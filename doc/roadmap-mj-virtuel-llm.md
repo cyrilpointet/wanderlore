@@ -184,20 +184,32 @@ Tranchées en clôture de la Phase 2 :
 
 ### Décisions de cadrage
 
-- **Objets : définitions et instances, sur le modèle des PNJ** (principe tranché avant la Phase 3 — architecture, section 6bis). Définitions à deux niveaux (univers, scénario), `unique` ou `archetype`, archétypes génériques pour les objets improvisés, ligne d'inventaire réduite à l'état de l'instance, indicateur `stackable` pour les objets interchangeables.
-- **À trancher à l'ouverture de la phase** : le schéma d'`inventory_items` et des définitions d'objets, la forme de `stackable`, le détenteur d'un objet (personnage seulement, ou aussi PNJ et lieux), la durabilité et les charges.
+Tranchées à l'ouverture de la phase (epic `KAN-44`) :
+
+- **Objets : définitions et instances, sur le modèle des PNJ** (architecture, section 6bis). Définitions `unique` ou `archetype`, archétypes génériques pour l'improvisé, `stackable` pour l'interchangeable, `equippable`, modificateurs, détenteur initial facultatif pour un unique. En dur dans la définition d'univers, avec un seul libellé anglais ; les noms par langue arrivent en Phase 5 avec tout le contenu.
+- **Trois détenteurs : le personnage, un PNJ, un lieu.** Un objet de quête peut être aux mains d'un PNJ ou rangé dans un lieu ; un PNJ qui prend la lettre du joueur l'ajoute à son inventaire ; une lettre cachée dans un coffre passe dans celui du lieu. Donner, voler, cacher, poser, ramasser sont des **transferts** ; `gone` est réservé à l'objet détruit ou consommé. À la mort d'un PNJ, ses objets passent au lieu courant.
+- **Table `inventory_items`** : une ligne par instance, trois clés étrangères de détenteur dont exactement une renseignée, handle d'exemplaire stable d'un détenteur à l'autre, état `carried` / `equipped` / `gone`, `equipped` réservé au personnage (document de base de données).
+- **Objets en scène** : ceux du personnage, des PNJ présents et du lieu courant. Seuls eux sont transmis au pipeline et peuvent changer de mains dans un tour. Pas d'indicateur « caché » : le narrateur ne révèle pas sans raison ce que détient un PNJ ou un lieu.
+- **Modificateurs contextuels** : labels qualitatifs (`minor_bonus` +1, `major_bonus` +2, `minor_penalty` -1, `major_penalty` -2), convertis par le backend, 3 au plus par jet (règles, section 5.1).
+- **Modificateurs d'objets** : ne comptent que pour leur détenteur, une fois par définition, sans emplacements d'équipement (règles, section 5.2).
+- **Dégâts = dégâts du coup + bonus de l'arme**, le bonus étant un modificateur d'objet ciblant les dégâts ; dégâts du coup = marge ÷ 2 arrondie au supérieur, au moins 1 (règles, section 7). La formule est posée et testée ici, son branchement dans le tour attend la Phase 8.
+- **Arme ordinaire d'un PNJ** : simple référence dans son profil de combat ; un objet spécial est détenu par lui comme tout objet (règles, section 8).
+- **Durabilité et charges différées** ; les consommables passent par la quantité.
+- **`world_states.world_objects` retiré**, remplacé par l'inventaire des lieux.
 
 ### Contenu
 
-- Table `inventory_items`, avec le champ `mechanical_effects` structuré tel que défini dans le document de base de données (modificateurs avec `target_skill`, `value`, `condition` — `owned` ou `equipped`).
-- **Séparation `item_reference` / `display_names` dès la création de la table.** La référence stable anglaise est l'identité de l'objet pour le code et le LLM ; les noms d'affichage par langue sont ce que voit le joueur. C'est le point à ne pas différer : le rattraper plus tard voudrait dire migrer des données de parties déjà jouées.
-- **L'étape d'extraction reçoit une liste fermée de références autorisées** et ne peut pas inventer d'objet. Un objet inventé n'aurait ni effets mécaniques, ni référence, ni traduction.
-- Calcul des modificateurs d'objets **exclusivement côté backend**, au moment du calcul du jet — jamais proposés ou chiffrés par le LLM. Le rapprochement se fait via `item_reference`, jamais via un nom d'affichage.
+- Catalogue d'objets en définitions dans la définition d'univers, effets mécaniques compris (modificateurs avec cible — compétence ou dégâts —, `value`, `condition` `owned` ou `equipped`).
+- Table `inventory_items` et service d'inventaire : création, transfert entre détenteurs, destruction, équipement, placement initial des objets de quête.
+- **Séparation référence / libellé.** La référence stable anglaise est l'identité de l'objet pour le code et le LLM ; le libellé est ce que voit le joueur. Une ligne d'instance ne stocke aucun nom : le passage aux noms par langue, en Phase 5, ne demandera aucune migration de parties déjà jouées.
+- **L'étape d'extraction reçoit une liste fermée** — définitions créables et objets en scène — et ne peut ni inventer un objet, ni déplacer un objet hors scène. Un objet inventé n'aurait ni effets mécaniques, ni référence, ni traduction.
+- **Modificateurs contextuels** proposés par l'arbitrage, jusqu'ici absents (Phase 1 : « ajoutés en Phase 4 »).
+- Calcul des modificateurs d'objets **exclusivement côté backend**, au moment du calcul du jet — jamais proposés ou chiffrés par le LLM. Le rapprochement se fait par la référence de la définition, jamais via un nom d'affichage.
 - Distinction effective, dans le résultat de jet et dans `turn_log`, entre modificateurs contextuels (source : LLM) et modificateurs d'objets (source : backend).
-- Extension du front pour afficher l'inventaire du personnage (lecture seule), avec les noms d'affichage résolus côté backend dans la langue de la partie.
-- **Données de combat des PNJ** : compétences, points de vie et références d'armes, au même format que celles d'un personnage joueur (voir système de règles, section 8). Elles arrivent avec l'inventaire, dont dépend le calcul des dégâts, pour que la Phase 8 trouve un modèle mécanique complet.
+- Extension du front pour afficher l'inventaire du personnage (lecture seule), libellés résolus côté backend. Ce que détiennent les PNJ et les lieux n'est pas affiché : le joueur l'apprend par la narration.
+- **Données de combat des PNJ** : compétences, points de vie et arme ordinaire, au même format que celles d'un personnage joueur (voir système de règles, section 8), et fonction de dégâts. Elles arrivent avec l'inventaire, dont dépend le bonus d'arme, pour que la Phase 8 trouve un modèle mécanique complet.
 
-> **Note de séquencement** : le catalogue d'objets en base n'arrive qu'en Phase 5, avec les tables `worlds` et `scenarios`. En Phase 4, les définitions d'objets vivent en dur dans la définition d'univers, comme les PNJ en Phase 3, et la liste fermée des références autorisées peut rester rudimentaire — l'important est que la séparation référence/affichage et le principe de liste fermée soient posés dès maintenant.
+> **Note de séquencement** : le catalogue d'objets en base n'arrive qu'en Phase 5, avec les tables `worlds` et `scenarios`. En Phase 4, les définitions d'objets vivent en dur dans la définition d'univers, comme les PNJ et les lieux depuis la Phase 3 — l'important est que la séparation référence/affichage et le principe de liste fermée soient posés dès maintenant.
 
 ### Critère de sortie de phase
 
@@ -213,7 +225,7 @@ Tranchées en clôture de la Phase 2 :
 ### Contenu applicatif
 
 - Tables `worlds` et `scenarios` en base, avec attributs et compétences paramétrables par univers, conformément au document de référence sur le système de règles.
-- **Définitions d'objets en base** : catalogue fermé des objets de l'univers et du scénario (référence stable, `unique` / `archetype`, effets mécaniques, noms d'affichage par langue), qui remplace la liste en dur de la Phase 4 et devient la source de vérité alimentant la liste transmise à l'étape d'extraction. Forme exacte (table dédiée comme `npc_definitions`, ou `scenarios.item_catalog`) tranchée avec le schéma de la Phase 4.
+- **Définitions d'objets en base** : catalogue fermé des objets de l'univers et du scénario (référence stable, `unique` / `archetype`, effets mécaniques, noms d'affichage par langue), qui remplace la liste en dur de la Phase 4 et devient la source de vérité alimentant la liste transmise à l'étape d'extraction. Même forme que les définitions en dur de la Phase 4 ; table dédiée comme `npc_definitions` ou `scenarios.item_catalog`, à trancher à l'ouverture de la phase.
 - **Table `location_definitions`** : catalogue des lieux de l'univers et du scénario, même forme que `npc_definitions` plus le parent, qui remplace la liste en dur de la Phase 3.
 - **Table `npc_definitions`** : catalogue des PNJ de l'univers et du scénario (uniques, archétypes, archétypes génériques), une définition de scénario surchargeant celle de l'univers de même référence. Elle remplace la liste en dur posée en Phase 3 et devient la source de vérité de la liste fermée transmise au pipeline — même trajectoire que `item_catalog`. Voir architecture, section 6ter.
 - **`scenarios.glossary`** : noms propres (lieux, PNJ, factions) et leurs traductions, injectés à la seule étape de narration pour figer la cohérence des noms d'un tour à l'autre. Voir document d'architecture, section 4bis.
@@ -293,6 +305,7 @@ Tranchées en clôture de la Phase 2 :
 ### Contenu
 
 - Combat modélisé comme séquence de jets alternés joueur/PNJ, conformément au modèle générique déjà défini dans le système de règles — cette phase implémente concrètement la boucle round par round, le modèle mécanique sous-jacent existant déjà depuis la Phase 3/4.
+- Branchement de la formule de dégâts posée en Phase 4 (dégâts du coup + bonus de l'arme) : l'arbitrage désigne attaquant et cible, le backend calcule les dégâts et les applique, et l'extraction cesse de chiffrer les blessures. Une arme détenue par un PNJ l'emporte sur l'arme ordinaire de son profil.
 - Cycle de vie complet de la partie :
   - création de personnage guidée (au-delà d'un simple formulaire technique),
   - conditions de fin de partie (victoire, mort du personnage, abandon volontaire),
@@ -402,7 +415,7 @@ Ces points sont pénibles à rattraper après coup :
 | 1 | Moteur de règles (formule, seuils, bornes de marge), validation du delta d'état, écriture de `turn_log` y compris sur échec |
 | 2 | Contrat d'API : authentification requise, accusé de réception, **séquence des événements SSE** (granularité tranchée, voir architecture section 8bis), et idempotence — une clé rejouée ne remet aucun job en file |
 | 3 | Un test de contrat par étape du pipeline, filet de sécurité lors des modifications de prompt |
-| 4 | Séparation des deux familles de modificateurs, conditions `owned`/`equipped`, traçabilité de l'origine, refus d'un identifiant d'objet hors liste |
+| 4 | Séparation des deux familles de modificateurs, conditions `owned`/`equipped`, traçabilité de l'origine, refus d'un identifiant d'objet hors liste ou hors scène, transferts entre détenteurs, formule de dégâts |
 | 5 | Contrôle d'accès par rôle, route par route — rend continu l'audit prévu en Phase 9 |
 | 6 | Qualité de récupération du lore : sur un jeu annoté, les bons fragments remontent-ils, et avec quel bruit |
 | 7 | Le résumé ne perd pas les faits critiques (eval, pas test) |
@@ -444,13 +457,13 @@ finit toujours par être ignoré.
 
 - **Multi-joueur** : explicitement hors scope, à traiter dans un projet distinct avec ses propres réflexions d'architecture (concurrence d'accès au state, infrastructure temps réel, visibilité narrative différenciée par joueur).
 - **Retry/fallback LLM** : pas de retry automatique des erreurs de transport. Depuis la Phase 3, une sortie structurée rejetée par la validation backend a droit à **une** nouvelle tentative avec message correctif, puis le tour échoue (voir Phase 3). Chaque erreur est renvoyée au front avec un message spécifique selon le type détecté. Un système de log d'erreurs API structuré est prévu en todolist, à traiter en Phase 9.
-- **Modificateurs contextuels vs modificateurs d'objets** : séparation stricte actée — le LLM ne propose que des modificateurs contextuels (plafonnés à 2-3), les modificateurs d'objets sont toujours calculés par le backend à partir de l'inventaire.
+- **Modificateurs contextuels vs modificateurs d'objets** : séparation stricte actée — le LLM ne propose que des modificateurs contextuels, en labels qualitatifs convertis par le backend (3 au plus), les modificateurs d'objets sont toujours calculés par le backend à partir des objets du détenteur.
 - **Un compte = un rôle unique** pour l'instant (`player` / `game_master` / `superadmin`), pas de cumul multi-rôle. À réévaluer si le besoin se présente concrètement.
 - **Budget de développement** : hébergement léger (ex. Vercel, Supabase, Railway) et LLM économique (ex. Gemini) pour la phase de test, budget cadré à 15-20€ mensuels — voir Phase 0.
 - **Démarche de monétisation** : aucun modèle choisi à ce stade, mais une démarche en deux temps est actée — mesure du coût réel par tour/partie dès la Phase 3, puis validation de l'appétence des joueurs lors du beta test fermé prévu en Phase 9 — avant toute sélection de modèle économique.
 - **Convention de nommage** : tables, colonnes, enums et code exclusivement en anglais ; langue par défaut de l'application en anglais, support multi-langue en complément.
 - **Architecture multi-langue** : « tout en anglais en interne, traduction au dernier moment ». Le lore, le scénario, le state, les system prompts et le résumé narratif restent en anglais et ne sont jamais dupliqués par langue ; seule l'étape de narration produit du texte dans la langue du joueur. Pas de second appel de traduction, pas de détection si le joueur écrit dans une autre langue. Un glossaire compact de noms propres assure la cohérence des noms. Voir document d'architecture, section 4bis.
-- **Objets** : séparation entre référence stable anglaise (`item_reference`) et noms d'affichage par langue ; catalogue fermé par scénario ; l'étape d'extraction ne peut accorder qu'un objet figurant dans la liste transmise. Voir document d'architecture, section 6bis.
+- **Objets** : définitions et instances ; séparation entre référence stable anglaise et nom d'affichage ; trois détenteurs possibles (personnage, PNJ, lieu) ; catalogue fermé ; l'étape d'extraction ne peut faire apparaître qu'un objet figurant dans la liste transmise, ni déplacer un objet hors scène. Voir document d'architecture, section 6bis.
 - **Exécution asynchrone et contrat d'API front/backend** : pipeline exécuté en tâche de fond via une file de jobs derrière un port — pg-boss (PostgreSQL) en instance unique, BullMQ (Redis) au passage à plusieurs instances —, retour progressif au front via AdonisJS Transmit (SSE) — introduit dès la Phase 2, pas différé à la Phase 9. Voir document d'architecture, section 8bis, pour le détail des événements.
 - **Environnement technique** : dev et tests locaux sous Docker (PostgreSQL ; Redis provisionné pour la bascule vers BullMQ), repo structuré en monorepo AdonisJS (`--kit=api`, Turborepo) avec packages `backend` et `frontend` dès la Phase 0, et `back-office` ajouté en Phase 5.
 - **Authentification** : le scaffolding register/login inclus par défaut dans un projet AdonisJS est réutilisé comme base pour l'authentification joueur (Phase 2), plutôt que de construire ce système from scratch — seul le champ `role` (enum `player`/`game_master`/`superadmin`) est une extension propre au projet. Le front s'authentifie par **cookie de session**, seul mode compatible sans contournement avec `EventSource`.

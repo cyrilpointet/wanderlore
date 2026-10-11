@@ -149,7 +149,8 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - **L'arbitrage choisit une catégorie d'action, pas une compétence** : `action_type` dans une liste fermée, compétence déduite par le backend via `resolution_rules` (schéma réduit en Phase 3, voir document de base de données).
 - **PNJ : définitions et instances** : deux axes indépendants — nature (`unique` / `archetype`) et source (univers / scénario). Le PNJ improvisé est une instance d'un archétype générique (`commoner`…) avec un descripteur libre sans portée mécanique. Handle attribué par le backend, instances créées par la seule extraction (E), jamais supprimées (`absent`). Voir architecture, section 6ter.
 - **Lieux : même modèle que les PNJ, dès la Phase 3** : lieux uniques et archétypes (`tavern`, `town`…), lieu improvisé = instance d'archétype avec parent, descripteur et nom éventuel ; un lieu unique est instancié à sa première visite, et la position courante est toujours un handle d'instance. Le front affiche le nom propre, sinon « archétype · parent ». Voir architecture, section 6quater.
-- **Objets : même modèle que les PNJ** (principe acté, schéma en Phase 4) : définitions univers / scénario, `unique` ou `archetype`, archétypes génériques pour l'improvisé, ligne d'inventaire réduite à l'état de l'instance, `stackable` pour les objets interchangeables ; le front affiche le libellé de l'archétype, jamais le descripteur. Voir architecture, section 6bis.
+- **Objets : même modèle que les PNJ** (principe acté avant la Phase 3, schéma à l'ouverture de la Phase 4) : définitions univers / scénario, `unique` ou `archetype`, archétypes génériques pour l'improvisé, ligne d'inventaire réduite à l'état de l'instance, `stackable` pour les objets interchangeables ; le front affiche le libellé de l'archétype, jamais le descripteur. Voir architecture, section 6bis, et document de base de données, `inventory_items`.
+- **Trois détenteurs d'objets : le personnage, un PNJ, un lieu** (Phase 4). Donner, voler, cacher, ramasser sont des transferts, l'objet gardant son identité ; seuls les objets en scène (personnage, PNJ présents, lieu courant) sont transmis au pipeline ; à la mort d'un PNJ, ses objets passent au lieu courant. Voir architecture, section 6bis.
 - **Budget de 3 minutes par tour** (Phase 3) : chaque appel LLM reçoit au plus le temps restant, un budget épuisé fait échouer le tour (`llm_timeout`) ; le balayage des tours `pending` reste à 5 minutes. Voir architecture, section 8bis.
 - **Un seul modèle LLM pour toutes les étapes** pendant les phases de test (`gemini-2.5-flash`). La différenciation par étape attend les mesures de coût réelles (Phase 9).
 - **Soumission d'un tour idempotente** : clé fournie par le client, une par soumission, enregistrée avant la mise en file. En Phase 2, worker unique dans le process HTTP, en `concurrency: 1` et sans retry — simplification à reprendre avant le beta test.
@@ -158,8 +159,8 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 ### Système de règles
 - Formule unique : `2d6 + valeur de compétence + modificateurs`, comparée à un seuil de difficulté qualitatif (facile/moyenne/difficile/très difficile).
 - Attributs et compétences définis par univers (donnée, pas structure figée dans le code).
-- **Modificateurs contextuels** (situationnels, proposés par le LLM, plafonnés à 2-3 par jet) strictement séparés des **modificateurs d'objets** (fixes, calculés par le backend à partir de l'inventaire, jamais chiffrés par le LLM).
-- Dégâts dérivés directement de la marge de réussite du jet d'attaque — pas de second jet séparé.
+- **Modificateurs contextuels** (situationnels, proposés par le LLM en labels qualitatifs — `minor_bonus` +1, `major_bonus` +2, `minor_penalty` -1, `major_penalty` -2 —, convertis par le backend, 3 au plus par jet) strictement séparés des **modificateurs d'objets** (fixes, calculés par le backend à partir des objets du détenteur, une fois par définition, jamais chiffrés par le LLM).
+- **Dégâts = dégâts du coup + bonus de l'arme** : les dégâts du coup se dérivent de la marge du jet d'attaque (÷ 2 arrondi au supérieur, au moins 1) — pas de second jet —, et le bonus d'arme est un modificateur d'objet ciblant les dégâts. Formule posée en Phase 4, branchée dans le tour en Phase 8.
 - Combat modélisé comme une simple répétition du pipeline standard (pas de sous-système dédié).
 - **Liberté du joueur** : le MJ ne refuse jamais une action parce qu'elle est imprudente, immorale ou interdite dans l'univers — il la résout et en fait assumer les conséquences. Seul l'impossible matériel mène à un échec automatique, et le personnage y tente quand même l'action. Voir règles, section 10.
 - **Réaction des PNJ** : tout personnage touché par une action réagit dans la même narration. Une réaction peut ouvrir une menace, jamais la trancher contre le joueur — c'est son action suivante, et le jet qui la résout, qui en décide. Une attaque ouverte est toujours tranchée par l'action suivante, quelle qu'elle soit, par un jet : sur un échec, elle porte et blesse. Voir règles, section 10.
@@ -217,7 +218,7 @@ L'inventaire se scinde exactement sur la ligne « le LLM propose, le backend dé
   le nom d'affichage traduit.
 - **L'étape d'extraction reçoit une liste fermée d'identifiants autorisés.** Tout ce qui en
   sort est rejeté — même mécanisme de réconciliation que pour `action_type`.
-- **Catalogue fermé d'objets par scénario.** Le LLM ne peut pas créer d'entrée d'inventaire :
+- **Catalogue fermé d'objets.** Le LLM ne peut pas créer d'entrée d'inventaire :
   un objet inventé n'aurait ni effets mécaniques, ni identifiant stable, ni traduction. Le
   narrateur reste libre de décrire ce qu'il veut, il ne peut simplement pas faire apparaître
   quelque chose qui a des conséquences mécaniques.
@@ -275,7 +276,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 ## 8. Points ouverts (non tranchés à date)
 
 - Choix définitif du provider LLM externe, et du modèle par étape au-delà des phases de test (un modèle unique d'ici là, voir section 7).
-- Gestion des objets à usage limité (consommables, dégradation) — non couverte par le mécanisme actuel de modificateurs d'objets. L'instance d'objet (voir section 7) est l'endroit prévu pour porter durabilité et charges ; la modélisation reste à trancher en Phase 4.
+- Gestion des objets à usage limité (dégradation, charges) — différée à l'ouverture de la Phase 4 : les consommables passent par la quantité, et l'instance d'objet (voir section 7) est l'endroit prévu pour porter durabilité et charges le moment venu.
 - Décision entre pgvector intégré et vector store externe pour le RAG, à trancher selon le volume de lore réellement atteint.
 - Modalités précises de l'inscription self-service (validation d'email, mot de passe oublié, authentification tierce).
 - Réintroduction éventuelle d'un retry automatique des erreurs de transport (timeout, 5xx), une fois le comportement réel des erreurs observé en usage. Les sorties structurées rejetées ont déjà leur nouvelle tentative unique (section 7).
@@ -296,9 +297,9 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 ## 9. État d'avancement
 
-**Phases 0 et 1 terminées.** Le socle technique est en place, et un tour de jeu complet se joue de bout en bout par requête HTTP directe dans l'univers des *Trois Mousquetaires*, avec mise à jour de `world_states`, écriture de `turn_log` et erreurs différenciées.
+**Phases 0 à 3 terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web dans l'univers des *Trois Mousquetaires*, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable.
 
-**Phase actuelle : Phase 2 (front minimal)**, en préparation. Les décisions de cadrage — stack front, authentification par cookie, worker, idempotence, contrat SSE — sont reportées dans la roadmap (Phase 2) et le document d'architecture (section 8bis). Reste à la découper en tickets.
+**Phase actuelle : Phase 4 (inventaire et modificateurs d'objets)**, en cours. Les décisions de cadrage sont reportées dans la roadmap (Phase 4), le document d'architecture (section 6bis), le document de base de données (`inventory_items`) et le système de règles (sections 5, 7, 8).
 
 ---
 

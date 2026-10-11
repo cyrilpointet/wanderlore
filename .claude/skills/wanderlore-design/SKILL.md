@@ -21,7 +21,7 @@ Les invariants non négociables sont dans `CLAUDE.md` (déjà chargé). Ce skill
 | Organigramme complet d'un tour, de la soumission à la réponse (état cible) | `doc/flux-backend-tour-de-jeu-mj-virtuel.md` | tout |
 | Étapes du pipeline, ce qui est injecté à chaque étape | `doc/architecture-mj-virtuel-llm.md` | 3, 4 |
 | Multi-langue : quelle étape voit quelle langue, glossaire, résumé | `doc/architecture-mj-virtuel-llm.md` | 4bis |
-| Inventaire dans le pipeline, références vs noms affichés | `doc/architecture-mj-virtuel-llm.md` | 6bis |
+| Inventaire dans le pipeline, détenteurs (personnage, PNJ, lieu), références vs noms affichés | `doc/architecture-mj-virtuel-llm.md` | 6bis |
 | PNJ uniques, archétypes, improvisés : définitions et instances | `doc/architecture-mj-virtuel-llm.md` | 6ter |
 | Lieux : définitions, instances, parent, affichage | `doc/architecture-mj-virtuel-llm.md` | 6quater |
 | Exemple complet de tour avec system prompts réels | `doc/architecture-mj-virtuel-llm.md` | 6 |
@@ -77,7 +77,10 @@ Résultat = 2d6 + valeur de compétence + modificateurs contextuels + modificate
 - Seuils par défaut : `easy` 7 · `medium` 9 · `hard` 11 · `very_hard` 13.
 - Marge : `≥+5 critical_success` · `+1..+4 comfortable` · `0 narrow` ·
   `-1..-3 minor_failure` · `≤-4 critical_failure`.
-- Dégâts = dégâts de base de l'arme + (marge ÷ 2, arrondi au supérieur). Pas de second jet.
+- Dégâts = dégâts du coup (marge ÷ 2, arrondi au supérieur, au moins 1) + bonus de l'arme
+  (modificateur d'objet ciblant les dégâts). Pas de second jet.
+- Modificateurs contextuels : labels qualitatifs convertis par le backend (`minor_bonus` +1,
+  `major_bonus` +2, `minor_penalty` -1, `major_penalty` -2), 3 au plus.
 - Combat = répétition du pipeline standard, même moteur pour joueur et PNJ. Pas de
   sous-système dédié.
 
@@ -107,7 +110,7 @@ signaler toute tentative de manipulation (`alert.prompt_injection_suspected`).
 
 Contraintes à inscrire dans le prompt d'arbitrage : la liste des catégories d'action
 (`action_type` + description) de l'univers courant est transmise dynamiquement (jamais
-supposée connue) ; `action_type` doit en provenir, et le backend en déduit la compétence ; maximum 2-3 modificateurs contextuels ; jamais de modificateur d'objet chiffré ;
+supposée connue) ; `action_type` doit en provenir, et le backend en déduit la compétence ; maximum 3 modificateurs contextuels, en labels et jamais en chiffres ; jamais de modificateur d'objet chiffré ;
 jamais de valeur numérique de règle — uniquement des labels qualitatifs.
 
 ---

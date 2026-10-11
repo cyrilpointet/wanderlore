@@ -102,40 +102,54 @@ Total modifiers = contextual modifiers (proposés par le LLM, plafonnés)
 
 ### 5.1 Modificateurs contextuels (`contextual_modifiers`)
 
-Situationnels, propres au tour joué : position avantageuse, réputation du PNJ, tenue inadaptée, circonstances particulières. Ce sont les **seuls** modificateurs que le LLM d'arbitrage a le droit de proposer, chaque source valant généralement entre -2 et +3.
+Situationnels, propres au tour joué : position avantageuse, réputation du PNJ, tenue inadaptée, circonstances particulières. Ce sont les **seuls** modificateurs que le LLM d'arbitrage a le droit de proposer.
 
-**Règle de gouvernance impérative** : maximum 2 à 3 modificateurs contextuels cumulés par jet. Au-delà, le score devient artificiellement gonflé et la difficulté perd son sens. Cette contrainte doit être explicitement inscrite dans le system prompt de l'étape d'arbitrage LLM (« ne propose jamais plus de 3 modificateurs contextuels pour une même action »), puisque rien au niveau du moteur de calcul lui-même ne l'empêcherait autrement.
+**Le LLM propose un label, le backend le chiffre** (tranché à l'ouverture de la Phase 4). Comme pour la difficulté, le modèle ne manipule aucune valeur numérique : il qualifie l'ampleur de la circonstance, et le backend la convertit selon un barème fixe, dans le code.
+
+| Label (`effect`) | Valeur |
+|---|---|
+| `major_bonus` | +2 |
+| `minor_bonus` | +1 |
+| `minor_penalty` | -1 |
+| `major_penalty` | -2 |
+
+Une même circonstance vaut ainsi toujours la même chose d'un tour à l'autre.
+
+**Règle de gouvernance impérative** : au plus **3** modificateurs contextuels par jet — l'écart maximal reste à ±6 sur un 2d6. Au-delà, le score devient artificiellement gonflé et la difficulté perd son sens. La contrainte est inscrite dans le system prompt de l'arbitrage et vérifiée par le backend : une sortie qui la dépasse est rejetée (nouvelle tentative unique, puis échec du tour). Un modificateur dont la source est un objet en scène est rejeté de la même façon : un objet ne compte qu'à travers ses modificateurs d'objet.
 
 **Exemple de structure de modificateurs contextuels (sortie du LLM) :**
 ```json
 [
-  { "source": "favorable_reputation", "value": 3, "description": "Le PNJ a déjà une opinion positive du joueur" },
-  { "source": "unsuitable_attire", "value": -2, "description": "Apparence incohérente avec le rang social revendiqué" }
+  { "source": "favorable_reputation", "effect": "major_bonus" },
+  { "source": "unsuitable_attire", "effect": "minor_penalty" }
 ]
 ```
 
 ### 5.2 Modificateurs d'objets (`item_modifiers`)
 
-Fixes, attachés à un objet possédé ou équipé (arme, outil, document, armure). Ce sont des données factuelles et déterministes, **jamais proposées ou chiffrées par le LLM** — le modèle ne fait que juger la plausibilité factuelle de l'usage de l'objet (le joueur le possède-t-il, est-ce cohérent de l'utiliser dans ce contexte), sans jamais connaître ni produire la valeur du bonus/malus associé.
+Fixes, attachés à un objet possédé ou équipé (arme, outil, document, armure). Ce sont des données factuelles et déterministes, portées par la **définition** de l'objet, **jamais proposées ou chiffrées par le LLM** — le modèle ne fait que juger la plausibilité factuelle de l'usage de l'objet (le joueur le possède-t-il, est-ce cohérent de l'utiliser dans ce contexte), sans jamais connaître ni produire la valeur du bonus/malus associé.
 
-Le backend calcule ces modificateurs lui-même au moment du jet, en interrogeant l'inventaire du personnage : il sélectionne les objets dont un effet cible la compétence utilisée (déterminée par le LLM à l'étape d'arbitrage) et dont la condition d'activation est satisfaite, puis additionne leurs valeurs.
+Un modificateur d'objet cible soit une **compétence**, soit les **dégâts** (le bonus d'une arme, section 7). Le backend calcule ces modificateurs lui-même, en lisant les objets **du détenteur** du jet — en Phase 4, le personnage ; un objet tenu par un PNJ ou rangé dans un lieu ne compte jamais pour lui : il sélectionne les modificateurs qui ciblent la compétence jouée (déduite de l'`action_type` choisi par l'arbitrage) et dont la condition d'activation est satisfaite, puis additionne leurs valeurs. Les modificateurs d'une même définition ne comptent **qu'une fois**, quel que soit le nombre d'exemplaires détenus.
 
 **Conditions d'activation possibles (`condition`) :**
 - `owned` — le bonus s'applique dès que l'objet est en inventaire, sans besoin d'être activement porté (ex: une lettre, un document).
 - `equipped` — le bonus ne s'applique que si l'objet est dans l'état "équipé" de l'inventaire (ex: une arme, une armure).
 
-**Exemple de structure de modificateurs d'objets (définis dans l'inventaire, calculés par le backend) :**
+**Exemple de structure de modificateurs d'objets (portés par les définitions d'objets, calculés par le backend) :**
 ```json
 [
-  { "target_skill": "persuasion", "value": 2, "condition": "owned", "description": "Sceau officiel reconnu" },
-  { "target_skill": "melee_combat", "value": 1, "condition": "equipped", "description": "Lame bien équilibrée" },
-  { "target_skill": "stealth", "value": -2, "condition": "equipped", "description": "Armure lourde, bruyante" }
+  { "target_skill": "persuasion", "value": 2, "condition": "owned", "description": "Recognised official seal" },
+  { "target_skill": "swordsmanship", "value": 1, "condition": "equipped", "description": "Well-balanced blade" },
+  { "target": "damage", "value": 2, "condition": "equipped", "description": "Rapier point" },
+  { "target_skill": "stealth", "value": -2, "condition": "equipped", "description": "Heavy, noisy armour" }
 ]
 ```
 
-**Pas de plafond arbitraire** sur les modificateurs d'objets : ils sont naturellement bornés par ce que le personnage possède et peut équiper simultanément, contrairement aux modificateurs contextuels qui doivent être explicitement limités côté prompt.
+La forme exacte du ciblage (compétence ou dégâts) est fixée dans le code de la définition d'univers ; l'exemple en donne le principe.
 
-**Identification des objets.** Le backend fait le rapprochement entre la compétence utilisée et les objets de l'inventaire via la **référence stable** de l'objet (`item_reference`, en anglais, invariable), jamais via son nom d'affichage — qui varie selon la langue de la partie. Le champ `description` d'un modificateur reste lui aussi en anglais : il sert l'audit (« pourquoi ce bonus s'applique-t-il ? »), pas l'affichage joueur. Voir le document de base de données pour la structure, et le document d'architecture (section 6bis) pour ce que chaque étape du pipeline voit de l'inventaire.
+**Pas de plafond arbitraire** sur les modificateurs d'objets : ils sont naturellement bornés par ce que le personnage possède et peut équiper simultanément, contrairement aux modificateurs contextuels qui doivent être explicitement limités. Il n'y a pas d'emplacements d'équipement en Phase 4 : la règle « une fois par définition » suffit à empêcher le cumul de deux exemplaires du même objet.
+
+**Identification des objets.** Le backend fait le rapprochement entre la compétence utilisée et les objets du personnage via la **référence stable** de leur définition (`definition_reference`, en anglais, invariable), jamais via son nom d'affichage — qui varie selon la langue de la partie. Le champ `description` d'un modificateur reste lui aussi en anglais : il sert l'audit (« pourquoi ce bonus s'applique-t-il ? »), pas l'affichage joueur. Voir le document de base de données pour la structure, et le document d'architecture (section 6bis) pour ce que chaque étape du pipeline voit de l'inventaire.
 
 ### 5.3 Traçabilité
 
@@ -180,13 +194,19 @@ Un seul pool de ressource (`hit_points`) représente la santé/état du personna
 
 ### Calcul des dégâts — pas de second jet
 
-Les dégâts ne nécessitent pas un jet séparé : la marge de réussite du jet d'attaque détermine directement les dégâts infligés. Ce choix évite un appel/calcul supplémentaire dans le pipeline pour chaque action offensive.
+Les dégâts ne nécessitent pas un jet séparé : la marge de réussite du jet d'attaque détermine directement les dégâts du coup, et l'arme y ajoute son bonus. Ce choix évite un appel/calcul supplémentaire dans le pipeline pour chaque action offensive.
 
 ```
-Dégâts = dégâts de base de l'arme + (marge de réussite ÷ 2, arrondi au supérieur)
+Dégâts = dégâts du coup + bonus de l'arme
+Dégâts du coup = marge de réussite ÷ 2, arrondi au supérieur, au moins 1
 ```
 
-**Exemple** : arme à dégâts de base 3, jet réussi avec une marge de +4 → 3 + 2 = 5 dégâts.
+- **Au moins 1** : un coup qui porte blesse toujours, même sur une réussite de justesse (marge 0) à mains nues.
+- **Le bonus de l'arme est un modificateur d'objet** ciblant les dégâts (section 5.2), en général sous condition `equipped`. Sans arme, il vaut 0.
+
+**Exemple** : rapière équipée (bonus +2), jet réussi avec une marge de +4 → 2 + 2 = 4 dégâts ; à mains nues, 2.
+
+**Séquencement** (tranché à l'ouverture de la Phase 4) : la formule est posée et testée en Phase 4, avec les profils de combat des PNJ. Son branchement dans le tour — désigner l'attaquant et la cible — arrive avec la boucle de combat de la Phase 8. D'ici là, l'extraction chiffre les blessures du personnage sur l'échelle fixe de la section 10.
 
 ---
 
@@ -199,7 +219,9 @@ Pas de sous-système de combat séparé. Un combat est modélisé comme une **s�
 
 Cette approche évite de coder un moteur de combat distinct : le combat n'est qu'un enchaînement d'appels au même pipeline, avec des tours plus rapprochés dans le temps.
 
-**Résolution des PNJ adverses** : leurs compétences et modificateurs sont stockés au même format que ceux d'un personnage joueur (dans l'instance de PNJ propre à la partie — `npc_instances` —, ou dans sa définition type au niveau du scénario). Le moteur applique la même formule pour eux, sans distinction de traitement entre joueur et PNJ — un seul moteur de résolution pour tous les participants.
+**Résolution des PNJ adverses** : leurs compétences et modificateurs sont stockés au même format que ceux d'un personnage joueur — profil de combat sur la définition (compétences, points de vie maximum, arme ordinaire), points de vie courants sur l'instance (`npc_instances`). Le moteur applique la même formule pour eux, sans distinction de traitement entre joueur et PNJ — un seul moteur de résolution pour tous les participants.
+
+**Arme ordinaire et objet spécial** (tranché à l'ouverture de la Phase 4). L'arme ordinaire d'un PNJ est une simple référence de définition dans son profil : elle ne se vole pas et ne se transfère pas. Un objet spécial (arme de quête, épée de famille) est **détenu** par le PNJ comme tout objet (architecture, section 6bis) : c'est en le prenant que le joueur peut l'obtenir, et une arme détenue l'emporte sur l'arme ordinaire du profil.
 
 ---
 
@@ -217,13 +239,13 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
 
 - La liste des catégories d'action (`action_type`, avec leur description) de l'univers courant doit être transmise dans le contexte dynamique de chaque appel, jamais supposée connue à l'avance par le modèle. Leur compétence associée n'est pas transmise : c'est le backend qui la déduit.
 - Le LLM ne doit proposer `action_type` que parmi cette liste. Une proposition hors liste est rejetée par le backend et déclenche la nouvelle tentative unique avec message correctif, puis l'échec du tour (architecture, section 7).
-- Le LLM ne doit jamais proposer plus de 2 à 3 modificateurs **contextuels** cumulés pour une même action.
+- Le LLM ne doit jamais proposer plus de 3 modificateurs **contextuels** pour une même action, chacun qualifié par un label (`minor_bonus`, `major_bonus`, `minor_penalty`, `major_penalty`) et jamais par un chiffre (section 5.1).
 - Le LLM ne doit **jamais** chiffrer ou proposer de modificateur lié à un objet possédé ou équipé par le joueur — ces valeurs sont calculées séparément par le backend à partir de l'inventaire (voir section 5.2). Le rôle du LLM se limite à juger la plausibilité factuelle de l'usage de l'objet, jamais son effet mécanique.
 - Le LLM ne manipule que des labels qualitatifs (`easy`/`medium`/`hard`/`very_hard`, noms de compétences en anglais) — jamais de valeurs numériques de règles, qui restent entièrement du ressort du backend.
-- Les objets sont désignés par leur **référence stable anglaise**, transmise au modèle dans le contexte. Le joueur peut parfaitement écrire « je montre ma lettre » dans sa langue : le rapprochement inter-langue entre son texte libre et la référence anglaise est fait nativement par le modèle, sans traitement préalable.
+- Les objets sont désignés par leur **référence stable anglaise**, transmise au modèle dans le contexte avec les seuls objets en scène — ceux du personnage, des PNJ présents et du lieu. Un objet tenu par un PNJ ou rangé dans le lieu peut être pris, demandé ou volé : c'est une action comme une autre, résolue normalement. Le joueur peut parfaitement écrire « je montre ma lettre » dans sa langue : le rapprochement inter-langue entre son texte libre et la référence anglaise est fait nativement par le modèle, sans traitement préalable.
 - **Le joueur n'est jamais bridé dans ses choix.** Une action imprudente, déshonorante, illégale ou vouée à mal finir n'est ni refusée ni requalifiée en échec : elle est résolue normalement (jet si l'issue est incertaine, succès automatique sinon), et ses conséquences sont mises en scène. La plausibilité ne juge que la possibilité matérielle dans l'univers, jamais la sagesse ou la morale de l'action. Une règle d'univers qui interdit quelque chose (l'édit contre les duels) décrit la réaction du monde, pas une limite imposée au joueur. Un échec automatique signifie que le personnage tente et échoue — jamais qu'il renonce.
 - **Le monde réagit, sans trancher contre le joueur.** Chaque personnage touché par une action y réagit dans la même narration (réplique, menace, hostilité, fuite). Une réaction peut ouvrir une menace — un PNJ attaque — mais ne la résout jamais de sa propre initiative : savoir si l'attaque porte revient à l'action suivante du joueur, et donc à un jet calculé par le backend. Aucune perte de points de vie n'est infligée par la seule initiative d'un PNJ. C'est la forme tour par tour des jets alternés joueur/PNJ (section 8), en attendant la boucle de combat de la Phase 8.
-- **Une attaque ouverte est toujours tranchée par l'action suivante** (tranché en Phase 3, après les premiers tests manuels : une menace pouvait rester suspendue indéfiniment). Tant qu'une attaque contre le personnage reste ouverte, l'action suivante du joueur la tranche, quelle qu'elle soit — une question au MJ, une attente ou une fuite comprises — et c'est **toujours un jet** : l'attaque ouverte suffit à rendre l'issue incertaine. Si le personnage ne fait rien contre elle, l'arbitrage retient la catégorie qui couvre l'esquive ou la parade. Sur une **réussite**, le personnage l'évite ; sur un **échec**, elle porte et il est **blessé** — légèrement sur un `minor_failure` ou un échec automatique, gravement sur un `critical_failure` —, la narration le disant explicitement. Perdre son arme ou du terrain peut s'y ajouter, jamais le remplacer. En attendant la formule de dégâts liée aux armes (section 7, Phase 4), l'extraction chiffre la blessure sur une échelle fixe : 1 ou 2 points pour une blessure légère, 3 à 5 pour une blessure grave. La règle précédente tient : la perte de points de vie vient toujours d'un jet raté du joueur, jamais de la seule initiative du PNJ.
+- **Une attaque ouverte est toujours tranchée par l'action suivante** (tranché en Phase 3, après les premiers tests manuels : une menace pouvait rester suspendue indéfiniment). Tant qu'une attaque contre le personnage reste ouverte, l'action suivante du joueur la tranche, quelle qu'elle soit — une question au MJ, une attente ou une fuite comprises — et c'est **toujours un jet** : l'attaque ouverte suffit à rendre l'issue incertaine. Si le personnage ne fait rien contre elle, l'arbitrage retient la catégorie qui couvre l'esquive ou la parade. Sur une **réussite**, le personnage l'évite ; sur un **échec**, elle porte et il est **blessé** — légèrement sur un `minor_failure` ou un échec automatique, gravement sur un `critical_failure` —, la narration le disant explicitement. Perdre son arme ou du terrain peut s'y ajouter, jamais le remplacer. En attendant le branchement de la formule de dégâts (section 7, Phase 8), l'extraction chiffre la blessure sur une échelle fixe : 1 ou 2 points pour une blessure légère, 3 à 5 pour une blessure grave. La règle précédente tient : la perte de points de vie vient toujours d'un jet raté du joueur, jamais de la seule initiative du PNJ.
 
 ---
 
@@ -232,4 +254,4 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
 - Décision sur l'opportunité de barèmes de difficulté alternatifs par univers (garder le standard partout pour la cohérence entre univers, ou permettre une personnalisation).
 - Modélisation précise des adversaires multiples en combat (ordre d'initiative, gestion de plusieurs PNJ hostiles simultanés dans un même round).
 - Éventuelle notion de statuts temporaires (blessé, effrayé, avantagé) et leur traduction en modificateurs automatiques plutôt que proposés au cas par cas par le LLM.
-- Gestion des objets à usage limité (consommables perdant leur effet après utilisation, objets qui se dégradent avec le temps ou l'usage) — actuellement le mécanisme de modificateurs d'objets (section 5.2) suppose un effet stable tant que l'objet est possédé/équipé, sans notion d'épuisement. À noter : le modèle définition / instance (voir architecture, section 6bis) facilitera ce traitement — la définition déclare les caractéristiques de l'objet, l'instance portera son état d'usure ou ses charges restantes.
+- Gestion des objets à usage limité (consommables perdant leur effet après utilisation, objets qui se dégradent avec le temps ou l'usage) — **différée à l'ouverture de la Phase 4** : les consommables passent par la quantité (une balle tirée est détruite), et le mécanisme de modificateurs d'objets (section 5.2) suppose un effet stable tant que l'objet est possédé/équipé. Le modèle définition / instance (architecture, section 6bis) permettra d'ajouter usure et charges sur l'instance le moment venu.

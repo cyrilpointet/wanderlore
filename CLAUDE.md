@@ -38,8 +38,9 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
    application. Ce qui est hors périmètre est rejeté, pas appliqué.
 3. **Pipeline à responsabilité unique par étape**, jamais un appel LLM global unique.
 4. **Modificateurs contextuels ≠ modificateurs d'objets.** Le LLM ne propose que des
-   modificateurs situationnels (plafonnés à 2-3 par jet). Les bonus/malus d'objets sont
-   lus dans l'inventaire et calculés par le backend — le LLM ne les chiffre jamais.
+   modificateurs situationnels (3 au plus par jet), qualifiés par un label que le backend
+   chiffre. Les bonus/malus d'objets sont lus dans l'inventaire et calculés par le backend —
+   le LLM ne les chiffre jamais.
 5. **Le narrateur ne reçoit jamais de données mécaniques brutes** (dés, seuils, valeurs de
    compétence) — uniquement `result` + `margin` qualitative.
 6. **Séparation system prompt / user message.** Le system prompt est statique par étape
@@ -118,9 +119,8 @@ Acquis :
 
 **Phase 1 (boucle de jeu minimale) terminée** — epic Jira `KAN-4`. Un tour complet se joue
 par requête HTTP directe dans l'univers **Les Trois Mousquetaires** (connu du LLM, domaine
-public). Ses simplifications volontaires restent en vigueur jusqu'à la Phase 3 : univers et
-règles en dur dans le system prompt, un seul type de jet, aucun modificateur, pas d'étape E
-séparée.
+public). Ses simplifications volontaires ont été levées en Phase 3 (pipeline séparé, étape E)
+et en Phase 4 (modificateurs) ; l'univers reste en dur jusqu'à la Phase 5.
 
 **Phase 2 (front minimal) terminée** — epic Jira `KAN-13`. Un joueur connecté joue un tour
 depuis l'interface web, avec retour progressif par SSE et erreurs affichées par catégorie.
@@ -149,7 +149,7 @@ SSE : `step_started(arbitration)`, `roll_resolved`, `step_started(narration)`, d
 `narration_chunk`, puis un seul `turn_completed` (avec le lieu courant libellé) ou
 `turn_failed` — pas de jalon pour l'extraction.
 
-**Phase actuelle : Phase 3 (pipeline complet)**, en préparation. Décisions de cadrage actées
+**Phase 3 (pipeline complet) terminée** — epic Jira `KAN-28`. Ses choix restent en vigueur
 (détail : roadmap Phase 3, architecture §6ter, §6quater, §7, §8bis) :
 - pipeline séparé A+B+C → jet → D → E ; l'appel fusionné de la branche sans jet disparaît ;
 - **une seule nouvelle tentative** sur une sortie structurée rejetée (JSON illisible, hors
@@ -165,6 +165,25 @@ SSE : `step_started(arbitration)`, `roll_resolved`, `step_started(narration)`, d
 - **PNJ et lieux : définitions et instances** — `unique` / `archetype`, l'improvisé est une
   instance d'archétype générique ; tables `npc_instances` et `location_instances`, handles
   attribués par le backend, instances créées par la seule étape E.
+
+**Phase actuelle : Phase 4 (inventaire et modificateurs d'objets)**, en cours — epic Jira
+`KAN-44`. Décisions de cadrage actées (détail : roadmap Phase 4, architecture §6bis, base de
+données `inventory_items`, règles §5, §7, §8) :
+- **objets : définitions et instances**, sur le modèle des PNJ ; définitions en dur dans
+  `world.ts` avec un seul libellé anglais jusqu'à la Phase 5 ; `stackable`, `equippable`,
+  modificateurs ciblant une compétence ou les dégâts, détenteur initial facultatif ;
+- **trois détenteurs** — personnage, PNJ, lieu — par trois clés étrangères dont exactement une
+  renseignée ; donner, voler, cacher, ramasser = **transfert**, l'exemplaire garde son handle ;
+  `gone` = détruit ou consommé ; à la mort d'un PNJ, ses objets passent au lieu courant ;
+- seuls les **objets en scène** (personnage, PNJ présents, lieu courant) vont au pipeline ;
+  le front n'affiche que l'inventaire du personnage ; `world_states.world_objects` disparaît ;
+- **modificateurs contextuels** en labels (`minor_bonus` +1, `major_bonus` +2,
+  `minor_penalty` -1, `major_penalty` -2), convertis par le backend, 3 au plus ;
+  **modificateurs d'objets** du seul détenteur, une fois par définition ;
+- **dégâts = dégâts du coup (marge ÷ 2 arrondie au supérieur, au moins 1) + bonus de
+  l'arme** ; formule posée en Phase 4, branchée dans le tour en Phase 8 ; l'arme ordinaire d'un
+  PNJ est une référence de son profil de combat ;
+- durabilité et charges différées, consommables par la quantité.
 
 Décision non tranchée, sans urgence : hébergement léger pour la phase de test (Vercel,
 Supabase, Railway…).
