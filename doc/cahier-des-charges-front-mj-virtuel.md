@@ -368,8 +368,19 @@ origine). Les requêtes mutantes portent l'en-tête CSRF attendu par `@adonisjs/
 - la partie : univers, chapitre, statut, dernière activité, personnage complet, et
   l'identifiant du tour en cours s'il y en a un ;
 - un tour d'historique : action du joueur, jet éventuel (compétence avec libellé, `result`,
-  `margin`), narration, effets visibles avec libellés ;
-- `turn_completed` : de quoi mettre à jour le journal **et** la fiche sans nouvelle requête.
+  `margin`, et depuis la Phase 4 les objets qui ont pesé, libellés, sans valeur), narration,
+  effets visibles avec libellés — points de vie, déplacement, et depuis la Phase 4 ce qui est
+  arrivé aux objets du personnage (`items` : `change` parmi `gained` / `lost` / `used_up` /
+  `equipped` / `unequipped`, l'objet, la quantité, et le PNJ ou le lieu concerné quand il y en
+  a un) ;
+- `turn_completed` : de quoi mettre à jour le journal **et** la fiche sans nouvelle requête —
+  inventaire compris depuis la Phase 4.
+
+**Inventaire (Phase 4).** La fiche porte `character.inventory` : les objets que détient le
+personnage, chacun en `{ handle, item: { reference, label }, quantity, equipped }`. Un objet
+empilable n'a pas de `handle`. Un objet improvisé porte le libellé de son archétype ; son
+descripteur, réservé au narrateur, ne sort jamais, pas plus que les modificateurs. Ce que
+détiennent les PNJ et les lieux n'est pas exposé : le joueur l'apprend par la narration.
 
 **Libellés en Phase 2 (KAN-15).** Faute de tables de contenu avant la Phase 5, les libellés
 sont portés par la définition de l'univers codée en dur (`app/services/game/world.ts`) et
@@ -398,7 +409,11 @@ Exemple indicatif de la vue d'une partie :
     "hitPointsMax": 10,
     "attributes": [{ "reference": "physical", "label": "Physical", "value": 3 }],
     "skills": [{ "reference": "swordsmanship", "label": "Swordsmanship", "attribute": "physical", "value": 3 }],
-    "resources": [{ "reference": "purse", "label": "Purse", "value": 15 }]
+    "resources": [{ "reference": "purse", "label": "Purse", "value": 15 }],
+    "inventory": [
+      { "handle": "letter_to_treville", "item": { "reference": "letter_to_treville", "label": "Letter for M. de Tréville" }, "quantity": 1, "equipped": false },
+      { "handle": "rapier_1", "item": { "reference": "rapier", "label": "Rapier" }, "quantity": 1, "equipped": true }
+    ]
   },
   "location": { "reference": "meung_sur_loire", "label": "Meung-sur-Loire" },
   "activeQuests": [{ "reference": "deliver_the_letter", "label": "Deliver the letter", "summary": "Carry your father's letter to Monsieur de Tréville." }],

@@ -95,7 +95,7 @@ export function toMessage(ref: TurnRef, event: TurnEvent, labels: ContentLabels)
       return {
         ...header,
         turn: new TurnTransformer(event.turn, labels).toObject(),
-        character: new CharacterTransformer(event.character, labels).toObject(),
+        character: new CharacterTransformer(event.character, labels, event.inventory).toObject(),
         location: event.location === null ? null : labels.location(event.location),
       }
 

@@ -25,7 +25,15 @@ export default class SessionsController {
     const session = await Session.query()
       .where('id', params.id)
       .where('userId', auth.getUserOrFail().id)
-      .preload('characters')
+      .preload('characters', (characters) =>
+        characters.preload('items', (items) =>
+          items
+            .whereNot('state', 'gone')
+            .orderBy('createdAt', 'asc')
+            .orderBy('definitionReference', 'asc')
+            .orderBy('handle', 'asc')
+        )
+      )
       .preload('worldState', (worldState) => worldState.preload('currentLocation'))
       .preload('turns', (turns) => turns.where('status', 'pending'))
       .firstOrFail()

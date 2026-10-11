@@ -9,6 +9,8 @@ import WorldState from '#models/world_state'
 import { THREE_MUSKETEERS } from '#services/game/world'
 import { improviseLocation, visitUniqueLocation } from '#services/game/locations'
 import { createUser, useTransaction } from '#tests/helpers/database'
+import { createItem, destroyItem, equipItem } from '#services/game/inventory'
+import { enterScene } from '#services/game/npcs'
 
 /**
  * The routes the front reads a game through. Built on fixtures rather than on
@@ -179,6 +181,65 @@ test.group('GET /sessions/:id', (group) => {
     assert.deepEqual(character.resources, [{ reference: 'purse', label: 'Purse', value: 15 }])
   })
 
+  test("shows the character's inventory, labelled, without what items are worth", async ({
+    client,
+    assert,
+  }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(player.id)
+    const character = await Character.findByOrFail('sessionId', session.id)
+    const holder = { type: 'character' as const, id: character.id }
+    const make = (definition: string, quantity = 1, descriptor: string | null = null) =>
+      createItem(THREE_MUSKETEERS, session.id, { definition, descriptor, quantity }, holder)
+
+    await make('letter_to_treville')
+    const sword = await make('rapier', 1, "his father's old sword")
+    await equipItem(THREE_MUSKETEERS, sword)
+    await make('lead_shot', 6)
+    const stool = await make('improvised_weapon', 1, 'a three-legged stool')
+    await destroyItem(THREE_MUSKETEERS, stool, 1)
+    /** Someone else's: never on the sheet. */
+    const rochefort = await enterScene(THREE_MUSKETEERS, session.id, {
+      definition: 'rochefort',
+      descriptor: null,
+    })
+    await createItem(
+      THREE_MUSKETEERS,
+      session.id,
+      { definition: 'dagger', descriptor: null, quantity: 1 },
+      { type: 'npc', id: rochefort.id }
+    )
+
+    const response = await client.get(`/api/v1/sessions/${session.id}`).loginAs(player)
+
+    response.assertStatus(200)
+    const { inventory } = dataOf(response).character
+    assert.sameDeepMembers(inventory, [
+      {
+        handle: 'letter_to_treville',
+        item: { reference: 'letter_to_treville', label: 'Letter for M. de Tréville' },
+        quantity: 1,
+        equipped: false,
+      },
+      {
+        handle: 'rapier_1',
+        item: { reference: 'rapier', label: 'Rapier' },
+        quantity: 1,
+        equipped: true,
+      },
+      {
+        handle: null,
+        item: { reference: 'lead_shot', label: 'Lead shot' },
+        quantity: 6,
+        equipped: false,
+      },
+    ])
+    const body = JSON.stringify(dataOf(response))
+    for (const leak of ['modifiers', 'old sword', 'condition']) {
+      assert.notInclude(body, leak)
+    }
+  })
+
   test('says where the story stands', async ({ client, assert }) => {
     const player = await User.findOrFail(await createUser())
     const session = await arrangeGame(player.id)
@@ -282,15 +343,135 @@ test.group('GET /sessions/:id/turns', (group) => {
 
     assert.equal(turn.playerInput, 'Action 1')
     assert.equal(turn.narration, 'Narration 1')
+    /** Logged before Phase 4: no item weighed, none changed. */
     assert.deepEqual(turn.roll, {
       skill: { reference: 'persuasion', label: 'Persuasion' },
       result: 'success',
       margin: 'comfortable',
+      items: [],
     })
     assert.deepEqual(turn.effects, {
       hitPointsDelta: -2,
       movement: { reference: 'hotel_de_treville', label: 'Hôtel de Tréville' },
+      items: [],
     })
+  })
+
+  test('names the items that weighed on a roll, never their value', async ({ client, assert }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(player.id)
+    const turn = await completedTurn(session.id, 1)
+    turn.rollResult = {
+      ...turn.rollResult,
+      appliedModifiers: [
+        { source: 'contextual', origin: 'favorable_reputation', value: 1 },
+        { source: 'item', origin: 'letter_to_treville', value: 1 },
+      ],
+    }
+    await turn.save()
+
+    const response = await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player)
+    const [read] = dataOf(response)
+
+    assert.deepEqual(read.roll.items, [
+      { reference: 'letter_to_treville', label: 'Letter for M. de Tréville' },
+    ])
+    assert.notInclude(JSON.stringify(read), 'favorable_reputation')
+    assert.notInclude(JSON.stringify(read), 'appliedModifiers')
+  })
+
+  test("tells what happened to the character's items, and with whom", async ({
+    client,
+    assert,
+  }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(player.id)
+    const turn = await completedTurn(session.id, 1)
+    const rochefort = {
+      holder: 'npc',
+      handle: 'rochefort',
+      definitionReference: 'rochefort',
+      name: null,
+    }
+    const guard = {
+      holder: 'npc',
+      handle: 'cardinal_guard_1',
+      definitionReference: 'cardinal_guard',
+      name: 'Bernajoux',
+    }
+    turn.appliedEffects = {
+      ...turn.appliedEffects,
+      items: {
+        created: [
+          { item: 'food', definition: 'food', quantity: 2, holder: { holder: 'character' } },
+        ],
+        transferred: [
+          {
+            item: 'letter_to_treville',
+            definition: 'letter_to_treville',
+            quantity: 1,
+            from: { holder: 'character' },
+            to: rochefort,
+          },
+          {
+            item: 'common_sword_1',
+            definition: 'common_sword',
+            quantity: 1,
+            from: guard,
+            to: { holder: 'character' },
+          },
+          /** Between others: not the player's business. */
+          { item: 'dagger_1', definition: 'dagger', quantity: 1, from: rochefort, to: guard },
+        ],
+        destroyed: [
+          {
+            item: 'lead_shot',
+            definition: 'lead_shot',
+            quantity: 1,
+            holder: { holder: 'character' },
+          },
+        ],
+        equipped: [{ item: 'common_sword_1', definition: 'common_sword' }],
+        unequipped: [],
+      },
+    }
+    await turn.save()
+
+    const response = await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player)
+    const [read] = dataOf(response)
+
+    assert.deepEqual(read.effects.items, [
+      {
+        change: 'gained',
+        item: { reference: 'food', label: 'Food' },
+        quantity: 2,
+        counterpart: null,
+      },
+      {
+        change: 'lost',
+        item: { reference: 'letter_to_treville', label: 'Letter for M. de Tréville' },
+        quantity: 1,
+        counterpart: { reference: 'rochefort', label: 'Rochefort' },
+      },
+      {
+        change: 'gained',
+        item: { reference: 'common_sword', label: 'Sword' },
+        quantity: 1,
+        counterpart: { reference: 'cardinal_guard_1', label: 'Bernajoux' },
+      },
+      {
+        change: 'used_up',
+        item: { reference: 'lead_shot', label: 'Lead shot' },
+        quantity: 1,
+        counterpart: null,
+      },
+      {
+        change: 'equipped',
+        item: { reference: 'common_sword', label: 'Sword' },
+        quantity: 1,
+        counterpart: null,
+      },
+    ])
   })
 
   test('never exposes the dice, the threshold, the total or the flags', async ({

@@ -2,7 +2,8 @@ import { BaseTransformer } from '@adonisjs/core/transformers'
 
 import type TurnLog from '#models/turn_log'
 import type { ContentLabels } from '#services/game/content_labels'
-import type { AppliedEffects } from '#services/game/prompts/types'
+import type { Labelled } from '#services/game/content_labels'
+import type { AppliedEffects, AppliedHolder, AppliedItems } from '#services/game/prompts/types'
 import type { MarginLabel, RollOutcome } from '#services/rules/types'
 
 /**
@@ -62,31 +63,45 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
       throw new Error(`Turn ${this.resource.id} logged a roll without its skill.`)
     }
 
+    /** Turns rolled before Phase 4 have no modifier at all. */
+    const modifiers = (rollResult.appliedModifiers ?? []) as { source: string; origin: string }[]
+
     return presentRoll(
       {
         skill,
         result: rollResult.result as RollOutcome,
         margin: rollResult.marginLabel as MarginLabel,
+        items: [
+          ...new Set(
+            modifiers.filter(({ source }) => source === 'item').map(({ origin }) => origin)
+          ),
+        ],
       },
       this.#labels
     )
   }
 }
 
+/**
+ * The items that weighed on the roll are named, never with what they were
+ * worth: the pill says an item counted, not by how much.
+ */
 export function presentRoll(
-  roll: { skill: string; result: RollOutcome; margin: MarginLabel },
+  roll: { skill: string; result: RollOutcome; margin: MarginLabel; items: string[] },
   labels: ContentLabels
 ) {
   return {
     skill: labels.of('skill', roll.skill),
     result: roll.result,
     margin: roll.margin,
+    items: roll.items.map((item) => labels.of('item', item)),
   }
 }
 
 /**
- * The effects the player is told about: hit points and movement. Scenario
- * flags and the changes about people are internal and stay out.
+ * The effects the player is told about: hit points, movement, and what
+ * happened to the character's items. Scenario flags, the changes about people
+ * and what passes between others stay out.
  *
  * A movement is logged as the place reached, references only, and labelled
  * here; turns logged before improvised places existed hold a bare handle,
@@ -103,5 +118,89 @@ export function presentEffects(effects: AppliedEffects, labels: ContentLabels) {
         : typeof movement === 'string'
           ? labels.of('location', movement)
           : labels.location(movement),
+    items: presentItemChanges(effects.items, labels),
   }
+}
+
+/** How an item changed for the character, as the journal tells it. */
+export const ITEM_CHANGES = ['gained', 'lost', 'used_up', 'equipped', 'unequipped'] as const
+
+type ItemChange = {
+  change: (typeof ITEM_CHANGES)[number]
+  item: Labelled
+  quantity: number
+  /** Who it came from or went to, when someone or somewhere did. */
+  counterpart: Labelled | null
+}
+
+/**
+ * The changes that touch the character, in the order they were applied.
+ * Turns played before Phase 4 logged no item at all.
+ */
+function presentItemChanges(items: AppliedItems | undefined, labels: ContentLabels): ItemChange[] {
+  if (items === undefined) {
+    return []
+  }
+
+  const item = (definition: string) => labels.of('item', definition)
+  const changes: ItemChange[] = []
+
+  for (const created of items.created.filter(({ holder }) => holder.holder === 'character')) {
+    changes.push({
+      change: 'gained',
+      item: item(created.definition),
+      quantity: created.quantity,
+      counterpart: null,
+    })
+  }
+
+  for (const moved of items.transferred) {
+    if (moved.to.holder === 'character') {
+      changes.push({
+        change: 'gained',
+        item: item(moved.definition),
+        quantity: moved.quantity,
+        counterpart: holderLabel(moved.from, labels),
+      })
+    } else if (moved.from.holder === 'character') {
+      changes.push({
+        change: 'lost',
+        item: item(moved.definition),
+        quantity: moved.quantity,
+        counterpart: holderLabel(moved.to, labels),
+      })
+    }
+  }
+
+  for (const used of items.destroyed.filter(({ holder }) => holder.holder === 'character')) {
+    changes.push({
+      change: 'used_up',
+      item: item(used.definition),
+      quantity: used.quantity,
+      counterpart: null,
+    })
+  }
+
+  for (const [change, list] of [
+    ['equipped', items.equipped],
+    ['unequipped', items.unequipped],
+  ] as const) {
+    for (const entry of list) {
+      changes.push({ change, item: item(entry.definition), quantity: 1, counterpart: null })
+    }
+  }
+
+  return changes
+}
+
+/** Someone by the name the game learnt, else by their definition; a place as the badge shows it. */
+function holderLabel(holder: AppliedHolder, labels: ContentLabels): Labelled | null {
+  if (holder.holder === 'npc') {
+    return {
+      reference: holder.handle,
+      label: holder.name ?? labels.of('npc', holder.definitionReference).label,
+    }
+  }
+
+  return holder.holder === 'location' ? labels.location(holder.place) : null
 }

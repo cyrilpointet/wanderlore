@@ -19,7 +19,7 @@ import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import { FakeLlmProvider, streamed } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
-import { extracted } from '#tests/helpers/turns'
+import { CHARACTER, extracted } from '#tests/helpers/turns'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { seedResolutionRules } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
@@ -289,6 +289,7 @@ test.group('Turn events | what goes over the wire', (group) => {
       skill: { reference: 'persuasion', label: 'Persuasion' },
       result: 'success',
       margin: 'comfortable',
+      items: [],
     })
   })
 
@@ -301,9 +302,11 @@ test.group('Turn events | what goes over the wire', (group) => {
     /** Enough to update both without a further request. */
     assert.equal(message.turn.narration, NARRATED_TEXT)
     assert.equal(message.turn.status, 'completed')
-    assert.deepEqual(message.turn.effects, { hitPointsDelta: -2, movement: null })
+    assert.deepEqual(message.turn.effects, { hitPointsDelta: -2, movement: null, items: [] })
     assert.equal(message.character.hitPoints, 8)
     assert.deepEqual(message.character.skills[0].label, 'Persuasion')
+    /** The sheet's inventory too, as the game view would read it. */
+    assert.deepEqual(message.character.inventory, [])
   })
 
   test('nothing mechanical or internal leaves in any event', async ({ assert }) => {
@@ -485,6 +488,42 @@ test.group('Turn events | the separated pipeline', (group) => {
     assert.deepEqual(message.location, { reference: 'tavern_1', label: 'Tavern · Paris' })
     /** The journal says the same, from the effects as applied. */
     assert.deepEqual(message.turn.effects.movement, message.location)
+  })
+
+  test('a completed turn carries the sheet with what the character now holds', async ({
+    assert,
+  }) => {
+    const bread = extracted({
+      items_created: [
+        {
+          definition: 'food',
+          descriptor: 'a loaf',
+          quantity: 2,
+          holder: CHARACTER,
+          equipped: false,
+        },
+      ],
+    })
+    const { events } = await playOne([NEEDS_ROLL, streamed(NARRATED_TEXT), bread])
+    const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!
+
+    const message = toMessage(
+      completed.ref,
+      completed.event,
+      new ContentLabels(THREE_MUSKETEERS)
+    ) as Record<string, any>
+
+    assert.deepEqual(message.character.inventory, [
+      { handle: null, item: { reference: 'food', label: 'Food' }, quantity: 2, equipped: false },
+    ])
+    assert.deepEqual(message.turn.effects.items, [
+      {
+        change: 'gained',
+        item: { reference: 'food', label: 'Food' },
+        quantity: 2,
+        counterpart: null,
+      },
+    ])
   })
 })
 

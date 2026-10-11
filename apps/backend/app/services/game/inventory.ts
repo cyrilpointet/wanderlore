@@ -415,11 +415,11 @@ export async function itemsInScene(
     .orderBy('handle', 'asc')
 
   return {
-    character: items.filter((item) => item.characterId === scene.characterId).map(toHeldItem),
+    character: items.filter((item) => item.characterId === scene.characterId).map(heldItemOf),
     npcs: present
       .map((npc) => ({
         handle: npc.handle,
-        items: items.filter((item) => item.npcInstanceId === npc.id).map(toHeldItem),
+        items: items.filter((item) => item.npcInstanceId === npc.id).map(heldItemOf),
       }))
       .filter((npc) => npc.items.length > 0),
     location: items
@@ -427,7 +427,7 @@ export async function itemsInScene(
         (item) =>
           scene.locationInstanceId !== null && item.locationInstanceId === scene.locationInstanceId
       )
-      .map(toHeldItem),
+      .map(heldItemOf),
   }
 }
 
@@ -494,7 +494,7 @@ export async function characterItems(
     .orderBy('definitionReference', 'asc')
     .orderBy('handle', 'asc')
 
-  return items.map(toHeldItem)
+  return items.map(heldItemOf)
 }
 
 /**
@@ -509,7 +509,7 @@ export function modifierSources(world: WorldDefinition, items: HeldItem[]): Modi
   }))
 }
 
-function toHeldItem(item: InventoryItem): HeldItem {
+export function heldItemOf(item: InventoryItem): HeldItem {
   return {
     handle: item.handle,
     definition: item.definitionReference,
