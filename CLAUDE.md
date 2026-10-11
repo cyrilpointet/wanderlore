@@ -137,17 +137,21 @@ Ses choix d'exécution restent en vigueur (détail : roadmap Phase 2, architectu
   `roll_resolved`, `turn_completed`, `turn_failed`) ; rattrapage par lecture du tour.
 
 **Pipeline d'un tour** (séparé depuis KAN-40, `#runPipeline` dans `turn_service.ts`) :
-arbitrage A+B+C (`action_type`, jamais de narration) → jet côté backend si requis
-(compétence déduite via `resolution_rules`, une compétence absente de la fiche vaut 0) →
+arbitrage A+B+C (`action_type` et circonstances en labels, jamais de narration) → jet côté
+backend si requis (compétence déduite via `resolution_rules`, une compétence absente de la
+fiche vaut 0 ; circonstances et objets du personnage ajoutés, chacun tracé avec son origine) →
 narration D en **texte libre streamé** (`narration_chunk`) → extraction E, structurée, qui lit
 la narration et renvoie le delta complet, validé contre les listes fermées → application par
 `applyDelta` (`app/services/game/apply_delta.ts`) dans la transaction du tour, dans un ordre
-fixe : déplacement, sorties, entrées, noms et dispositions. Trois appels au minimum par tour,
+fixe : déplacement, sorties, entrées, noms et dispositions, puis objets (créations,
+transferts, destructions, équipement — « le lieu » étant celui où le tour a commencé). Trois
+appels au minimum par tour,
 sauf pour un **aparté au MJ** (`intent.type: out_of_character`) : narré en réponse brève,
 sans extraction ni changement d'état.
-SSE : `step_started(arbitration)`, `roll_resolved`, `step_started(narration)`, des
-`narration_chunk`, puis un seul `turn_completed` (avec le lieu courant libellé) ou
-`turn_failed` — pas de jalon pour l'extraction.
+SSE : `step_started(arbitration)`, `roll_resolved` (avec les objets qui ont pesé, sans
+valeur), `step_started(narration)`, des `narration_chunk`, puis un seul `turn_completed` (avec
+le lieu courant libellé et l'inventaire à jour) ou `turn_failed` — pas de jalon pour
+l'extraction.
 
 **Phase 3 (pipeline complet) terminée** — epic Jira `KAN-28`. Ses choix restent en vigueur
 (détail : roadmap Phase 3, architecture §6ter, §6quater, §7, §8bis) :
@@ -166,9 +170,9 @@ SSE : `step_started(arbitration)`, `roll_resolved`, `step_started(narration)`, d
   instance d'archétype générique ; tables `npc_instances` et `location_instances`, handles
   attribués par le backend, instances créées par la seule étape E.
 
-**Phase actuelle : Phase 4 (inventaire et modificateurs d'objets)**, en cours — epic Jira
-`KAN-44`. Décisions de cadrage actées (détail : roadmap Phase 4, architecture §6bis, base de
-données `inventory_items`, règles §5, §7, §8) :
+**Phase 4 (inventaire et modificateurs d'objets) terminée** — epic Jira `KAN-44`. Ses choix
+restent en vigueur (détail : roadmap Phase 4, architecture §6bis, base de données
+`inventory_items`, règles §5, §7, §8) :
 - **objets : définitions et instances**, sur le modèle des PNJ ; définitions en dur dans
   `world.ts` avec un seul libellé anglais jusqu'à la Phase 5 ; `stackable`, `equippable`,
   modificateurs ciblant une compétence ou les dégâts, détenteur initial facultatif ;
@@ -184,6 +188,8 @@ données `inventory_items`, règles §5, §7, §8) :
   l'arme** ; formule posée en Phase 4, branchée dans le tour en Phase 8 ; l'arme ordinaire d'un
   PNJ est une référence de son profil de combat ;
 - durabilité et charges différées, consommables par la quantité.
+
+**Phase actuelle : Phase 5 (multi-univers et back-office minimal)**, à cadrer et découper.
 
 Décision non tranchée, sans urgence : hébergement léger pour la phase de test (Vercel,
 Supabase, Railway…).
@@ -239,6 +245,9 @@ Supabase, Railway…).
   un `container.swap()` ferait de la substitution un état global à restaurer après chaque
   test. Un test construit sa propre instance avec un double. Voir `app/services/llm.ts` et
   `app/services/dice.ts`.
+- **Tout changement d'objet passe par le service d'inventaire** (`#services/game/inventory`) :
+  création, transfert, destruction, équipement, placement initial. Jamais d'écriture directe
+  dans `inventory_items` : les règles d'unicité, d'empilement et de détenteur y vivent.
 - **Tout tirage aléatoire passe par `import dice from '#services/dice'`** — jamais
   `Math.random()` dans le code métier, sinon le moteur de règles n'est plus testable.
 - **Toute lecture du temps dans le code du tour passe par le port `Clock`**
@@ -289,6 +298,8 @@ Supabase, Railway…).
   les lui fournit. Le flux SSE passe par `transmit()` (`src/api/transmit.ts`), fermé à la
   déconnexion et sur un `401`.
 - **Couleurs par jetons sémantiques uniquement** (`src/styles.css`) — jamais une valeur brute.
+- **Un composant se teste rendu en HTML statique** (`*.test.tsx`, `renderToStaticMarkup`,
+  sous Node) — jamais dans un DOM : la suite Vitest reste sans navigateur.
 - En développement, Vite proxifie `/api` et `/__transmit` vers le backend (même origine).
 
 ### Tests
@@ -302,7 +313,11 @@ Supabase, Railway…).
   avorterait sinon la transaction du test. Asserter sur le SQLSTATE, pas sur le message.
 - **Les migrations lancées depuis un test passent toujours par `testUtils.db()`**, jamais
   par `node ace migration:run` ni `migration:fresh` (qui réécrivent `database/schema.ts` —
-  `fresh` n'accepte même pas `--no-schema-generate`).
+  `fresh` n'accepte même pas `--no-schema-generate`). `migration:reset` le réécrit **vide**,
+  ce qui empêche ace de démarrer : ne jamais l'utiliser, base de test comprise.
+- **Échec en cascade connu** : environ un passage complet sur trois, des dizaines de tests
+  tombent sur « unable to release database lock » (verrou consultatif de Lucid pris et relâché
+  sur deux connexions différentes du pool). Relancer avant d'enquêter.
 - **Les tests importent `#services/llm/gateway`**, jamais `#services/llm`, qui construirait
   un vrai client Gemini. `FakeLlmProvider` (`#tests/helpers/fake_llm_provider`) sert de
   double : il **doit** honorer `AbortSignal`, sinon les tests de timeout pendent.

@@ -297,9 +297,9 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 ## 9. État d'avancement
 
-**Phases 0 à 3 terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web dans l'univers des *Trois Mousquetaires*, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable.
+**Phases 0 à 4 terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web dans l'univers des *Trois Mousquetaires*, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable. Depuis la Phase 4, les objets sont des instances détenues par le personnage, un PNJ ou un lieu, les jets comptent circonstances (labels) et objets, chacun tracé avec son origine, et l'inventaire du personnage s'affiche au front.
 
-**Phase actuelle : Phase 4 (inventaire et modificateurs d'objets)**, en cours. Les décisions de cadrage sont reportées dans la roadmap (Phase 4), le document d'architecture (section 6bis), le document de base de données (`inventory_items`) et le système de règles (sections 5, 7, 8).
+**Phase actuelle : Phase 5 (multi-univers et back-office minimal)**, à cadrer et découper. Voir la roadmap, Phase 5.
 
 ---
 
