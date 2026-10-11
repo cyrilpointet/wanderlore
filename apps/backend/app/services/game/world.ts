@@ -58,6 +58,11 @@ export type WorldDefinition = {
    * would have no label to show.
    */
   locations: LocationDefinition[]
+  /**
+   * Closed catalogue of items. The model picks from it and never makes up an
+   * item: one it invented would have no effect, no label and no translation.
+   */
+  items: ItemDefinition[]
   chapters: ContentEntry[]
   quests: ContentEntry[]
 }
@@ -89,6 +94,48 @@ export type NpcDefinition = DescribedEntry & {
  */
 export type LocationDefinition = DescribedEntry &
   ({ kind: 'unique'; parent: string | null } | { kind: 'archetype' })
+
+export const ITEM_CONDITIONS = ['owned', 'equipped'] as const
+
+/**
+ * When an item modifier applies: as soon as the item is held (`owned`), or
+ * only while the character wears or wields it (`equipped`).
+ */
+export type ItemCondition = (typeof ITEM_CONDITIONS)[number]
+
+/**
+ * A fixed bonus or malus an item brings to its holder, aimed at a skill or at
+ * the damage a hit deals — the weapon's bonus. Read by the backend only: the
+ * model never sees it, proposes it or prices it.
+ */
+export type ItemModifier = {
+  value: number
+  condition: ItemCondition
+  /** English, for audit: why the modifier applies. Never shown, never translated. */
+  description: string
+} & ({ target: 'skill'; skill: string } | { target: 'damage' })
+
+/**
+ * Who holds a unique item when the game starts, if anyone: it comes into
+ * being with that character or place, the first time the game meets them.
+ */
+export type ItemHolderReference =
+  { holder: 'npc'; reference: string } | { holder: 'location'; reference: string }
+
+/**
+ * An item of the world. A `unique` exists at most once per game; an
+ * `archetype` as many times as the story needs, and a `generic` one stands for
+ * whatever the player improvises, with a free-text descriptor and no
+ * definition of its own. A `stackable` archetype is interchangeable — twenty
+ * lead balls — and counts by quantity rather than by copy.
+ */
+export type ItemDefinition = DescribedEntry & {
+  equippable: boolean
+  modifiers: ItemModifier[]
+} & (
+    | { kind: 'unique'; initialHolder: ItemHolderReference | null }
+    | { kind: 'archetype'; generic: boolean; stackable: boolean }
+  )
 
 export const THREE_MUSKETEERS: WorldDefinition = {
   reference: 'three_musketeers',
@@ -498,6 +545,281 @@ export const THREE_MUSKETEERS: WorldDefinition = {
     },
   ],
 
+  /**
+   * The items the plot turns on, then the arms and gear of the novel, then
+   * generic archetypes for anything else the player picks up. Values stay
+   * small: three contextual modifiers already move a 2d6 by up to six.
+   */
+  items: [
+    {
+      reference: 'letter_to_treville',
+      label: 'Letter for M. de Tréville',
+      kind: 'unique',
+      initialHolder: null,
+      equippable: false,
+      description:
+        "A letter of recommendation from d'Artagnan's father to his old comrade, the captain of the Musketeers.",
+      modifiers: [
+        {
+          target: 'skill',
+          skill: 'persuasion',
+          value: 1,
+          condition: 'owned',
+          description: 'A gentleman vouched for by an old friend of Tréville',
+        },
+      ],
+    },
+    {
+      reference: 'queens_diamond_studs',
+      label: "The Queen's diamond studs",
+      kind: 'unique',
+      initialHolder: { holder: 'npc', reference: 'buckingham' },
+      equippable: false,
+      description:
+        'Twelve diamond studs the King gave the Queen, which she secretly gave the Duke of Buckingham.',
+      modifiers: [],
+    },
+    {
+      reference: 'richelieu_warrant',
+      label: "The Cardinal's warrant",
+      kind: 'unique',
+      initialHolder: { holder: 'npc', reference: 'milady' },
+      equippable: false,
+      description:
+        "A paper in Richelieu's hand stating that the bearer acted on his orders and for the good of the State.",
+      modifiers: [
+        {
+          target: 'skill',
+          skill: 'intimidation',
+          value: 2,
+          condition: 'owned',
+          description: "The Cardinal's own signature covers the bearer",
+        },
+      ],
+    },
+    {
+      reference: 'cardinal_seal',
+      label: "The Cardinal's seal",
+      kind: 'unique',
+      initialHolder: { holder: 'location', reference: 'palais_cardinal' },
+      equippable: false,
+      description: "A signet bearing Richelieu's arms, used to seal his orders.",
+      modifiers: [
+        {
+          target: 'skill',
+          skill: 'deception',
+          value: 2,
+          condition: 'owned',
+          description: 'Forged orders carry a genuine seal',
+        },
+      ],
+    },
+
+    {
+      reference: 'rapier',
+      label: 'Rapier',
+      kind: 'archetype',
+      generic: false,
+      stackable: false,
+      equippable: true,
+      description: 'A long, slender duelling sword, the weapon of every gentleman.',
+      modifiers: [
+        {
+          target: 'skill',
+          skill: 'swordsmanship',
+          value: 1,
+          condition: 'equipped',
+          description: 'A well-balanced duelling blade',
+        },
+        {
+          target: 'damage',
+          value: 2,
+          condition: 'equipped',
+          description: 'Rapier point',
+        },
+      ],
+    },
+    {
+      reference: 'dagger',
+      label: 'Dagger',
+      kind: 'archetype',
+      generic: false,
+      stackable: false,
+      equippable: true,
+      description: 'A short blade, a main-gauche or a knife worn at the belt.',
+      modifiers: [
+        {
+          target: 'damage',
+          value: 1,
+          condition: 'equipped',
+          description: 'Short blade',
+        },
+      ],
+    },
+    {
+      reference: 'pistol',
+      label: 'Pistol',
+      kind: 'archetype',
+      generic: false,
+      stackable: false,
+      equippable: true,
+      description: 'A single-shot wheellock pistol, slow to reload.',
+      modifiers: [
+        {
+          target: 'damage',
+          value: 3,
+          condition: 'equipped',
+          description: 'Pistol ball at close range',
+        },
+      ],
+    },
+    {
+      reference: 'musket',
+      label: 'Musket',
+      kind: 'archetype',
+      generic: false,
+      stackable: false,
+      equippable: true,
+      description: 'A long, heavy matchlock musket, deadly and cumbersome.',
+      modifiers: [
+        {
+          target: 'damage',
+          value: 4,
+          condition: 'equipped',
+          description: 'Musket ball',
+        },
+        {
+          target: 'skill',
+          skill: 'stealth',
+          value: -1,
+          condition: 'equipped',
+          description: 'A long, smoking matchlock is hard to hide',
+        },
+      ],
+    },
+    {
+      reference: 'musketeer_tabard',
+      label: "Musketeer's tabard",
+      kind: 'archetype',
+      generic: false,
+      stackable: false,
+      equippable: true,
+      description: "The blue tabard with the silver cross of the King's Musketeers.",
+      modifiers: [
+        {
+          target: 'skill',
+          skill: 'intimidation',
+          value: 1,
+          condition: 'equipped',
+          description: "Wearing the King's colours",
+        },
+      ],
+    },
+
+    {
+      reference: 'improvised_weapon',
+      label: 'Improvised weapon',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: true,
+      description: 'Anything picked up to hit with: a stool, a bottle, a candlestick, a stick.',
+      modifiers: [
+        {
+          target: 'damage',
+          value: 1,
+          condition: 'equipped',
+          description: 'Something heavy to hit with',
+        },
+      ],
+    },
+    {
+      reference: 'common_sword',
+      label: 'Sword',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: true,
+      description: "Any plain sword: a soldier's blade, a sabre, a sword taken from a fallen foe.",
+      modifiers: [
+        {
+          target: 'damage',
+          value: 2,
+          condition: 'equipped',
+          description: 'A plain blade',
+        },
+      ],
+    },
+    {
+      reference: 'rope',
+      label: 'Rope',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: false,
+      description: 'A coil of rope or cord.',
+      modifiers: [
+        {
+          target: 'skill',
+          skill: 'athletics',
+          value: 1,
+          condition: 'owned',
+          description: 'A rope to climb or swing with',
+        },
+      ],
+    },
+    {
+      reference: 'tool',
+      label: 'Tool',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: false,
+      description: 'A key, a lantern, a crowbar or any other implement.',
+      modifiers: [],
+    },
+    {
+      reference: 'document',
+      label: 'Document',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: false,
+      description: 'A letter, a note, a map or any paper of no particular weight.',
+      modifiers: [],
+    },
+    {
+      reference: 'trinket',
+      label: 'Trinket',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: false,
+      description: 'A small valuable: a ring, a locket, a handkerchief, a jewel.',
+      modifiers: [],
+    },
+    {
+      reference: 'food',
+      label: 'Food',
+      kind: 'archetype',
+      generic: true,
+      stackable: true,
+      equippable: false,
+      description: 'A ration of food or a bottle of wine.',
+      modifiers: [],
+    },
+    {
+      reference: 'lead_shot',
+      label: 'Lead shot',
+      kind: 'archetype',
+      generic: true,
+      stackable: true,
+      equippable: false,
+      description: 'Lead balls and powder for a pistol or a musket, one shot each.',
+      modifiers: [],
+    },
+  ],
+
   chapters: [{ reference: 'the_road_to_paris', label: 'The Road to Paris' }],
 
   quests: [{ reference: 'deliver_the_letter', label: 'Deliver the letter' }],
@@ -520,6 +842,16 @@ export function uniqueLocationReferences(world: WorldDefinition): string[] {
   return world.locations
     .filter((location) => location.kind === 'unique')
     .map((location) => location.reference)
+}
+
+/** Every item an extraction may name, unique or archetype. */
+export function itemReferences(world: WorldDefinition): string[] {
+  return world.items.map((item) => item.reference)
+}
+
+/** Items that may come into being any number of times: archetypes, generic or not. */
+export function itemArchetypeReferences(world: WorldDefinition): string[] {
+  return world.items.filter((item) => item.kind === 'archetype').map((item) => item.reference)
 }
 
 /** Generic places an improvised location is an instance of. */

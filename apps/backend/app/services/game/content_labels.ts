@@ -30,6 +30,7 @@ export type ContentKind =
   | 'npc'
   | 'location'
   | 'location_archetype'
+  | 'item'
   | 'chapter'
   | 'quest'
 
@@ -74,6 +75,7 @@ export class ContentLabels {
       location_archetype: index(
         world.locations.filter((location) => location.kind === 'archetype')
       ),
+      item: index(world.items),
       chapter: index(world.chapters),
       quest: index(world.quests),
     }

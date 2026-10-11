@@ -1,7 +1,10 @@
 import { test } from '@japa/runner'
 
 import {
+  ITEM_CONDITIONS,
   THREE_MUSKETEERS,
+  itemArchetypeReferences,
+  itemReferences,
   locationArchetypeReferences,
   npcReferences,
   uniqueLocationReferences,
@@ -22,6 +25,7 @@ const CONTENT: [string, ContentEntry[]][] = [
   ['resources', THREE_MUSKETEERS.resources],
   ['npcs', THREE_MUSKETEERS.npcs],
   ['locations', THREE_MUSKETEERS.locations],
+  ['items', THREE_MUSKETEERS.items],
   ['chapters', THREE_MUSKETEERS.chapters],
   ['quests', THREE_MUSKETEERS.quests],
 ]
@@ -156,5 +160,119 @@ test.group('World definition | locations', () => {
       0
     )
     assert.lengthOf([...unique, ...archetypes], THREE_MUSKETEERS.locations.length)
+  })
+})
+
+test.group('World definition | items', () => {
+  const items = THREE_MUSKETEERS.items
+  const skills = THREE_MUSKETEERS.skills.map((skill) => skill.reference)
+
+  test('every definition is described for the model', ({ assert }) => {
+    for (const item of items) {
+      assert.isNotEmpty(item.description.trim(), item.reference)
+    }
+  })
+
+  test('every modifier is a whole, non-zero value with a known condition', ({ assert }) => {
+    for (const item of items) {
+      for (const modifier of item.modifiers) {
+        assert.isTrue(Number.isInteger(modifier.value), item.reference)
+        assert.notEqual(modifier.value, 0, item.reference)
+        assert.include(ITEM_CONDITIONS, modifier.condition, item.reference)
+        assert.isNotEmpty(modifier.description.trim(), item.reference)
+      }
+    }
+  })
+
+  test('every skill modifier aims at a skill of the world', ({ assert }) => {
+    for (const item of items) {
+      for (const modifier of item.modifiers) {
+        if (modifier.target === 'skill') {
+          assert.include(skills, modifier.skill, item.reference)
+        }
+      }
+    }
+  })
+
+  test('only an item that can be equipped asks to be equipped', ({ assert }) => {
+    for (const item of items.filter((entry) => !entry.equippable)) {
+      for (const modifier of item.modifiers) {
+        assert.notEqual(modifier.condition, 'equipped', item.reference)
+      }
+    }
+  })
+
+  test('a damage bonus is positive and comes from a wielded item', ({ assert }) => {
+    for (const item of items) {
+      for (const modifier of item.modifiers.filter((entry) => entry.target === 'damage')) {
+        assert.isAbove(modifier.value, 0, item.reference)
+        assert.isTrue(item.equippable, item.reference)
+      }
+    }
+  })
+
+  test('an item counts its bonus to damage once at most', ({ assert }) => {
+    for (const item of items) {
+      const damage = item.modifiers.filter((modifier) => modifier.target === 'damage')
+
+      assert.isAtMost(damage.length, 1, item.reference)
+    }
+  })
+
+  test('every initial holder is a unique character or a unique place', ({ assert }) => {
+    const uniqueNpcs = THREE_MUSKETEERS.npcs
+      .filter((npc) => npc.kind === 'unique')
+      .map((npc) => npc.reference)
+    const uniquePlaces = uniqueLocationReferences(THREE_MUSKETEERS)
+
+    for (const item of items) {
+      if (item.kind !== 'unique' || item.initialHolder === null) {
+        continue
+      }
+
+      const { holder, reference } = item.initialHolder
+      const known = holder === 'npc' ? uniqueNpcs : uniquePlaces
+
+      assert.include(known, reference, `${item.reference} → ${holder} ${reference}`)
+    }
+  })
+
+  test('places items with characters and in places from the start', ({ assert }) => {
+    const holders = items.flatMap((item) =>
+      item.kind === 'unique' && item.initialHolder !== null ? [item.initialHolder.holder] : []
+    )
+
+    assert.includeMembers(holders, ['npc', 'location'])
+  })
+
+  test('declares generic archetypes for improvised items, stackable ones among them', ({
+    assert,
+  }) => {
+    const generics = items.filter((item) => item.kind === 'archetype' && item.generic)
+
+    assert.isNotEmpty(generics)
+    assert.isTrue(generics.some((item) => item.kind === 'archetype' && item.stackable))
+  })
+
+  test('no unique item could be mistaken for a copy of an archetype', ({ assert }) => {
+    /** Both share a game's handles: `letter_to_treville`, but `rapier_2`. */
+    for (const archetype of itemArchetypeReferences(THREE_MUSKETEERS)) {
+      const handle = new RegExp(`^${archetype}_\\d+$`)
+
+      for (const item of items) {
+        assert.notMatch(item.reference, handle)
+      }
+    }
+  })
+
+  test('lists every definition in the closed list, archetypes apart', ({ assert }) => {
+    assert.sameMembers(
+      itemReferences(THREE_MUSKETEERS),
+      items.map((item) => item.reference)
+    )
+    assert.sameMembers(
+      itemArchetypeReferences(THREE_MUSKETEERS),
+      items.filter((item) => item.kind === 'archetype').map((item) => item.reference)
+    )
   })
 })

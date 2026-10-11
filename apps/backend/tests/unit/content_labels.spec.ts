@@ -40,6 +40,19 @@ test.group('Content labels', () => {
     assert.deepEqual(labels.of('npc', 'commoner'), { reference: 'commoner', label: 'Commoner' })
   })
 
+  test('labels items of the world, unique or archetype', ({ assert }) => {
+    assert.deepEqual(labels.of('item', 'letter_to_treville'), {
+      reference: 'letter_to_treville',
+      label: 'Letter for M. de Tréville',
+    })
+    /** An improvised item reads as its archetype: the descriptor is for the narrator. */
+    assert.deepEqual(labels.of('item', 'improvised_weapon'), {
+      reference: 'improvised_weapon',
+      label: 'Improvised weapon',
+    })
+    assert.throws(() => labels.of('item', 'magic_ring'), MissingLabelError)
+  })
+
   test('labels a unique place by its definition, under its handle', ({ assert }) => {
     const place = {
       handle: 'paris',
