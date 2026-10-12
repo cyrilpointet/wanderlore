@@ -17,6 +17,9 @@ import { Route as AuthenticatedWorldsWorldIdRouteImport } from './routes/_authen
 import { Route as AuthenticatedWorldsNewRouteImport } from './routes/_authenticated/worlds/new'
 import { Route as AuthenticatedWorldsWorldIdIndexRouteImport } from './routes/_authenticated/worlds/$worldId/index'
 import { Route as AuthenticatedWorldsWorldIdActionTypesRouteImport } from './routes/_authenticated/worlds/$worldId/action-types'
+import { Route as AuthenticatedWorldsWorldIdItemsRouteImport } from './routes/_authenticated/worlds/$worldId/items'
+import { Route as AuthenticatedWorldsWorldIdLocationsRouteImport } from './routes/_authenticated/worlds/$worldId/locations'
+import { Route as AuthenticatedWorldsWorldIdNpcsRouteImport } from './routes/_authenticated/worlds/$worldId/npcs'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -61,6 +64,24 @@ const AuthenticatedWorldsWorldIdActionTypesRoute =
     path: '/action-types',
     getParentRoute: () => AuthenticatedWorldsWorldIdRoute,
   } as any)
+const AuthenticatedWorldsWorldIdItemsRoute =
+  AuthenticatedWorldsWorldIdItemsRouteImport.update({
+    id: '/items',
+    path: '/items',
+    getParentRoute: () => AuthenticatedWorldsWorldIdRoute,
+  } as any)
+const AuthenticatedWorldsWorldIdLocationsRoute =
+  AuthenticatedWorldsWorldIdLocationsRouteImport.update({
+    id: '/locations',
+    path: '/locations',
+    getParentRoute: () => AuthenticatedWorldsWorldIdRoute,
+  } as any)
+const AuthenticatedWorldsWorldIdNpcsRoute =
+  AuthenticatedWorldsWorldIdNpcsRouteImport.update({
+    id: '/npcs',
+    path: '/npcs',
+    getParentRoute: () => AuthenticatedWorldsWorldIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -69,6 +90,9 @@ export interface FileRoutesByFullPath {
   '/worlds/new': typeof AuthenticatedWorldsNewRoute
   '/worlds/': typeof AuthenticatedWorldsIndexRoute
   '/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
+  '/worlds/$worldId/items': typeof AuthenticatedWorldsWorldIdItemsRoute
+  '/worlds/$worldId/locations': typeof AuthenticatedWorldsWorldIdLocationsRoute
+  '/worlds/$worldId/npcs': typeof AuthenticatedWorldsWorldIdNpcsRoute
   '/worlds/$worldId/': typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +101,9 @@ export interface FileRoutesByTo {
   '/worlds/new': typeof AuthenticatedWorldsNewRoute
   '/worlds': typeof AuthenticatedWorldsIndexRoute
   '/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
+  '/worlds/$worldId/items': typeof AuthenticatedWorldsWorldIdItemsRoute
+  '/worlds/$worldId/locations': typeof AuthenticatedWorldsWorldIdLocationsRoute
+  '/worlds/$worldId/npcs': typeof AuthenticatedWorldsWorldIdNpcsRoute
   '/worlds/$worldId': typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 export interface FileRoutesById {
@@ -88,6 +115,9 @@ export interface FileRoutesById {
   '/_authenticated/worlds/new': typeof AuthenticatedWorldsNewRoute
   '/_authenticated/worlds/': typeof AuthenticatedWorldsIndexRoute
   '/_authenticated/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
+  '/_authenticated/worlds/$worldId/items': typeof AuthenticatedWorldsWorldIdItemsRoute
+  '/_authenticated/worlds/$worldId/locations': typeof AuthenticatedWorldsWorldIdLocationsRoute
+  '/_authenticated/worlds/$worldId/npcs': typeof AuthenticatedWorldsWorldIdNpcsRoute
   '/_authenticated/worlds/$worldId/': typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -99,6 +129,9 @@ export interface FileRouteTypes {
     | '/worlds/new'
     | '/worlds/'
     | '/worlds/$worldId/action-types'
+    | '/worlds/$worldId/items'
+    | '/worlds/$worldId/locations'
+    | '/worlds/$worldId/npcs'
     | '/worlds/$worldId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -107,6 +140,9 @@ export interface FileRouteTypes {
     | '/worlds/new'
     | '/worlds'
     | '/worlds/$worldId/action-types'
+    | '/worlds/$worldId/items'
+    | '/worlds/$worldId/locations'
+    | '/worlds/$worldId/npcs'
     | '/worlds/$worldId'
   id:
     | '__root__'
@@ -117,6 +153,9 @@ export interface FileRouteTypes {
     | '/_authenticated/worlds/new'
     | '/_authenticated/worlds/'
     | '/_authenticated/worlds/$worldId/action-types'
+    | '/_authenticated/worlds/$worldId/items'
+    | '/_authenticated/worlds/$worldId/locations'
+    | '/_authenticated/worlds/$worldId/npcs'
     | '/_authenticated/worlds/$worldId/'
   fileRoutesById: FileRoutesById
 }
@@ -184,11 +223,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorldsWorldIdActionTypesRouteImport
       parentRoute: typeof AuthenticatedWorldsWorldIdRoute
     }
+    '/_authenticated/worlds/$worldId/items': {
+      id: '/_authenticated/worlds/$worldId/items'
+      path: '/items'
+      fullPath: '/worlds/$worldId/items'
+      preLoaderRoute: typeof AuthenticatedWorldsWorldIdItemsRouteImport
+      parentRoute: typeof AuthenticatedWorldsWorldIdRoute
+    }
+    '/_authenticated/worlds/$worldId/locations': {
+      id: '/_authenticated/worlds/$worldId/locations'
+      path: '/locations'
+      fullPath: '/worlds/$worldId/locations'
+      preLoaderRoute: typeof AuthenticatedWorldsWorldIdLocationsRouteImport
+      parentRoute: typeof AuthenticatedWorldsWorldIdRoute
+    }
+    '/_authenticated/worlds/$worldId/npcs': {
+      id: '/_authenticated/worlds/$worldId/npcs'
+      path: '/npcs'
+      fullPath: '/worlds/$worldId/npcs'
+      preLoaderRoute: typeof AuthenticatedWorldsWorldIdNpcsRouteImport
+      parentRoute: typeof AuthenticatedWorldsWorldIdRoute
+    }
   }
 }
 
 interface AuthenticatedWorldsWorldIdRouteChildren {
   AuthenticatedWorldsWorldIdActionTypesRoute: typeof AuthenticatedWorldsWorldIdActionTypesRoute
+  AuthenticatedWorldsWorldIdItemsRoute: typeof AuthenticatedWorldsWorldIdItemsRoute
+  AuthenticatedWorldsWorldIdLocationsRoute: typeof AuthenticatedWorldsWorldIdLocationsRoute
+  AuthenticatedWorldsWorldIdNpcsRoute: typeof AuthenticatedWorldsWorldIdNpcsRoute
   AuthenticatedWorldsWorldIdIndexRoute: typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 
@@ -196,6 +259,10 @@ const AuthenticatedWorldsWorldIdRouteChildren: AuthenticatedWorldsWorldIdRouteCh
   {
     AuthenticatedWorldsWorldIdActionTypesRoute:
       AuthenticatedWorldsWorldIdActionTypesRoute,
+    AuthenticatedWorldsWorldIdItemsRoute: AuthenticatedWorldsWorldIdItemsRoute,
+    AuthenticatedWorldsWorldIdLocationsRoute:
+      AuthenticatedWorldsWorldIdLocationsRoute,
+    AuthenticatedWorldsWorldIdNpcsRoute: AuthenticatedWorldsWorldIdNpcsRoute,
     AuthenticatedWorldsWorldIdIndexRoute: AuthenticatedWorldsWorldIdIndexRoute,
   }
 

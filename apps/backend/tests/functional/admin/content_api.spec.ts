@@ -428,3 +428,53 @@ test.group('Content API | access', (group) => {
     response.assertStatus(403)
   })
 })
+
+test.group('Content API | kinds', (group) => {
+  useTransaction(group)
+
+  test('refuses what only the other kind of definition may have, on its field', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const genericUnique = await as(client, user).post(`/worlds/${worldId}/npcs`, {
+      ...GUARD,
+      kind: 'unique',
+      generic: true,
+    })
+    const parentedArchetype = await as(client, user).post(`/worlds/${worldId}/locations`, {
+      reference: 'tavern',
+      labels: { en: 'Tavern' },
+      description: 'A place to drink.',
+      kind: 'archetype',
+      parent: 'paris',
+    })
+
+    for (const [response, field] of [
+      [genericUnique, 'generic'],
+      [parentedArchetype, 'parent'],
+    ] as const) {
+      response.assertStatus(422)
+      assert.equal(bodyOf(response).error.code, 'kind_mismatch')
+      assert.equal(bodyOf(response).error.details.field, field)
+    }
+  })
+
+  test('checks the definition as edited, not only what is sent', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+    const created = await as(client, user).post(`/worlds/${worldId}/npcs`, {
+      ...GUARD,
+      generic: true,
+    })
+
+    const response = await as(client, user).patch(`/npcs/${bodyOf(created).data.id}`, {
+      kind: 'unique',
+    })
+
+    response.assertStatus(422)
+    assert.equal(bodyOf(response).error.details.field, 'generic')
+  })
+})

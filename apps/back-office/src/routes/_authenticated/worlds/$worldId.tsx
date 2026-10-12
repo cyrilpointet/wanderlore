@@ -45,7 +45,7 @@ function WorldLayout() {
         </h1>
         <p className="mt-1 font-mono text-label text-subtle">{world.reference}</p>
 
-        <nav aria-label={t('tabs.label')} className="mt-6 mb-8 flex gap-5 border-b border-border">
+        <nav aria-label={t('tabs.label')} className="mt-6 mb-8 flex gap-5 overflow-x-auto border-b border-border">
           <Link
             to="/worlds/$worldId"
             params={{ worldId }}
@@ -62,6 +62,20 @@ function WorldLayout() {
             className={TAB}
           >
             {t('tabs.actionTypes')}
+          </Link>
+          <Link to="/worlds/$worldId/npcs" params={{ worldId }} activeProps={ACTIVE_TAB} className={TAB}>
+            {t('tabs.npcs')}
+          </Link>
+          <Link
+            to="/worlds/$worldId/locations"
+            params={{ worldId }}
+            activeProps={ACTIVE_TAB}
+            className={TAB}
+          >
+            {t('tabs.locations')}
+          </Link>
+          <Link to="/worlds/$worldId/items" params={{ worldId }} activeProps={ACTIVE_TAB} className={TAB}>
+            {t('tabs.items')}
           </Link>
         </nav>
 

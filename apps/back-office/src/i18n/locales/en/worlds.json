@@ -13,7 +13,10 @@
   "tabs": {
     "label": "Parts of the world",
     "general": "World",
-    "actionTypes": "Categories of action"
+    "actionTypes": "Categories of action",
+    "npcs": "People",
+    "locations": "Places",
+    "items": "Items"
   },
   "form": {
     "general": "Identity",

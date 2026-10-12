@@ -56,6 +56,8 @@ export default tseslint.config(
               'name',
               // The path of a form field, as the backend names it in its errors.
               'path',
+              // Which catalogue an editor works on: npcs, locations or items.
+              'catalogue',
               'htmlFor',
               'role',
               'autoComplete',

@@ -4,6 +4,7 @@ import NpcDefinition from '#models/npc_definition'
 import ItemDefinition from '#models/item_definition'
 import LocationDefinition from '#models/location_definition'
 import { type Catalogue, definitionValidators } from '#validators/content'
+import { Refusal } from '#exceptions/refusal'
 import { refuseUsedDefinition } from '#services/game/content/usage'
 import DefinitionTransformer from '#transformers/admin/definition_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -73,6 +74,8 @@ export default class DefinitionsController {
       throw referenceTaken(payload.reference)
     }
 
+    refuseKindMismatch(payload)
+
     const definition = await Model.create({ ...payload, ...level } as never)
 
     response.status(201)
@@ -86,7 +89,9 @@ export default class DefinitionsController {
     refuseReferenceChange(request, definition.reference)
 
     const payload = await request.validateUsing(definitionValidators[catalogue].update as never)
-    await definition.merge(payload as never).save()
+    definition.merge(payload as never)
+    refuseKindMismatch(definition.$attributes)
+    await definition.save()
 
     return serialize(DefinitionTransformer.transform(definition))
   }
@@ -109,6 +114,31 @@ export default class DefinitionsController {
     await definition.delete()
 
     return response.noContent()
+  }
+}
+
+/**
+ * What only one kind of definition may have: a unique is neither generic nor
+ * stackable, an archetype has no parent nor initial holder. Refused on the
+ * field at fault rather than left to the database constraints.
+ */
+function refuseKindMismatch(definition: Record<string, unknown>) {
+  const unique = definition.kind === 'unique'
+  const mismatch = unique
+    ? (['generic', 'stackable'] as const).find((field) => definition[field] === true)
+    : (['parent', 'initialHolder'] as const).find(
+        (field) => definition[field] !== null && definition[field] !== undefined
+      )
+
+  if (mismatch) {
+    throw new Refusal(
+      422,
+      'kind_mismatch',
+      unique
+        ? `A unique definition cannot be ${mismatch}.`
+        : `An archetype has no ${mismatch === 'parent' ? 'parent' : 'initial holder'}.`,
+      { field: mismatch }
+    )
   }
 }
 

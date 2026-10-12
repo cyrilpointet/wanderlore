@@ -1,0 +1,52 @@
+{
+  "reference": "Reference",
+  "kind": "Kind",
+  "kinds": {
+    "unique": "Unique",
+    "archetype": "Archetype"
+  },
+  "kindHint": {
+    "npcs": "A unique person exists once per game; an archetype as many times as the story needs.",
+    "locations": "A unique place exists once per game; an archetype stands for any place of its kind.",
+    "items": "A unique item exists once per game; an archetype as many times as the story needs."
+  },
+  "description": "Description",
+  "descriptionHint": "One line of English for the model, never shown to the player.",
+  "generic": {
+    "npcs": "Generic: stands for anyone the player runs into",
+    "items": "Generic: stands for anything the player picks up"
+  },
+  "defaultDisposition": "Disposition on meeting",
+  "dispositions": {
+    "hostile": "Hostile",
+    "unfriendly": "Unfriendly",
+    "neutral": "Neutral",
+    "friendly": "Friendly",
+    "allied": "Allied"
+  },
+  "combat": "Fighting profile",
+  "combatHint": "JSON: skills by reference, hitPointsMax, and the item reference of the ordinary weapon (or null).",
+  "parent": "Inside",
+  "parentHint": "The named place that contains this one, if any.",
+  "none": "None",
+  "stackable": "Stackable: copies are interchangeable and counted by quantity",
+  "equippable": "Can be worn or wielded",
+  "initialHolder": "Held when the game starts by",
+  "initialHolderHint": "A named person or place; the item comes into being with them.",
+  "people": "People",
+  "places": "Places",
+  "modifiers": "Modifiers",
+  "modifiersHint": "JSON list: each with target (skill or damage), skill when the target is a skill, value, condition (owned or equipped) and description.",
+  "overrides": "Overrides the world's",
+  "empty": "Nothing here yet.",
+  "intro": {
+    "npcs": "The people the scene can hold. The model picks from this list and never invents someone with a state of their own.",
+    "locations": "The places of the world, named or generic. A movement names a named place, or a new place of an archetype.",
+    "items": "The items of the world. The model picks from this list and never makes up an item."
+  },
+  "add": {
+    "npcs": "Add a person",
+    "locations": "Add a place",
+    "items": "Add an item"
+  }
+}
