@@ -5,5 +5,7 @@
   "forbidden_role": "This account cannot do that.",
   "reference_taken": "This reference is already taken.",
   "reference_immutable": "A reference never changes once created.",
-  "content_in_use": "Games are played with this: it cannot be removed."
+  "content_in_use": "Games are played with this: it cannot be removed.",
+  "scenario_incoherent": "This scenario does not hold together yet.",
+  "scenario_not_playable": "This scenario cannot be played yet."
 }

@@ -8,18 +8,25 @@ import Character from '#models/character'
 import WorldState from '#models/world_state'
 import { Refusal } from '#exceptions/refusal'
 
-import { loadWorld } from './content/load.js'
+import { loadContent } from './content/load.js'
+import { resolveWorld } from './content/resolve.js'
+import { type CoherenceIssue, checkScenario } from './content/coherence.js'
 import { UnknownLocationError, visitUniqueLocation } from './locations.js'
 import { ItemRefusedError, UnknownItemError, createItem, equipItem } from './inventory.js'
 
 /**
- * A scenario that cannot be played from: a draft without its character or
- * its starting state, or whose content does not hold together. Publishing
- * checks the latter; a game master trying out a draft can still meet it.
+ * A scenario that cannot be played from: its content does not hold together
+ * — a draft without its character or its starting state, say. Publishing
+ * checks it; a game master trying a draft out can still meet it.
  */
 export class ScenarioNotPlayableError extends Refusal {
-  constructor(reason: string, options?: ErrorOptions) {
-    super(422, 'scenario_not_playable', `This scenario cannot be played yet: ${reason}`)
+  constructor(reason: string, options?: ErrorOptions & { issues?: CoherenceIssue[] }) {
+    super(
+      422,
+      'scenario_not_playable',
+      `This scenario cannot be played yet: ${reason}`,
+      options?.issues ? { issues: options.issues } : undefined
+    )
 
     if (options?.cause) {
       this.cause = options.cause
@@ -66,17 +73,21 @@ export async function startGame(user: User, scenarioId: string): Promise<Session
   }
 
   const scenario = await query.firstOrFail()
-  const { pregeneratedCharacter: pregenerated, initialState } = scenario
 
-  if (pregenerated === null) {
-    throw new ScenarioNotPlayableError('it has no character to play.')
+  /**
+   * Checked again here, not only at publication: content edited since may
+   * have broken it, and a draft a game master tries out was never checked.
+   */
+  const content = await loadContent({ worldId: scenario.worldId, scenarioId: scenario.id })
+  const issues = checkScenario(content.world, content.scenario)
+
+  if (issues.length > 0) {
+    throw new ScenarioNotPlayableError('its content does not hold together.', { issues })
   }
 
-  if (initialState === null) {
-    throw new ScenarioNotPlayableError('it does not say where the story starts.')
-  }
-
-  const world = await loadWorld({ worldId: scenario.worldId, scenarioId: scenario.id })
+  const world = resolveWorld(content.world, content.scenario)
+  const pregenerated = scenario.pregeneratedCharacter!
+  const initialState = scenario.initialState!
 
   return db.transaction(async (trx) => {
     const session = await Session.create(

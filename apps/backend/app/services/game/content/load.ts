@@ -3,13 +3,35 @@ import type { QueryClientContract } from '@adonisjs/lucid/types/database'
 import Scenario from '#models/scenario'
 import type { WorldDefinition } from '#services/game/world'
 
-import { resolveWorld } from './resolve.js'
+import type { ScenarioContent } from './types.js'
+import { resolveWorld, type WorldLevelContent } from './resolve.js'
 import { readWorldLevel, scenarioContentOf } from './store.js'
 
 /** What names a game's content: its world and the scenario it was started from. */
 export type GameContentRef = {
   worldId: string
   scenarioId: string
+}
+
+/** The content a game is played with, as stored: its world's, and its scenario's. */
+export type GameContent = {
+  world: WorldLevelContent
+  scenario: ScenarioContent
+}
+
+/** A game's world and scenario, read as they stand in the database right now. */
+export async function loadContent(
+  ref: GameContentRef,
+  client?: QueryClientContract
+): Promise<GameContent> {
+  const scenario = await Scenario.query({ client })
+    .where('id', ref.scenarioId)
+    .where('worldId', ref.worldId)
+    .firstOrFail()
+
+  const world = await readWorldLevel(ref.worldId, client)
+
+  return { world, scenario: await scenarioContentOf(scenario, client) }
 }
 
 /**
@@ -24,14 +46,9 @@ export async function loadWorld(
   ref: GameContentRef,
   client?: QueryClientContract
 ): Promise<WorldDefinition> {
-  const scenario = await Scenario.query({ client })
-    .where('id', ref.scenarioId)
-    .where('worldId', ref.worldId)
-    .firstOrFail()
+  const { world, scenario } = await loadContent(ref, client)
 
-  const world = await readWorldLevel(ref.worldId, client)
-
-  return resolveWorld(world, await scenarioContentOf(scenario, client))
+  return resolveWorld(world, scenario)
 }
 
 /**

@@ -30,6 +30,8 @@ export type ScannedRoutes = {
     'admin.scenarios.show': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
     'admin.scenarios.update': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
     'admin.scenarios.destroy': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.scenarios.publish': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.scenarios.unpublish': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
     'admin.definitions.world.index': { paramsTuple: [ParamValue,ParamValue]; params: {'worldId': ParamValue,'catalogue': ParamValue} }
     'admin.definitions.world.store': { paramsTuple: [ParamValue,ParamValue]; params: {'worldId': ParamValue,'catalogue': ParamValue} }
     'admin.definitions.scenario.index': { paramsTuple: [ParamValue,ParamValue]; params: {'scenarioId': ParamValue,'catalogue': ParamValue} }
@@ -83,6 +85,8 @@ export type ScannedRoutes = {
     'admin.worlds.store': { paramsTuple?: []; params?: {} }
     'admin.action_types.store': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
     'admin.scenarios.store': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.scenarios.publish': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.scenarios.unpublish': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
     'admin.definitions.world.store': { paramsTuple: [ParamValue,ParamValue]; params: {'worldId': ParamValue,'catalogue': ParamValue} }
     'admin.definitions.scenario.store': { paramsTuple: [ParamValue,ParamValue]; params: {'scenarioId': ParamValue,'catalogue': ParamValue} }
     'subscribe': { paramsTuple?: []; params?: {} }

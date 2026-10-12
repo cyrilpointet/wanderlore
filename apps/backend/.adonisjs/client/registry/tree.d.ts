@@ -54,6 +54,8 @@ export interface ApiDefinition {
       show: typeof routes['admin.scenarios.show']
       update: typeof routes['admin.scenarios.update']
       destroy: typeof routes['admin.scenarios.destroy']
+      publish: typeof routes['admin.scenarios.publish']
+      unpublish: typeof routes['admin.scenarios.unpublish']
     }
     definitions: {
       world: {

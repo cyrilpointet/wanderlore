@@ -8,6 +8,9 @@ import {
   removedReferences,
 } from '#services/game/content/usage'
 import ScenarioTransformer from '#transformers/admin/scenario_transformer'
+import { Refusal } from '#exceptions/refusal'
+import { loadContent } from '#services/game/content/load'
+import { checkScenario } from '#services/game/content/coherence'
 import type { HttpContext } from '@adonisjs/core/http'
 
 import { referenceTaken, refuseReferenceChange } from './content.js'
@@ -66,6 +69,37 @@ export default class ScenariosController {
     await refuseRemovedQuests(scope, removedReferences(scenario.quests, payload.quests))
 
     await scenario.merge(payload).save()
+
+    return serialize(ScenarioTransformer.transform(scenario))
+  }
+
+  /**
+   * Offers the scenario to the players, once its content holds together. The
+   * answer lists everything that does not, all at once.
+   */
+  async publish({ params, serialize }: HttpContext) {
+    const scenario = await Scenario.findOrFail(params.scenarioId)
+    const content = await loadContent({ worldId: scenario.worldId, scenarioId: scenario.id })
+    const issues = checkScenario(content.world, content.scenario)
+
+    if (issues.length > 0) {
+      throw new Refusal(422, 'scenario_incoherent', 'This scenario does not hold together yet.', {
+        issues,
+      })
+    }
+
+    scenario.status = 'published'
+    await scenario.save()
+
+    return serialize(ScenarioTransformer.transform(scenario))
+  }
+
+  /** Back to a draft: no new game starts from it; games already started play on. */
+  async unpublish({ params, serialize }: HttpContext) {
+    const scenario = await Scenario.findOrFail(params.scenarioId)
+
+    scenario.status = 'draft'
+    await scenario.save()
 
     return serialize(ScenarioTransformer.transform(scenario))
   }

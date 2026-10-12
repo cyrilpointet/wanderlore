@@ -87,6 +87,8 @@ router
         router.get('scenarios/:scenarioId', [controllers.admin.Scenarios, 'show'])
         router.patch('scenarios/:scenarioId', [controllers.admin.Scenarios, 'update'])
         router.delete('scenarios/:scenarioId', [controllers.admin.Scenarios, 'destroy'])
+        router.post('scenarios/:scenarioId/publish', [controllers.admin.Scenarios, 'publish'])
+        router.post('scenarios/:scenarioId/unpublish', [controllers.admin.Scenarios, 'unpublish'])
 
         /** The three catalogues, at world level or at a scenario's. */
         router

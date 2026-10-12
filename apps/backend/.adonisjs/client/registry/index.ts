@@ -162,6 +162,18 @@ const routes = {
     tokens: [{"old":"/api/v1/admin/scenarios/:scenarioId","type":0,"val":"api","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId","type":0,"val":"v1","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId","type":0,"val":"admin","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId","type":0,"val":"scenarios","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId","type":1,"val":"scenarioId","end":""}],
     types: placeholder as Registry['admin.scenarios.destroy']['types'],
   },
+  'admin.scenarios.publish': {
+    methods: ["POST"],
+    pattern: '/api/v1/admin/scenarios/:scenarioId/publish',
+    tokens: [{"old":"/api/v1/admin/scenarios/:scenarioId/publish","type":0,"val":"api","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId/publish","type":0,"val":"v1","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId/publish","type":0,"val":"admin","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId/publish","type":0,"val":"scenarios","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId/publish","type":1,"val":"scenarioId","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId/publish","type":0,"val":"publish","end":""}],
+    types: placeholder as Registry['admin.scenarios.publish']['types'],
+  },
+  'admin.scenarios.unpublish': {
+    methods: ["POST"],
+    pattern: '/api/v1/admin/scenarios/:scenarioId/unpublish',
+    tokens: [{"old":"/api/v1/admin/scenarios/:scenarioId/unpublish","type":0,"val":"api","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId/unpublish","type":0,"val":"v1","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId/unpublish","type":0,"val":"admin","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId/unpublish","type":0,"val":"scenarios","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId/unpublish","type":1,"val":"scenarioId","end":""},{"old":"/api/v1/admin/scenarios/:scenarioId/unpublish","type":0,"val":"unpublish","end":""}],
+    types: placeholder as Registry['admin.scenarios.unpublish']['types'],
+  },
   'admin.definitions.world.index': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/admin/worlds/:worldId/:catalogue',

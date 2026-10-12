@@ -319,6 +319,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['destroy']>>>
     }
   }
+  'admin.scenarios.publish': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/scenarios/:scenarioId/publish'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { scenarioId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['publish']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['publish']>>>
+    }
+  }
+  'admin.scenarios.unpublish': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/scenarios/:scenarioId/unpublish'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { scenarioId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['unpublish']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['unpublish']>>>
+    }
+  }
   'admin.definitions.world.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/admin/worlds/:worldId/:catalogue'
