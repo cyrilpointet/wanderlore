@@ -189,10 +189,27 @@ restent en vigueur (détail : roadmap Phase 4, architecture §6bis, base de donn
   PNJ est une référence de son profil de combat ;
 - durabilité et charges différées, consommables par la quantité.
 
-**Phase actuelle : Phase 5 (multi-univers et back-office minimal)**, à cadrer et découper.
+**Phase actuelle : Phase 5 (multi-univers et back-office minimal)**, cadrée, à découper.
+Décisions (détail : roadmap, Phase 5, « Décisions de cadrage ») :
+- back-office sur la stack du front ; front, back-office et API sur trois sous-domaines d'un
+  domaine à nous (cookie de session same-site, CORS avec `credentials`) ; premier
+  `game_master` par seeder ;
+- univers chargé une fois par tour et passé à toutes les étapes, sans cache ;
+- scénario `draft` / `published`, cohérence vérifiée à la publication ; personnage prétiré et
+  état initial portés par le scénario ; un `game_master` peut jouer, brouillons compris ;
+- back-office couvrant tout ce qu'un tour exige, JSON brut validé pour les structures
+  imbriquées ;
+- `npc_definitions`, `location_definitions`, `item_definitions`, même forme, surcharge
+  scénario sur univers pour les trois ; référence immuable, suppression interdite si une
+  instance l'emploie ;
+- noms d'affichage par langue sur chaque définition (anglais obligatoire) ; glossaire réduit
+  aux noms propres non-entités, au niveau de l'univers ;
+- Trois Mousquetaires en base par seeder de contenu ; `sessions.world_id` / `scenario_id`
+  `NOT NULL` sans reprise (parties recréées par `game:reset`).
 
-Décision non tranchée, sans urgence : hébergement léger pour la phase de test (Vercel,
-Supabase, Railway…).
+Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
+privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
+serverless pour le backend).
 
 ---
 

@@ -71,7 +71,7 @@ Cette section formalise la raison d'être du projet, établie via une analyse CQ
 
 ### Budget actuel (phase de test)
 
-- **Hébergement** : solution légère et peu onéreuse envisagée pour la première phase de test (ex. Vercel, Supabase, Railway) — tiers gratuits ou quasi-gratuits suffisants au volume actuel.
+- **Hébergement** : solution légère et peu onéreuse envisagée pour la première phase de test — tiers gratuits ou quasi-gratuits suffisants au volume actuel. Piste privilégiée : **Railway**, une seule plateforme pour le backend, PostgreSQL et les deux applications statiques. Le serverless est exclu pour le backend (worker dans le process HTTP, flux SSE ouverts, instance unique). Contrainte actée en Phase 5 : trois sous-domaines d'un domaine à nous (voir roadmap, Phase 5).
 - **LLM** : API économique envisagée pour la phase de beta test fermé (ex. Gemini), cohérente avec un faible volume d'usage.
 - **Budget global visé** : de l'ordre de 15-20€ mensuels, cadré comme un budget loisir.
 - **Point de vigilance** : ce budget est valable tant que le volume d'usage reste faible. Le coût scale avec le nombre de tours joués (jusqu'à 3 appels LLM par tour dans le pipeline complet une fois la Phase 3 de la roadmap atteinte) — ce n'est pas un budget qui restera stable en cas d'ouverture à davantage d'utilisateurs.
@@ -289,7 +289,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 - Hébergement et canal de distribution définitifs (au-delà des solutions légères envisagées pour la phase de test — voir section 4) — non abordés pour une éventuelle montée en charge.
 - **Choix du modèle de monétisation** — la démarche pour y parvenir est actée (voir section 4 : mesure du coût réel puis validation de l'appétence en beta test), mais aucune piste n'est encore sélectionnée.
 - Modalités d'une éventuelle ouverture future du rôle "maître du jeu" à des utilisateurs tiers (aujourd'hui strictement technique/interne) — non planifiée, envisagée comme possibilité à long terme.
-- Support multi-langue : l'architecture est actée (voir section 7), mais **la liste des langues cibles** reste ouverte. L'i18n du front est posée dès la Phase 2, avec l'anglais seul ; bibliothèque retenue : react-i18next. Reste également à décider du niveau de granularité du glossaire de noms propres (par scénario, par univers) et de son outillage de saisie dans le back-office.
+- Support multi-langue : l'architecture est actée (voir section 7), mais **la liste des langues cibles** reste ouverte. L'i18n du front est posée dès la Phase 2, avec l'anglais seul ; bibliothèque retenue : react-i18next. Le glossaire est tranché en Phase 5 : noms d'affichage par langue sur chaque définition (anglais obligatoire, repli sur l'anglais), glossaire réduit aux noms propres qui ne sont pas des entités, porté par l'univers et complété par le scénario (voir roadmap, Phase 5).
 - Événements SSE : granularité et rattrapage tranchés pour la Phase 2 ; le streaming de la narration est tranché pour la Phase 3 ; reste ouvert un éventuel rejeu des événements manqués (voir document d'architecture, section 8bis).
 - Passage à plusieurs instances : bascule de la file vers BullMQ, worker séparé (transport Redis de Transmit) et sérialisation des tours par verrou PostgreSQL sur `session_id` — à trancher avant le beta test.
 

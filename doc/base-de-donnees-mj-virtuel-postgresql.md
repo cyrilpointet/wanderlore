@@ -47,6 +47,12 @@ Bible de contexte, indépendante de toute partie jouée.
 }
 ```
 
+> **Révisé à l'ouverture de la Phase 5** (roadmap, Phase 5, décisions de cadrage) : `worlds`
+> reçoit une `reference` stable et des noms d'affichage par langue ; `general_rules` est
+> éclaté en colonnes `jsonb` distinctes — `attributes`, `skills`, `resources` — et en deux
+> listes de phrases, `rules` (arbitrage) et `ambiance` (narration). `content_boundaries` est
+> différé à la Phase 9. Le schéma définitif s'écrit avec la migration.
+
 ### `lore_fragments`
 
 Unités atomiques de connaissance sur un univers. Sert de source pour l'indexation RAG (embeddings générés à partir du `content`), tout en restant en base relationnelle comme source de vérité éditable.
@@ -76,9 +82,14 @@ Trame narrative type, rattachée à un univers.
 | `synopsis` | text | résumé général |
 | `chapter_structure` | jsonb | liste ordonnée de chapitres/beats, objectifs, conditions de progression |
 | ~~`planned_npcs`~~ | — | remplacé par la table `npc_definitions` (Phase 5), qui porte aussi les PNJ de l'univers — voir architecture, section 6ter |
-| `item_catalog` | jsonb | **catalogue fermé** des objets acquérables : référence stable, effets mécaniques, noms d'affichage par langue — *remplacé en Phase 5 par des définitions d'objets à deux niveaux (univers et scénario), de même forme que les définitions en dur de la Phase 4 (voir `inventory_items`) ; table dédiée ou colonne, à trancher en Phase 5* |
-| `glossary` | jsonb | noms propres (lieux, PNJ, factions) et leurs traductions par langue |
-| `branch_points` | jsonb | points de bascule / choix narratifs possibles |
+| `item_catalog` | jsonb | **catalogue fermé** des objets acquérables : référence stable, effets mécaniques, noms d'affichage par langue — *remplacé en Phase 5 par la table `item_definitions`, à deux niveaux (univers et scénario), de même forme que les définitions en dur de la Phase 4 (voir `inventory_items`)* |
+| `glossary` | jsonb | noms propres **qui ne sont pas des entités** (factions, figures historiques hors scène) et leurs traductions par langue — porté par l'univers, complété par le scénario (Phase 5) ; les noms des PNJ et des lieux viennent de leurs définitions |
+| `branch_points` | jsonb | points de bascule / choix narratifs possibles — *différé au-delà de la Phase 5* |
+
+> **Révisé à l'ouverture de la Phase 5** (roadmap, Phase 5, décisions de cadrage) :
+> `scenarios` porte aussi un statut (`draft` / `published`), le personnage prétiré et l'état
+> initial (lieu, quêtes, chapitre) ; chapitres et quêtes y sont des listes
+> `{ reference, labels }`, sans conditions de progression à ce stade.
 
 **Le catalogue des définitions d'objets** est la source de vérité des objets que l'étape d'extraction peut faire apparaître.
 Le LLM ne peut pas créer d'entrée d'inventaire : un objet inventé n'aurait ni effets
@@ -486,6 +497,6 @@ users ──── usage_quotas (optionnel)
 
 - Choix définitif du mécanisme RAG : pgvector intégré vs vector store externe (Pinecone, Qdrant, etc.).
 - Politique de rétention/archivage de `turn_log` pour les parties terminées anciennes.
-- Emplacement définitif du glossaire de noms propres : `scenarios.glossary` comme proposé ici, ou au niveau de `worlds` pour ce qui est commun à tous les scénarios d'un univers.
+- ~~Emplacement définitif du glossaire~~ — tranché en Phase 5 : univers, complété par le scénario, réduit aux noms propres qui ne sont pas des entités.
 - Faut-il indexer `inventory_items.definition_reference` — dépend du volume d'objets par partie, probablement inutile avant la Phase 8.
-- Stratégie de migration de schéma pour les colonnes jsonb (versionnement de structure interne si le format évolue avec de nouveaux univers).
+- Stratégie de migration de schéma pour les colonnes jsonb (versionnement de structure interne si le format évolue avec de nouveaux univers) — différée en Phase 5 : chaque `jsonb` saisi est validé côté backend, et aucune donnée de production n'existe encore.

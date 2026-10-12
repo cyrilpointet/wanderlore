@@ -557,8 +557,11 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   dès la Phase 2 comme un panneau capable d'accueillir des onglets. La pastille de jet
   pourra mentionner qu'un objet a pesé sur le jet — sans chiffre.
 - **Phase 5 — Multi-univers.** Un écran **New game** : choix d'un scénario dans un
-  catalogue (univers, synopsis, ton), puis démarrage. Le nom de l'univers et tous les
-  libellés viennent de la base. Le back-office est un package séparé.
+  catalogue (univers, synopsis, ton), puis démarrage avec le personnage prétiré du
+  scénario — aucune création de personnage avant la Phase 8. Le catalogue ne montre que
+  les scénarios publiés ; un compte `game_master` y voit aussi les brouillons, pour les
+  tester. Le nom de l'univers et tous les libellés viennent de la base. Le back-office est
+  un package séparé.
 - **Phase 7 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
   probablement nécessaire.
 - **Phase 8 — Cycle de vie et combat.** Création de personnage guidée ; combat en rounds
