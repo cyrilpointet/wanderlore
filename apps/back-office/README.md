@@ -16,3 +16,6 @@ seeders ran). A player is turned away: the backend refuses them on every
 `/api/v1/admin` route regardless.
 
 `src/api/client.ts` is a copy of the player front's client: keep the two in step.
+
+`VITE_PLAYER_URL` (default `http://localhost:5173`) is where **Try it in the game**
+sends a game master: the player front, whose New game catalogue shows them drafts.

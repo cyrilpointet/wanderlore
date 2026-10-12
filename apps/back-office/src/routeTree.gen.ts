@@ -12,14 +12,20 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedScenariosScenarioIdRouteImport } from './routes/_authenticated/scenarios/$scenarioId'
 import { Route as AuthenticatedWorldsIndexRouteImport } from './routes/_authenticated/worlds/index'
 import { Route as AuthenticatedWorldsWorldIdRouteImport } from './routes/_authenticated/worlds/$worldId'
 import { Route as AuthenticatedWorldsNewRouteImport } from './routes/_authenticated/worlds/new'
+import { Route as AuthenticatedScenariosScenarioIdIndexRouteImport } from './routes/_authenticated/scenarios/$scenarioId/index'
+import { Route as AuthenticatedScenariosScenarioIdItemsRouteImport } from './routes/_authenticated/scenarios/$scenarioId/items'
+import { Route as AuthenticatedScenariosScenarioIdLocationsRouteImport } from './routes/_authenticated/scenarios/$scenarioId/locations'
+import { Route as AuthenticatedScenariosScenarioIdNpcsRouteImport } from './routes/_authenticated/scenarios/$scenarioId/npcs'
 import { Route as AuthenticatedWorldsWorldIdIndexRouteImport } from './routes/_authenticated/worlds/$worldId/index'
 import { Route as AuthenticatedWorldsWorldIdActionTypesRouteImport } from './routes/_authenticated/worlds/$worldId/action-types'
 import { Route as AuthenticatedWorldsWorldIdItemsRouteImport } from './routes/_authenticated/worlds/$worldId/items'
 import { Route as AuthenticatedWorldsWorldIdLocationsRouteImport } from './routes/_authenticated/worlds/$worldId/locations'
 import { Route as AuthenticatedWorldsWorldIdNpcsRouteImport } from './routes/_authenticated/worlds/$worldId/npcs'
+import { Route as AuthenticatedWorldsWorldIdScenariosRouteImport } from './routes/_authenticated/worlds/$worldId/scenarios'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -35,6 +41,12 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedScenariosScenarioIdRoute =
+  AuthenticatedScenariosScenarioIdRouteImport.update({
+    id: '/scenarios/$scenarioId',
+    path: '/scenarios/$scenarioId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedWorldsIndexRoute =
   AuthenticatedWorldsIndexRouteImport.update({
     id: '/worlds/',
@@ -52,6 +64,30 @@ const AuthenticatedWorldsNewRoute = AuthenticatedWorldsNewRouteImport.update({
   path: '/worlds/new',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedScenariosScenarioIdIndexRoute =
+  AuthenticatedScenariosScenarioIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedScenariosScenarioIdRoute,
+  } as any)
+const AuthenticatedScenariosScenarioIdItemsRoute =
+  AuthenticatedScenariosScenarioIdItemsRouteImport.update({
+    id: '/items',
+    path: '/items',
+    getParentRoute: () => AuthenticatedScenariosScenarioIdRoute,
+  } as any)
+const AuthenticatedScenariosScenarioIdLocationsRoute =
+  AuthenticatedScenariosScenarioIdLocationsRouteImport.update({
+    id: '/locations',
+    path: '/locations',
+    getParentRoute: () => AuthenticatedScenariosScenarioIdRoute,
+  } as any)
+const AuthenticatedScenariosScenarioIdNpcsRoute =
+  AuthenticatedScenariosScenarioIdNpcsRouteImport.update({
+    id: '/npcs',
+    path: '/npcs',
+    getParentRoute: () => AuthenticatedScenariosScenarioIdRoute,
+  } as any)
 const AuthenticatedWorldsWorldIdIndexRoute =
   AuthenticatedWorldsWorldIdIndexRouteImport.update({
     id: '/',
@@ -82,17 +118,29 @@ const AuthenticatedWorldsWorldIdNpcsRoute =
     path: '/npcs',
     getParentRoute: () => AuthenticatedWorldsWorldIdRoute,
   } as any)
+const AuthenticatedWorldsWorldIdScenariosRoute =
+  AuthenticatedWorldsWorldIdScenariosRouteImport.update({
+    id: '/scenarios',
+    path: '/scenarios',
+    getParentRoute: () => AuthenticatedWorldsWorldIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/scenarios/$scenarioId': typeof AuthenticatedScenariosScenarioIdRouteWithChildren
   '/worlds/$worldId': typeof AuthenticatedWorldsWorldIdRouteWithChildren
   '/worlds/new': typeof AuthenticatedWorldsNewRoute
   '/worlds/': typeof AuthenticatedWorldsIndexRoute
+  '/scenarios/$scenarioId/items': typeof AuthenticatedScenariosScenarioIdItemsRoute
+  '/scenarios/$scenarioId/locations': typeof AuthenticatedScenariosScenarioIdLocationsRoute
+  '/scenarios/$scenarioId/npcs': typeof AuthenticatedScenariosScenarioIdNpcsRoute
   '/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
   '/worlds/$worldId/items': typeof AuthenticatedWorldsWorldIdItemsRoute
   '/worlds/$worldId/locations': typeof AuthenticatedWorldsWorldIdLocationsRoute
   '/worlds/$worldId/npcs': typeof AuthenticatedWorldsWorldIdNpcsRoute
+  '/worlds/$worldId/scenarios': typeof AuthenticatedWorldsWorldIdScenariosRoute
+  '/scenarios/$scenarioId/': typeof AuthenticatedScenariosScenarioIdIndexRoute
   '/worlds/$worldId/': typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -100,10 +148,15 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/worlds/new': typeof AuthenticatedWorldsNewRoute
   '/worlds': typeof AuthenticatedWorldsIndexRoute
+  '/scenarios/$scenarioId/items': typeof AuthenticatedScenariosScenarioIdItemsRoute
+  '/scenarios/$scenarioId/locations': typeof AuthenticatedScenariosScenarioIdLocationsRoute
+  '/scenarios/$scenarioId/npcs': typeof AuthenticatedScenariosScenarioIdNpcsRoute
   '/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
   '/worlds/$worldId/items': typeof AuthenticatedWorldsWorldIdItemsRoute
   '/worlds/$worldId/locations': typeof AuthenticatedWorldsWorldIdLocationsRoute
   '/worlds/$worldId/npcs': typeof AuthenticatedWorldsWorldIdNpcsRoute
+  '/worlds/$worldId/scenarios': typeof AuthenticatedWorldsWorldIdScenariosRoute
+  '/scenarios/$scenarioId': typeof AuthenticatedScenariosScenarioIdIndexRoute
   '/worlds/$worldId': typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 export interface FileRoutesById {
@@ -111,13 +164,19 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/scenarios/$scenarioId': typeof AuthenticatedScenariosScenarioIdRouteWithChildren
   '/_authenticated/worlds/$worldId': typeof AuthenticatedWorldsWorldIdRouteWithChildren
   '/_authenticated/worlds/new': typeof AuthenticatedWorldsNewRoute
   '/_authenticated/worlds/': typeof AuthenticatedWorldsIndexRoute
+  '/_authenticated/scenarios/$scenarioId/items': typeof AuthenticatedScenariosScenarioIdItemsRoute
+  '/_authenticated/scenarios/$scenarioId/locations': typeof AuthenticatedScenariosScenarioIdLocationsRoute
+  '/_authenticated/scenarios/$scenarioId/npcs': typeof AuthenticatedScenariosScenarioIdNpcsRoute
   '/_authenticated/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
   '/_authenticated/worlds/$worldId/items': typeof AuthenticatedWorldsWorldIdItemsRoute
   '/_authenticated/worlds/$worldId/locations': typeof AuthenticatedWorldsWorldIdLocationsRoute
   '/_authenticated/worlds/$worldId/npcs': typeof AuthenticatedWorldsWorldIdNpcsRoute
+  '/_authenticated/worlds/$worldId/scenarios': typeof AuthenticatedWorldsWorldIdScenariosRoute
+  '/_authenticated/scenarios/$scenarioId/': typeof AuthenticatedScenariosScenarioIdIndexRoute
   '/_authenticated/worlds/$worldId/': typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -125,13 +184,19 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/scenarios/$scenarioId'
     | '/worlds/$worldId'
     | '/worlds/new'
     | '/worlds/'
+    | '/scenarios/$scenarioId/items'
+    | '/scenarios/$scenarioId/locations'
+    | '/scenarios/$scenarioId/npcs'
     | '/worlds/$worldId/action-types'
     | '/worlds/$worldId/items'
     | '/worlds/$worldId/locations'
     | '/worlds/$worldId/npcs'
+    | '/worlds/$worldId/scenarios'
+    | '/scenarios/$scenarioId/'
     | '/worlds/$worldId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -139,23 +204,34 @@ export interface FileRouteTypes {
     | '/login'
     | '/worlds/new'
     | '/worlds'
+    | '/scenarios/$scenarioId/items'
+    | '/scenarios/$scenarioId/locations'
+    | '/scenarios/$scenarioId/npcs'
     | '/worlds/$worldId/action-types'
     | '/worlds/$worldId/items'
     | '/worlds/$worldId/locations'
     | '/worlds/$worldId/npcs'
+    | '/worlds/$worldId/scenarios'
+    | '/scenarios/$scenarioId'
     | '/worlds/$worldId'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/scenarios/$scenarioId'
     | '/_authenticated/worlds/$worldId'
     | '/_authenticated/worlds/new'
     | '/_authenticated/worlds/'
+    | '/_authenticated/scenarios/$scenarioId/items'
+    | '/_authenticated/scenarios/$scenarioId/locations'
+    | '/_authenticated/scenarios/$scenarioId/npcs'
     | '/_authenticated/worlds/$worldId/action-types'
     | '/_authenticated/worlds/$worldId/items'
     | '/_authenticated/worlds/$worldId/locations'
     | '/_authenticated/worlds/$worldId/npcs'
+    | '/_authenticated/worlds/$worldId/scenarios'
+    | '/_authenticated/scenarios/$scenarioId/'
     | '/_authenticated/worlds/$worldId/'
   fileRoutesById: FileRoutesById
 }
@@ -188,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/scenarios/$scenarioId': {
+      id: '/_authenticated/scenarios/$scenarioId'
+      path: '/scenarios/$scenarioId'
+      fullPath: '/scenarios/$scenarioId'
+      preLoaderRoute: typeof AuthenticatedScenariosScenarioIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/worlds/': {
       id: '/_authenticated/worlds/'
       path: '/worlds'
@@ -208,6 +291,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/worlds/new'
       preLoaderRoute: typeof AuthenticatedWorldsNewRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/scenarios/$scenarioId/': {
+      id: '/_authenticated/scenarios/$scenarioId/'
+      path: '/'
+      fullPath: '/scenarios/$scenarioId/'
+      preLoaderRoute: typeof AuthenticatedScenariosScenarioIdIndexRouteImport
+      parentRoute: typeof AuthenticatedScenariosScenarioIdRoute
+    }
+    '/_authenticated/scenarios/$scenarioId/items': {
+      id: '/_authenticated/scenarios/$scenarioId/items'
+      path: '/items'
+      fullPath: '/scenarios/$scenarioId/items'
+      preLoaderRoute: typeof AuthenticatedScenariosScenarioIdItemsRouteImport
+      parentRoute: typeof AuthenticatedScenariosScenarioIdRoute
+    }
+    '/_authenticated/scenarios/$scenarioId/locations': {
+      id: '/_authenticated/scenarios/$scenarioId/locations'
+      path: '/locations'
+      fullPath: '/scenarios/$scenarioId/locations'
+      preLoaderRoute: typeof AuthenticatedScenariosScenarioIdLocationsRouteImport
+      parentRoute: typeof AuthenticatedScenariosScenarioIdRoute
+    }
+    '/_authenticated/scenarios/$scenarioId/npcs': {
+      id: '/_authenticated/scenarios/$scenarioId/npcs'
+      path: '/npcs'
+      fullPath: '/scenarios/$scenarioId/npcs'
+      preLoaderRoute: typeof AuthenticatedScenariosScenarioIdNpcsRouteImport
+      parentRoute: typeof AuthenticatedScenariosScenarioIdRoute
     }
     '/_authenticated/worlds/$worldId/': {
       id: '/_authenticated/worlds/$worldId/'
@@ -244,14 +355,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorldsWorldIdNpcsRouteImport
       parentRoute: typeof AuthenticatedWorldsWorldIdRoute
     }
+    '/_authenticated/worlds/$worldId/scenarios': {
+      id: '/_authenticated/worlds/$worldId/scenarios'
+      path: '/scenarios'
+      fullPath: '/worlds/$worldId/scenarios'
+      preLoaderRoute: typeof AuthenticatedWorldsWorldIdScenariosRouteImport
+      parentRoute: typeof AuthenticatedWorldsWorldIdRoute
+    }
   }
 }
+
+interface AuthenticatedScenariosScenarioIdRouteChildren {
+  AuthenticatedScenariosScenarioIdItemsRoute: typeof AuthenticatedScenariosScenarioIdItemsRoute
+  AuthenticatedScenariosScenarioIdLocationsRoute: typeof AuthenticatedScenariosScenarioIdLocationsRoute
+  AuthenticatedScenariosScenarioIdNpcsRoute: typeof AuthenticatedScenariosScenarioIdNpcsRoute
+  AuthenticatedScenariosScenarioIdIndexRoute: typeof AuthenticatedScenariosScenarioIdIndexRoute
+}
+
+const AuthenticatedScenariosScenarioIdRouteChildren: AuthenticatedScenariosScenarioIdRouteChildren =
+  {
+    AuthenticatedScenariosScenarioIdItemsRoute:
+      AuthenticatedScenariosScenarioIdItemsRoute,
+    AuthenticatedScenariosScenarioIdLocationsRoute:
+      AuthenticatedScenariosScenarioIdLocationsRoute,
+    AuthenticatedScenariosScenarioIdNpcsRoute:
+      AuthenticatedScenariosScenarioIdNpcsRoute,
+    AuthenticatedScenariosScenarioIdIndexRoute:
+      AuthenticatedScenariosScenarioIdIndexRoute,
+  }
+
+const AuthenticatedScenariosScenarioIdRouteWithChildren =
+  AuthenticatedScenariosScenarioIdRoute._addFileChildren(
+    AuthenticatedScenariosScenarioIdRouteChildren,
+  )
 
 interface AuthenticatedWorldsWorldIdRouteChildren {
   AuthenticatedWorldsWorldIdActionTypesRoute: typeof AuthenticatedWorldsWorldIdActionTypesRoute
   AuthenticatedWorldsWorldIdItemsRoute: typeof AuthenticatedWorldsWorldIdItemsRoute
   AuthenticatedWorldsWorldIdLocationsRoute: typeof AuthenticatedWorldsWorldIdLocationsRoute
   AuthenticatedWorldsWorldIdNpcsRoute: typeof AuthenticatedWorldsWorldIdNpcsRoute
+  AuthenticatedWorldsWorldIdScenariosRoute: typeof AuthenticatedWorldsWorldIdScenariosRoute
   AuthenticatedWorldsWorldIdIndexRoute: typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 
@@ -263,6 +406,8 @@ const AuthenticatedWorldsWorldIdRouteChildren: AuthenticatedWorldsWorldIdRouteCh
     AuthenticatedWorldsWorldIdLocationsRoute:
       AuthenticatedWorldsWorldIdLocationsRoute,
     AuthenticatedWorldsWorldIdNpcsRoute: AuthenticatedWorldsWorldIdNpcsRoute,
+    AuthenticatedWorldsWorldIdScenariosRoute:
+      AuthenticatedWorldsWorldIdScenariosRoute,
     AuthenticatedWorldsWorldIdIndexRoute: AuthenticatedWorldsWorldIdIndexRoute,
   }
 
@@ -272,12 +417,15 @@ const AuthenticatedWorldsWorldIdRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedScenariosScenarioIdRoute: typeof AuthenticatedScenariosScenarioIdRouteWithChildren
   AuthenticatedWorldsWorldIdRoute: typeof AuthenticatedWorldsWorldIdRouteWithChildren
   AuthenticatedWorldsNewRoute: typeof AuthenticatedWorldsNewRoute
   AuthenticatedWorldsIndexRoute: typeof AuthenticatedWorldsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedScenariosScenarioIdRoute:
+    AuthenticatedScenariosScenarioIdRouteWithChildren,
   AuthenticatedWorldsWorldIdRoute: AuthenticatedWorldsWorldIdRouteWithChildren,
   AuthenticatedWorldsNewRoute: AuthenticatedWorldsNewRoute,
   AuthenticatedWorldsIndexRoute: AuthenticatedWorldsIndexRoute,

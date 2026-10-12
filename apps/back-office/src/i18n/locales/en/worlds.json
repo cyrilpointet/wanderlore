@@ -16,7 +16,8 @@
     "actionTypes": "Categories of action",
     "npcs": "People",
     "locations": "Places",
-    "items": "Items"
+    "items": "Items",
+    "scenarios": "Scenarios"
   },
   "form": {
     "general": "Identity",
