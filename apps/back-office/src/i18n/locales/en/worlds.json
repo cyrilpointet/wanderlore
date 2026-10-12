@@ -1,0 +1,7 @@
+{
+  "title": "Worlds",
+  "loading": "Loading the worlds…",
+  "empty": "No world yet.",
+  "scenarioCount_one": "{{count}} scenario",
+  "scenarioCount_other": "{{count}} scenarios"
+}

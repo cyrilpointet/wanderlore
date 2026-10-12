@@ -1,0 +1,15 @@
+{
+  "appName": "Wanderlore",
+  "backOffice": "Back-office",
+  "tryAgain": "Try again",
+  "nav": {
+    "label": "Back-office sections",
+    "worlds": "Worlds"
+  },
+  "system": {
+    "notFound": "This page does not exist.",
+    "unexpected": "Something went wrong.",
+    "reload": "Reload",
+    "home": "Worlds"
+  }
+}

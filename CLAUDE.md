@@ -57,7 +57,7 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
 ## Stack
 
 - Monorepo Turborepo (npm workspaces, `apps/*`) — `backend` (AdonisJS `--kit=api`),
-  `frontend`, et `back-office` ajouté plus tard (Phase 5).
+  `frontend` (joueur) et `back-office` (game masters, Phase 5, même stack que le front).
 - Front joueur (`apps/frontend`, Phase 2) : **Vite + React + TypeScript, Tailwind CSS 4,
   TanStack Router (routes par fichiers), TanStack Query, Vitest**. **i18n dès la Phase 2 avec react-i18next** —
   anglais seul au départ, mais aucun texte d'interface en dur : tout passe par une clé de
@@ -338,6 +338,17 @@ serverless pour le backend).
 - **Un composant se teste rendu en HTML statique** (`*.test.tsx`, `renderToStaticMarkup`,
   sous Node) — jamais dans un DOM : la suite Vitest reste sans navigateur.
 - En développement, Vite proxifie `/api` et `/__transmit` vers le backend (même origine).
+
+### Back-office (`apps/back-office`)
+
+- **Mêmes conventions que le front joueur** (section précédente) : `api()`, aucun texte en
+  dur, erreurs par `code`, jetons de couleur, tests en HTML statique.
+- **`src/api/client.ts` est une copie** de celui du front : les garder alignés.
+- **Réservé aux `game_master`** : la connexion relit le profil et déconnecte aussitôt tout
+  autre rôle ; un compte déjà connecté côté front (cookie partagé) est accueilli sur `/login`
+  par un message et un bouton de déconnexion. Le backend refuse de toute façon chaque route
+  `/api/v1/admin`.
+- En développement, port **5174** (le front reste sur 5173), `/api` proxifié vers le backend.
 
 ### Tests
 
