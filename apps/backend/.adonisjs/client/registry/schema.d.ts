@@ -163,6 +163,234 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['index']>>>
     }
   }
+  'admin.worlds.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/worlds'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/content').createWorldValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/content').createWorldValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.worlds.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/admin/worlds/:worldId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { worldId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['show']>>>
+    }
+  }
+  'admin.worlds.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/admin/worlds/:worldId'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/content').updateWorldValidator)>>
+      paramsTuple: [ParamValue]
+      params: { worldId: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/content').updateWorldValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.worlds.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/admin/worlds/:worldId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { worldId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['destroy']>>>
+    }
+  }
+  'admin.action_types.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/admin/worlds/:worldId/action-types'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { worldId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/action_types_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/action_types_controller').default['index']>>>
+    }
+  }
+  'admin.action_types.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/worlds/:worldId/action-types'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/content').createActionTypeValidator)>>
+      paramsTuple: [ParamValue]
+      params: { worldId: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/content').createActionTypeValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/action_types_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/action_types_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.action_types.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/admin/action-types/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/content').updateActionTypeValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/content').updateActionTypeValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/action_types_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/action_types_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.action_types.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/admin/action-types/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/action_types_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/action_types_controller').default['destroy']>>>
+    }
+  }
+  'admin.scenarios.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/admin/worlds/:worldId/scenarios'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { worldId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['index']>>>
+    }
+  }
+  'admin.scenarios.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/worlds/:worldId/scenarios'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/content').createScenarioValidator)>>
+      paramsTuple: [ParamValue]
+      params: { worldId: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/content').createScenarioValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.scenarios.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/admin/scenarios/:scenarioId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { scenarioId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['show']>>>
+    }
+  }
+  'admin.scenarios.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/admin/scenarios/:scenarioId'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/content').updateScenarioValidator)>>
+      paramsTuple: [ParamValue]
+      params: { scenarioId: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/content').updateScenarioValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.scenarios.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/admin/scenarios/:scenarioId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { scenarioId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/scenarios_controller').default['destroy']>>>
+    }
+  }
+  'admin.definitions.world.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/admin/worlds/:worldId/:catalogue'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { worldId: ParamValue; catalogue: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['index']>>>
+    }
+  }
+  'admin.definitions.world.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/worlds/:worldId/:catalogue'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { worldId: ParamValue; catalogue: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['store']>>>
+    }
+  }
+  'admin.definitions.scenario.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/admin/scenarios/:scenarioId/:catalogue'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { scenarioId: ParamValue; catalogue: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['index']>>>
+    }
+  }
+  'admin.definitions.scenario.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/scenarios/:scenarioId/:catalogue'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { scenarioId: ParamValue; catalogue: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['store']>>>
+    }
+  }
+  'admin.definitions.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/admin/:catalogue/:definitionId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { catalogue: ParamValue; definitionId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['update']>>>
+    }
+  }
+  'admin.definitions.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/admin/:catalogue/:definitionId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { catalogue: ParamValue; definitionId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['destroy']>>>
+    }
+  }
   'event_stream': {
     methods: ["GET","HEAD"]
     pattern: '/__transmit/events'

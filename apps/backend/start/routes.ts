@@ -72,7 +72,43 @@ router
     router
       .group(() => {
         router.get('worlds', [controllers.admin.Worlds, 'index'])
+        router.post('worlds', [controllers.admin.Worlds, 'store'])
+        router.get('worlds/:worldId', [controllers.admin.Worlds, 'show'])
+        router.patch('worlds/:worldId', [controllers.admin.Worlds, 'update'])
+        router.delete('worlds/:worldId', [controllers.admin.Worlds, 'destroy'])
+
+        router.get('worlds/:worldId/action-types', [controllers.admin.ActionTypes, 'index'])
+        router.post('worlds/:worldId/action-types', [controllers.admin.ActionTypes, 'store'])
+        router.patch('action-types/:id', [controllers.admin.ActionTypes, 'update'])
+        router.delete('action-types/:id', [controllers.admin.ActionTypes, 'destroy'])
+
+        router.get('worlds/:worldId/scenarios', [controllers.admin.Scenarios, 'index'])
+        router.post('worlds/:worldId/scenarios', [controllers.admin.Scenarios, 'store'])
+        router.get('scenarios/:scenarioId', [controllers.admin.Scenarios, 'show'])
+        router.patch('scenarios/:scenarioId', [controllers.admin.Scenarios, 'update'])
+        router.delete('scenarios/:scenarioId', [controllers.admin.Scenarios, 'destroy'])
+
+        /** The three catalogues, at world level or at a scenario's. */
+        router
+          .get('worlds/:worldId/:catalogue', [controllers.admin.Definitions, 'index'])
+          .as('definitions.world.index')
+        router
+          .post('worlds/:worldId/:catalogue', [controllers.admin.Definitions, 'store'])
+          .as('definitions.world.store')
+        router
+          .get('scenarios/:scenarioId/:catalogue', [controllers.admin.Definitions, 'index'])
+          .as('definitions.scenario.index')
+        router
+          .post('scenarios/:scenarioId/:catalogue', [controllers.admin.Definitions, 'store'])
+          .as('definitions.scenario.store')
+        router.patch(':catalogue/:definitionId', [controllers.admin.Definitions, 'update'])
+        router.delete(':catalogue/:definitionId', [controllers.admin.Definitions, 'destroy'])
       })
+      .where('worldId', router.matchers.uuid())
+      .where('scenarioId', router.matchers.uuid())
+      .where('definitionId', router.matchers.uuid())
+      .where('id', router.matchers.uuid())
+      .where('catalogue', { match: /^(npcs|locations|items)$/ })
       .prefix('admin')
       .as('admin')
       .use([middleware.auth(), middleware.role({ roles: ['game_master'] })])

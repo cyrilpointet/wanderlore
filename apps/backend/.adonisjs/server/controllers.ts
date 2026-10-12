@@ -5,6 +5,10 @@
 
 export const controllers = {
   admin: {
+    ActionTypes: () => import('#controllers/admin/action_types_controller'),
+    Content: () => import('#controllers/admin/content'),
+    Definitions: () => import('#controllers/admin/definitions_controller'),
+    Scenarios: () => import('#controllers/admin/scenarios_controller'),
     Worlds: () => import('#controllers/admin/worlds_controller'),
   },
   Login: () => import('#controllers/login_controller'),

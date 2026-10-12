@@ -37,6 +37,35 @@ export interface ApiDefinition {
   admin: {
     worlds: {
       index: typeof routes['admin.worlds.index']
+      store: typeof routes['admin.worlds.store']
+      show: typeof routes['admin.worlds.show']
+      update: typeof routes['admin.worlds.update']
+      destroy: typeof routes['admin.worlds.destroy']
+    }
+    actionTypes: {
+      index: typeof routes['admin.action_types.index']
+      store: typeof routes['admin.action_types.store']
+      update: typeof routes['admin.action_types.update']
+      destroy: typeof routes['admin.action_types.destroy']
+    }
+    scenarios: {
+      index: typeof routes['admin.scenarios.index']
+      store: typeof routes['admin.scenarios.store']
+      show: typeof routes['admin.scenarios.show']
+      update: typeof routes['admin.scenarios.update']
+      destroy: typeof routes['admin.scenarios.destroy']
+    }
+    definitions: {
+      world: {
+        index: typeof routes['admin.definitions.world.index']
+        store: typeof routes['admin.definitions.world.store']
+      }
+      scenario: {
+        index: typeof routes['admin.definitions.scenario.index']
+        store: typeof routes['admin.definitions.scenario.store']
+      }
+      update: typeof routes['admin.definitions.update']
+      destroy: typeof routes['admin.definitions.destroy']
     }
   }
   eventStream: typeof routes['event_stream']

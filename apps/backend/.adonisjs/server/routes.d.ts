@@ -17,6 +17,25 @@ export type ScannedRoutes = {
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
     'game.turns.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.worlds.index': { paramsTuple?: []; params?: {} }
+    'admin.worlds.store': { paramsTuple?: []; params?: {} }
+    'admin.worlds.show': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.worlds.update': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.worlds.destroy': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.action_types.index': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.action_types.store': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.action_types.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.action_types.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.scenarios.index': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.scenarios.store': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.scenarios.show': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.scenarios.update': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.scenarios.destroy': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.definitions.world.index': { paramsTuple: [ParamValue,ParamValue]; params: {'worldId': ParamValue,'catalogue': ParamValue} }
+    'admin.definitions.world.store': { paramsTuple: [ParamValue,ParamValue]; params: {'worldId': ParamValue,'catalogue': ParamValue} }
+    'admin.definitions.scenario.index': { paramsTuple: [ParamValue,ParamValue]; params: {'scenarioId': ParamValue,'catalogue': ParamValue} }
+    'admin.definitions.scenario.store': { paramsTuple: [ParamValue,ParamValue]; params: {'scenarioId': ParamValue,'catalogue': ParamValue} }
+    'admin.definitions.update': { paramsTuple: [ParamValue,ParamValue]; params: {'catalogue': ParamValue,'definitionId': ParamValue} }
+    'admin.definitions.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'catalogue': ParamValue,'definitionId': ParamValue} }
     'event_stream': { paramsTuple?: []; params?: {} }
     'subscribe': { paramsTuple?: []; params?: {} }
     'unsubscribe': { paramsTuple?: []; params?: {} }
@@ -30,6 +49,12 @@ export type ScannedRoutes = {
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
     'admin.worlds.index': { paramsTuple?: []; params?: {} }
+    'admin.worlds.show': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.action_types.index': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.scenarios.index': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.scenarios.show': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.definitions.world.index': { paramsTuple: [ParamValue,ParamValue]; params: {'worldId': ParamValue,'catalogue': ParamValue} }
+    'admin.definitions.scenario.index': { paramsTuple: [ParamValue,ParamValue]; params: {'scenarioId': ParamValue,'catalogue': ParamValue} }
     'event_stream': { paramsTuple?: []; params?: {} }
   }
   HEAD: {
@@ -41,6 +66,12 @@ export type ScannedRoutes = {
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
     'admin.worlds.index': { paramsTuple?: []; params?: {} }
+    'admin.worlds.show': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.action_types.index': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.scenarios.index': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.scenarios.show': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.definitions.world.index': { paramsTuple: [ParamValue,ParamValue]; params: {'worldId': ParamValue,'catalogue': ParamValue} }
+    'admin.definitions.scenario.index': { paramsTuple: [ParamValue,ParamValue]; params: {'scenarioId': ParamValue,'catalogue': ParamValue} }
     'event_stream': { paramsTuple?: []; params?: {} }
   }
   POST: {
@@ -49,8 +80,25 @@ export type ScannedRoutes = {
     'profile.login.destroy': { paramsTuple?: []; params?: {} }
     'game.sessions.store': { paramsTuple?: []; params?: {} }
     'game.turns.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.worlds.store': { paramsTuple?: []; params?: {} }
+    'admin.action_types.store': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.scenarios.store': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.definitions.world.store': { paramsTuple: [ParamValue,ParamValue]; params: {'worldId': ParamValue,'catalogue': ParamValue} }
+    'admin.definitions.scenario.store': { paramsTuple: [ParamValue,ParamValue]; params: {'scenarioId': ParamValue,'catalogue': ParamValue} }
     'subscribe': { paramsTuple?: []; params?: {} }
     'unsubscribe': { paramsTuple?: []; params?: {} }
+  }
+  PATCH: {
+    'admin.worlds.update': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.action_types.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.scenarios.update': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.definitions.update': { paramsTuple: [ParamValue,ParamValue]; params: {'catalogue': ParamValue,'definitionId': ParamValue} }
+  }
+  DELETE: {
+    'admin.worlds.destroy': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.action_types.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.scenarios.destroy': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.definitions.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'catalogue': ParamValue,'definitionId': ParamValue} }
   }
 }
 declare module '@adonisjs/core/types/http' {

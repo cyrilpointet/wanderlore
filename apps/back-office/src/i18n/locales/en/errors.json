@@ -2,5 +2,8 @@
   "invalid_csrf_token": "Your page is out of date. Reload it and try again.",
   "network_error": "Connection lost.",
   "unexpected": "Something went wrong.",
-  "forbidden_role": "This account cannot do that."
+  "forbidden_role": "This account cannot do that.",
+  "reference_taken": "This reference is already taken.",
+  "reference_immutable": "A reference never changes once created.",
+  "content_in_use": "Games are played with this: it cannot be removed."
 }
