@@ -39,6 +39,23 @@ const jsonObject = { tsType: 'Record<string, unknown>', decorators: column }
 const jsonObjectList = { tsType: 'Record<string, unknown>[]', decorators: arrayColumn }
 const numbersByKey = { tsType: 'Record<string, number>', decorators: column }
 
+/**
+ * Game content columns, typed with the shapes of `#services/game/content/types`:
+ * their payloads are settled, and the back-office writes them whole.
+ */
+function content(type: string, options: { array?: boolean } = {}) {
+  const name = type.replace(/\[\]$/, '')
+
+  return {
+    tsType: type,
+    decorators: options.array ? arrayColumn : column,
+    imports: [{ source: '#services/game/content/types', typeImports: [name] }],
+  }
+}
+
+const labels = content('Labels')
+const kind = content('DefinitionKind')
+
 export default {
   tables: {
     users: {
@@ -47,6 +64,52 @@ export default {
           tsType: "'player' | 'game_master' | 'superadmin'",
           decorators: column,
         },
+      },
+    },
+
+    worlds: {
+      columns: {
+        labels,
+        rules: { tsType: 'string[]', decorators: arrayColumn },
+        ambiance: { tsType: 'string[]', decorators: arrayColumn },
+        attributes: content('LabelledEntry[]', { array: true }),
+        skills: content('SkillEntry[]', { array: true }),
+        resources: content('LabelledEntry[]', { array: true }),
+        glossary: content('GlossaryEntry[]', { array: true }),
+      },
+    },
+
+    scenarios: {
+      columns: {
+        labels,
+        status: content('ScenarioStatus'),
+        chapters: content('LabelledEntry[]', { array: true }),
+        quests: content('LabelledEntry[]', { array: true }),
+        pregenerated_character: content('PregeneratedCharacter'),
+        initial_state: content('InitialState'),
+        glossary: content('GlossaryEntry[]', { array: true }),
+      },
+    },
+
+    npc_definitions: {
+      columns: {
+        labels,
+        kind,
+        default_disposition: content('NpcDisposition'),
+        combat: content('CombatProfile'),
+      },
+    },
+
+    location_definitions: {
+      columns: { labels, kind },
+    },
+
+    item_definitions: {
+      columns: {
+        labels,
+        kind,
+        modifiers: content('ItemModifier[]', { array: true }),
+        initial_holder: content('ItemHolderReference'),
       },
     },
 

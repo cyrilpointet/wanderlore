@@ -6,6 +6,7 @@
 
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
+import type { ItemHolderReference, DefinitionKind, Labels, ItemModifier, CombatProfile, NpcDisposition, LabelledEntry, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
 
 export class AuthAccessTokenSchema extends BaseModel {
   static $columns = ['abilities', 'createdAt', 'expiresAt', 'hash', 'id', 'lastUsedAt', 'name', 'tokenableId', 'type', 'updatedAt'] as const
@@ -88,6 +89,64 @@ export class InventoryItemSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class ItemDefinitionSchema extends BaseModel {
+  static $columns = ['createdAt', 'description', 'equippable', 'generic', 'id', 'initialHolder', 'kind', 'labels', 'modifiers', 'reference', 'scenarioId', 'stackable', 'updatedAt', 'worldId'] as const
+  $columns = ItemDefinitionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare description: string
+  @column()
+  declare equippable: boolean
+  @column()
+  declare generic: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare initialHolder: ItemHolderReference | null
+  @column()
+  declare kind: DefinitionKind
+  @column()
+  declare labels: Labels
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare modifiers: ItemModifier[]
+  @column()
+  declare reference: string
+  @column()
+  declare scenarioId: string | null
+  @column()
+  declare stackable: boolean
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare worldId: string
+}
+
+export class LocationDefinitionSchema extends BaseModel {
+  static $columns = ['createdAt', 'description', 'id', 'kind', 'labels', 'parent', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
+  $columns = LocationDefinitionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare description: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: DefinitionKind
+  @column()
+  declare labels: Labels
+  @column()
+  declare parent: string | null
+  @column()
+  declare reference: string
+  @column()
+  declare scenarioId: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare worldId: string
+}
+
 export class LocationInstanceSchema extends BaseModel {
   static $columns = ['createdAt', 'definitionReference', 'descriptor', 'handle', 'id', 'name', 'parentReference', 'sessionId', 'updatedAt'] as const
   $columns = LocationInstanceSchema.$columns
@@ -109,6 +168,35 @@ export class LocationInstanceSchema extends BaseModel {
   declare sessionId: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+}
+
+export class NpcDefinitionSchema extends BaseModel {
+  static $columns = ['combat', 'createdAt', 'defaultDisposition', 'description', 'generic', 'id', 'kind', 'labels', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
+  $columns = NpcDefinitionSchema.$columns
+  @column()
+  declare combat: CombatProfile
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare defaultDisposition: NpcDisposition
+  @column()
+  declare description: string
+  @column()
+  declare generic: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: DefinitionKind
+  @column()
+  declare labels: Labels
+  @column()
+  declare reference: string
+  @column()
+  declare scenarioId: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare worldId: string
 }
 
 export class NpcInstanceSchema extends BaseModel {
@@ -139,7 +227,7 @@ export class NpcInstanceSchema extends BaseModel {
 }
 
 export class ResolutionRuleSchema extends BaseModel {
-  static $columns = ['actionType', 'associatedSkill', 'createdAt', 'description', 'id', 'updatedAt', 'worldReference'] as const
+  static $columns = ['actionType', 'associatedSkill', 'createdAt', 'description', 'id', 'updatedAt', 'worldId'] as const
   $columns = ResolutionRuleSchema.$columns
   @column()
   declare actionType: string
@@ -154,11 +242,44 @@ export class ResolutionRuleSchema extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
   @column()
-  declare worldReference: string
+  declare worldId: string
+}
+
+export class ScenarioSchema extends BaseModel {
+  static $columns = ['chapters', 'createdAt', 'createdBy', 'glossary', 'id', 'initialState', 'labels', 'pregeneratedCharacter', 'quests', 'reference', 'status', 'synopsis', 'updatedAt', 'worldId'] as const
+  $columns = ScenarioSchema.$columns
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare chapters: LabelledEntry[]
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare glossary: GlossaryEntry[]
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare initialState: InitialState | null
+  @column()
+  declare labels: Labels
+  @column()
+  declare pregeneratedCharacter: PregeneratedCharacter | null
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare quests: LabelledEntry[]
+  @column()
+  declare reference: string
+  @column()
+  declare status: ScenarioStatus
+  @column()
+  declare synopsis: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare worldId: string
 }
 
 export class SessionSchema extends BaseModel {
-  static $columns = ['createdAt', 'currentChapter', 'id', 'lastActivityAt', 'status', 'userId'] as const
+  static $columns = ['createdAt', 'currentChapter', 'id', 'lastActivityAt', 'scenarioId', 'status', 'userId', 'worldId'] as const
   $columns = SessionSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -169,9 +290,13 @@ export class SessionSchema extends BaseModel {
   @column.dateTime()
   declare lastActivityAt: DateTime
   @column()
+  declare scenarioId: string
+  @column()
   declare status: 'in_progress' | 'paused' | 'completed'
   @column()
   declare userId: string
+  @column()
+  declare worldId: string
 }
 
 export class TurnLogSchema extends BaseModel {
@@ -247,6 +372,37 @@ export class WorldStateSchema extends BaseModel {
   declare narrativeFlags: Record<string, unknown>
   @column()
   declare sessionId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class WorldSchema extends BaseModel {
+  static $columns = ['ambiance', 'attributes', 'createdAt', 'createdBy', 'glossary', 'id', 'labels', 'narrativeTone', 'reference', 'resources', 'rules', 'skills', 'updatedAt'] as const
+  $columns = WorldSchema.$columns
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare ambiance: string[]
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare attributes: LabelledEntry[]
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare glossary: GlossaryEntry[]
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare labels: Labels
+  @column()
+  declare narrativeTone: string
+  @column()
+  declare reference: string
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare resources: LabelledEntry[]
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare rules: string[]
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare skills: SkillEntry[]
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }

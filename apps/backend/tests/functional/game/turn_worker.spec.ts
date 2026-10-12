@@ -18,7 +18,7 @@ import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { extracted } from '#tests/helpers/turns'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
-import { seedResolutionRules } from '#tests/helpers/content'
+import { seedContent } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
 
 /**
@@ -48,7 +48,7 @@ const INVALID = {
 
 async function arrangeScene() {
   /** Arbitration picks from the world's action types, read from the database. */
-  await seedResolutionRules()
+  await seedContent()
   const userId = await createUser()
   const sessionId = await createSession(userId)
 

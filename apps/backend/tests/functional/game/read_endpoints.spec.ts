@@ -9,6 +9,7 @@ import WorldState from '#models/world_state'
 import { THREE_MUSKETEERS } from '#services/game/world'
 import { improviseLocation, visitUniqueLocation } from '#services/game/locations'
 import { createUser, useTransaction } from '#tests/helpers/database'
+import { seedMusketeers } from '#tests/helpers/content'
 import { createItem, destroyItem, equipItem } from '#services/game/inventory'
 import { enterScene } from '#services/game/npcs'
 
@@ -28,6 +29,7 @@ function dataOf(response: { body(): unknown }): any {
 async function arrangeGame(userId: string, lastActivityAt = DateTime.now()) {
   const session = await Session.create({
     userId,
+    ...(await seedMusketeers()),
     status: 'in_progress',
     currentChapter: 'the_road_to_paris',
     lastActivityAt,

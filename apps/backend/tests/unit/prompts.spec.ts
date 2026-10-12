@@ -1,6 +1,6 @@
 import { test } from '@japa/runner'
 
-import { RESOLUTION_RULES } from '#services/game/resolution_rule_content'
+import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 import {
   THREE_MUSKETEERS,
   locationArchetypeReferences,
@@ -38,7 +38,7 @@ import {
  * These specs never call a model. They pin what is verifiable without one: what
  * each step is handed, and what it must never be handed.
  */
-const ACTION_TYPES = RESOLUTION_RULES[0].rules.map(({ actionType, description }) => ({
+const ACTION_TYPES = THREE_MUSKETEERS_CONTENT.actionTypes.map(({ actionType, description }) => ({
   actionType,
   description,
 }))

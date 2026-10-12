@@ -8,6 +8,8 @@ import {
   createLocationInstance,
   createNpcInstance,
   createResolutionRule,
+  createScenario,
+  createWorld,
   createSession,
   createTurn,
   createUser,
@@ -52,12 +54,16 @@ test.group('Resetting the games', (group) => {
 
   test('keeps the accounts and the game content', async ({ assert }) => {
     const userId = await createUser()
-    await createSession(userId)
-    await createResolutionRule('three_musketeers', 'melee_combat')
+    const worldId = await createWorld()
+    const scenarioId = await createScenario(worldId)
+    await createSession(userId, { worldId, scenarioId })
+    await createResolutionRule(worldId, 'melee_combat')
 
     await deleteAllGames(db.connection())
 
     assert.equal(await countRows('users', { id: userId }), 1)
-    assert.equal(await countRows('resolution_rules', { world_reference: 'three_musketeers' }), 1)
+    assert.equal(await countRows('worlds', { id: worldId }), 1)
+    assert.equal(await countRows('scenarios', { id: scenarioId }), 1)
+    assert.equal(await countRows('resolution_rules', { world_id: worldId }), 1)
   })
 })

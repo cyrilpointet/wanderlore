@@ -19,6 +19,13 @@ export default class GameReset extends BaseCommand {
   @flags.boolean({ description: 'Do not ask for confirmation' })
   declare force: boolean
 
+  /**
+   * Deletes without seeding again: what a migration that will not run over
+   * existing games asks for, before the schema the seeders need exists.
+   */
+  @flags.boolean({ description: 'Delete the games without seeding a new one', default: true })
+  declare seed: boolean
+
   async run() {
     if (this.app.inProduction) {
       this.logger.error('game:reset deletes every game: it is refused in production.')
@@ -39,6 +46,10 @@ export default class GameReset extends BaseCommand {
 
     await db.transaction((trx) => deleteAllGames(trx))
     this.logger.success(`Deleted ${target}.`)
+
+    if (!this.seed) {
+      return
+    }
 
     /** The same seeders a fresh database gets: content first, then the test account and its game. */
     const seed = await this.kernel.exec('db:seed', [])

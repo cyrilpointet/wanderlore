@@ -2,6 +2,8 @@ import { test } from '@japa/runner'
 import app from '@adonisjs/core/services/app'
 import db from '@adonisjs/lucid/services/db'
 import { MigrationRunner } from '@adonisjs/lucid/migration'
+
+type MigrationSource = { getMigrations(): Promise<{ name: string }[]> }
 import testUtils from '@adonisjs/core/services/test_utils'
 
 import { countRows, createSession, createUser } from '#tests/helpers/database'
@@ -12,9 +14,27 @@ const MIGRATION =
 /**
  * Driven through the runner itself rather than through `node ace`: the
  * commands regenerate `database/schema.ts`, the runner does not.
+ *
+ * `until` stops going up at the migration under test: a later one refuses
+ * to run while games exist (a game needs a world since Phase 5), and these
+ * games are the point of the spec.
  */
-async function migrate(options: { direction: 'up' } | { direction: 'down'; step: number }) {
+async function migrate(
+  options: { direction: 'up'; until?: string } | { direction: 'down'; step: number }
+) {
   const runner = new MigrationRunner(db, app, options)
+
+  if (options.direction === 'up' && options.until) {
+    const until = options.until
+    const source = (runner as unknown as { migrationSource: MigrationSource }).migrationSource
+    const all = source.getMigrations.bind(source)
+
+    source.getMigrations = async () => {
+      const migrations = await all()
+      return migrations.filter((migration) => migration.name <= until)
+    }
+  }
+
   await runner.run()
 
   if (runner.error) {
@@ -79,7 +99,17 @@ test.group('Migrations | current location', (group) => {
     const userId = await createUser()
     users.push(userId)
 
-    return createSession(userId)
+    /** Before Phase 5, a game had no world to name. */
+    if (await db.connection().schema.hasColumn('sessions', 'world_id')) {
+      return createSession(userId)
+    }
+
+    const [row] = await db
+      .table('sessions')
+      .insert({ user_id: userId, created_at: JANUARY, last_activity_at: JANUARY })
+      .returning('id')
+
+    return row.id
   }
 
   /**
@@ -92,9 +122,10 @@ test.group('Migrations | current location', (group) => {
     await migrate({ direction: 'up' })
   })
 
+  /** Games first: the Phase 5 migration will not run over them. */
   group.each.teardown(async () => {
-    await testUtils.db().migrate()
     await db.from('users').whereIn('id', users.splice(0)).delete()
+    await testUtils.db().migrate()
   })
 
   test('turns the places already visited into instances', async ({ assert }) => {
@@ -115,7 +146,7 @@ test.group('Migrations | current location', (group) => {
       })
     }
 
-    await migrate({ direction: 'up' })
+    await migrate({ direction: 'up', until: MIGRATION })
 
     const places = await db
       .from('location_instances')
@@ -178,7 +209,7 @@ test.group('Migrations | current location', (group) => {
       { reference: 'paris' },
     ])
 
-    await migrate({ direction: 'up' })
+    await migrate({ direction: 'up', until: MIGRATION })
 
     /** Up again: the instances the rollback left behind are reused, not duplicated. */
     assert.equal(await countRows('location_instances', { session_id: returned }), 2)

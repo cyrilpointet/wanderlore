@@ -9,6 +9,7 @@ import {
   createLocationInstance,
   createNpcInstance,
   createResolutionRule,
+  createWorld,
   createSession,
   createTurn,
   createUser,
@@ -100,10 +101,11 @@ test.group('Schema constraints', (group) => {
   })
 
   test('a world holds one rule per action type', async ({ assert }) => {
-    await createResolutionRule('three_musketeers', 'melee_combat')
+    const worldId = await createWorld()
+    await createResolutionRule(worldId, 'melee_combat')
 
     const error = await expectDbError(() =>
-      createResolutionRule('three_musketeers', 'melee_combat', 'swordsmanship')
+      createResolutionRule(worldId, 'melee_combat', 'swordsmanship')
     )
 
     /** Two rows would leave resolution picking a skill at random. */
@@ -111,9 +113,9 @@ test.group('Schema constraints', (group) => {
   })
 
   test('the same action type is fine in another world', async ({ assert }) => {
-    await createResolutionRule('three_musketeers', 'melee_combat')
+    await createResolutionRule(await createWorld(), 'melee_combat')
 
-    assert.isString(await createResolutionRule('another_world', 'melee_combat'))
+    assert.isString(await createResolutionRule(await createWorld(), 'melee_combat'))
   })
 
   test('a handle names one place per game', async ({ assert }) => {

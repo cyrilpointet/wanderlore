@@ -87,15 +87,65 @@ export async function createUser(
   return row.id
 }
 
+export async function createWorld(reference = unique('world').replace(/-/g, '_')): Promise<string> {
+  const now = new Date()
+  const [row] = await db
+    .table('worlds')
+    .insert({
+      reference,
+      labels: { en: 'Test World' },
+      narrative_tone: 'A world written by a test.',
+      created_at: now,
+      updated_at: now,
+    })
+    .returning('id')
+
+  return row.id
+}
+
+export async function createScenario(
+  worldId: string,
+  overrides: Partial<{ reference: string; status: string }> = {}
+): Promise<string> {
+  const now = new Date()
+  const [row] = await db
+    .table('scenarios')
+    .insert({
+      world_id: worldId,
+      reference: overrides.reference ?? unique('scenario').replace(/-/g, '_'),
+      labels: { en: 'Test Scenario' },
+      ...(overrides.status ? { status: overrides.status } : {}),
+      created_at: now,
+      updated_at: now,
+    })
+    .returning('id')
+
+  return row.id
+}
+
+/**
+ * A game needs a world and one of its scenarios: given, or a fresh pair made
+ * for it.
+ */
 export async function createSession(
   userId: string,
-  overrides: Partial<{ status: string; currentChapter: string }> = {}
+  overrides: Partial<{
+    status: string
+    currentChapter: string
+    worldId: string
+    scenarioId: string
+  }> = {}
 ): Promise<string> {
+  const worldId = overrides.worldId ?? (await createWorld())
+  const scenarioId = overrides.scenarioId ?? (await createScenario(worldId))
+
   const now = new Date()
   const [row] = await db
     .table('sessions')
     .insert({
       user_id: userId,
+      world_id: worldId,
+      scenario_id: scenarioId,
       ...(overrides.status ? { status: overrides.status } : {}),
       current_chapter: overrides.currentChapter ?? null,
       created_at: now,
@@ -235,7 +285,7 @@ export async function createTurn(
 }
 
 export async function createResolutionRule(
-  worldReference: string,
+  worldId: string,
   actionType: string,
   associatedSkill = 'athletics'
 ): Promise<string> {
@@ -243,7 +293,7 @@ export async function createResolutionRule(
   const [row] = await db
     .table('resolution_rules')
     .insert({
-      world_reference: worldReference,
+      world_id: worldId,
       action_type: actionType,
       description: 'A rule written by a test.',
       associated_skill: associatedSkill,

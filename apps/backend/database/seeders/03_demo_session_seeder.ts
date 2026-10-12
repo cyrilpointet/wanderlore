@@ -2,7 +2,9 @@ import { DateTime } from 'luxon'
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
 
 import User from '#models/user'
+import World from '#models/world'
 import Session from '#models/session'
+import Scenario from '#models/scenario'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
 import { THREE_MUSKETEERS } from '#services/game/world'
@@ -39,8 +41,17 @@ export default class extends BaseSeeder {
       await existing.delete()
     }
 
+    /** Written by the content seeder, which runs first. */
+    const world = await World.findByOrFail('reference', THREE_MUSKETEERS.reference)
+    const scenario = await Scenario.query()
+      .where('worldId', world.id)
+      .where('reference', 'a_gascon_in_paris')
+      .firstOrFail()
+
     const session = await Session.create({
       userId: player.id,
+      worldId: world.id,
+      scenarioId: scenario.id,
       status: 'in_progress',
       currentChapter: 'the_road_to_paris',
       lastActivityAt: DateTime.now(),

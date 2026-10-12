@@ -30,7 +30,7 @@ import {
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
-import { seedResolutionRules } from '#tests/helpers/content'
+import { seedContent } from '#tests/helpers/content'
 import { countRows, createSession, createUser, useTransaction } from '#tests/helpers/database'
 import { CHARACTER, extracted, playerOf } from '#tests/helpers/turns'
 
@@ -77,7 +77,7 @@ const NARRATED = [streamed(NARRATED_TEXT), NARRATED_EFFECTS]
 
 async function arrangeScene() {
   /** Arbitration picks from the world's action types, read from the database. */
-  await seedResolutionRules()
+  await seedContent()
   const userId = await createUser()
   const sessionId = await createSession(userId)
 

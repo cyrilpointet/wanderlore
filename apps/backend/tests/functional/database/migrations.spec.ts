@@ -13,6 +13,11 @@ const TABLES = [
   'location_instances',
   'npc_instances',
   'inventory_items',
+  'worlds',
+  'scenarios',
+  'npc_definitions',
+  'location_definitions',
+  'item_definitions',
 ]
 
 const ENUM_TYPES = [
@@ -22,6 +27,8 @@ const ENUM_TYPES = [
   'npc_disposition',
   'npc_status',
   'item_state',
+  'scenario_status',
+  'definition_kind',
 ]
 
 async function existingTables(): Promise<string[]> {

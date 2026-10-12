@@ -30,23 +30,24 @@ export class UnknownActionTypeError extends Error {
  * from one turn to the next whatever order the rows were written in.
  */
 export async function actionTypesOf(world: WorldDefinition): Promise<ActionType[]> {
-  const rules = await ResolutionRule.query()
-    .where('worldReference', world.reference)
-    .orderBy('actionType')
+  const rules = await rulesOf(world).orderBy('actionType')
 
   return rules.map(({ actionType, description }) => ({ actionType, description }))
 }
 
 /** The skill a roll uses for this category. Arbitration never sees it. */
 export async function skillFor(world: WorldDefinition, actionType: string): Promise<string> {
-  const rule = await ResolutionRule.query()
-    .where('worldReference', world.reference)
-    .where('actionType', actionType)
-    .first()
+  const rule = await rulesOf(world).where('actionType', actionType).first()
 
   if (rule === null) {
     throw new UnknownActionTypeError(world.reference, actionType)
   }
 
   return rule.associatedSkill
+}
+
+function rulesOf(world: WorldDefinition) {
+  return ResolutionRule.query().whereHas('world', (query) =>
+    query.where('reference', world.reference)
+  )
 }

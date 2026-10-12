@@ -1,4 +1,6 @@
 import User from '#models/user'
+import World from '#models/world'
+import Scenario from '#models/scenario'
 import TurnLog from '#models/turn_log'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
@@ -19,6 +21,12 @@ export default class Session extends SessionSchema {
 
   @belongsTo(() => User)
   declare user: BelongsTo<typeof User>
+
+  @belongsTo(() => World)
+  declare world: BelongsTo<typeof World>
+
+  @belongsTo(() => Scenario)
+  declare scenario: BelongsTo<typeof Scenario>
 
   /**
    * `hasMany` although a session is played by a single character today: nothing

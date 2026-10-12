@@ -252,6 +252,11 @@ serverless pour le backend).
   colonne (`22P02`). Le `prepare` doit laisser passer `null` intact, sinon un NULL SQL
   devient un `null` JSON. Il se déclare dans `schema_rules.ts` (clé `args`), comme le
   typage.
+- **Le contenu de jeu écrit en code vit dans `database/content/`** (forme `WorldContent`,
+  `#services/game/content/types`) et s'écrit en base par `storeWorldContent`
+  (`#services/game/content/store`), idempotent par référence — jamais par des insertions à la
+  main. Le tour lit une `WorldDefinition` résolue par `resolveWorld` (univers + scénario, la
+  définition de scénario remplaçant celle de l'univers de même référence).
 - **Les seeders sont préfixés d'un numéro à deux chiffres** (`01_`, `02_`…) : Lucid les
   joue par ordre de nom de fichier, et un simple `node ace db:seed` doit remplir une base
   vide. Le contenu de jeu (tous environnements) passe en premier, puis les données de test
@@ -358,6 +363,7 @@ node ace llm:ping                 # vérifie que le provider LLM répond
 node ace llm:cost --input-per-million=… --output-per-million=…
                                   # coût réel par tour, partie, étape, langue (lecture seule)
 node ace game:reset               # supprime parties et turn_log, re-seed une partie neuve (hors prod)
+node ace game:reset --no-seed     # supprime sans re-seeder (avant une migration qui refuse les parties)
 
 node ace test                     # suite complète
 node ace test unit                # suite unitaire seule (suite en positionnel)
