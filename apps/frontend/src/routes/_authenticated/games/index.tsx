@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
-import { CircleAlert } from 'lucide-react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { CircleAlert, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { AppHeader } from '@/components/app_header'
@@ -19,9 +19,18 @@ function Games() {
     <>
       <AppHeader />
       <main className="mx-auto w-full max-w-xl px-4 pt-8 pb-12 sm:px-6 lg:pt-16">
-        <h1 className="mb-8 font-serif text-[1.75rem] leading-tight font-medium text-text lg:text-[2rem]">
-          {t('title')}
-        </h1>
+        <div className="mb-8 flex items-center justify-between gap-4">
+          <h1 className="font-serif text-[1.75rem] leading-tight font-medium text-text lg:text-[2rem]">
+            {t('title')}
+          </h1>
+          <Link
+            to="/games/new"
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-accent px-4 text-body font-medium text-on-accent transition-colors hover:bg-accent-hover"
+          >
+            <Plus aria-hidden className="size-4" />
+            {t('newGame')}
+          </Link>
+        </div>
         <GameList />
       </main>
     </>
@@ -62,7 +71,14 @@ function GameList() {
   }
 
   if (games.data.length === 0) {
-    return <p className="text-body text-muted">{t('empty')}</p>
+    return (
+      <p className="text-body text-muted">
+        {t('empty')}{' '}
+        <Link to="/games/new" className="text-accent underline-offset-2 hover:underline">
+          {t('emptyHint')}
+        </Link>
+      </p>
+    )
   }
 
   return (

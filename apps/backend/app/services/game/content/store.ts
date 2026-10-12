@@ -164,7 +164,7 @@ export async function readWorldContent(
 
   return {
     ...(await readWorldLevel(worldId, client)),
-    scenarios: await Promise.all(scenarios.map((scenario) => scenarioContentOf(scenario, client))),
+    scenarios: await sequentially(scenarios, (scenario) => scenarioContentOf(scenario, client)),
   }
 }
 
@@ -231,11 +231,13 @@ export async function readCatalogues(
       : query.where('scenarioId', scenarioId)
   }
 
-  const [npcs, locations, items] = await Promise.all([
-    level(NpcDefinition.query({ client })),
-    level(LocationDefinition.query({ client })),
-    level(ItemDefinition.query({ client })),
-  ])
+  /**
+   * One after the other: inside a transaction they share one connection,
+   * which runs a single query at a time anyway.
+   */
+  const npcs = await level(NpcDefinition.query({ client }))
+  const locations = await level(LocationDefinition.query({ client }))
+  const items = await level(ItemDefinition.query({ client }))
 
   return {
     npcs: npcs.map((npc): NpcDefinitionContent => ({
@@ -266,4 +268,17 @@ export async function readCatalogues(
       initialHolder: item.initialHolder,
     })),
   }
+}
+
+async function sequentially<Item, Result>(
+  items: Item[],
+  run: (item: Item) => Promise<Result>
+): Promise<Result[]> {
+  const results: Result[] = []
+
+  for (const item of items) {
+    results.push(await run(item))
+  }
+
+  return results
 }

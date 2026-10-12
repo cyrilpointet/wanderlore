@@ -19,7 +19,11 @@ export const MARGINS = [
 /** What happened to one of the character's items during a turn. */
 export const ITEM_CHANGES = ['gained', 'lost', 'used_up', 'equipped', 'unequipped'] as const
 
+/** Only a game master sees drafts, to try them out before publishing. */
+export const SCENARIO_STATUSES = ['draft', 'published'] as const
+
 export type GameStatus = (typeof GAME_STATUSES)[number]
+export type ScenarioStatus = (typeof SCENARIO_STATUSES)[number]
 export type TurnStatus = (typeof TURN_STATUSES)[number]
 export type Step = (typeof STEPS)[number]
 export type Result = (typeof RESULTS)[number]

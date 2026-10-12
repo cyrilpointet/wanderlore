@@ -32,5 +32,9 @@
     "used_up": "You use up {{item}}",
     "equipped": "You equip {{item}}",
     "unequipped": "You put away {{item}}"
+  },
+  "scenarioStatus": {
+    "draft": "Draft",
+    "published": "Published"
   }
 }

@@ -3,5 +3,16 @@
   "loading": "Loading your games…",
   "empty": "No game yet.",
   "worldAndChapter": "{{world}} · {{chapter}}",
-  "lastActivity": "{{value, relativetime}}"
+  "lastActivity": "{{value, relativetime}}",
+  "newGame": "New game",
+  "emptyHint": "Start one from a scenario.",
+  "newGamePage": {
+    "title": "New game",
+    "intro": "Pick a story. You play its character from the first scene.",
+    "loading": "Loading the scenarios…",
+    "empty": "No scenario can be played yet.",
+    "start": "Play",
+    "starting": "Starting…",
+    "back": "My games"
+  }
 }

@@ -9,7 +9,9 @@ export type ScannedRoutes = {
     'auth.csrf': { paramsTuple?: []; params?: {} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'profile.login.destroy': { paramsTuple?: []; params?: {} }
+    'game.scenarios.index': { paramsTuple?: []; params?: {} }
     'game.sessions.index': { paramsTuple?: []; params?: {} }
+    'game.sessions.store': { paramsTuple?: []; params?: {} }
     'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
@@ -21,6 +23,7 @@ export type ScannedRoutes = {
   GET: {
     'auth.csrf': { paramsTuple?: []; params?: {} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
+    'game.scenarios.index': { paramsTuple?: []; params?: {} }
     'game.sessions.index': { paramsTuple?: []; params?: {} }
     'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -30,6 +33,7 @@ export type ScannedRoutes = {
   HEAD: {
     'auth.csrf': { paramsTuple?: []; params?: {} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
+    'game.scenarios.index': { paramsTuple?: []; params?: {} }
     'game.sessions.index': { paramsTuple?: []; params?: {} }
     'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -40,6 +44,7 @@ export type ScannedRoutes = {
     'auth.new_account.store': { paramsTuple?: []; params?: {} }
     'auth.login.store': { paramsTuple?: []; params?: {} }
     'profile.login.destroy': { paramsTuple?: []; params?: {} }
+    'game.sessions.store': { paramsTuple?: []; params?: {} }
     'game.turns.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'subscribe': { paramsTuple?: []; params?: {} }
     'unsubscribe': { paramsTuple?: []; params?: {} }

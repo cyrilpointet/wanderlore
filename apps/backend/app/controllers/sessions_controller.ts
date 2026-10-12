@@ -1,6 +1,8 @@
 import Session from '#models/session'
 import { ContentLabels } from '#services/game/content_labels'
 import { loadWorld, loadWorlds } from '#services/game/content/load'
+import { startGame } from '#services/game/new_game'
+import { startGameValidator } from '#validators/session'
 import SessionTransformer from '#transformers/session_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 
@@ -30,24 +32,45 @@ export default class SessionsController {
   }
 
   async show({ params, auth, serialize }: HttpContext) {
-    const session = await Session.query()
-      .where('id', params.id)
-      .where('userId', auth.getUserOrFail().id)
-      .preload('characters', (characters) =>
-        characters.preload('items', (items) =>
-          items
-            .whereNot('state', 'gone')
-            .orderBy('createdAt', 'asc')
-            .orderBy('definitionReference', 'asc')
-            .orderBy('handle', 'asc')
-        )
-      )
-      .preload('worldState', (worldState) => worldState.preload('currentLocation'))
-      .preload('turns', (turns) => turns.where('status', 'pending'))
-      .firstOrFail()
-
+    const session = await findGame(params.id, auth.getUserOrFail().id)
     const labels = new ContentLabels(await loadWorld(session))
 
     return serialize(SessionTransformer.transform(session, () => labels))
   }
+
+  /**
+   * Starts a game from a scenario and answers with it, in the shape the game
+   * screen reads, so the front goes straight to it.
+   */
+  async store({ request, response, auth, serialize }: HttpContext) {
+    const { scenarioId } = await request.validateUsing(startGameValidator)
+    const user = auth.getUserOrFail()
+
+    const created = await startGame(user, scenarioId)
+    const session = await findGame(created.id, user.id)
+    const labels = new ContentLabels(await loadWorld(session))
+
+    response.status(201)
+
+    return serialize(SessionTransformer.transform(session, () => labels))
+  }
+}
+
+/** A game with everything its screen shows, scoped to its owner. */
+function findGame(sessionId: string, userId: string) {
+  return Session.query()
+    .where('id', sessionId)
+    .where('userId', userId)
+    .preload('characters', (characters) =>
+      characters.preload('items', (items) =>
+        items
+          .whereNot('state', 'gone')
+          .orderBy('createdAt', 'asc')
+          .orderBy('definitionReference', 'asc')
+          .orderBy('handle', 'asc')
+      )
+    )
+    .preload('worldState', (worldState) => worldState.preload('currentLocation'))
+    .preload('turns', (turns) => turns.where('status', 'pending'))
+    .firstOrFail()
 }

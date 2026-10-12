@@ -67,6 +67,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/login_controller').default['destroy']>>>
     }
   }
+  'game.scenarios.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/scenarios'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/scenarios_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/scenarios_controller').default['index']>>>
+    }
+  }
   'game.sessions.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/sessions'
@@ -77,6 +89,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['index']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['index']>>>
+    }
+  }
+  'game.sessions.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/sessions'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/session').startGameValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/session').startGameValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'game.sessions.show': {

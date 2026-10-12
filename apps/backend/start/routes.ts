@@ -48,7 +48,9 @@ router
 
     router
       .group(() => {
+        router.get('scenarios', [controllers.Scenarios, 'index'])
         router.get('sessions', [controllers.Sessions, 'index'])
+        router.post('sessions', [controllers.Sessions, 'store'])
         router.get('sessions/:id', [controllers.Sessions, 'show'])
         router.get('sessions/:id/turns', [controllers.Turns, 'index'])
         router.get('sessions/:id/turns/:turnId', [controllers.Turns, 'show'])

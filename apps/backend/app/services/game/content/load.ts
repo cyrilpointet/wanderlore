@@ -29,12 +29,9 @@ export async function loadWorld(
     .where('worldId', ref.worldId)
     .firstOrFail()
 
-  const [world, scenarioContent] = await Promise.all([
-    readWorldLevel(ref.worldId, client),
-    scenarioContentOf(scenario, client),
-  ])
+  const world = await readWorldLevel(ref.worldId, client)
 
-  return resolveWorld(world, scenarioContent)
+  return resolveWorld(world, await scenarioContentOf(scenario, client))
 }
 
 /**
@@ -47,11 +44,11 @@ export async function loadWorlds(
 ): Promise<(ref: GameContentRef) => WorldDefinition> {
   const keyOf = (ref: GameContentRef) => `${ref.worldId}/${ref.scenarioId}`
   const distinct = new Map(refs.map((ref) => [keyOf(ref), ref]))
-  const loaded = new Map(
-    await Promise.all(
-      [...distinct].map(async ([key, ref]) => [key, await loadWorld(ref, client)] as const)
-    )
-  )
+  const loaded = new Map<string, WorldDefinition>()
+
+  for (const [key, ref] of distinct) {
+    loaded.set(key, await loadWorld(ref, client))
+  }
 
   return (ref) => {
     const world = loaded.get(keyOf(ref))

@@ -36,11 +36,23 @@ const routes = {
     tokens: [{"old":"/api/v1/account/logout","type":0,"val":"api","end":""},{"old":"/api/v1/account/logout","type":0,"val":"v1","end":""},{"old":"/api/v1/account/logout","type":0,"val":"account","end":""},{"old":"/api/v1/account/logout","type":0,"val":"logout","end":""}],
     types: placeholder as Registry['profile.login.destroy']['types'],
   },
+  'game.scenarios.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/scenarios',
+    tokens: [{"old":"/api/v1/scenarios","type":0,"val":"api","end":""},{"old":"/api/v1/scenarios","type":0,"val":"v1","end":""},{"old":"/api/v1/scenarios","type":0,"val":"scenarios","end":""}],
+    types: placeholder as Registry['game.scenarios.index']['types'],
+  },
   'game.sessions.index': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/sessions',
     tokens: [{"old":"/api/v1/sessions","type":0,"val":"api","end":""},{"old":"/api/v1/sessions","type":0,"val":"v1","end":""},{"old":"/api/v1/sessions","type":0,"val":"sessions","end":""}],
     types: placeholder as Registry['game.sessions.index']['types'],
+  },
+  'game.sessions.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/sessions',
+    tokens: [{"old":"/api/v1/sessions","type":0,"val":"api","end":""},{"old":"/api/v1/sessions","type":0,"val":"v1","end":""},{"old":"/api/v1/sessions","type":0,"val":"sessions","end":""}],
+    types: placeholder as Registry['game.sessions.store']['types'],
   },
   'game.sessions.show': {
     methods: ["GET","HEAD"],

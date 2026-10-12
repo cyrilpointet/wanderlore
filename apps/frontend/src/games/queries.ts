@@ -1,7 +1,14 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
-import type { GameStatus, ItemChange, Margin, Result, TurnStatus } from '@/api/enums'
+import type {
+  GameStatus,
+  ItemChange,
+  Margin,
+  Result,
+  ScenarioStatus,
+  TurnStatus,
+} from '@/api/enums'
 import type { ContentLabel } from '@/api/types'
 
 /**
@@ -109,3 +116,28 @@ export const turnsQuery = (gameId: string) =>
     queryKey: ['games', gameId, 'turns'],
     queryFn: async () => (await api<{ data: Turn[] }>(`/sessions/${gameId}/turns`)).data,
   })
+
+/** A scenario a game can be started from, as the New game catalogue shows it. */
+export type ScenarioSummary = {
+  id: string
+  title: string
+  synopsis: string
+  /** Always `published` for a player; a game master also sees drafts. */
+  status: ScenarioStatus
+  world: ContentLabel & { tone: string }
+}
+
+/** The scenarios this account may start a game from, sorted by the backend. */
+export const scenariosQuery = queryOptions({
+  queryKey: ['scenarios'],
+  queryFn: async () => (await api<{ data: ScenarioSummary[] }>('/scenarios')).data,
+})
+
+/** Starts a game from a scenario; the answer is the new game, as its screen reads it. */
+export async function startGame(scenarioId: string): Promise<Game> {
+  const { data } = await api<{ data: Game }>('/sessions', {
+    method: 'POST',
+    body: { scenarioId },
+  })
+  return data
+}

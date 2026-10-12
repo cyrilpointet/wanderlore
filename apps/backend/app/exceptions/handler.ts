@@ -2,6 +2,7 @@ import app from '@adonisjs/core/services/app'
 import { errors as shieldErrors } from '@adonisjs/shield'
 import { type HttpContext, ExceptionHandler } from '@adonisjs/core/http'
 
+import { Refusal } from '#exceptions/refusal'
 import { describeTurnFailure } from '#exceptions/turn_failure'
 
 export default class HttpExceptionHandler extends ExceptionHandler {
@@ -24,6 +25,16 @@ export default class HttpExceptionHandler extends ExceptionHandler {
     if (error instanceof shieldErrors.E_BAD_CSRF_TOKEN) {
       return ctx.response.status(403).send({
         error: { code: 'invalid_csrf_token', message: error.message },
+      })
+    }
+
+    if (error instanceof Refusal) {
+      return ctx.response.status(error.status).send({
+        error: {
+          code: error.code,
+          message: error.message,
+          ...(error.details === undefined ? {} : { details: error.details }),
+        },
       })
     }
 
