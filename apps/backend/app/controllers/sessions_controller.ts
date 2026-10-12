@@ -1,11 +1,8 @@
 import Session from '#models/session'
 import { ContentLabels } from '#services/game/content_labels'
-import { THREE_MUSKETEERS } from '#services/game/world'
+import { loadWorld, loadWorlds } from '#services/game/content/load'
 import SessionTransformer from '#transformers/session_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
-
-/** One world until Phase 5, where the session names its own. */
-const labels = new ContentLabels(THREE_MUSKETEERS)
 
 /**
  * The player's games. Every lookup is scoped to the player asking, so someone
@@ -18,7 +15,18 @@ export default class SessionsController {
       .preload('characters')
       .orderBy('lastActivityAt', 'desc')
 
-    return serialize(SessionTransformer.transform(sessions, labels).useVariant('toSummary'))
+    /** Each world once, however many of the player's games are played in it. */
+    const worldOf = await loadWorlds(sessions)
+    const labels = new Map<string, ContentLabels>()
+    const labelsOf = (session: Session) => {
+      if (!labels.has(session.scenarioId)) {
+        labels.set(session.scenarioId, new ContentLabels(worldOf(session)))
+      }
+
+      return labels.get(session.scenarioId)!
+    }
+
+    return serialize(SessionTransformer.transform(sessions, labelsOf).useVariant('toSummary'))
   }
 
   async show({ params, auth, serialize }: HttpContext) {
@@ -38,6 +46,8 @@ export default class SessionsController {
       .preload('turns', (turns) => turns.where('status', 'pending'))
       .firstOrFail()
 
-    return serialize(SessionTransformer.transform(session, labels))
+    const labels = new ContentLabels(await loadWorld(session))
+
+    return serialize(SessionTransformer.transform(session, () => labels))
   }
 }

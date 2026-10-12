@@ -1,7 +1,5 @@
-import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
-
-import { resolveWorld } from './content/resolve.js'
 import type {
+  ActionTypeContent,
   CombatProfile,
   ItemHolderReference,
   ItemModifier,
@@ -63,6 +61,12 @@ export type WorldDefinition = {
   skills: WorldSkill[]
   resources: ContentEntry[]
   /**
+   * The categories arbitration picks from, each tied to the skill that
+   * resolves it. Part of the world so a turn reads them from the same
+   * snapshot as everything else.
+   */
+  actionTypes: ActionTypeContent[]
+  /**
    * Closed catalogue of the people the scene can hold. The model picks from
    * it and never invents someone with state of their own.
    */
@@ -119,15 +123,6 @@ export type ItemDefinition = DescribedEntry & {
     | { kind: 'unique'; initialHolder: ItemHolderReference | null }
     | { kind: 'archetype'; generic: boolean; stackable: boolean }
   )
-
-/**
- * Still read by the turn until it loads its world from the database: the
- * same content the seeder writes, resolved for its one scenario.
- */
-export const THREE_MUSKETEERS: WorldDefinition = resolveWorld(
-  THREE_MUSKETEERS_CONTENT,
-  THREE_MUSKETEERS_CONTENT.scenarios[0]
-)
 
 export function skillReferences(world: WorldDefinition): string[] {
   return world.skills.map((skill) => skill.reference)

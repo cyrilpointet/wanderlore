@@ -1,9 +1,7 @@
 import logger from '@adonisjs/core/services/logger'
 import transmit from '@adonisjs/transmit/services/main'
 
-import { ContentLabels } from './game/content_labels.js'
 import { TransmitTurnEvents } from './game/transmit_turn_events.js'
-import { THREE_MUSKETEERS } from './game/world.js'
 
 /**
  * Application-wide turn events, sent over SSE.
@@ -24,8 +22,6 @@ const turnEvents = new TransmitTurnEvents(
     broadcast: (channel, payload) =>
       transmit.broadcast(channel, JSON.parse(JSON.stringify(payload))),
   },
-  /** One world until Phase 5, where the session names its own. */
-  new ContentLabels(THREE_MUSKETEERS),
   logger
 )
 

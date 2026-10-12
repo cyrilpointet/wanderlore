@@ -27,6 +27,8 @@ export type TurnEvent =
       result: RollOutcome
       margin: MarginLabel
       items: string[]
+      /** The labels of the world the turn is played in, for the wire. */
+      labels: ContentLabels
     }
   /**
    * A fragment of the narration as it is written, to append to what came
@@ -47,6 +49,7 @@ export type TurnEvent =
       /** What the character holds once the turn is applied. */
       inventory: HeldItem[]
       location: PlacedLocation | null
+      labels: ContentLabels
     }
   | { type: 'turn_failed'; failure: { code: string; message: string } }
 
@@ -78,7 +81,7 @@ export function channelOf(sessionId: string): string {
  * The event as it goes over the wire: in the same shapes as the read routes,
  * so the front handles a turn one way whether it arrived live or was read back.
  */
-export function toMessage(ref: TurnRef, event: TurnEvent, labels: ContentLabels) {
+export function toMessage(ref: TurnRef, event: TurnEvent) {
   const header = { event: event.type, turnId: ref.turnId, idempotencyKey: ref.idempotencyKey }
 
   switch (event.type) {
@@ -86,7 +89,7 @@ export function toMessage(ref: TurnRef, event: TurnEvent, labels: ContentLabels)
       return { ...header, step: event.step }
 
     case 'roll_resolved':
-      return { ...header, ...presentRoll(event, labels) }
+      return { ...header, ...presentRoll(event, event.labels) }
 
     case 'narration_chunk':
       return { ...header, text: event.text }
@@ -94,9 +97,13 @@ export function toMessage(ref: TurnRef, event: TurnEvent, labels: ContentLabels)
     case 'turn_completed':
       return {
         ...header,
-        turn: new TurnTransformer(event.turn, labels).toObject(),
-        character: new CharacterTransformer(event.character, labels, event.inventory).toObject(),
-        location: event.location === null ? null : labels.location(event.location),
+        turn: new TurnTransformer(event.turn, event.labels).toObject(),
+        character: new CharacterTransformer(
+          event.character,
+          event.labels,
+          event.inventory
+        ).toObject(),
+        location: event.location === null ? null : event.labels.location(event.location),
       }
 
     case 'turn_failed':

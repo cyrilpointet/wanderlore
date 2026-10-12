@@ -12,8 +12,6 @@ import { LlmError } from '#services/llm/errors'
 import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
-import { ContentLabels } from '#services/game/content_labels'
-import { THREE_MUSKETEERS } from '#services/game/world'
 import { channelOf, toMessage } from '#services/game/turn_events'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import { FakeLlmProvider, streamed } from '#tests/helpers/fake_llm_provider'
@@ -21,7 +19,7 @@ import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { CHARACTER, extracted } from '#tests/helpers/turns'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
-import { seedContent } from '#tests/helpers/content'
+import { seedMusketeers } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
 
 /**
@@ -61,10 +59,10 @@ const UNKNOWN_SKILL = {
 }
 
 async function arrangeScene() {
-  /** Arbitration picks from the world's action types, read from the database. */
-  await seedContent()
+  /** A turn loads its world from the database: the game is played in the seeded one. */
+  const content = await seedMusketeers()
   const userId = await createUser()
-  const sessionId = await createSession(userId)
+  const sessionId = await createSession(userId, content)
 
   await Character.create({
     sessionId,
@@ -193,7 +191,7 @@ test.group('Turn events | sequence', (group) => {
     const { events } = await playOne([NEEDS_ROLL, ...NARRATED])
     const chunk = events.recorded.find(({ event }) => event.type === 'narration_chunk')!
 
-    assert.deepEqual(toMessage(chunk.ref, chunk.event, new ContentLabels(THREE_MUSKETEERS)), {
+    assert.deepEqual(toMessage(chunk.ref, chunk.event), {
       event: 'narration_chunk',
       turnId: chunk.ref.turnId,
       idempotencyKey: chunk.ref.idempotencyKey,
@@ -272,15 +270,13 @@ test.group('Turn events | sequence', (group) => {
 test.group('Turn events | what goes over the wire', (group) => {
   useTransaction(group)
 
-  const labels = new ContentLabels(THREE_MUSKETEERS)
-
   test('a roll carries its labelled skill and qualitative outcome, never a number', async ({
     assert,
   }) => {
     const { turn, events } = await playOne([NEEDS_ROLL, ...NARRATED])
     const roll = events.recorded.find(({ event }) => event.type === 'roll_resolved')!
 
-    const message = toMessage(roll.ref, roll.event, labels)
+    const message = toMessage(roll.ref, roll.event)
 
     assert.deepEqual(message, {
       event: 'roll_resolved',
@@ -297,7 +293,7 @@ test.group('Turn events | what goes over the wire', (group) => {
     const { events } = await playOne([NEEDS_ROLL, ...NARRATED])
     const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!
 
-    const message = toMessage(completed.ref, completed.event, labels) as Record<string, any>
+    const message = toMessage(completed.ref, completed.event) as Record<string, any>
 
     /** Enough to update both without a further request. */
     assert.equal(message.turn.narration, NARRATED_TEXT)
@@ -314,9 +310,7 @@ test.group('Turn events | what goes over the wire', (group) => {
     const second = await playOne([NEEDS_ROLL, ...NARRATED])
 
     const wire = JSON.stringify(
-      [...events.recorded, ...second.events.recorded].map(({ ref, event }) =>
-        toMessage(ref, event, labels)
-      )
+      [...events.recorded, ...second.events.recorded].map(({ ref, event }) => toMessage(ref, event))
     )
 
     for (const leak of ['dice', 'threshold', 'total', 'skillValue', 'street_seen']) {
@@ -328,7 +322,7 @@ test.group('Turn events | what goes over the wire', (group) => {
     const { turn, events } = await playOne([UNKNOWN_SKILL, UNKNOWN_SKILL])
     const failed = events.recorded.find(({ event }) => event.type === 'turn_failed')!
 
-    const message = toMessage(failed.ref, failed.event, labels) as Record<string, any>
+    const message = toMessage(failed.ref, failed.event) as Record<string, any>
 
     assert.equal(message.turnId, turn.id)
     assert.equal(message.failure.code, 'turn_validation_failed')
@@ -479,11 +473,7 @@ test.group('Turn events | the separated pipeline', (group) => {
     const { events } = await playOne([NEEDS_ROLL, streamed(NARRATED_TEXT), tavern])
     const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!
 
-    const message = toMessage(
-      completed.ref,
-      completed.event,
-      new ContentLabels(THREE_MUSKETEERS)
-    ) as Record<string, any>
+    const message = toMessage(completed.ref, completed.event) as Record<string, any>
 
     assert.deepEqual(message.location, { reference: 'tavern_1', label: 'Tavern · Paris' })
     /** The journal says the same, from the effects as applied. */
@@ -507,11 +497,7 @@ test.group('Turn events | the separated pipeline', (group) => {
     const { events } = await playOne([NEEDS_ROLL, streamed(NARRATED_TEXT), bread])
     const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!
 
-    const message = toMessage(
-      completed.ref,
-      completed.event,
-      new ContentLabels(THREE_MUSKETEERS)
-    ) as Record<string, any>
+    const message = toMessage(completed.ref, completed.event) as Record<string, any>
 
     assert.deepEqual(message.character.inventory, [
       { handle: null, item: { reference: 'food', label: 'Food' }, quantity: 2, equipped: false },

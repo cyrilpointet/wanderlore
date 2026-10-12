@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 
 import LocationInstance from '#models/location_instance'
-import { THREE_MUSKETEERS } from '#services/game/world'
+import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
 import {
   UnknownLocationError,
   improviseLocation,

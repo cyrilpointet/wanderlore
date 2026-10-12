@@ -2,7 +2,6 @@ import { test } from '@japa/runner'
 
 import {
   ITEM_CONDITIONS,
-  THREE_MUSKETEERS,
   itemArchetypeReferences,
   itemReferences,
   locationArchetypeReferences,
@@ -11,6 +10,7 @@ import {
   type ContentEntry,
   type LocationDefinition,
 } from '#services/game/world'
+import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
 
 const REFERENCE = /^[a-z][a-z0-9_]{0,63}$/
 

@@ -5,6 +5,12 @@ import type { ContentLabels } from '#services/game/content_labels'
 import CharacterTransformer from '#transformers/character_transformer'
 
 /**
+ * The labels of the world a game is played in. A function of the game, since a
+ * list of games can span several worlds.
+ */
+export type LabelsOf = (session: Session) => ContentLabels
+
+/**
  * A game, as the player sees it.
  *
  * Expects `characters` and `worldState` preloaded — the latter with its
@@ -13,9 +19,9 @@ import CharacterTransformer from '#transformers/character_transformer'
 export default class SessionTransformer extends BaseTransformer<Session> {
   #labels: ContentLabels
 
-  constructor(session: Session, labels: ContentLabels) {
+  constructor(session: Session, labelsOf: LabelsOf) {
     super(session)
-    this.#labels = labels
+    this.#labels = labelsOf(session)
   }
 
   /** The game screen: the full sheet and where the story stands. */

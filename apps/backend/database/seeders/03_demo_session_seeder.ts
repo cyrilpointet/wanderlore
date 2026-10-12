@@ -7,7 +7,8 @@ import Session from '#models/session'
 import Scenario from '#models/scenario'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
-import { THREE_MUSKETEERS } from '#services/game/world'
+import { loadWorld } from '#services/game/content/load'
+import type { WorldDefinition } from '#services/game/world'
 import { visitUniqueLocation } from '#services/game/locations'
 import { createItem, equipItem } from '#services/game/inventory'
 
@@ -42,15 +43,16 @@ export default class extends BaseSeeder {
     }
 
     /** Written by the content seeder, which runs first. */
-    const world = await World.findByOrFail('reference', THREE_MUSKETEERS.reference)
+    const worldRow = await World.findByOrFail('reference', 'three_musketeers')
     const scenario = await Scenario.query()
-      .where('worldId', world.id)
+      .where('worldId', worldRow.id)
       .where('reference', 'a_gascon_in_paris')
       .firstOrFail()
+    const world = await loadWorld({ worldId: worldRow.id, scenarioId: scenario.id })
 
     const session = await Session.create({
       userId: player.id,
-      worldId: world.id,
+      worldId: worldRow.id,
       scenarioId: scenario.id,
       status: 'in_progress',
       currentChapter: 'the_road_to_paris',
@@ -65,7 +67,13 @@ export default class extends BaseSeeder {
        * Drawn from the world's own skill list, so the arbitration step can
        * never name one this character does not have.
        */
-      skills: skillsFor(['swordsmanship', 'athletics', 'observation', 'persuasion', 'etiquette']),
+      skills: skillsFor(world, [
+        'swordsmanship',
+        'athletics',
+        'observation',
+        'persuasion',
+        'etiquette',
+      ]),
       hitPoints: 10,
       hitPointsMax: 10,
       resources: { purse: 15 },
@@ -73,7 +81,7 @@ export default class extends BaseSeeder {
     })
 
     /** The story opens in Meung, the first place the game has been through. */
-    const meung = await visitUniqueLocation(THREE_MUSKETEERS, session.id, 'meung_sur_loire')
+    const meung = await visitUniqueLocation(world, session.id, 'meung_sur_loire')
 
     await WorldState.create({
       sessionId: session.id,
@@ -96,14 +104,14 @@ export default class extends BaseSeeder {
     const holder = { type: 'character' as const, id: character.id }
 
     await createItem(
-      THREE_MUSKETEERS,
+      world,
       session.id,
       { definition: 'letter_to_treville', descriptor: null, quantity: 1 },
       holder
     )
 
     const sword = await createItem(
-      THREE_MUSKETEERS,
+      world,
       session.id,
       {
         definition: 'rapier',
@@ -112,7 +120,7 @@ export default class extends BaseSeeder {
       },
       holder
     )
-    await equipItem(THREE_MUSKETEERS, sword)
+    await equipItem(world, sword)
   }
 }
 
@@ -120,13 +128,13 @@ export default class extends BaseSeeder {
  * Fails loudly on a skill the world does not define: a character holding one
  * would make the closed list the validator enforces a lie.
  */
-function skillsFor(names: string[]): Record<string, number> {
-  const known = new Set(THREE_MUSKETEERS.skills.map((skill) => skill.reference))
+function skillsFor(world: WorldDefinition, names: string[]): Record<string, number> {
+  const known = new Set(world.skills.map((skill) => skill.reference))
   const values: Record<string, number> = { swordsmanship: 3, persuasion: 2 }
 
   for (const name of names) {
     if (!known.has(name)) {
-      throw new Error(`"${name}" is not a skill of the ${THREE_MUSKETEERS.reference} world.`)
+      throw new Error(`"${name}" is not a skill of the ${world.reference} world.`)
     }
   }
 

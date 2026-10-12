@@ -31,10 +31,12 @@ import {
   sceneItemsOf,
 } from './inventory.js'
 import { actionTypesOf, skillFor } from './resolution_rules.js'
+import { ContentLabels } from './content_labels.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
+import { loadWorld } from './content/load.js'
 import {
-  THREE_MUSKETEERS,
+  type WorldDefinition,
   locationArchetypeReferences,
   npcReferences,
   uniqueLocationReferences,
@@ -283,6 +285,10 @@ export class TurnService {
 
     /** Counted from here, when a worker picks the turn up — not from its submission. */
     const budget = new TurnBudget(this.#clock)
+    /**
+     * The world is read here, once, with the rest of the scene: every step of
+     * this turn sees the same content, whatever is edited while it plays.
+     */
     const scene = await this.#loadScene(turn.sessionId)
 
     /**
@@ -313,6 +319,7 @@ export class TurnService {
       character: scene.character,
       inventory: await characterItems(scene.character.id),
       location: await this.#whereItStands(scene.worldState),
+      labels: new ContentLabels(scene.world),
     })
 
     return turn
@@ -349,19 +356,20 @@ export class TurnService {
     trace: TurnTrace,
     budget: TurnBudget
   ): Promise<TurnEffects> {
+    const { world } = scene
     const context = buildContext(scene, turn.playerInput, turn.language)
-    /** Read on every turn: from Phase 5 the list is the world's own. */
-    const actionTypes = await actionTypesOf(THREE_MUSKETEERS)
+    /** The world's own list, from the snapshot the turn was picked up with. */
+    const actionTypes = actionTypesOf(world)
     const meta: ValidationMeta = {
       actionTypes: actionTypes.map(({ actionType }) => actionType),
       npcHandles: scene.npcs.map(({ handle }) => handle),
-      locations: uniqueLocationReferences(THREE_MUSKETEERS),
-      locationArchetypes: locationArchetypeReferences(THREE_MUSKETEERS),
-      npcDefinitions: npcReferences(THREE_MUSKETEERS),
+      locations: uniqueLocationReferences(world),
+      locationArchetypes: locationArchetypeReferences(world),
+      npcDefinitions: npcReferences(world),
       itemsInScene: itemReferencesOf(scene.items),
       sceneItems: sceneItemsOf(scene.items),
       creatableItems: scene.creatableItems,
-      itemKinds: THREE_MUSKETEERS.items.map((item) => ({
+      itemKinds: world.items.map((item) => ({
         reference: item.reference,
         unique: item.kind === 'unique',
         stackable: item.kind === 'archetype' && item.stackable,
@@ -524,7 +532,7 @@ export class TurnService {
       }
     }
 
-    const skill = await skillFor(THREE_MUSKETEERS, actionType!)
+    const skill = skillFor(scene.world, actionType!)
     /** A skill the character never learnt is rolled untrained. */
     const resolution = this.#rules.resolve(
       scene.character.skills[skill] ?? UNTRAINED,
@@ -533,7 +541,7 @@ export class TurnService {
         skill,
         contextual: decision.resolution.contextual_modifiers,
         /** The character's own, never what someone else or the place holds. */
-        items: modifierSources(THREE_MUSKETEERS, scene.items.character),
+        items: modifierSources(scene.world, scene.items.character),
       }
     )
 
@@ -545,6 +553,7 @@ export class TurnService {
       skill,
       ...toNarrationOutcome(resolution),
       items: itemsThatWeighed(resolution.appliedModifiers),
+      labels: new ContentLabels(scene.world),
     })
 
     return { mode, ...toNarrationOutcome(resolution), reason: null }
@@ -568,6 +577,8 @@ export class TurnService {
       .preload('worldState', (worldState) => worldState.preload('currentLocation'))
       .preload('locations', (locations) => locations.orderBy('createdAt', 'asc'))
       .firstOrFail()
+
+    const world = await loadWorld(session)
 
     const character = session.characters[0]
 
@@ -593,6 +604,7 @@ export class TurnService {
 
     return {
       session,
+      world,
       character,
       worldState: session.worldState,
       npcs: await presentNpcs(sessionId),
@@ -600,7 +612,7 @@ export class TurnService {
         characterId: character.id,
         locationInstanceId: session.worldState.currentLocationId,
       }),
-      creatableItems: await creatableItems(THREE_MUSKETEERS, sessionId),
+      creatableItems: await creatableItems(world, sessionId),
       /** Oldest first, so the model reads the exchange in the order it happened. */
       recentTurns: turns.reverse(),
       lastTurnNumber: Number(last?.$extras.max ?? 0),
@@ -640,7 +652,7 @@ export class TurnService {
 
         const applied = await applyDelta(
           {
-            world: THREE_MUSKETEERS,
+            world: scene.world,
             sessionId: scene.session.id,
             character: scene.character,
             worldState: scene.worldState,
@@ -678,6 +690,8 @@ export class TurnService {
 
 type LoadedScene = {
   session: Session
+  /** The world as it stood when the turn was picked up. */
+  world: WorldDefinition
   character: Character
   worldState: WorldState
   npcs: PresentNpc[]
@@ -697,7 +711,7 @@ function buildContext(
   language: GameLanguage
 ): TurnContext {
   return {
-    world: THREE_MUSKETEERS,
+    world: scene.world,
     character: {
       name: scene.character.name,
       hit_points: scene.character.hitPoints,

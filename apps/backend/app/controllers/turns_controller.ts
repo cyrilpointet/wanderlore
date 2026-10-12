@@ -2,13 +2,10 @@ import turns from '#services/turn'
 import Session from '#models/session'
 import TurnLog from '#models/turn_log'
 import { ContentLabels } from '#services/game/content_labels'
-import { THREE_MUSKETEERS } from '#services/game/world'
+import { loadWorld } from '#services/game/content/load'
 import { playTurnValidator } from '#validators/turn'
 import TurnTransformer from '#transformers/turn_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
-
-/** One world until Phase 5, where the session names its own. */
-const labels = new ContentLabels(THREE_MUSKETEERS)
 
 /**
  * Deliberately thin: it validates the request, names who is asking, and
@@ -25,7 +22,7 @@ export default class TurnsController {
       .withScopes((scopes) => scopes.completed())
       .orderBy('turnNumber', 'asc')
 
-    return serialize(TurnTransformer.transform(history, labels))
+    return serialize(TurnTransformer.transform(history, await labelsOf(session)))
   }
 
   /**
@@ -40,7 +37,7 @@ export default class TurnsController {
       .where('id', params.turnId)
       .firstOrFail()
 
-    return serialize(TurnTransformer.transform(turn, labels))
+    return serialize(TurnTransformer.transform(turn, await labelsOf(session)))
   }
 
   /**
@@ -65,9 +62,11 @@ export default class TurnsController {
       idempotencyKey: headers['idempotency-key'],
     })
 
+    const session = await findOwnSession(params.id, auth.getUserOrFail().id)
+
     response.status(202)
 
-    return serialize(TurnTransformer.transform(turn, labels))
+    return serialize(TurnTransformer.transform(turn, await labelsOf(session)))
   }
 }
 
@@ -77,4 +76,9 @@ export default class TurnsController {
  */
 function findOwnSession(sessionId: string, userId: string) {
   return Session.query().where('id', sessionId).where('userId', userId).firstOrFail()
+}
+
+/** The labels of the world the game is played in, as it stands now. */
+async function labelsOf(session: Session): Promise<ContentLabels> {
+  return new ContentLabels(await loadWorld(session))
 }

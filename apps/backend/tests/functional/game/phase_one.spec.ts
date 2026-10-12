@@ -11,7 +11,7 @@ import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
-import { THREE_MUSKETEERS } from '#services/game/world'
+import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
 import { ContentLabels, type ContentKind } from '#services/game/content_labels'
 import {
   FakeLlmProvider,

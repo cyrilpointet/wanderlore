@@ -33,6 +33,7 @@ export function resolveWorld(world: WorldLevelContent, scenario: ScenarioContent
     attributes: world.attributes.map(entryOf),
     skills: world.skills.map((skill) => ({ ...entryOf(skill), attribute: skill.attribute })),
     resources: world.resources.map(entryOf),
+    actionTypes: world.actionTypes,
     npcs: overlay(world.npcs, scenario.npcs).map(npcOf),
     locations: overlay(world.locations, scenario.locations).map(locationOf),
     items: overlay(world.items, scenario.items).map(itemOf),

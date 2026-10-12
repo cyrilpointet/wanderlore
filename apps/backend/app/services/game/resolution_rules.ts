@@ -1,5 +1,3 @@
-import ResolutionRule from '#models/resolution_rule'
-
 import type { WorldDefinition } from './world.js'
 
 /** A category arbitration may pick, with what it covers. Never the skill. */
@@ -29,25 +27,19 @@ export class UnknownActionTypeError extends Error {
  * The closed list handed to arbitration. Sorted, so the prompt reads the same
  * from one turn to the next whatever order the rows were written in.
  */
-export async function actionTypesOf(world: WorldDefinition): Promise<ActionType[]> {
-  const rules = await rulesOf(world).orderBy('actionType')
-
-  return rules.map(({ actionType, description }) => ({ actionType, description }))
+export function actionTypesOf(world: WorldDefinition): ActionType[] {
+  return world.actionTypes
+    .map(({ actionType, description }) => ({ actionType, description }))
+    .sort((a, b) => a.actionType.localeCompare(b.actionType))
 }
 
 /** The skill a roll uses for this category. Arbitration never sees it. */
-export async function skillFor(world: WorldDefinition, actionType: string): Promise<string> {
-  const rule = await rulesOf(world).where('actionType', actionType).first()
+export function skillFor(world: WorldDefinition, actionType: string): string {
+  const rule = world.actionTypes.find((candidate) => candidate.actionType === actionType)
 
-  if (rule === null) {
+  if (rule === undefined) {
     throw new UnknownActionTypeError(world.reference, actionType)
   }
 
   return rule.associatedSkill
-}
-
-function rulesOf(world: WorldDefinition) {
-  return ResolutionRule.query().whereHas('world', (query) =>
-    query.where('reference', world.reference)
-  )
 }

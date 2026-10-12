@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 
 import { ContentLabels, MissingLabelError } from '#services/game/content_labels'
-import { THREE_MUSKETEERS } from '#services/game/world'
+import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
 
 test.group('Content labels', () => {
   const labels = new ContentLabels(THREE_MUSKETEERS)

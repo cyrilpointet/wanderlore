@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 
 import InventoryItem from '#models/inventory_item'
-import { THREE_MUSKETEERS } from '#services/game/world'
+import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
 import { enterScene } from '#services/game/npcs'
 import { visitUniqueLocation } from '#services/game/locations'
 import {

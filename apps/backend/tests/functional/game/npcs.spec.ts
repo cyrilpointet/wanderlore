@@ -1,6 +1,6 @@
 import { test } from '@japa/runner'
 
-import { THREE_MUSKETEERS } from '#services/game/world'
+import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
 import { DeadNpcError, UnknownNpcError, enterScene, presentNpcs } from '#services/game/npcs'
 import { countRows, createSession, createUser, useTransaction } from '#tests/helpers/database'
 

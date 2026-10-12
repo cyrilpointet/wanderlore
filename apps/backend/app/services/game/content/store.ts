@@ -15,6 +15,7 @@ import type {
   ScenarioContent,
   WorldContent,
 } from './types.js'
+import type { WorldLevelContent } from './resolve.js'
 
 export type StoredWorld = {
   world: World
@@ -159,11 +160,23 @@ export async function readWorldContent(
   worldId: string,
   client?: QueryClientContract
 ): Promise<WorldContent> {
+  const scenarios = await Scenario.query({ client }).where('worldId', worldId).orderBy('reference')
+
+  return {
+    ...(await readWorldLevel(worldId, client)),
+    scenarios: await Promise.all(scenarios.map((scenario) => scenarioContentOf(scenario, client))),
+  }
+}
+
+/** What a world brings to every game played in it, its scenarios aside. */
+export async function readWorldLevel(
+  worldId: string,
+  client?: QueryClientContract
+): Promise<WorldLevelContent> {
   const world = await World.findOrFail(worldId, { client })
   const rules = await ResolutionRule.query({ client })
     .where('worldId', worldId)
     .orderBy('actionType')
-  const scenarios = await Scenario.query({ client }).where('worldId', worldId).orderBy('reference')
 
   return {
     reference: world.reference,
@@ -181,7 +194,6 @@ export async function readWorldContent(
       associatedSkill,
     })),
     ...(await readCatalogues(worldId, null, client)),
-    scenarios: await Promise.all(scenarios.map((scenario) => scenarioContentOf(scenario, client))),
   }
 }
 

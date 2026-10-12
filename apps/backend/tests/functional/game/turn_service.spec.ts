@@ -21,7 +21,7 @@ import { TurnValidationError } from '#services/game/turn_validator'
 import { createItem, equipItem, unequipItem } from '#services/game/inventory'
 import { enterScene } from '#services/game/npcs'
 import InventoryItem from '#models/inventory_item'
-import { THREE_MUSKETEERS } from '#services/game/world'
+import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
 import {
   FakeLlmProvider,
   streamed,
@@ -30,7 +30,7 @@ import {
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
-import { seedContent } from '#tests/helpers/content'
+import { seedMusketeers } from '#tests/helpers/content'
 import { countRows, createSession, createUser, useTransaction } from '#tests/helpers/database'
 import { CHARACTER, extracted, playerOf } from '#tests/helpers/turns'
 
@@ -76,10 +76,10 @@ const NARRATED_EFFECTS = extracted({ movement: 'louvre', scenario_flags: [], hit
 const NARRATED = [streamed(NARRATED_TEXT), NARRATED_EFFECTS]
 
 async function arrangeScene() {
-  /** Arbitration picks from the world's action types, read from the database. */
-  await seedContent()
+  /** A turn loads its world from the database: the game is played in the seeded one. */
+  const content = await seedMusketeers()
   const userId = await createUser()
-  const sessionId = await createSession(userId)
+  const sessionId = await createSession(userId, content)
 
   const character = await Character.create({
     sessionId,
@@ -991,5 +991,43 @@ test.group('TurnService | items in the roll', (group) => {
     /** No extraction at all: two calls. */
     assert.lengthOf(provider.requests, 2)
     assert.equal(await countRows('inventory_items', { session_id: sessionId }), 2)
+  })
+})
+
+test.group('TurnService | the world a turn reads', (group) => {
+  useTransaction(group)
+
+  test('content edited while a turn plays reaches the next turn, not this one', async ({
+    assert,
+  }) => {
+    const { sessionId, userId } = await arrangeScene()
+    let edit: Promise<unknown> | undefined
+
+    /**
+     * While arbitration is answering, the game master ties persuasion's
+     * category to another skill. The roll that follows still uses the world
+     * the turn was picked up with.
+     */
+    const { play } = buildService(
+      [NEEDS_ROLL, ...NARRATED, NEEDS_ROLL, ...NARRATED],
+      [4, 4, 4, 4],
+      undefined,
+      20,
+      (request) => {
+        if (request.step === 'arbitration' && edit === undefined) {
+          edit = db
+            .from('resolution_rules')
+            .where('action_type', 'social_persuasion')
+            .update({ associated_skill: 'athletics' })
+        }
+      }
+    )
+
+    const first = await play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
+    await edit
+    const second = await play({ sessionId, userId, playerInput: 'I ask him again.' })
+
+    assert.equal(first.rollResult!.skill, 'persuasion')
+    assert.equal(second.rollResult!.skill, 'athletics')
   })
 })

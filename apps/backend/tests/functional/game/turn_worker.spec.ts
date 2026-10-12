@@ -18,7 +18,7 @@ import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { extracted } from '#tests/helpers/turns'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
-import { seedContent } from '#tests/helpers/content'
+import { seedMusketeers } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
 
 /**
@@ -47,10 +47,10 @@ const INVALID = {
 }
 
 async function arrangeScene() {
-  /** Arbitration picks from the world's action types, read from the database. */
-  await seedContent()
+  /** A turn loads its world from the database: the game is played in the seeded one. */
+  const content = await seedMusketeers()
   const userId = await createUser()
-  const sessionId = await createSession(userId)
+  const sessionId = await createSession(userId, content)
 
   await Character.create({
     sessionId,

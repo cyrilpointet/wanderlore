@@ -2,12 +2,12 @@ import { test } from '@japa/runner'
 
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 import {
-  THREE_MUSKETEERS,
   locationArchetypeReferences,
   npcReferences,
   skillReferences,
   uniqueLocationReferences,
 } from '#services/game/world'
+import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
 import type {
   ArbitrationContext,
   NarrationRequest,

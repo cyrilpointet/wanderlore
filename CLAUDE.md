@@ -288,9 +288,14 @@ serverless pour le backend).
   application, `RecordingTurnEvents` en test), émis par le code du tour — jamais dérivé de la
   file. Un envoi raté ne fait jamais échouer un tour : le front rattrape en relisant le tour.
 - **Toute référence de contenu envoyée au front passe par `ContentLabels`**
-  (`#services/game/content_labels`) et sort en `{ reference, label }`. Jusqu'à la Phase 5,
-  les libellés vivent dans `app/services/game/world.ts`. Une référence sans libellé lève
-  `MissingLabelError` : jamais de référence brute ni « embellie » en repli.
+  (`#services/game/content_labels`) et sort en `{ reference, label }`, construit sur l'univers
+  de la partie concernée — par requête, ou par tour pour les événements SSE qui le portent.
+  Une référence sans libellé lève `MissingLabelError` : jamais de référence brute ni
+  « embellie » en repli.
+- **L'univers d'une partie se lit par `loadWorld`** (`#services/game/content/load`), sans
+  cache : une fois par tour, à sa prise en charge, et la photo passe à toutes les étapes.
+  Aucun code du tour ne relit le contenu en cours de route. Les specs qui donnent un univers
+  directement à un service utilisent `THREE_MUSKETEERS` de `#tests/helpers/worlds`.
 - **Changer de provider** = écrire un adaptateur dans `app/services/llm/providers/` et
   changer la ligne de `config/llm.ts`. Rien d'autre.
 - Le gateway **garantit un JSON parsable, pas un JSON valide** : la validation métier du

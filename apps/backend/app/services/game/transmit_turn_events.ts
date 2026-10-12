@@ -1,6 +1,5 @@
 import type { Logger } from '@adonisjs/core/logger'
 
-import type { ContentLabels } from './content_labels.js'
 import {
   type TurnEvent,
   type TurnEvents,
@@ -23,18 +22,16 @@ export type Broadcaster = {
  */
 export class TransmitTurnEvents implements TurnEvents {
   #transmit: Broadcaster
-  #labels: ContentLabels
   #logger: Logger
 
-  constructor(transmit: Broadcaster, labels: ContentLabels, logger: Logger) {
+  constructor(transmit: Broadcaster, logger: Logger) {
     this.#transmit = transmit
-    this.#labels = labels
     this.#logger = logger
   }
 
   emit(ref: TurnRef, event: TurnEvent): void {
     try {
-      this.#transmit.broadcast(channelOf(ref.sessionId), toMessage(ref, event, this.#labels))
+      this.#transmit.broadcast(channelOf(ref.sessionId), toMessage(ref, event))
     } catch (error) {
       /** A lost event is caught up by reading the turn back; a lost turn is not. */
       this.#logger.error({ err: error, turnId: ref.turnId }, 'turn event not delivered')
