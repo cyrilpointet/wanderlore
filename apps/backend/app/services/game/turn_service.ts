@@ -21,7 +21,7 @@ import {
   isTurnNumberConflict,
 } from './errors.js'
 import { applyDelta } from './apply_delta.js'
-import { type PresentNpc, presentNpcs } from './npcs.js'
+import { type PresentNpc, presentNpcDefinitions, presentNpcs } from './npcs.js'
 import {
   type ItemsInScene,
   characterItems,
@@ -319,7 +319,7 @@ export class TurnService {
       character: scene.character,
       inventory: await characterItems(scene.character.id),
       location: await this.#whereItStands(scene.worldState),
-      labels: new ContentLabels(scene.world),
+      labels: new ContentLabels(scene.world, turn.language),
     })
 
     return turn
@@ -553,7 +553,7 @@ export class TurnService {
       skill,
       ...toNarrationOutcome(resolution),
       items: itemsThatWeighed(resolution.appliedModifiers),
-      labels: new ContentLabels(scene.world),
+      labels: new ContentLabels(scene.world, turn.language),
     })
 
     return { mode, ...toNarrationOutcome(resolution), reason: null }
@@ -608,6 +608,7 @@ export class TurnService {
       character,
       worldState: session.worldState,
       npcs: await presentNpcs(sessionId),
+      npcDefinitions: await presentNpcDefinitions(sessionId),
       items: await itemsInScene(sessionId, {
         characterId: character.id,
         locationInstanceId: session.worldState.currentLocationId,
@@ -695,6 +696,8 @@ type LoadedScene = {
   character: Character
   worldState: WorldState
   npcs: PresentNpc[]
+  /** Definition of each person present, by handle. */
+  npcDefinitions: Record<string, string>
   items: ItemsInScene
   creatableItems: string[]
   /**
@@ -722,6 +725,8 @@ function buildContext(
       npcs_present: scene.npcs,
       narrative_flags: scene.worldState.narrativeFlags,
       visited_locations: scene.session.locations.map((location) => location.handle),
+      place: scene.worldState.currentLocation ?? null,
+      npc_definitions: scene.npcDefinitions,
       items: scene.items,
     },
     recent_buffer: toRecentBuffer(scene.recentTurns),

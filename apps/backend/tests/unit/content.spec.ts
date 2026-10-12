@@ -52,11 +52,16 @@ test.group('Content | scenario over world', () => {
     assert.equal(world.label, 'The Three Musketeers')
     assert.equal(world.npcs.at(-1)?.reference, 'newcomer')
     assert.deepEqual(world.chapters, [
-      { reference: 'the_road_to_paris', label: 'The Road to Paris' },
+      {
+        reference: 'the_road_to_paris',
+        label: 'The Road to Paris',
+        labels: { en: 'The Road to Paris' },
+      },
     ])
     assert.deepEqual(world.skills[0], {
       reference: 'swordsmanship',
       label: 'Swordsmanship',
+      labels: { en: 'Swordsmanship' },
       attribute: 'physical',
     })
   })

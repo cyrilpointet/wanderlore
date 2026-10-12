@@ -1,10 +1,11 @@
+import type { Labels } from './content/types.js'
 import type { ContentEntry, WorldDefinition } from './world.js'
 
 /**
  * A content reference paired with the label the player reads.
  *
  * The front never shows a reference, nor turns one into text itself: that
- * text depends on the world, and from Phase 5 on the language.
+ * text depends on the world and on the language.
  */
 export type Labelled = {
   reference: string
@@ -55,17 +56,28 @@ export class MissingLabelError extends Error {
 }
 
 /**
- * Labels for one world's content, read from its definition.
+ * The name in the language asked for, or else in English: English is the one
+ * language every name is written in.
+ */
+export function inLanguage(labels: Labels, language: string): string {
+  return labels[language] ?? labels.en
+}
+
+/**
+ * Labels for one world's content, in one language, read from its definition.
  *
- * The only place a response bound for the front gets its labels from, so the
- * Phase 5 move to `display_names` and `glossary` stays behind this class.
+ * The only place a response bound for the front — or a name bound for the
+ * narrator — gets its label from. A name missing in the language falls back
+ * on English; a reference missing from the world is a bug and throws.
  */
 export class ContentLabels {
   readonly #world: WorldDefinition
+  readonly #language: string
   readonly #entries: Record<ContentKind, Map<string, IndexedEntry>>
 
-  constructor(world: WorldDefinition) {
+  constructor(world: WorldDefinition, language = 'en') {
     this.#world = world
+    this.#language = language
     this.#entries = {
       attribute: index(world.attributes),
       skill: index(world.skills),
@@ -82,7 +94,10 @@ export class ContentLabels {
   }
 
   world(): Labelled {
-    return { reference: this.#world.reference, label: this.#world.label }
+    return {
+      reference: this.#world.reference,
+      label: inLanguage(this.#world.labels, this.#language),
+    }
   }
 
   of(kind: ContentKind, reference: string): Labelled {
@@ -139,23 +154,29 @@ export class ContentLabels {
     return this.#world.skills.find((entry) => entry.reference === skill)!.attribute
   }
 
-  #find(kind: ContentKind, reference: string): IndexedEntry {
+  #find(kind: ContentKind, reference: string): FoundEntry {
     const entry = this.#entries[kind].get(reference)
 
     if (entry === undefined) {
       throw new MissingLabelError(this.#world.reference, kind, reference)
     }
 
-    return entry
+    return { label: inLanguage(entry.labels, this.#language), rank: entry.rank }
   }
 }
 
-type IndexedEntry = {
+/** An entry as it was found: its name in the language asked for, and its rank. */
+type FoundEntry = {
   label: string
+  rank: number
+}
+
+type IndexedEntry = {
+  labels: Labels
   /** Position in the world definition. */
   rank: number
 }
 
 function index(entries: ContentEntry[]): Map<string, IndexedEntry> {
-  return new Map(entries.map((entry, rank) => [entry.reference, { label: entry.label, rank }]))
+  return new Map(entries.map((entry, rank) => [entry.reference, { labels: entry.labels, rank }]))
 }

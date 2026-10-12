@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 
 import { ContentLabels, MissingLabelError } from '#services/game/content_labels'
-import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
+import { THREE_MUSKETEERS, THREE_MUSKETEERS_IN_FRENCH } from '#tests/helpers/worlds'
 
 test.group('Content labels', () => {
   const labels = new ContentLabels(THREE_MUSKETEERS)
@@ -116,5 +116,43 @@ test.group('Content labels', () => {
     })
     assert.throws(() => labels.of('location', 'tavern'), MissingLabelError)
     assert.throws(() => labels.of('location_archetype', 'paris'), MissingLabelError)
+  })
+})
+
+test.group('Content labels | languages', () => {
+  const french = new ContentLabels(THREE_MUSKETEERS_IN_FRENCH, 'fr')
+
+  test('labels in the language asked for', ({ assert }) => {
+    assert.deepEqual(french.of('item', 'rapier'), { reference: 'rapier', label: 'Rapière' })
+    assert.deepEqual(french.world(), {
+      reference: 'three_musketeers',
+      label: 'Les Trois Mousquetaires',
+    })
+  })
+
+  test('falls back on English where a name is not translated', ({ assert }) => {
+    assert.deepEqual(french.of('item', 'pistol'), { reference: 'pistol', label: 'Pistol' })
+  })
+
+  test('names an improvised place in the language too', ({ assert }) => {
+    assert.deepEqual(
+      french.location({
+        handle: 'tavern_1',
+        definitionReference: 'tavern',
+        parentReference: 'paris',
+        name: null,
+      }),
+      { reference: 'tavern_1', label: 'Taverne · Paris' }
+    )
+  })
+
+  test('English by default, whatever the world translates', ({ assert }) => {
+    const english = new ContentLabels(THREE_MUSKETEERS_IN_FRENCH)
+
+    assert.equal(english.of('item', 'rapier').label, 'Rapier')
+  })
+
+  test('a translation never makes up for a missing reference', ({ assert }) => {
+    assert.throws(() => french.of('item', 'arquebus'), MissingLabelError)
   })
 })

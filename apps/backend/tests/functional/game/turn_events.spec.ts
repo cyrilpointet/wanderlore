@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
+import db from '@adonisjs/lucid/services/db'
 import transmit from '@adonisjs/transmit/services/main'
 import type { HttpContext } from '@adonisjs/core/http'
 
@@ -539,5 +540,43 @@ test.group('Turn events | an aside to the game master', (group) => {
     assert.isNull(turn.extractionOutput)
     assert.isNull(world.currentLocationId)
     assert.equal(terminals(events.sequenceOf(turn.id)).at(-1), 'turn_completed')
+  })
+})
+
+test.group('Turn events | the language of the turn', (group) => {
+  useTransaction(group)
+
+  test('a turn played in French labels its events in French, English where untranslated', async ({
+    assert,
+  }) => {
+    const { userId, sessionId } = await arrangeScene()
+    /** The game master translated one skill of the world. */
+    await db.rawQuery(
+      `update worlds set skills = (
+         select jsonb_agg(case when skill->>'reference' = 'persuasion'
+           then jsonb_set(skill, '{labels,fr}', '"Éloquence"') else skill end)
+         from jsonb_array_elements(skills) as skill)
+       where reference = 'three_musketeers'`
+    )
+    const { service, events } = buildService([NEEDS_ROLL, ...NARRATED])
+
+    const { turn } = await service.record({
+      sessionId,
+      userId,
+      playerInput: 'Je lui demande de me laisser passer.',
+      idempotencyKey: randomUUID(),
+      language: 'fr',
+    })
+    await service.run(turn.id)
+
+    const roll = events.recorded.find(({ event }) => event.type === 'roll_resolved')!
+    const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!
+    const message = toMessage(completed.ref, completed.event) as Record<string, any>
+
+    assert.deepEqual((toMessage(roll.ref, roll.event) as Record<string, any>).skill, {
+      reference: 'persuasion',
+      label: 'Éloquence',
+    })
+    assert.equal(message.character.attributes[0].label, 'Social')
   })
 })

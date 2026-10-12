@@ -1,6 +1,7 @@
 import type {
   ActionTypeContent,
   CombatProfile,
+  Labels,
   ItemHolderReference,
   ItemModifier,
   NpcDisposition,
@@ -28,13 +29,15 @@ export {
 
 /**
  * A piece of world content: the stable reference the state and the model use,
- * and the label the player reads.
+ * and the names the player reads it by.
  *
- * The English label until labels are resolved by language.
+ * `label` is the English name, which the model reads beside the reference;
+ * `labels` holds every language, read through `ContentLabels` only.
  */
 export type ContentEntry = {
   reference: string
   label: string
+  labels: Labels
 }
 
 export type WorldSkill = ContentEntry & {
@@ -45,6 +48,7 @@ export type WorldSkill = ContentEntry & {
 export type WorldDefinition = {
   reference: string
   label: string
+  labels: Labels
   /** One line, handed to both steps so arbitration and narration agree on register. */
   tone: string
   /**
@@ -83,6 +87,11 @@ export type WorldDefinition = {
   items: ItemDefinition[]
   chapters: ContentEntry[]
   quests: ContentEntry[]
+  /**
+   * Proper names that are no entity of the game, the world's then the
+   * scenario's. For the narrator only, in the game's language.
+   */
+  glossary: ContentEntry[]
 }
 
 type DescribedEntry = ContentEntry & {

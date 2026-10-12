@@ -1,3 +1,4 @@
+import type { PlacedLocation } from '#services/game/content_labels'
 import type {
   ContextualModifier,
   Difficulty,
@@ -182,6 +183,10 @@ export type SceneState = {
   narrative_flags: Record<string, unknown>
   /** Handles of the places this game has been through, oldest first. */
   visited_locations: string[]
+  /** The place as the game holds it, for naming it in the game's language. */
+  place: PlacedLocation | null
+  /** Definition of each person present, by handle, for naming them. */
+  npc_definitions: Record<string, string>
   /**
    * What the character, the people present and the place hold. Each step is
    * handed its own view of it, never the modifiers.

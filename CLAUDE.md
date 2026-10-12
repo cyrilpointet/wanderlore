@@ -289,9 +289,13 @@ serverless pour le backend).
   file. Un envoi raté ne fait jamais échouer un tour : le front rattrape en relisant le tour.
 - **Toute référence de contenu envoyée au front passe par `ContentLabels`**
   (`#services/game/content_labels`) et sort en `{ reference, label }`, construit sur l'univers
-  de la partie concernée — par requête, ou par tour pour les événements SSE qui le portent.
-  Une référence sans libellé lève `MissingLabelError` : jamais de référence brute ni
-  « embellie » en repli.
+  de la partie concernée — par requête, ou par tour pour les événements SSE qui le portent —
+  et dans une langue (celle du tour pour les événements, l'anglais ailleurs jusqu'au choix
+  de langue de la Phase 9), avec repli sur l'anglais. Une référence sans libellé lève
+  `MissingLabelError` : jamais de référence brute ni « embellie » en repli.
+- **Seule la narration reçoit des noms traduits** (`names`, `items_in_scene`), dans la seule
+  langue du tour, et le glossaire réduit à ses entrées traduites dans cette langue. Arbitrage
+  et extraction ne lisent que l'anglais (`label`) — jamais `labels` ni le glossaire.
 - **L'univers d'une partie se lit par `loadWorld`** (`#services/game/content/load`), sans
   cache : une fois par tour, à sa prise en charge, et la photo passe à toutes les étapes.
   Aucun code du tour ne relit le contenu en cours de route. Les specs qui donnent un univers

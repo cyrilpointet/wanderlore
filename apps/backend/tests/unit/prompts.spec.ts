@@ -7,7 +7,7 @@ import {
   skillReferences,
   uniqueLocationReferences,
 } from '#services/game/world'
-import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
+import { THREE_MUSKETEERS, THREE_MUSKETEERS_IN_FRENCH } from '#tests/helpers/worlds'
 import type {
   ArbitrationContext,
   NarrationRequest,
@@ -109,6 +109,13 @@ function turnContext(overrides: Partial<TurnContext> = {}): TurnContext {
       ],
       narrative_flags: {},
       visited_locations: ['meung_sur_loire', 'hotel_de_treville'],
+      place: {
+        handle: 'hotel_de_treville',
+        definitionReference: 'hotel_de_treville',
+        parentReference: null,
+        name: null,
+      },
+      npc_definitions: { royal_guard_1: 'royal_guard' },
       items: ITEMS,
     },
     recent_buffer: [{ role: 'narration', text: 'A guard bars your way.' }],
@@ -639,5 +646,80 @@ test.group('Prompts | manual testing fixes', () => {
       buildNarrationMessage(narrationRequest({ aside: true }))
     )
     assert.isTrue(outcome.aside)
+  })
+})
+
+test.group('Prompts | the language of the game', () => {
+  /** A game played in French, in a world with a few French names. */
+  const inFrench = { world: THREE_MUSKETEERS_IN_FRENCH, language: 'fr' as const }
+
+  test('the narrator gets the names of the scene in the language of the game', ({ assert }) => {
+    const { names } = payloadOf(buildNarrationMessage(narrationRequest(inFrench)))
+
+    assert.deepEqual(names.location, 'Hôtel de Tréville')
+    assert.deepEqual(names.npcs_present, [{ handle: 'royal_guard_1', name: 'Garde du Roi' }])
+  })
+
+  test('a name learnt in play wins over the definition', ({ assert }) => {
+    const context = turnContext()
+    const named = {
+      ...context.scene,
+      npcs_present: [{ ...context.scene.npcs_present[0], name: 'Jacques' }],
+    }
+    const { names } = payloadOf(
+      buildNarrationMessage(narrationRequest({ ...inFrench, scene: named }))
+    )
+
+    assert.deepEqual(names.npcs_present, [{ handle: 'royal_guard_1', name: 'Jacques' }])
+  })
+
+  test('items go to the narrator in the language too, English where untranslated', ({ assert }) => {
+    const { items_in_scene: items } = payloadOf(buildNarrationMessage(narrationRequest(inFrench)))
+
+    assert.deepEqual(
+      items.character.map(({ name }: { name: string }) => name),
+      ['Letter for M. de Tréville', 'Rapière', 'Lead shot']
+    )
+  })
+
+  test('the glossary goes in the language of the game, translated entries only', ({ assert }) => {
+    const { names } = payloadOf(buildNarrationMessage(narrationRequest(inFrench)))
+
+    assert.deepEqual(names.glossary, [
+      { term: "the Cardinal's Guards", name: 'les gardes du Cardinal' },
+    ])
+  })
+
+  test('one language travels, never the table of translations', ({ assert }) => {
+    const message = buildNarrationMessage(narrationRequest(inFrench))
+
+    /** The language itself is a parameter; a translation keyed by it is not. */
+    assert.notInclude(message, '"labels"')
+    assert.notInclude(message, '"fr":')
+  })
+
+  test('a game in English pays for no glossary', ({ assert }) => {
+    const { names } = payloadOf(
+      buildNarrationMessage(narrationRequest({ world: THREE_MUSKETEERS_IN_FRENCH }))
+    )
+
+    assert.deepEqual(names.glossary, [])
+    assert.equal(names.location, 'Hôtel de Tréville')
+  })
+
+  test('arbitration and extraction read English only, and no glossary', ({ assert }) => {
+    const arbitration = buildArbitrationMessage(arbitrationContext(inFrench))
+    const extraction = buildExtractionMessage({
+      ...turnContext(inFrench),
+      narration: 'Le garde vous laisse passer.',
+      creatable_items: ['rope'],
+    })
+
+    for (const message of [arbitration, extraction]) {
+      for (const leak of ['Rapière', 'Garde du Roi', 'gardes du Cardinal', 'glossary', '"fr":']) {
+        assert.notInclude(message, leak)
+      }
+    }
+    assert.include(arbitration, 'Rapier')
   })
 })

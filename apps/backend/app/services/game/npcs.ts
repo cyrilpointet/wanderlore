@@ -160,6 +160,20 @@ export async function presentNpcs(
   }))
 }
 
+/** The definition of each person present, by handle: what names them when they have no name of their own. */
+export async function presentNpcDefinitions(
+  sessionId: string,
+  client?: QueryClientContract
+): Promise<Record<string, string>> {
+  const npcs = await NpcInstance.query({ client })
+    .where('sessionId', sessionId)
+    .where('status', 'present')
+
+  return Object.fromEntries(
+    npcs.map(({ handle, definitionReference }) => [handle, definitionReference])
+  )
+}
+
 async function countOf(
   sessionId: string,
   definition: string,

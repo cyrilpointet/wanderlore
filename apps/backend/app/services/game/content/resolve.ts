@@ -27,6 +27,7 @@ export function resolveWorld(world: WorldLevelContent, scenario: ScenarioContent
   return {
     reference: world.reference,
     label: world.labels.en,
+    labels: world.labels,
     tone: world.narrativeTone,
     rules: world.rules,
     ambiance: world.ambiance,
@@ -39,6 +40,7 @@ export function resolveWorld(world: WorldLevelContent, scenario: ScenarioContent
     items: overlay(world.items, scenario.items).map(itemOf),
     chapters: scenario.chapters.map(entryOf),
     quests: scenario.quests.map(entryOf),
+    glossary: overlay(world.glossary, scenario.glossary).map(entryOf),
   }
 }
 
@@ -60,7 +62,7 @@ export function overlay<Definition extends { reference: string }>(
 }
 
 function entryOf(entry: LabelledEntry) {
-  return { reference: entry.reference, label: entry.labels.en }
+  return { reference: entry.reference, label: entry.labels.en, labels: entry.labels }
 }
 
 function npcOf(npc: NpcDefinitionContent): NpcDefinition {

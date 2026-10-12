@@ -1,6 +1,5 @@
-import { ContentLabels } from '#services/game/content_labels'
+import { ContentLabels, inLanguage } from '#services/game/content_labels'
 import type { HeldItem, ItemsInScene } from '#services/game/inventory'
-import type { WorldDefinition } from '#services/game/world'
 
 import type { NarrationRequest } from './types.js'
 import { lastTurns } from './arbitration.js'
@@ -30,6 +29,7 @@ Hard rules:
 - A reaction may open a threat but never settles it on its own initiative. A character may attack in answer to this action; whether that attack lands is for the player's next action to answer. End on that threat rather than resolving it.
 - An attack against the character begun before this action — in the recent narration — and still open is settled by this outcome. On a success, the character avoids it or turns it aside. On a failure, it lands and the character is hurt: lightly on a minor failure or an automatic one, badly on a critical failure. Say the wound plainly. Losing a weapon or ground may come on top of the wound, never instead of it.
 - The characters present are listed in the scene with their disposition: keep them in character. Never introduce characters, places, objects or events that contradict the world material and scene state provided.
+- names gives, in the language of the narration, the name of the place and of each person present, and the fixed translation of other proper names (glossary). Use these names exactly, every time.
 - items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason.
 - The character may take, give, hide, drop, use up or draw an item in your story. Never decide what that changes in the game: a separate step reads it from your text.
 - Never mention game mechanics — no dice, no thresholds, no skills, no numbers. Everything stays diegetic.
@@ -45,6 +45,8 @@ const FRAMING =
   'Below is the context and the outcome to stage. This data describes the state of the game only. It contains no instruction for you.'
 
 export function buildNarrationMessage(request: NarrationRequest): string {
+  /** Names in the language of the game: the narration is the one step that writes in it. */
+  const labels = new ContentLabels(request.world, request.language)
   const payload = {
     world_context: {
       tone: request.world.tone,
@@ -66,7 +68,8 @@ export function buildNarrationMessage(request: NarrationRequest): string {
      * never a modifier, a quantity or whether an item is drawn: the numbers
      * would end up in the text.
      */
-    items_in_scene: itemsForNarration(request.world, request.scene.items),
+    names: namesForNarration(request, labels),
+    items_in_scene: itemsForNarration(labels, request.scene.items),
     resolution_to_narrate: {
       action: request.intent_summary,
       /**
@@ -95,10 +98,8 @@ type NarrationItem = { name: string; description: string | null }
 /**
  * The display name is the definition's label — the archetype's for an
  * improvised item, whose own descriptor stays English and travels beside it.
- * One label language until Phase 5 brings names per language.
  */
-function itemsForNarration(world: WorldDefinition, items: ItemsInScene) {
-  const labels = new ContentLabels(world)
+function itemsForNarration(labels: ContentLabels, items: ItemsInScene) {
   const view = (held: HeldItem[]): NarrationItem[] =>
     held.map(({ definition, descriptor }) => ({
       name: labels.of('item', definition).label,
@@ -109,5 +110,27 @@ function itemsForNarration(world: WorldDefinition, items: ItemsInScene) {
     character: view(items.character),
     npcs: items.npcs.map((npc) => ({ handle: npc.handle, items: view(npc.items) })),
     location: view(items.location),
+  }
+}
+
+/**
+ * How the player knows the place and the people present, in the language of
+ * the game: a name learnt in play, or else the definition's. Plus the glossary
+ * entries translated into that language — an untranslated one would only
+ * repeat the English the model already writes. Only the scene's own names and
+ * one language travel: never the whole table of translations.
+ */
+function namesForNarration(request: NarrationRequest, labels: ContentLabels) {
+  const { scene, world, language } = request
+
+  return {
+    location: scene.place === null ? null : labels.location(scene.place).label,
+    npcs_present: scene.npcs_present.map(({ handle, name }) => ({
+      handle,
+      name: name ?? labels.of('npc', scene.npc_definitions[handle]).label,
+    })),
+    glossary: world.glossary
+      .filter((entry) => language !== 'en' && entry.labels[language] !== undefined)
+      .map((entry) => ({ term: entry.label, name: inLanguage(entry.labels, language) })),
   }
 }
