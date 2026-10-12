@@ -4,6 +4,9 @@
  */
 
 export const controllers = {
+  admin: {
+    Worlds: () => import('#controllers/admin/worlds_controller'),
+  },
   Login: () => import('#controllers/login_controller'),
   NewAccount: () => import('#controllers/new_account_controller'),
   Profile: () => import('#controllers/profile_controller'),

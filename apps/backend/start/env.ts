@@ -25,6 +25,10 @@ export default await Env.create(new URL('../', import.meta.url), {
   // Session
   SESSION_DRIVER: Env.schema.enum(['cookie', 'memory', 'database'] as const),
 
+  // Hosting on subdomains (see config/cors.ts, config/session.ts)
+  CORS_ORIGINS: Env.schema.string.optional(),
+  COOKIE_DOMAIN: Env.schema.string.optional(),
+
   // PostgreSQL
   PG_HOST: Env.schema.string({ format: 'host' }),
   PG_PORT: Env.schema.number(),

@@ -64,5 +64,17 @@ router
       .where('turnId', router.matchers.uuid())
       .as('game')
       .use(middleware.auth())
+
+    /**
+     * The back-office: game masters only. A signed-in player is refused with
+     * a 403, an anonymous visitor with a 401.
+     */
+    router
+      .group(() => {
+        router.get('worlds', [controllers.admin.Worlds, 'index'])
+      })
+      .prefix('admin')
+      .as('admin')
+      .use([middleware.auth(), middleware.role({ roles: ['game_master'] })])
   })
   .prefix('/api/v1')

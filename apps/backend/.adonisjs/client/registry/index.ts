@@ -78,6 +78,12 @@ const routes = {
     tokens: [{"old":"/api/v1/sessions/:id/turns","type":0,"val":"api","end":""},{"old":"/api/v1/sessions/:id/turns","type":0,"val":"v1","end":""},{"old":"/api/v1/sessions/:id/turns","type":0,"val":"sessions","end":""},{"old":"/api/v1/sessions/:id/turns","type":1,"val":"id","end":""},{"old":"/api/v1/sessions/:id/turns","type":0,"val":"turns","end":""}],
     types: placeholder as Registry['game.turns.store']['types'],
   },
+  'admin.worlds.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/admin/worlds',
+    tokens: [{"old":"/api/v1/admin/worlds","type":0,"val":"api","end":""},{"old":"/api/v1/admin/worlds","type":0,"val":"v1","end":""},{"old":"/api/v1/admin/worlds","type":0,"val":"admin","end":""},{"old":"/api/v1/admin/worlds","type":0,"val":"worlds","end":""}],
+    types: placeholder as Registry['admin.worlds.index']['types'],
+  },
   'event_stream': {
     methods: ["GET","HEAD"],
     pattern: '/__transmit/events',

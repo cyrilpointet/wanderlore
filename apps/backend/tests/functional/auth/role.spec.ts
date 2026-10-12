@@ -39,7 +39,7 @@ test.group('Account role', (group) => {
     assert.equal(row.role, 'player')
   })
 
-  test('the role is never exposed by the API', async ({ client, assert }) => {
+  test('an account reads its own role, and nothing else does', async ({ client, assert }) => {
     const payload = signupPayload()
 
     const signup = await client.post(SIGNUP).json(payload).withCsrfToken()
@@ -47,14 +47,13 @@ test.group('Account role', (group) => {
     const profile = await client.get(PROFILE).loginAs(user)
 
     /**
-     * Deliberate: `UserTransformer` is an explicit allowlist and omits `role`.
-     * Authorisation is a backend concern, and the role is not part of the API
-     * contract until the back-office arrives in Phase 5.
-     *
-     * Whoever needs to expose it will have to delete this test — and read why.
+     * The profile is the account reading itself: the back-office needs the
+     * role to turn a player away at sign-in (Phase 5). `UserTransformer`
+     * stays an explicit allowlist everywhere else — what an account may do
+     * is decided by the backend on every request, never by a client.
      */
+    assert.equal(profile.body().data.role, 'player')
     assert.notProperty(signup.body().data, 'role')
-    assert.notProperty(profile.body().data, 'role')
   })
 
   test('the role cannot be set through the signup payload', async ({ client, assert }) => {

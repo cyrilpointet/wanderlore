@@ -151,6 +151,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/turns_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'admin.worlds.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/admin/worlds'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/worlds_controller').default['index']>>>
+    }
+  }
   'event_stream': {
     methods: ["GET","HEAD"]
     pattern: '/__transmit/events'

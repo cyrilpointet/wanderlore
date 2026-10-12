@@ -276,6 +276,12 @@ serverless pour le backend).
   (`#services/clock`, `FakeClock` en test) — jamais `Date.now()` ni `AbortSignal.timeout()`
   directement. Le budget de 3 minutes d'un tour (`TurnBudget`) part de sa prise en charge
   par le worker, et chaque appel LLM reçoit un signal borné au temps restant.
+- **Les routes du back-office vivent sous `/api/v1/admin`**, derrière `auth` puis
+  `role({ roles: ['game_master'] })` : un joueur reçoit `403 forbidden_role`. Le rôle n'est
+  exposé qu'au compte lui-même (`/account/profile`). Comptes de test locaux :
+  `player@wanderlore.test` et `gm@wanderlore.test`, mot de passe `password`.
+- **Un refus que le client peut traiter** lève `Refusal(status, code, message, details?)`
+  (`#exceptions/refusal`), rendu en `{ error: { code, message, details? } }`.
 - **Tout appel LLM passe par `import llm from '#services/llm'`** — jamais un provider ni un
   SDK directement. `generateJson()` pour les étapes structurées (A+B+C, E),
   `generateText()` / `streamText()` pour la narration (D).

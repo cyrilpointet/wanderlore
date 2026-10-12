@@ -36,6 +36,13 @@ const sessionConfig = defineConfig({
     path: '/',
 
     /**
+     * The parent domain once the apps live on subdomains of it, so the front
+     * and the back-office both send it to the API. Unset locally: the Vite
+     * proxy keeps everything on one origin.
+     */
+    domain: env.get('COOKIE_DOMAIN'),
+
+    /**
      * Prevent JavaScript access to the cookie in the browser.
      */
     httpOnly: true,

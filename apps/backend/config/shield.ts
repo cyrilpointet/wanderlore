@@ -1,3 +1,4 @@
+import env from '#start/env'
 import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/shield'
 
@@ -55,6 +56,8 @@ const shieldConfig = defineConfig({
      */
     cookieOptions: {
       path: '/',
+      /** On the parent domain too, so each app can read it and send it back. */
+      domain: env.get('COOKIE_DOMAIN'),
       sameSite: 'lax',
       secure: app.inProduction,
     },

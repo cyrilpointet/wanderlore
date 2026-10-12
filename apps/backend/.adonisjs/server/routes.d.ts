@@ -16,6 +16,7 @@ export type ScannedRoutes = {
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
     'game.turns.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.worlds.index': { paramsTuple?: []; params?: {} }
     'event_stream': { paramsTuple?: []; params?: {} }
     'subscribe': { paramsTuple?: []; params?: {} }
     'unsubscribe': { paramsTuple?: []; params?: {} }
@@ -28,6 +29,7 @@ export type ScannedRoutes = {
     'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
+    'admin.worlds.index': { paramsTuple?: []; params?: {} }
     'event_stream': { paramsTuple?: []; params?: {} }
   }
   HEAD: {
@@ -38,6 +40,7 @@ export type ScannedRoutes = {
     'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
+    'admin.worlds.index': { paramsTuple?: []; params?: {} }
     'event_stream': { paramsTuple?: []; params?: {} }
   }
   POST: {

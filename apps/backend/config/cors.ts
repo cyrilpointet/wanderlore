@@ -1,5 +1,17 @@
+import env from '#start/env'
 import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/cors'
+
+/**
+ * `CORS_ORIGINS`, comma-separated: the origins of the player front and of the
+ * back-office, each on its own subdomain (`https://app.…`, `https://admin.…`).
+ */
+export function allowedOrigins(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0)
+}
 
 /**
  * Configuration options to tweak the CORS policy. The following
@@ -14,11 +26,11 @@ const corsConfig = defineConfig({
   enabled: true,
 
   /**
-   * In development, allow every origin to simplify local front/backend setup.
-   * In production, keep an explicit allowlist (empty by default, so no
-   * cross-origin browser access is allowed until configured).
+   * In development, allow every origin to simplify local front/backend setup
+   * (both apps go through the Vite proxy anyway). Anywhere else, only the
+   * origins declared in `CORS_ORIGINS` — none by default.
    */
-  origin: app.inDev ? true : [],
+  origin: app.inDev ? true : allowedOrigins(env.get('CORS_ORIGINS')),
 
   /**
    * HTTP methods accepted for cross-origin requests.

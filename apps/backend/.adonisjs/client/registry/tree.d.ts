@@ -34,6 +34,11 @@ export interface ApiDefinition {
       store: typeof routes['game.turns.store']
     }
   }
+  admin: {
+    worlds: {
+      index: typeof routes['admin.worlds.index']
+    }
+  }
   eventStream: typeof routes['event_stream']
   subscribe: typeof routes['subscribe']
   unsubscribe: typeof routes['unsubscribe']
