@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
-import { CircleAlert } from 'lucide-react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { CircleAlert, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { AppHeader } from '@/components/app_header'
+import { PRIMARY } from '@/content/ui'
 import { failureMessage } from '@/i18n/errors'
 import { worldsQuery } from '@/worlds/queries'
 import { WorldList } from '@/worlds/world_list'
@@ -20,9 +21,15 @@ function Worlds() {
     <>
       <AppHeader />
       <main className="mx-auto w-full max-w-3xl px-4 pt-8 pb-12 sm:px-6 lg:pt-12">
-        <h1 className="mb-8 font-serif text-[1.75rem] leading-tight font-medium text-text">
-          {t('title')}
-        </h1>
+        <div className="mb-8 flex items-center justify-between gap-4">
+          <h1 className="font-serif text-[1.75rem] leading-tight font-medium text-text">
+            {t('title')}
+          </h1>
+          <Link to="/worlds/new" className={PRIMARY}>
+            <Plus aria-hidden className="size-4" />
+            {t('newWorld')}
+          </Link>
+        </div>
 
         {worlds.isPending && (
           <p aria-busy className="text-body text-muted">

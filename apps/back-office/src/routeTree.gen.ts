@@ -13,6 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedWorldsIndexRouteImport } from './routes/_authenticated/worlds/index'
+import { Route as AuthenticatedWorldsWorldIdRouteImport } from './routes/_authenticated/worlds/$worldId'
+import { Route as AuthenticatedWorldsNewRouteImport } from './routes/_authenticated/worlds/new'
+import { Route as AuthenticatedWorldsWorldIdIndexRouteImport } from './routes/_authenticated/worlds/$worldId/index'
+import { Route as AuthenticatedWorldsWorldIdActionTypesRouteImport } from './routes/_authenticated/worlds/$worldId/action-types'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,31 +38,86 @@ const AuthenticatedWorldsIndexRoute =
     path: '/worlds/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedWorldsWorldIdRoute =
+  AuthenticatedWorldsWorldIdRouteImport.update({
+    id: '/worlds/$worldId',
+    path: '/worlds/$worldId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedWorldsNewRoute = AuthenticatedWorldsNewRouteImport.update({
+  id: '/worlds/new',
+  path: '/worlds/new',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedWorldsWorldIdIndexRoute =
+  AuthenticatedWorldsWorldIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedWorldsWorldIdRoute,
+  } as any)
+const AuthenticatedWorldsWorldIdActionTypesRoute =
+  AuthenticatedWorldsWorldIdActionTypesRouteImport.update({
+    id: '/action-types',
+    path: '/action-types',
+    getParentRoute: () => AuthenticatedWorldsWorldIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/worlds/$worldId': typeof AuthenticatedWorldsWorldIdRouteWithChildren
+  '/worlds/new': typeof AuthenticatedWorldsNewRoute
   '/worlds/': typeof AuthenticatedWorldsIndexRoute
+  '/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
+  '/worlds/$worldId/': typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/worlds/new': typeof AuthenticatedWorldsNewRoute
   '/worlds': typeof AuthenticatedWorldsIndexRoute
+  '/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
+  '/worlds/$worldId': typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/worlds/$worldId': typeof AuthenticatedWorldsWorldIdRouteWithChildren
+  '/_authenticated/worlds/new': typeof AuthenticatedWorldsNewRoute
   '/_authenticated/worlds/': typeof AuthenticatedWorldsIndexRoute
+  '/_authenticated/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
+  '/_authenticated/worlds/$worldId/': typeof AuthenticatedWorldsWorldIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/worlds/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/worlds/$worldId'
+    | '/worlds/new'
+    | '/worlds/'
+    | '/worlds/$worldId/action-types'
+    | '/worlds/$worldId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/worlds'
+  to:
+    | '/'
+    | '/login'
+    | '/worlds/new'
+    | '/worlds'
+    | '/worlds/$worldId/action-types'
+    | '/worlds/$worldId'
   id:
-    '__root__' | '/' | '/_authenticated' | '/login' | '/_authenticated/worlds/'
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/login'
+    | '/_authenticated/worlds/$worldId'
+    | '/_authenticated/worlds/new'
+    | '/_authenticated/worlds/'
+    | '/_authenticated/worlds/$worldId/action-types'
+    | '/_authenticated/worlds/$worldId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -97,14 +156,63 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorldsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/worlds/$worldId': {
+      id: '/_authenticated/worlds/$worldId'
+      path: '/worlds/$worldId'
+      fullPath: '/worlds/$worldId'
+      preLoaderRoute: typeof AuthenticatedWorldsWorldIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/worlds/new': {
+      id: '/_authenticated/worlds/new'
+      path: '/worlds/new'
+      fullPath: '/worlds/new'
+      preLoaderRoute: typeof AuthenticatedWorldsNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/worlds/$worldId/': {
+      id: '/_authenticated/worlds/$worldId/'
+      path: '/'
+      fullPath: '/worlds/$worldId/'
+      preLoaderRoute: typeof AuthenticatedWorldsWorldIdIndexRouteImport
+      parentRoute: typeof AuthenticatedWorldsWorldIdRoute
+    }
+    '/_authenticated/worlds/$worldId/action-types': {
+      id: '/_authenticated/worlds/$worldId/action-types'
+      path: '/action-types'
+      fullPath: '/worlds/$worldId/action-types'
+      preLoaderRoute: typeof AuthenticatedWorldsWorldIdActionTypesRouteImport
+      parentRoute: typeof AuthenticatedWorldsWorldIdRoute
+    }
   }
 }
 
+interface AuthenticatedWorldsWorldIdRouteChildren {
+  AuthenticatedWorldsWorldIdActionTypesRoute: typeof AuthenticatedWorldsWorldIdActionTypesRoute
+  AuthenticatedWorldsWorldIdIndexRoute: typeof AuthenticatedWorldsWorldIdIndexRoute
+}
+
+const AuthenticatedWorldsWorldIdRouteChildren: AuthenticatedWorldsWorldIdRouteChildren =
+  {
+    AuthenticatedWorldsWorldIdActionTypesRoute:
+      AuthenticatedWorldsWorldIdActionTypesRoute,
+    AuthenticatedWorldsWorldIdIndexRoute: AuthenticatedWorldsWorldIdIndexRoute,
+  }
+
+const AuthenticatedWorldsWorldIdRouteWithChildren =
+  AuthenticatedWorldsWorldIdRoute._addFileChildren(
+    AuthenticatedWorldsWorldIdRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
+  AuthenticatedWorldsWorldIdRoute: typeof AuthenticatedWorldsWorldIdRouteWithChildren
+  AuthenticatedWorldsNewRoute: typeof AuthenticatedWorldsNewRoute
   AuthenticatedWorldsIndexRoute: typeof AuthenticatedWorldsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedWorldsWorldIdRoute: AuthenticatedWorldsWorldIdRouteWithChildren,
+  AuthenticatedWorldsNewRoute: AuthenticatedWorldsNewRoute,
   AuthenticatedWorldsIndexRoute: AuthenticatedWorldsIndexRoute,
 }
 

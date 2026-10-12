@@ -54,6 +54,8 @@ export default tseslint.config(
               'rel',
               'target',
               'name',
+              // The path of a form field, as the backend names it in its errors.
+              'path',
               'htmlFor',
               'role',
               'autoComplete',

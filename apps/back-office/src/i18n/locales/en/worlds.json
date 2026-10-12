@@ -3,5 +3,44 @@
   "loading": "Loading the worlds…",
   "empty": "No world yet.",
   "scenarioCount_one": "{{count}} scenario",
-  "scenarioCount_other": "{{count}} scenarios"
+  "scenarioCount_other": "{{count}} scenarios",
+  "newWorld": "New world",
+  "back": "Worlds",
+  "create": "Create the world",
+  "creating": "Creating…",
+  "deleteWorld": "Delete this world",
+  "deleteWorldHint": "Only a world no game was ever played in can be deleted, with its scenarios and catalogues.",
+  "tabs": {
+    "label": "Parts of the world",
+    "general": "World",
+    "actionTypes": "Categories of action"
+  },
+  "form": {
+    "general": "Identity",
+    "reference": "Reference",
+    "referenceHint": "Lower-case letters, digits and underscores. It never changes once the world is created.",
+    "tone": "Tone",
+    "toneHint": "One line, in English, for both arbitration and narration.",
+    "rules": "Rules",
+    "rulesHint": "What is possible in this world, in English. Read by arbitration only.",
+    "ambiance": "Ambiance",
+    "ambianceHint": "Sensory material for the narrator, in English.",
+    "attributes": "Attributes",
+    "skills": "Skills",
+    "skillsHint": "Each skill hangs off an attribute. Keep the list short and flat.",
+    "attribute": "Attribute",
+    "resources": "Resources",
+    "glossary": "Glossary",
+    "glossaryHint": "Proper names that are no person nor place of the game — factions, figures off stage — and their translations."
+  },
+  "actionTypes": {
+    "intro": "Arbitration picks a category for each action, and the skill tied to it is rolled.",
+    "empty": "No category yet: no action could be rolled.",
+    "add": "Add a category",
+    "reference": "Category",
+    "skill": "Skill rolled",
+    "description": "What it covers",
+    "descriptionHint": "One sentence in English, read by arbitration."
+  },
+  "fixErrors": "Some fields need fixing: see below each of them."
 }

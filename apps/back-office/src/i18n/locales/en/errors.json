@@ -7,5 +7,25 @@
   "reference_immutable": "A reference never changes once created.",
   "content_in_use": "Games are played with this: it cannot be removed.",
   "scenario_incoherent": "This scenario does not hold together yet.",
-  "scenario_not_playable": "This scenario cannot be played yet."
+  "scenario_not_playable": "This scenario cannot be played yet.",
+  "rules": {
+    "required": "Required.",
+    "regex": "Lower-case letters, digits and underscores, starting with a letter.",
+    "minLength": "Too short.",
+    "maxLength": "Too long.",
+    "distinct": "Each reference may appear only once.",
+    "english_label": "An English name is required.",
+    "label_text": "Every name must be a line of text.",
+    "number": "A number is expected.",
+    "withoutDecimals": "A whole number is expected.",
+    "min": "Too small.",
+    "max": "Too large.",
+    "enum": "Not one of the allowed values.",
+    "boolean": "Yes or no is expected.",
+    "object": "An object is expected.",
+    "array": "A list is expected.",
+    "string": "Text is expected."
+  },
+  "invalid_json": "This is not valid JSON.",
+  "content_in_use_detail": "Games are played with: {{references}}."
 }
