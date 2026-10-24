@@ -415,6 +415,54 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/definitions_controller').default['destroy']>>>
     }
   }
+  'admin.accounts.accounts.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/admin/accounts'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: ExtractQueryForGet<InferInput<(typeof import('#validators/account').listAccountsValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/accounts_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/accounts_controller').default['index']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.accounts.accounts.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/accounts'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/account').createAccountValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/account').createAccountValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/accounts_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/accounts_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.accounts.accounts.suspend': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/accounts/:accountId/suspend'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { accountId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/accounts_controller').default['suspend']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/accounts_controller').default['suspend']>>>
+    }
+  }
+  'admin.accounts.accounts.reactivate': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/accounts/:accountId/reactivate'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { accountId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/accounts_controller').default['reactivate']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/accounts_controller').default['reactivate']>>>
+    }
+  }
   'event_stream': {
     methods: ["GET","HEAD"]
     pattern: '/__transmit/events'

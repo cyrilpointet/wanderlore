@@ -10,3 +10,9 @@ export const createAccountValidator = vine.create({
   password: vine.string().minLength(8).maxLength(32),
   role: vine.enum(['player', 'game_master', 'superadmin'] as const),
 })
+
+/** The filters of the account list. */
+export const listAccountsValidator = vine.create({
+  role: vine.enum(['player', 'game_master', 'superadmin'] as const).optional(),
+  status: vine.enum(['active', 'suspended'] as const).optional(),
+})

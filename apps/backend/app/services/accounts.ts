@@ -1,3 +1,4 @@
+import { DateTime } from 'luxon'
 import type { HttpContext } from '@adonisjs/core/http'
 
 import User from '#models/user'
@@ -44,4 +45,61 @@ export type NewAccount = {
  */
 export async function createAccount(account: NewAccount): Promise<User> {
   return User.create({ ...account, suspendedAt: null })
+}
+
+export const ACCOUNT_STATUSES = ['active', 'suspended'] as const
+export type AccountStatus = (typeof ACCOUNT_STATUSES)[number]
+
+/** The accounts, newest first, narrowed to a role or a status when asked. */
+export async function listAccounts(filters: {
+  role?: User['role']
+  status?: AccountStatus
+}): Promise<User[]> {
+  const query = User.query().orderBy('createdAt', 'desc').orderBy('email', 'asc')
+
+  if (filters.role) query.where('role', filters.role)
+  if (filters.status === 'active') query.whereNull('suspendedAt')
+  if (filters.status === 'suspended') query.whereNotNull('suspendedAt')
+
+  return query
+}
+
+/**
+ * Suspends an account. Never one's own — a superadmin would lock themselves
+ * out — and never the last active superadmin, or nobody could manage
+ * accounts any more. Suspending an account already suspended keeps the date
+ * it was first suspended on.
+ */
+export async function suspendAccount(actor: User, target: User): Promise<User> {
+  if (actor.id === target.id) {
+    throw new Refusal(409, 'cannot_suspend_self', 'An account cannot suspend itself.')
+  }
+
+  if (target.isSuspended) {
+    return target
+  }
+
+  if (target.role === 'superadmin') {
+    const others = await User.query()
+      .where('role', 'superadmin')
+      .whereNull('suspendedAt')
+      .whereNot('id', target.id)
+      .first()
+
+    if (others === null) {
+      throw new Refusal(409, 'last_superadmin', 'The last active superadmin cannot be suspended.')
+    }
+  }
+
+  target.suspendedAt = DateTime.now()
+  await target.save()
+
+  return target
+}
+
+export async function reactivateAccount(target: User): Promise<User> {
+  target.suspendedAt = null
+  await target.save()
+
+  return target
 }

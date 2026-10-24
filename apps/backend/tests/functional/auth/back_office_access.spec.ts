@@ -28,7 +28,7 @@ test.group('Back-office | access', (group) => {
     assert.equal((response.body() as any).error.code, 'forbidden_role')
   })
 
-  test('refuses a superadmin too: accounts come in Phase 5bis', async ({ client }) => {
+  test('refuses a superadmin too: it manages accounts, not content', async ({ client }) => {
     const response = await client.get(WORLDS).loginAs(await userWith('superadmin'))
 
     response.assertStatus(403)

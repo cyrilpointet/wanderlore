@@ -210,6 +210,30 @@ const routes = {
     tokens: [{"old":"/api/v1/admin/:catalogue/:definitionId","type":0,"val":"api","end":""},{"old":"/api/v1/admin/:catalogue/:definitionId","type":0,"val":"v1","end":""},{"old":"/api/v1/admin/:catalogue/:definitionId","type":0,"val":"admin","end":""},{"old":"/api/v1/admin/:catalogue/:definitionId","type":1,"val":"catalogue","end":""},{"old":"/api/v1/admin/:catalogue/:definitionId","type":1,"val":"definitionId","end":""}],
     types: placeholder as Registry['admin.definitions.destroy']['types'],
   },
+  'admin.accounts.accounts.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/admin/accounts',
+    tokens: [{"old":"/api/v1/admin/accounts","type":0,"val":"api","end":""},{"old":"/api/v1/admin/accounts","type":0,"val":"v1","end":""},{"old":"/api/v1/admin/accounts","type":0,"val":"admin","end":""},{"old":"/api/v1/admin/accounts","type":0,"val":"accounts","end":""}],
+    types: placeholder as Registry['admin.accounts.accounts.index']['types'],
+  },
+  'admin.accounts.accounts.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/admin/accounts',
+    tokens: [{"old":"/api/v1/admin/accounts","type":0,"val":"api","end":""},{"old":"/api/v1/admin/accounts","type":0,"val":"v1","end":""},{"old":"/api/v1/admin/accounts","type":0,"val":"admin","end":""},{"old":"/api/v1/admin/accounts","type":0,"val":"accounts","end":""}],
+    types: placeholder as Registry['admin.accounts.accounts.store']['types'],
+  },
+  'admin.accounts.accounts.suspend': {
+    methods: ["POST"],
+    pattern: '/api/v1/admin/accounts/:accountId/suspend',
+    tokens: [{"old":"/api/v1/admin/accounts/:accountId/suspend","type":0,"val":"api","end":""},{"old":"/api/v1/admin/accounts/:accountId/suspend","type":0,"val":"v1","end":""},{"old":"/api/v1/admin/accounts/:accountId/suspend","type":0,"val":"admin","end":""},{"old":"/api/v1/admin/accounts/:accountId/suspend","type":0,"val":"accounts","end":""},{"old":"/api/v1/admin/accounts/:accountId/suspend","type":1,"val":"accountId","end":""},{"old":"/api/v1/admin/accounts/:accountId/suspend","type":0,"val":"suspend","end":""}],
+    types: placeholder as Registry['admin.accounts.accounts.suspend']['types'],
+  },
+  'admin.accounts.accounts.reactivate': {
+    methods: ["POST"],
+    pattern: '/api/v1/admin/accounts/:accountId/reactivate',
+    tokens: [{"old":"/api/v1/admin/accounts/:accountId/reactivate","type":0,"val":"api","end":""},{"old":"/api/v1/admin/accounts/:accountId/reactivate","type":0,"val":"v1","end":""},{"old":"/api/v1/admin/accounts/:accountId/reactivate","type":0,"val":"admin","end":""},{"old":"/api/v1/admin/accounts/:accountId/reactivate","type":0,"val":"accounts","end":""},{"old":"/api/v1/admin/accounts/:accountId/reactivate","type":1,"val":"accountId","end":""},{"old":"/api/v1/admin/accounts/:accountId/reactivate","type":0,"val":"reactivate","end":""}],
+    types: placeholder as Registry['admin.accounts.accounts.reactivate']['types'],
+  },
   'event_stream': {
     methods: ["GET","HEAD"],
     pattern: '/__transmit/events',

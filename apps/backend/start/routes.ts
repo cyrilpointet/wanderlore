@@ -66,8 +66,8 @@ router
       .use(middleware.auth())
 
     /**
-     * The back-office: game masters only. A signed-in player is refused with
-     * a 403, an anonymous visitor with a 401.
+     * The back-office content: game masters only. Any other signed-in account
+     * is refused with a 403, an anonymous visitor with a 401.
      */
     router
       .group(() => {
@@ -114,5 +114,21 @@ router
       .prefix('admin')
       .as('admin')
       .use([middleware.auth(), middleware.role({ roles: ['game_master'] })])
+
+    /**
+     * The accounts: superadmins only. A superadmin manages accounts and
+     * nothing else — the content above stays the game masters'.
+     */
+    router
+      .group(() => {
+        router.get('accounts', [controllers.admin.Accounts, 'index'])
+        router.post('accounts', [controllers.admin.Accounts, 'store'])
+        router.post('accounts/:accountId/suspend', [controllers.admin.Accounts, 'suspend'])
+        router.post('accounts/:accountId/reactivate', [controllers.admin.Accounts, 'reactivate'])
+      })
+      .where('accountId', router.matchers.uuid())
+      .prefix('admin')
+      .as('admin.accounts')
+      .use([middleware.auth(), middleware.role({ roles: ['superadmin'] })])
   })
   .prefix('/api/v1')

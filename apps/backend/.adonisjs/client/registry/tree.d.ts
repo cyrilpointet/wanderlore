@@ -69,6 +69,14 @@ export interface ApiDefinition {
       update: typeof routes['admin.definitions.update']
       destroy: typeof routes['admin.definitions.destroy']
     }
+    accounts: {
+      accounts: {
+        index: typeof routes['admin.accounts.accounts.index']
+        store: typeof routes['admin.accounts.accounts.store']
+        suspend: typeof routes['admin.accounts.accounts.suspend']
+        reactivate: typeof routes['admin.accounts.accounts.reactivate']
+      }
+    }
   }
   eventStream: typeof routes['event_stream']
   subscribe: typeof routes['subscribe']
