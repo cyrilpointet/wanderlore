@@ -292,7 +292,8 @@ serverless pour le backend).
 - **Les routes du back-office vivent sous `/api/v1/admin`**, derrière `auth` puis
   `role({ roles: ['game_master'] })` : un joueur reçoit `403 forbidden_role`. Le rôle n'est
   exposé qu'au compte lui-même (`/account/profile`). Comptes de test locaux :
-  `player@wanderlore.test` et `gm@wanderlore.test`, mot de passe `password`.
+  `player@wanderlore.test`, `gm@wanderlore.test` et `admin@wanderlore.test` (superadmin), mot
+  de passe `password`. Ailleurs, le premier superadmin vient de `account:create-superadmin`.
 - **Un refus que le client peut traiter** lève `Refusal(status, code, message, details?)`
   (`#exceptions/refusal`), rendu en `{ error: { code, message, details? } }`.
 - **Tout appel LLM passe par `import llm from '#services/llm'`** — jamais un provider ni un
@@ -403,6 +404,7 @@ node ace llm:cost --input-per-million=… --output-per-million=…
                                   # coût réel par tour, partie, étape, langue (lecture seule)
 node ace game:reset               # supprime parties et turn_log, re-seed une partie neuve (hors prod)
 node ace game:reset --no-seed     # supprime sans re-seeder (avant une migration qui refuse les parties)
+node ace account:create-superadmin  # crée un superadmin hors de l'interface, production comprise
 
 node ace test                     # suite complète
 node ace test unit                # suite unitaire seule (suite en positionnel)

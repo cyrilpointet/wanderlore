@@ -25,7 +25,7 @@ import { useTransaction } from '#tests/helpers/database'
 import { extracted, playerOf } from '#tests/helpers/turns'
 import ContentSeeder from '#database/seeders/01_content_seeder'
 import TestUserSeeder from '#database/seeders/02_test_user_seeder'
-import DemoSessionSeeder from '#database/seeders/04_demo_session_seeder'
+import DemoSessionSeeder from '#database/seeders/05_demo_session_seeder'
 
 /**
  * The exit criterion of Phase 1, exercised on the seeded game rather than on a

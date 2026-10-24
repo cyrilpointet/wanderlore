@@ -1,6 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 
-import type User from '#models/user'
+import User from '#models/user'
 import { Refusal } from '#exceptions/refusal'
 
 /**
@@ -28,4 +28,20 @@ export async function endSuspendedSession(ctx: HttpContext, user: User): Promise
   await ctx.auth.use('web').logout()
 
   return true
+}
+
+export type NewAccount = {
+  fullName: string
+  email: string
+  password: string
+  role: User['role']
+}
+
+/**
+ * Creates an account of any role, active, with the password given: no email
+ * is sent before Phase 9 — whoever creates it hands the password over.
+ * Expects input already validated by `createAccountValidator`.
+ */
+export async function createAccount(account: NewAccount): Promise<User> {
+  return User.create({ ...account, suspendedAt: null })
 }
