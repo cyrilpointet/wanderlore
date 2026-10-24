@@ -18,7 +18,7 @@
 
 ### Contenu
 
-- Squelette applicatif AdonisJS créé avec `--kit=api`, en **monorepo géré par Turborepo (workspaces)**. Structure par défaut : package `backend` (API AdonisJS) et package `frontend` (front joueur). Un troisième package `back-office` sera ajouté en Phase 5bis pour l'interface superadmin — la structure en workspaces permet cet ajout sans réorganisation du repo.
+- Squelette applicatif AdonisJS créé avec `--kit=api`, en **monorepo géré par Turborepo (workspaces)**. Structure par défaut : package `backend` (API AdonisJS) et package `frontend` (front joueur). Un troisième package `back-office` est ajouté en Phase 5 pour les `game_master`, puis accueille l'interface superadmin en Phase 5bis — la structure en workspaces permet cet ajout sans réorganisation du repo.
 - **Environnement de dev et de tests locaux sous Docker** : conteneurs PostgreSQL et Redis, pour un environnement reproductible dès la Phase 0 (Redis provisionné dès cette phase en prévision de BullMQ ; la Phase 2 retient finalement pg-boss, et Redis ne devient nécessaire qu'au passage à plusieurs instances).
 - Connexion à une base PostgreSQL.
 - Tables strictement nécessaires pour un tour de jeu, en version minimale :
@@ -147,7 +147,7 @@ Tranchées en clôture de la Phase 2 :
 - **Une seule nouvelle tentative sur une sortie structurée rejetée.** Quand le backend rejette la sortie JSON d'une étape (A+B+C ou E) — JSON illisible, hors schéma, hors bornes, référence absente de la liste fermée —, l'appel est renvoyé une fois avec un message correctif qui nomme les valeurs rejetées et rappelle la liste valide. Un second rejet fait échouer le tour. Les erreurs de transport ne sont toujours pas retentées. Détail : architecture, section 7.
 - **Narration en streaming dès cette phase** (événement `narration_chunk`). La narration diffusée reste provisoire jusqu'à `turn_completed`, et le front la retire si le tour échoue ensuite. Détail : architecture, section 8bis.
 - **Budget de 3 minutes par tour**, compté depuis sa prise en charge : chaque appel LLM reçoit au plus le temps restant, et un budget épuisé fait échouer le tour en `llm_timeout`. Le balayage des tours `pending` reste à 5 minutes et ne peut plus expirer un tour vivant. Détail : architecture, section 8bis.
-- **Un seul modèle pour toutes les étapes** (`gemini-2.5-flash`) pendant les phases de test. La séparation des étapes rend la différenciation possible, mais elle attend les mesures de coût réelles (Phase 9).
+- **Un seul modèle pour toutes les étapes** (`gemini-2.5-flash`, remplacé en octobre 2026 par `gemini-3.8-flash`, le premier n'étant plus ouvert aux nouvelles clés API) pendant les phases de test. La séparation des étapes rend la différenciation possible, mais elle attend les mesures de coût réelles (Phase 9).
 
 ### Contenu
 
@@ -224,7 +224,7 @@ Tranchées à l'ouverture de la phase (epic `KAN-44`) :
 
 ### Décisions de cadrage
 
-Tranchées à l'ouverture de la phase (cadrage en cours) :
+Tranchées à l'ouverture de la phase (epic `KAN-58`) :
 
 - **Back-office : même stack que le front joueur** (Vite + React + TypeScript, Tailwind CSS 4, TanStack Router et Query, react-i18next, Vitest), mêmes conventions (`api()`, aucun texte en dur, jetons de couleur sémantiques, tests en rendu HTML statique).
 - **Hébergement séparé, sur trois sous-domaines d'un domaine à nous** (`app.`, `admin.`, `api.`). Les trois applications forment ainsi un même site au sens du navigateur : le cookie de session reste `SameSite=Lax` et n'est jamais un cookie tiers, ce qui préserve aussi le flux SSE. L'API autorise les deux origines en CORS avec `credentials` ; le cookie de session et le cookie CSRF sont posés sur le domaine parent, lisible par les deux applications. Origines et domaine du cookie viennent de variables d'environnement ; en local, le proxy Vite reste la règle. Un domaine fourni par une plateforme (`*.up.railway.app`, `*.onrender.com`…) ne convient pas : il est inscrit sur la *Public Suffix List*, et ses sous-domaines y sont des sites distincts.
@@ -243,6 +243,13 @@ Tranchées à l'ouverture de la phase (cadrage en cours) :
   - **différés** : `content_boundaries` (modération, Phase 9), `branch_points` et conditions de progression des chapitres (tant qu'aucun tour ne sait les exploiter).
 - **Les Trois Mousquetaires passent en base** par un seeder de contenu idempotent placé en tête (`01_`), qui crée l'univers et son scénario publié d'après leur référence ; `world.ts` ne garde que les types. `sessions` reçoit `world_id` et `scenario_id` **`NOT NULL`, sans reprise de données** : seules existent des parties de dev et de test, recréées par `game:reset`.
 - **Pas de versionnement de structure des `jsonb`** à ce stade : chaque `jsonb` saisi est validé côté backend avant écriture, et aucune donnée de production n'existe à faire migrer.
+
+Tranchés en cours de phase, laissés ouverts au découpage :
+
+- **Code commun du back-office copié**, pas partagé dans un package : le client API, les jetons de couleur et le thème, signalés comme copies du front joueur.
+- **Scénario publié modifié ensuite** : il reste publié, et sa cohérence est revérifiée au lancement de chaque partie plutôt que de bloquer les modifications qui la casseraient (`scenario_not_playable`, avec la liste des incohérences).
+- **Une incohérence de nature** (unique générique ou empilable, archétype avec parent ou détenteur initial) est refusée par l'API sur le champ fautif (`kind_mismatch`), en amont des contraintes de la base.
+- **`node ace game:reset --no-seed`** vide les parties avant la migration qui les refuse.
 
 ### Contenu applicatif
 

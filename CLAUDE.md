@@ -73,7 +73,7 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
 - AdonisJS Transmit (SSE) pour le retour progressif au front pendant un tour.
 - Docker en local pour PostgreSQL + Redis (`docker compose up -d` à la racine) — Redis n'est
   requis qu'une fois la file basculée sur BullMQ.
-- LLM : **Google Gemini** (`gemini-2.5-flash`, SDK `@google/genai`), encapsulé derrière le
+- LLM : **Google Gemini** (`gemini-3.8-flash`, SDK `@google/genai`), encapsulé derrière le
   **LLM Gateway**. Aucun autre fichier de l'app n'importe un SDK de provider.
 
 ## Règles de travail
@@ -119,8 +119,8 @@ Acquis :
 
 **Phase 1 (boucle de jeu minimale) terminée** — epic Jira `KAN-4`. Un tour complet se joue
 par requête HTTP directe dans l'univers **Les Trois Mousquetaires** (connu du LLM, domaine
-public). Ses simplifications volontaires ont été levées en Phase 3 (pipeline séparé, étape E)
-et en Phase 4 (modificateurs) ; l'univers reste en dur jusqu'à la Phase 5.
+public). Ses simplifications volontaires ont été levées en Phase 3 (pipeline séparé, étape E),
+en Phase 4 (modificateurs) et en Phase 5 (univers en base).
 
 **Phase 2 (front minimal) terminée** — epic Jira `KAN-13`. Un joueur connecté joue un tour
 depuis l'interface web, avec retour progressif par SSE et erreurs affichées par catégorie.
@@ -161,9 +161,10 @@ l'extraction.
 - **narration en streaming** (`narration_chunk`), provisoire jusqu'à `turn_completed`,
   retirée par le front sur `turn_failed` ;
 - **budget de 3 minutes par tour** ; le balayage des tours `pending` reste à 5 minutes ;
-- un seul modèle (`gemini-2.5-flash`) pour toutes les étapes pendant les phases de test ;
-- **`resolution_rules`** réduite (`world_reference`, `action_type`, `description`,
-  `associated_skill`), remplie par un seeder de contenu idempotent ; l'arbitrage choisit un
+- un seul modèle pour toutes les étapes pendant les phases de test — `gemini-3.8-flash` depuis
+  octobre 2026, `gemini-2.5-flash` n'étant plus ouvert aux nouvelles clés API ;
+- **`resolution_rules`** réduite (`world_id` depuis la Phase 5, `action_type`, `description`,
+  `associated_skill`) ; l'arbitrage choisit un
   `action_type`, le backend en déduit la compétence, et le LLM ne voit plus les valeurs de
   compétence ;
 - **PNJ et lieux : définitions et instances** — `unique` / `archetype`, l'improvisé est une
@@ -173,8 +174,8 @@ l'extraction.
 **Phase 4 (inventaire et modificateurs d'objets) terminée** — epic Jira `KAN-44`. Ses choix
 restent en vigueur (détail : roadmap Phase 4, architecture §6bis, base de données
 `inventory_items`, règles §5, §7, §8) :
-- **objets : définitions et instances**, sur le modèle des PNJ ; définitions en dur dans
-  `world.ts` avec un seul libellé anglais jusqu'à la Phase 5 ; `stackable`, `equippable`,
+- **objets : définitions et instances**, sur le modèle des PNJ (en base depuis la Phase 5) ;
+  `stackable`, `equippable`,
   modificateurs ciblant une compétence ou les dégâts, détenteur initial facultatif ;
 - **trois détenteurs** — personnage, PNJ, lieu — par trois clés étrangères dont exactement une
   renseignée ; donner, voler, cacher, ramasser = **transfert**, l'exemplaire garde son handle ;
@@ -189,23 +190,31 @@ restent en vigueur (détail : roadmap Phase 4, architecture §6bis, base de donn
   PNJ est une référence de son profil de combat ;
 - durabilité et charges différées, consommables par la quantité.
 
-**Phase actuelle : Phase 5 (multi-univers et back-office minimal)**, cadrée, à découper.
-Décisions (détail : roadmap, Phase 5, « Décisions de cadrage ») :
-- back-office sur la stack du front ; front, back-office et API sur trois sous-domaines d'un
-  domaine à nous (cookie de session same-site, CORS avec `credentials`) ; premier
-  `game_master` par seeder ;
-- univers chargé une fois par tour et passé à toutes les étapes, sans cache ;
-- scénario `draft` / `published`, cohérence vérifiée à la publication ; personnage prétiré et
-  état initial portés par le scénario ; un `game_master` peut jouer, brouillons compris ;
-- back-office couvrant tout ce qu'un tour exige, JSON brut validé pour les structures
-  imbriquées ;
-- `npc_definitions`, `location_definitions`, `item_definitions`, même forme, surcharge
-  scénario sur univers pour les trois ; référence immuable, suppression interdite si une
-  instance l'emploie ;
-- noms d'affichage par langue sur chaque définition (anglais obligatoire) ; glossaire réduit
-  aux noms propres non-entités, au niveau de l'univers ;
-- Trois Mousquetaires en base par seeder de contenu ; `sessions.world_id` / `scenario_id`
-  `NOT NULL` sans reprise (parties recréées par `game:reset`).
+**Phase 5 (multi-univers et back-office minimal) terminée** — epic Jira `KAN-58`. Un
+`game_master` crée un univers et un scénario complets depuis le back-office, un joueur les
+joue. Ses choix restent en vigueur (détail : roadmap Phase 5, « Décisions de cadrage » ; base
+de données, section 2) :
+- **contenu en base** : `worlds`, `scenarios`, et trois catalogues de même forme
+  (`npc_definitions`, `location_definitions`, `item_definitions`), au niveau de l'univers ou
+  d'un scénario qui **surcharge** la définition de même référence ; Trois Mousquetaires écrits
+  par le seeder de contenu depuis `database/content/` ;
+- **univers chargé une fois par tour** (`loadWorld`), sans cache, et passé à toutes les étapes ;
+- **noms d'affichage par langue** (`labels`, anglais obligatoire, repli sur l'anglais) ;
+  glossaire réduit aux noms propres non-entités, univers complété par le scénario ; seule la
+  narration reçoit des noms traduits ;
+- **scénario `draft` / `published`**, cohérence vérifiée à la publication et au lancement de
+  chaque partie (`checkScenario`) ; une partie se lance en copiant le **personnage prétiré**
+  et l'**état initial** du scénario ; un `game_master` voit et joue les brouillons ;
+- **référence immuable**, suppression refusée (`content_in_use`) si une partie emploie le
+  contenu ; le reste est modifiable et vaut dès le tour suivant ;
+- **back-office** (`apps/back-office`) sur la stack du front, routes `/api/v1/admin` réservées
+  au `game_master` ; JSON brut validé pour les structures imbriquées (profil de combat,
+  modificateurs, prétiré) ;
+- front, back-office et API sur **trois sous-domaines** d'un domaine à nous (`CORS_ORIGINS`,
+  `COOKIE_DOMAIN`) ; premier `game_master` par seeder.
+
+**Phase actuelle : Phase 5bis (gestion des comptes, rôle `superadmin`)**, à cadrer et
+découper. Voir la roadmap, Phase 5bis.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de

@@ -22,36 +22,29 @@
 
 ### `worlds`
 
-Bible de contexte, indépendante de toute partie jouée.
+Bible de contexte, indépendante de toute partie jouée. **Schéma de la Phase 5** : les listes
+sans identité propre (attributs, compétences, ressources, règles, ambiance, glossaire) restent
+en `jsonb`, lues et écrites avec l'univers ; les catalogues ont leurs tables.
 
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant |
-| `name` | text | nom de l'univers |
-| `description` | text | description générale |
-| `narrative_tone` | text | registre, ambiance (ex: "médiéval-fantastique, politique, tension sociale") |
-| `general_rules` | jsonb | contraintes globales : niveau de magie, technologie, contraintes physiques, liste des attributs/compétences |
-| `content_boundaries` | jsonb | tabous, éléments interdits à générer |
-| `created_at` / `updated_at` | timestamp | — |
+| `reference` | varchar, unique | référence anglaise stable (`three_musketeers`), immuable après création |
+| `labels` | jsonb | noms d'affichage par langue, `en` obligatoire (`{ "en": "The Three Musketeers", "fr": "…" }`) |
+| `narrative_tone` | text | une ligne, transmise à l'arbitrage et à la narration |
+| `rules` | jsonb | liste de phrases anglaises : ce qui est possible dans l'univers, pour la seule arbitration |
+| `ambiance` | jsonb | liste de phrases anglaises : matière sensorielle pour le seul narrateur |
+| `attributes` | jsonb | `[{ reference, labels }]` |
+| `skills` | jsonb | `[{ reference, labels, attribute }]`, chaque compétence rattachée à un attribut |
+| `resources` | jsonb | `[{ reference, labels }]` (ex. `purse`) |
+| `glossary` | jsonb | `[{ reference, labels }]` : noms propres qui ne sont pas des entités du jeu (factions, figures hors scène) et leurs traductions |
+| `created_by` | FK → users, nullable | auteur ; null pour le contenu que possède le seeder |
+| `created_at` / `updated_at` | timestamptz | — |
 
-**Exemple de contenu `general_rules`** :
-```json
-{
-  "attributes": ["Physical", "Mental", "Social"],
-  "skills": [
-    { "name": "persuasion", "attribute": "Social" },
-    { "name": "melee_combat", "attribute": "Physical" },
-    { "name": "stealth", "attribute": "Physical" },
-    { "name": "magic", "attribute": "Mental" }
-  ]
-}
-```
-
-> **Révisé à l'ouverture de la Phase 5** (roadmap, Phase 5, décisions de cadrage) : `worlds`
-> reçoit une `reference` stable et des noms d'affichage par langue ; `general_rules` est
-> éclaté en colonnes `jsonb` distinctes — `attributes`, `skills`, `resources` — et en deux
-> listes de phrases, `rules` (arbitrage) et `ambiance` (narration). `content_boundaries` est
-> différé à la Phase 9. Le schéma définitif s'écrit avec la migration.
+- `general_rules` n'existe pas : il est éclaté en colonnes distinctes. `content_boundaries`
+  (tabous) est différé à la modération de la Phase 9.
+- **Les catégories d'action** vivent dans `resolution_rules` ; **les PNJ, lieux et objets**
+  dans les trois tables de définitions.
 
 ### `lore_fragments`
 
@@ -72,35 +65,73 @@ Unités atomiques de connaissance sur un univers. Sert de source pour l'indexati
 
 ### `scenarios`
 
-Trame narrative type, rattachée à un univers.
+Trame narrative rattachée à un univers, d'où une partie est lancée. **Schéma de la Phase 5** :
 
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant |
-| `world_id` | FK → worlds | univers parent |
-| `title` | text | titre du scénario |
-| `synopsis` | text | résumé général |
-| `chapter_structure` | jsonb | liste ordonnée de chapitres/beats, objectifs, conditions de progression |
-| ~~`planned_npcs`~~ | — | remplacé par la table `npc_definitions` (Phase 5), qui porte aussi les PNJ de l'univers — voir architecture, section 6ter |
-| `item_catalog` | jsonb | **catalogue fermé** des objets acquérables : référence stable, effets mécaniques, noms d'affichage par langue — *remplacé en Phase 5 par la table `item_definitions`, à deux niveaux (univers et scénario), de même forme que les définitions en dur de la Phase 4 (voir `inventory_items`)* |
-| `glossary` | jsonb | noms propres **qui ne sont pas des entités** (factions, figures historiques hors scène) et leurs traductions par langue — porté par l'univers, complété par le scénario (Phase 5) ; les noms des PNJ et des lieux viennent de leurs définitions |
-| `branch_points` | jsonb | points de bascule / choix narratifs possibles — *différé au-delà de la Phase 5* |
+| `world_id` | FK → worlds (cascade) | univers parent |
+| `reference` | varchar | référence stable, unique dans l'univers, immuable |
+| `labels` | jsonb | titre par langue, `en` obligatoire |
+| `synopsis` | text | résumé anglais, montré dans le catalogue **New game** |
+| `status` | enum `scenario_status` | `draft` / `published` ; seul un scénario publié est proposé aux joueurs |
+| `chapters` | jsonb | `[{ reference, labels }]`, dans l'ordre ; sans conditions de progression à ce stade |
+| `quests` | jsonb | `[{ reference, labels }]` |
+| `pregenerated_character` | jsonb, nullable | le personnage copié dans chaque partie : `name`, `attributes`, `skills`, `resources` (valeurs par référence), `hitPointsMax`, `items` (`definition`, `descriptor`, `quantity`, `equipped`) |
+| `initial_state` | jsonb, nullable | là où une partie commence : `location` (lieu unique), `chapter`, `quests` (`reference`, `step`, `summary`) |
+| `glossary` | jsonb | complète le glossaire de l'univers |
+| `created_by` | FK → users, nullable | auteur |
+| `created_at` / `updated_at` | timestamptz | — |
 
-> **Révisé à l'ouverture de la Phase 5** (roadmap, Phase 5, décisions de cadrage) :
-> `scenarios` porte aussi un statut (`draft` / `published`), le personnage prétiré et l'état
-> initial (lieu, quêtes, chapitre) ; chapitres et quêtes y sont des listes
-> `{ reference, labels }`, sans conditions de progression à ce stade.
+- Unicité sur `(world_id, reference)`, et sur `(id, world_id)` : cible des clés étrangères
+  composites qui empêchent une définition ou une partie de nommer le scénario d'un autre
+  univers.
+- **Brouillon et publication** : un brouillon peut manquer de personnage ou d'état initial. La
+  publication vérifie que le scénario tient debout (`checkScenario`, références, archétypes
+  génériques, personnage, état initial, nom anglais partout) et renvoie la liste complète des
+  incohérences ; la vérification est refaite au lancement de chaque partie.
+- **Lancer une partie** copie le prétiré et l'état initial dans une partie neuve, dans une
+  transaction. La création guidée de personnage attend la Phase 8.
+- Différés : `branch_points`, conditions de progression des chapitres.
 
-**Le catalogue des définitions d'objets** est la source de vérité des objets que l'étape d'extraction peut faire apparaître.
-Le LLM ne peut pas créer d'entrée d'inventaire : un objet inventé n'aurait ni effets
-mécaniques, ni référence stable, ni traduction. Le narrateur reste libre de décrire ce qu'il
-veut — il ne peut simplement pas faire apparaître quelque chose de mécaniquement actif.
-
-**`glossary`** fige la traduction des noms propres, pour éviter qu'un même lieu soit nommé
-différemment d'un tour à l'autre. Il est injecté à la seule étape de narration, limité aux
-entités présentes dans la scène — quelques dizaines de jetons, contre des milliers si l'on
+**`glossary`** fige la traduction des noms propres, pour éviter qu'un même nom soit rendu
+différemment d'un tour à l'autre. Les noms des PNJ et des lieux viennent de leurs
+définitions ; le glossaire ne porte que le reste. Seules ses entrées traduites dans la langue
+du tour vont à la narration — quelques dizaines de jetons, contre des milliers si l'on
 dupliquait tout le lore par langue.
-| `created_at` / `updated_at` | timestamp | — |
+
+### Définitions : `npc_definitions`, `location_definitions`, `item_definitions`
+
+Les trois catalogues fermés, **de même forme** : une définition de l'univers (`scenario_id`
+null), ou d'un scénario, qui **remplace la définition de l'univers de même référence** pour
+les parties de ce scénario. Le tour lit l'univers résolu (`resolveWorld`). Voir architecture,
+sections 6bis, 6ter et 6quater.
+
+| Colonne | Type | Contenu |
+|---|---|---|
+| `id` | uuid | identifiant |
+| `world_id` | FK → worlds (cascade) | univers |
+| `scenario_id` | uuid, nullable | scénario qui surcharge ; clé étrangère composite `(scenario_id, world_id)` → `scenarios(id, world_id)` |
+| `reference` | varchar | référence stable : ce que manipulent le code, l'état et le LLM ; immuable |
+| `labels` | jsonb | noms par langue, `en` obligatoire |
+| `description` | text | une ligne d'anglais pour le modèle, jamais affichée |
+| `kind` | enum `definition_kind` | `unique` (une instance par partie au plus) / `archetype` |
+
+Colonnes propres à chaque catalogue :
+
+| Table | Colonnes |
+|---|---|
+| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills`, `hitPointsMax`, `weapon` — référence d'objet ou null) |
+| `location_definitions` | `parent` (lieu unique englobant ; null pour un archétype, qui reçoit son parent par instance) |
+| `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement) |
+
+- Unicité de la référence parmi les définitions de l'univers, et parmi celles de chaque
+  scénario (index uniques partiels) : une définition de scénario peut reprendre la référence
+  d'une définition de l'univers — c'est ainsi qu'elle la surcharge.
+- CHECK : un unique n'est ni générique ni empilable ; un archétype n'a ni parent ni détenteur
+  initial. L'API le refuse en amont, sur le champ fautif (`kind_mismatch`).
+- **Une définition qu'emploie une instance d'une partie ne se supprime pas** (`content_in_use`) ;
+  libellés, description et mécanique restent modifiables et valent dès le tour suivant.
 
 ### `resolution_rules`
 
@@ -108,46 +139,34 @@ Barèmes de jeu paramétrables, table clé pour l'étape de résolution du pipel
 rattache chaque catégorie d'action (`action_type`) à la compétence qui la résout : le LLM
 d'arbitrage choisit la catégorie dans une liste fermée, le backend en déduit la compétence.
 
-**Schéma de la Phase 3** (tranché avant la phase) — volontairement réduit à ce qu'un tour
-lit réellement :
+**Schéma de la Phase 5** — volontairement réduit à ce qu'un tour lit réellement :
 
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant |
-| `world_reference` | varchar | référence de l'univers (`three_musketeers`) ; devient `world_id` (FK → `worlds`) en Phase 5 |
+| `world_id` | FK → worlds (cascade) | univers (remplace `world_reference` en Phase 5) |
 | `action_type` | varchar | catégorie d'action, référence anglaise stable (ex : `melee_combat`, `social_persuasion`) |
 | `description` | text | une phrase anglaise sur ce que couvre la catégorie, transmise à l'arbitrage |
 | `associated_skill` | varchar | référence d'une compétence de l'univers |
 | `created_at` / `updated_at` | timestamptz | — |
 
-Contrainte d'unicité sur `(world_reference, action_type)`, qui sert aussi d'index à la
-résolution. `action_type` est un `varchar`, pas un enum : la liste est propre à chaque
-univers, donc ouverte.
+Contrainte d'unicité sur `(world_id, action_type)`. `action_type` est un `varchar`, pas un
+enum : la liste est propre à chaque univers, donc ouverte.
 
-- **Pas de clé étrangère vers les compétences** : jusqu'à la Phase 5, elles vivent dans la
-  définition d'univers en dur. Un test vérifie que chaque `associated_skill` y existe.
-- **Pas de seuils par ligne** : l'échelle de difficulté est fixe dans le code. Un barème
-  alternatif, s'il est un jour autorisé, se réglera par univers, sur `worlds`.
-- **Remplissage par un seeder de contenu idempotent**, exécuté dans tous les environnements :
-  les lignes sont écrites dans le code, à côté de la définition d'univers, et insérées ou
-  mises à jour par `(world_reference, action_type)`. Modifier le contenu revient à modifier ce
-  fichier, jusqu'à ce que le back-office de la Phase 5 prenne le relais.
+- **Pas de clé étrangère vers les compétences**, qui vivent dans `worlds.skills` : la
+  publication d'un scénario vérifie que chaque `associated_skill` existe.
+- **Lue avec l'univers** : les catégories font partie de la photo de l'univers prise au début
+  du tour, comme le reste du contenu.
+- **Pas de seuils par ligne** : l'échelle de difficulté est fixe dans le code.
+- **Édition** par le back-office ; le seeder de contenu écrit celles des univers en code
+  (`database/content/`). Une catégorie qu'un jet journalisé a résolue ne se supprime pas.
 
-**Colonnes prévues plus tard**, ajoutées chacune par un `alterTable` quand un tour les lira :
+**Colonnes envisagées plus tard**, ajoutées chacune par un `alterTable` quand un tour les lira :
 
-| Colonne | Type | Contenu | Phase |
-|---|---|---|---|
-| `scenario_id` | FK → scenarios, nullable | scénario parent si la règle surcharge celle de l'univers | 5 |
-| `possible_modifiers` | jsonb | sources de bonus/malus contextuels possibles | 4 au plus tôt |
-| `specific_conditions` | jsonb | prérequis stricts, conséquences d'échec/réussite critique, mécaniques propres au type d'action | à la première règle qui en a besoin |
-
-**Exemple de contenu `possible_modifiers`** :
-```json
-[
-  { "source": "legitimacy_item", "value": 2, "description": "Présentation d'un document ou sceau officiel crédible" },
-  { "source": "favorable_reputation", "value": 3, "description": "Le PNJ a déjà une opinion positive du joueur" }
-]
-```
+| Colonne | Type | Contenu |
+|---|---|---|
+| `scenario_id` | FK → scenarios, nullable | scénario parent si la règle surcharge celle de l'univers |
+| `specific_conditions` | jsonb | prérequis stricts, conséquences d'échec/réussite critique, mécaniques propres au type d'action |
 
 **Exemple de contenu `specific_conditions`** (cas d'un prérequis strict) :
 ```json
@@ -170,11 +189,15 @@ Une partie jouée par un joueur donné.
 |---|---|---|
 | `id` | uuid | identifiant |
 | `user_id` | FK → users | joueur propriétaire |
-| `scenario_id` | FK → scenarios | scénario parent |
-| `world_id` | FK → worlds | univers parent (dénormalisé pour accès direct sans jointure supplémentaire) |
-| `status` | text | `in_progress` / `completed` / `paused` |
-| `current_chapter` | text/uuid | référence au chapitre courant dans `chapter_structure` |
-| `created_at` / `last_activity_at` | timestamp | — |
+| `world_id` | FK → worlds (restrict), non null | univers de la partie (Phase 5) |
+| `scenario_id` | uuid, non null | scénario d'où la partie est lancée ; clé étrangère composite `(scenario_id, world_id)` → `scenarios(id, world_id)`, restrict |
+| `status` | enum `session_status` | `in_progress` / `paused` / `completed` |
+| `current_chapter` | varchar, nullable | référence du chapitre courant, parmi `scenarios.chapters` |
+| `created_at` / `last_activity_at` | timestamptz | — |
+
+- `world_id` et `scenario_id` sont arrivés `NOT NULL` **sans reprise de données** : la
+  migration refuse de passer tant que des parties existent (`node ace game:reset --no-seed`).
+- Le contenu avec lequel une partie a été jouée ne se supprime pas (restrict).
 
 ### `characters`
 
@@ -202,12 +225,12 @@ un lieu. Une ligne est une **instance** qui pointe vers une **définition** d'ob
 que l'état propre à l'instance. Voir architecture, section 6bis.
 
 **Définitions d'objets.** En dur dans la définition d'univers en Phase 4, comme les PNJ et les
-lieux ; en base à partir de la Phase 5. Chaque définition porte :
+lieux ; en base depuis la Phase 5 (`item_definitions`, section 2). Chaque définition porte :
 
 | Champ | Contenu |
 |---|---|
 | `reference` | **référence stable en anglais** (ex. `letter_to_treville`) — c'est elle que manipulent le code et le LLM |
-| `label` | libellé anglais affiché au joueur ; les noms par langue arrivent en Phase 5 avec tout le contenu |
+| `labels` | noms d'affichage par langue, `en` obligatoire (Phase 5 ; un seul libellé anglais en Phase 4) |
 | `description` | une ligne d'anglais pour le modèle, jamais affichée |
 | `kind` | `unique` (une instance au plus par partie) ou `archetype` |
 | `generic` | archétype servant aux objets improvisés (`improvised_weapon`, `rope`…) |
@@ -297,7 +320,7 @@ les dégâts, avec une condition d'activation.
 
 Lieux tels qu'ils existent dans une partie : lieux uniques visités et lieux d'archétype
 improvisés, sous une même forme. Définitions en dur dans la définition d'univers en Phase 3,
-en base en Phase 5 (`location_definitions`, même forme que `npc_definitions`, plus le parent).
+en base depuis la Phase 5 (`location_definitions`, section 2).
 Voir architecture, section 6quater.
 
 **Schéma de la Phase 3** (tranché avant la phase) :
@@ -319,21 +342,11 @@ Voir architecture, section 6quater.
 - Le passage de `visited_locations` à `current_location_id` se fait par une migration
   `alterTable` qui reprend les lieux déjà visités des parties existantes.
 
-### `npc_definitions` (Phase 5)
-
-Catalogue fermé des PNJ, qui remplace la liste en dur de la Phase 3. Forme prévue :
-`world_id`, `scenario_id` (nullable — une définition de scénario de même référence surcharge
-celle de l'univers), `reference`, `kind` (`unique` / `archetype`), `generic` (archétype
-générique servant aux PNJ improvisés), `description`, `default_disposition`, puis le profil
-de combat (Phase 4, d'abord en dur : compétences, points de vie maximum, arme ordinaire —
-voir règles, section 8). Unicité sur `(world_id, scenario_id, reference)`. Voir
-architecture, section 6ter.
-
 ### `npc_instances`
 
 État des PNJ tels qu'ils existent dans une partie précise, distinct de leur définition
-(catalogue fermé : en dur dans la définition d'univers en Phase 3, table `npc_definitions` en
-Phase 5). PNJ uniques, archétypes et PNJ improvisés y ont tous la même forme : un improvisé
+(catalogue fermé : en dur dans la définition d'univers en Phase 3, table `npc_definitions`
+depuis la Phase 5). PNJ uniques, archétypes et PNJ improvisés y ont tous la même forme : un improvisé
 est une instance d'archétype générique. Voir architecture, section 6ter.
 
 **Schéma de la Phase 3** (tranché avant la phase) :
@@ -467,16 +480,19 @@ Résumés hiérarchiques générés par le job asynchrone.
 ## 6. Schéma relationnel synthétique
 
 ```
-worlds ──┬── lore_fragments
-         ├── scenarios ──── sessions ──┬── characters ─────────┐
-         └── resolution_rules          │                       │
-               (world ou scenario)     ├── npc_instances ──────┼── inventory_items
-                                        ├── location_instances ─┘   (un détenteur parmi trois)
-                                        ├── world_states (1:1)
-                                        ├── turn_log
-                                        └── narrative_summaries
+worlds ──┬── lore_fragments (Phase 6)
+         ├── resolution_rules
+         ├── npc_ / location_ / item_definitions ──┐ (univers, ou scénario qui surcharge)
+         └── scenarios ────────────────────────────┘
+               └── sessions ──┬── characters ─────────┐
+                              ├── npc_instances ──────┼── inventory_items
+                              ├── location_instances ─┘   (un détenteur parmi trois)
+                              ├── world_states (1:1)
+                              ├── turn_log
+                              └── narrative_summaries (Phase 7)
 
 users ──── sessions
+users ──── worlds, scenarios (created_by)
 users ──── usage_quotas (optionnel)
 ```
 

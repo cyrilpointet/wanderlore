@@ -152,7 +152,7 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - **Objets : même modèle que les PNJ** (principe acté avant la Phase 3, schéma à l'ouverture de la Phase 4) : définitions univers / scénario, `unique` ou `archetype`, archétypes génériques pour l'improvisé, ligne d'inventaire réduite à l'état de l'instance, `stackable` pour les objets interchangeables ; le front affiche le libellé de l'archétype, jamais le descripteur. Voir architecture, section 6bis, et document de base de données, `inventory_items`.
 - **Trois détenteurs d'objets : le personnage, un PNJ, un lieu** (Phase 4). Donner, voler, cacher, ramasser sont des transferts, l'objet gardant son identité ; seuls les objets en scène (personnage, PNJ présents, lieu courant) sont transmis au pipeline ; à la mort d'un PNJ, ses objets passent au lieu courant. Voir architecture, section 6bis.
 - **Budget de 3 minutes par tour** (Phase 3) : chaque appel LLM reçoit au plus le temps restant, un budget épuisé fait échouer le tour (`llm_timeout`) ; le balayage des tours `pending` reste à 5 minutes. Voir architecture, section 8bis.
-- **Un seul modèle LLM pour toutes les étapes** pendant les phases de test (`gemini-2.5-flash`). La différenciation par étape attend les mesures de coût réelles (Phase 9).
+- **Un seul modèle LLM pour toutes les étapes** pendant les phases de test (`gemini-3.8-flash`, qui remplace en octobre 2026 `gemini-2.5-flash`, fermé aux nouvelles clés API). La différenciation par étape attend les mesures de coût réelles (Phase 9).
 - **Soumission d'un tour idempotente** : clé fournie par le client, une par soumission, enregistrée avant la mise en file. En Phase 2, worker unique dans le process HTTP, en `concurrency: 1` et sans retry — simplification à reprendre avant le beta test.
 - **File de jobs substituable, pg-boss puis BullMQ** : port + adaptateur, pg-boss (PostgreSQL) tant qu'il n'y a qu'une instance — pas de Redis à héberger —, BullMQ au passage à plusieurs instances, qui ramène Redis pour Transmit. Condition de la bascule : idempotence, sérialisation des tours et événements SSE ne dépendent jamais de la file (voir architecture, section 8bis).
 
@@ -297,9 +297,9 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 ## 9. État d'avancement
 
-**Phases 0 à 4 terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web dans l'univers des *Trois Mousquetaires*, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable. Depuis la Phase 4, les objets sont des instances détenues par le personnage, un PNJ ou un lieu, les jets comptent circonstances (labels) et objets, chacun tracé avec son origine, et l'inventaire du personnage s'affiche au front.
+**Phases 0 à 5 terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable. Depuis la Phase 4, les objets sont des instances détenues par le personnage, un PNJ ou un lieu, les jets comptent circonstances (labels) et objets, chacun tracé avec son origine, et l'inventaire du personnage s'affiche au front. Depuis la Phase 5, le contenu de jeu est en base (univers, scénarios, catalogues de PNJ, lieux et objets, avec surcharge par scénario et noms par langue) ; le joueur lance une partie depuis un catalogue de scénarios publiés, avec le personnage prétiré du scénario ; un `game_master` crée, teste et publie univers et scénarios depuis le back-office.
 
-**Phase actuelle : Phase 5 (multi-univers et back-office minimal)**, à cadrer et découper. Voir la roadmap, Phase 5.
+**Phase actuelle : Phase 5bis (gestion des comptes, rôle `superadmin`)**, à cadrer et découper. Voir la roadmap, Phase 5bis.
 
 ---
 
