@@ -1,3 +1,41 @@
 {
-  "title": "Accounts"
+  "title": "Accounts",
+  "intro": "Every account, newest first. One role each: players play, game masters write the content, superadmins manage the accounts.",
+  "loading": "Loading the accounts…",
+  "empty": "No account matches.",
+  "filters": {
+    "label": "Filter the accounts",
+    "role": "Role",
+    "status": "Status",
+    "all": "All"
+  },
+  "roles": {
+    "player": "Player",
+    "game_master": "Game master",
+    "superadmin": "Superadmin"
+  },
+  "statuses": {
+    "active": "Active",
+    "suspended": "Suspended"
+  },
+  "createdOn": "Created {{value, datetime}}",
+  "suspendedOn": "Suspended {{value, datetime}}",
+  "you": "You",
+  "suspend": "Suspend",
+  "suspending": "Suspending…",
+  "confirmSuspend": "Suspend this account?",
+  "suspendHint": "It is signed out at once and can no longer sign in. Its games are kept.",
+  "reactivate": "Reactivate",
+  "reactivating": "Reactivating…",
+  "newAccount": "New account",
+  "create": "Create the account",
+  "creating": "Creating…",
+  "created": "Account created. Hand its password over yourself: no email is sent.",
+  "form": {
+    "fullName": "Full name",
+    "email": "Email",
+    "password": "Initial password",
+    "passwordHint": "8 to 32 characters. The account keeps it until it can change it (Phase 9).",
+    "role": "Role"
+  }
 }
