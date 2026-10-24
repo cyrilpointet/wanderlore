@@ -2,6 +2,7 @@ import User from '#models/user'
 import { loginValidator } from '#validators/user'
 import type { HttpContext } from '@adonisjs/core/http'
 import UserTransformer from '#transformers/user_transformer'
+import { AccountSuspendedError } from '#services/accounts'
 
 /**
  * Session-based login and logout.
@@ -15,6 +16,12 @@ export default class LoginController {
     const { email, password } = await request.validateUsing(loginValidator)
 
     const user = await User.verifyCredentials(email, password)
+
+    /** Checked after the credentials: an unknown account learns nothing from this. */
+    if (user.isSuspended) {
+      throw new AccountSuspendedError(403)
+    }
+
     await auth.use('web').login(user)
 
     return serialize(UserTransformer.transform(user))

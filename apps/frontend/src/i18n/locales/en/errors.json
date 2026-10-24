@@ -14,5 +14,6 @@
   "input_empty": "Write what you do first.",
   "input_invalid": "This action cannot be sent as it is.",
   "scenario_not_playable": "This scenario cannot be played yet.",
-  "forbidden_role": "This account cannot do that."
+  "forbidden_role": "This account cannot do that.",
+  "account_suspended": "This account is suspended."
 }

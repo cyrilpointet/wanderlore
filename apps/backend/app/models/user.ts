@@ -14,6 +14,11 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   @hasMany(() => Session)
   declare sessions: HasMany<typeof Session>
 
+  /** A suspended account can neither sign in nor use a session it already had. */
+  get isSuspended(): boolean {
+    return this.suspendedAt !== null
+  }
+
   get initials() {
     const [first, last] = this.fullName ? this.fullName.split(' ') : this.email.split('@')
     if (first && last) {

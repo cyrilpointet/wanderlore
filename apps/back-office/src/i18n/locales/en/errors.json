@@ -28,5 +28,6 @@
   },
   "invalid_json": "This is not valid JSON.",
   "content_in_use_detail": "Games are played with: {{references}}.",
-  "kind_mismatch": "This only belongs to the other kind of definition."
+  "kind_mismatch": "This only belongs to the other kind of definition.",
+  "account_suspended": "This account is suspended."
 }

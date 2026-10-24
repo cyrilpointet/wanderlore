@@ -339,7 +339,7 @@ export class TurnLogSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['createdAt', 'email', 'fullName', 'id', 'password', 'role', 'updatedAt'] as const
+  static $columns = ['createdAt', 'email', 'fullName', 'id', 'password', 'role', 'suspendedAt', 'updatedAt'] as const
   $columns = UserSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -353,6 +353,8 @@ export class UserSchema extends BaseModel {
   declare password: string
   @column()
   declare role: 'player' | 'game_master' | 'superadmin'
+  @column.dateTime()
+  declare suspendedAt: DateTime | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
