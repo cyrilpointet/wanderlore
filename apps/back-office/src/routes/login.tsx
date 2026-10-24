@@ -25,9 +25,11 @@ export const Route = createFileRoute('/login')({
     redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
   }),
   beforeLoad: async ({ context, search }) => {
-    // A game master already signed in has nothing to do here.
-    if (canUseBackOffice(await context.queryClient.ensureQueryData(currentUserQuery))) {
-      throw redirect({ href: redirectTarget(search.redirect) })
+    // An account already signed in to the back-office has nothing to do here.
+    const user = await context.queryClient.ensureQueryData(currentUserQuery)
+
+    if (canUseBackOffice(user)) {
+      throw redirect({ href: redirectTarget(search.redirect, user) })
     }
   },
   component: Login,
@@ -72,7 +74,7 @@ function SignInForm() {
     mutationFn: signIn,
     onSuccess: async (user) => {
       queryClient.setQueryData(currentUserQuery.queryKey, user)
-      await navigate({ href: redirectTarget(search.redirect), replace: true })
+      await navigate({ href: redirectTarget(search.redirect, user), replace: true })
     },
   })
 
@@ -134,7 +136,7 @@ function SignInForm() {
   )
 }
 
-/** Signed in, but not as a game master: say so, and offer to switch accounts. */
+/** Signed in with a role the back-office is closed to: say so, and offer to switch accounts. */
 function WrongAccount() {
   const { t } = useTranslation('auth')
   const queryClient = useQueryClient()
@@ -149,7 +151,7 @@ function WrongAccount() {
   return (
     <div className="flex flex-col gap-4 text-center">
       <p role="alert" className="text-body text-text">
-        {t('notAGameMaster')}
+        {t('closedToAccount')}
       </p>
       <button
         type="button"

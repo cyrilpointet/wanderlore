@@ -2,8 +2,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import { ApiError, NetworkError } from '@/api/client'
 import {
-  HOME,
-  NotAGameMasterError,
+  ClosedToAccountError,
   canUseBackOffice,
   redirectTarget,
   signIn,
@@ -39,10 +38,10 @@ afterEach(() => {
 })
 
 describe('canUseBackOffice', () => {
-  test('lets a game master in, and no one else', () => {
+  test('lets a game master and a superadmin in, and no one else', () => {
     expect(canUseBackOffice(GAME_MASTER)).toBe(true)
+    expect(canUseBackOffice({ ...GAME_MASTER, role: 'superadmin' })).toBe(true)
     expect(canUseBackOffice({ ...GAME_MASTER, role: 'player' })).toBe(false)
-    expect(canUseBackOffice({ ...GAME_MASTER, role: 'superadmin' })).toBe(false)
     expect(canUseBackOffice(null)).toBe(false)
   })
 })
@@ -56,6 +55,15 @@ describe('signIn', () => {
     )
   })
 
+  test('signs a superadmin in', async () => {
+    const superadmin = { ...GAME_MASTER, role: 'superadmin' }
+    respondInTurn([200, { data: { id: 'admin' } }], [200, { data: superadmin }])
+
+    await expect(
+      signIn({ email: 'admin@wanderlore.test', password: 'password' })
+    ).resolves.toEqual(superadmin)
+  })
+
   test('signs a player straight back out, and says why', async () => {
     const calls = respondInTurn(
       [200, { data: { id: 'player' } }],
@@ -64,7 +72,7 @@ describe('signIn', () => {
     )
 
     await expect(signIn({ email: 'player@wanderlore.test', password: 'password' })).rejects.toThrow(
-      NotAGameMasterError
+      ClosedToAccountError
     )
     expect(calls.at(-1)).toEqual({ url: '/api/v1/account/logout', method: 'POST' })
   })
@@ -72,8 +80,8 @@ describe('signIn', () => {
 
 describe('signInErrorMessage', () => {
   test('tells a player the back-office is not for them', () => {
-    expect(signInErrorMessage(new NotAGameMasterError())).toBe(
-      "This account is not a game master's: the back-office is closed to it."
+    expect(signInErrorMessage(new ClosedToAccountError())).toBe(
+      'The back-office is for game masters and superadmins: it is closed to this account.'
     )
   })
 
@@ -89,14 +97,25 @@ describe('signInErrorMessage', () => {
 })
 
 describe('redirectTarget', () => {
-  test('goes back to the page that was asked for', () => {
-    expect(redirectTarget('/worlds')).toBe('/worlds')
+  const SUPERADMIN: User = { ...GAME_MASTER, role: 'superadmin' }
+
+  test('goes back to the page that was asked for, in one of the account’s sections', () => {
+    expect(redirectTarget('/worlds/w1/npcs', GAME_MASTER as never)).toBe('/worlds/w1/npcs')
+    expect(redirectTarget('/accounts?role=player', SUPERADMIN as never)).toBe(
+      '/accounts?role=player'
+    )
   })
 
-  test.each([undefined, '', 'https://evil.example', '//evil.example', '/login?redirect=/worlds'])(
-    'lands on the worlds otherwise (%s)',
+  test('lands on the home of the role for a section of the other role', () => {
+    expect(redirectTarget('/accounts', GAME_MASTER as never)).toBe('/worlds')
+    expect(redirectTarget('/scenarios/s1', SUPERADMIN as never)).toBe('/accounts')
+  })
+
+  test.each([undefined, '', '/', 'https://evil.example', '//evil.example', '/login?redirect=/worlds'])(
+    'lands on the home of the role otherwise (%s)',
     (requested) => {
-      expect(redirectTarget(requested)).toBe(HOME)
+      expect(redirectTarget(requested, GAME_MASTER as never)).toBe('/worlds')
+      expect(redirectTarget(requested, SUPERADMIN as never)).toBe('/accounts')
     }
   )
 })

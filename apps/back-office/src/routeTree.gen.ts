@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedAccountsIndexRouteImport } from './routes/_authenticated/accounts/index'
 import { Route as AuthenticatedScenariosScenarioIdRouteImport } from './routes/_authenticated/scenarios/$scenarioId'
 import { Route as AuthenticatedWorldsIndexRouteImport } from './routes/_authenticated/worlds/index'
 import { Route as AuthenticatedWorldsWorldIdRouteImport } from './routes/_authenticated/worlds/$worldId'
@@ -41,6 +42,12 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAccountsIndexRoute =
+  AuthenticatedAccountsIndexRouteImport.update({
+    id: '/accounts/',
+    path: '/accounts/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedScenariosScenarioIdRoute =
   AuthenticatedScenariosScenarioIdRouteImport.update({
     id: '/scenarios/$scenarioId',
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/scenarios/$scenarioId': typeof AuthenticatedScenariosScenarioIdRouteWithChildren
   '/worlds/$worldId': typeof AuthenticatedWorldsWorldIdRouteWithChildren
   '/worlds/new': typeof AuthenticatedWorldsNewRoute
+  '/accounts/': typeof AuthenticatedAccountsIndexRoute
   '/worlds/': typeof AuthenticatedWorldsIndexRoute
   '/scenarios/$scenarioId/items': typeof AuthenticatedScenariosScenarioIdItemsRoute
   '/scenarios/$scenarioId/locations': typeof AuthenticatedScenariosScenarioIdLocationsRoute
@@ -147,6 +155,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/worlds/new': typeof AuthenticatedWorldsNewRoute
+  '/accounts': typeof AuthenticatedAccountsIndexRoute
   '/worlds': typeof AuthenticatedWorldsIndexRoute
   '/scenarios/$scenarioId/items': typeof AuthenticatedScenariosScenarioIdItemsRoute
   '/scenarios/$scenarioId/locations': typeof AuthenticatedScenariosScenarioIdLocationsRoute
@@ -167,6 +176,7 @@ export interface FileRoutesById {
   '/_authenticated/scenarios/$scenarioId': typeof AuthenticatedScenariosScenarioIdRouteWithChildren
   '/_authenticated/worlds/$worldId': typeof AuthenticatedWorldsWorldIdRouteWithChildren
   '/_authenticated/worlds/new': typeof AuthenticatedWorldsNewRoute
+  '/_authenticated/accounts/': typeof AuthenticatedAccountsIndexRoute
   '/_authenticated/worlds/': typeof AuthenticatedWorldsIndexRoute
   '/_authenticated/scenarios/$scenarioId/items': typeof AuthenticatedScenariosScenarioIdItemsRoute
   '/_authenticated/scenarios/$scenarioId/locations': typeof AuthenticatedScenariosScenarioIdLocationsRoute
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/scenarios/$scenarioId'
     | '/worlds/$worldId'
     | '/worlds/new'
+    | '/accounts/'
     | '/worlds/'
     | '/scenarios/$scenarioId/items'
     | '/scenarios/$scenarioId/locations'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/worlds/new'
+    | '/accounts'
     | '/worlds'
     | '/scenarios/$scenarioId/items'
     | '/scenarios/$scenarioId/locations'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
     | '/_authenticated/scenarios/$scenarioId'
     | '/_authenticated/worlds/$worldId'
     | '/_authenticated/worlds/new'
+    | '/_authenticated/accounts/'
     | '/_authenticated/worlds/'
     | '/_authenticated/scenarios/$scenarioId/items'
     | '/_authenticated/scenarios/$scenarioId/locations'
@@ -263,6 +276,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/accounts/': {
+      id: '/_authenticated/accounts/'
+      path: '/accounts'
+      fullPath: '/accounts/'
+      preLoaderRoute: typeof AuthenticatedAccountsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/scenarios/$scenarioId': {
       id: '/_authenticated/scenarios/$scenarioId'
@@ -420,6 +440,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedScenariosScenarioIdRoute: typeof AuthenticatedScenariosScenarioIdRouteWithChildren
   AuthenticatedWorldsWorldIdRoute: typeof AuthenticatedWorldsWorldIdRouteWithChildren
   AuthenticatedWorldsNewRoute: typeof AuthenticatedWorldsNewRoute
+  AuthenticatedAccountsIndexRoute: typeof AuthenticatedAccountsIndexRoute
   AuthenticatedWorldsIndexRoute: typeof AuthenticatedWorldsIndexRoute
 }
 
@@ -428,6 +449,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedScenariosScenarioIdRouteWithChildren,
   AuthenticatedWorldsWorldIdRoute: AuthenticatedWorldsWorldIdRouteWithChildren,
   AuthenticatedWorldsNewRoute: AuthenticatedWorldsNewRoute,
+  AuthenticatedAccountsIndexRoute: AuthenticatedAccountsIndexRoute,
   AuthenticatedWorldsIndexRoute: AuthenticatedWorldsIndexRoute,
 }
 

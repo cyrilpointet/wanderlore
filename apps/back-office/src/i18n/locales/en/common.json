@@ -4,12 +4,13 @@
   "tryAgain": "Try again",
   "nav": {
     "label": "Back-office sections",
-    "worlds": "Worlds"
+    "worlds": "Worlds",
+    "accounts": "Accounts"
   },
   "system": {
     "notFound": "This page does not exist.",
     "unexpected": "Something went wrong.",
     "reload": "Reload",
-    "home": "Worlds"
+    "home": "Home"
   }
 }

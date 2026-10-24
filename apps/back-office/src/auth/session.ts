@@ -3,6 +3,7 @@ import { queryOptions } from '@tanstack/react-query'
 import { api, ApiError } from '@/api/client'
 import { failureMessage } from '@/i18n/errors'
 import i18n from '@/i18n'
+import { canVisit, homeOf, isBackOfficeRole } from './sections'
 
 export type Role = 'player' | 'game_master' | 'superadmin'
 
@@ -14,9 +15,6 @@ export type User = {
   initials: string
   role: Role
 }
-
-/** Where a game master lands when nothing else was asked for. */
-export const HOME = '/worlds'
 
 /**
  * Who is signed in, or `null` — a player as well: the session cookie is the
@@ -44,19 +42,23 @@ async function fetchCurrentUser(): Promise<User | null> {
   }
 }
 
+/** A signed-in account the back-office is open to: a game master or a superadmin. */
+export type BackOfficeUser = User & { role: 'game_master' | 'superadmin' }
+
 /**
- * The back-office is for game masters. The backend refuses anyone else on
- * every request regardless: this only spares them a screen they cannot use.
+ * The back-office is for game masters and superadmins, each in their own
+ * sections. The backend refuses anyone else on every request regardless:
+ * this only spares them screens they cannot use.
  */
-export function canUseBackOffice(user: User | null): user is User {
-  return user?.role === 'game_master'
+export function canUseBackOffice(user: User | null): user is BackOfficeUser {
+  return user !== null && isBackOfficeRole(user.role)
 }
 
-/** Signed in, but not as a game master: turned away right after signing in. */
-export class NotAGameMasterError extends Error {
+/** Signed in, but with a role the back-office is closed to: turned away right after signing in. */
+export class ClosedToAccountError extends Error {
   constructor() {
-    super('This account is not a game master.')
-    this.name = 'NotAGameMasterError'
+    super('The back-office is closed to this account.')
+    this.name = 'ClosedToAccountError'
   }
 }
 
@@ -64,14 +66,17 @@ export class NotAGameMasterError extends Error {
  * Signs in, then reads the account back to learn its role: a player is
  * signed out at once rather than left holding a session they cannot use here.
  */
-export async function signIn(credentials: { email: string; password: string }): Promise<User> {
+export async function signIn(credentials: {
+  email: string
+  password: string
+}): Promise<BackOfficeUser> {
   await api('/auth/login', { method: 'POST', body: credentials })
 
   const user = await fetchCurrentUser()
 
   if (!canUseBackOffice(user)) {
     await signOut()
-    throw new NotAGameMasterError()
+    throw new ClosedToAccountError()
   }
 
   return user
@@ -87,8 +92,8 @@ export async function signOut(): Promise<void> {
  * someone probing for accounts.
  */
 export function signInErrorMessage(error: unknown): string {
-  if (error instanceof NotAGameMasterError) {
-    return i18n.t('notAGameMaster', { ns: 'auth' })
+  if (error instanceof ClosedToAccountError) {
+    return i18n.t('closedToAccount', { ns: 'auth' })
   }
 
   if (error instanceof ApiError && (error.status === 400 || error.status === 422)) {
@@ -100,11 +105,16 @@ export function signInErrorMessage(error: unknown): string {
 
 /**
  * The page to go back to after signing in. Only a path of this app is
- * followed: a crafted `?redirect=https://…` link must not send someone who
- * just typed their password to another site.
+ * followed — a crafted `?redirect=https://…` link must not send someone who
+ * just typed their password to another site — and only a path of the
+ * account's own sections; anything else lands on its home.
  */
-export function redirectTarget(requested: string | undefined): string {
-  if (!requested || !requested.startsWith('/') || requested.startsWith('//')) return HOME
-  if (requested.startsWith('/login')) return HOME
-  return requested
+export function redirectTarget(requested: string | undefined, user: BackOfficeUser): string {
+  const home = homeOf(user.role)
+
+  if (!requested || !requested.startsWith('/') || requested.startsWith('//')) return home
+  if (requested.startsWith('/login') || requested === '/') return home
+
+  const pathname = requested.split(/[?#]/)[0]!
+  return canVisit(user.role, pathname) ? requested : home
 }

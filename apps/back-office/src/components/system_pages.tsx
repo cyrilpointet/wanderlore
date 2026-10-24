@@ -16,7 +16,7 @@ export function NotFoundPage() {
 
   return (
     <SystemPage message={t('system.notFound')}>
-      <Link to="/worlds" className={ACTION}>
+      <Link to="/" className={ACTION}>
         {t('system.home')}
       </Link>
     </SystemPage>

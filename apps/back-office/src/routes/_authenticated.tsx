@@ -1,11 +1,13 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 
 import { canUseBackOffice, currentUserQuery } from '@/auth/session'
+import { canVisit, homeOf } from '@/auth/sections'
 
 /**
- * Every route under this layout requires a signed-in game master. Anyone else
- * goes to the sign-in page: to sign in, or to be told this account cannot use
- * the back-office. The backend refuses them on every request regardless.
+ * Every route under this layout requires a signed-in game master or
+ * superadmin, and belongs to the sections of one of the two: anyone else
+ * goes to the sign-in page, and a section of the other role sends back to
+ * one's own home. The backend refuses them on every request regardless.
  */
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
@@ -13,6 +15,10 @@ export const Route = createFileRoute('/_authenticated')({
 
     if (!canUseBackOffice(user)) {
       throw redirect({ to: '/login', search: { redirect: location.href } })
+    }
+
+    if (!canVisit(user.role, location.pathname)) {
+      throw redirect({ to: homeOf(user.role) })
     }
 
     return { user }
