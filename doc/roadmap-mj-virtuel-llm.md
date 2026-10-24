@@ -278,6 +278,17 @@ Tranchés en cours de phase, laissés ouverts au découpage :
 
 **Objectif** : permettre l'administration des comptes eux-mêmes, une fois qu'il existe réellement plusieurs types de comptes à gérer. Cette phase est volontairement positionnée après la Phase 5 : introduire le rôle `superadmin` plus tôt n'aurait rien de concret à administrer.
 
+### Décisions de cadrage
+
+Tranchées à l'ouverture de la phase (epic `KAN-71`) :
+
+- **Premier superadmin par une commande** `node ace account:create-superadmin` (nom, email, mot de passe saisi masqué), utilisable en production — un seeder ne suffit pas, les nôtres sont réservés aux environnements locaux. En plus, un compte de test local `admin@wanderlore.test` par seeder, comme les deux autres.
+- **Un compte = un rôle** : le superadmin gère les comptes et seulement eux ; le `game_master` garde le contenu. Le back-office accueille les deux rôles, chacun ne voyant que ses sections ; les routes `/api/v1/admin/accounts` sont réservées au superadmin.
+- **Suspension par `users.suspended_at`** : connexion refusée (`account_suspended`) ; une session déjà ouverte est coupée à la requête suivante — la session est un cookie chiffré, impossible à révoquer côté serveur, donc l'état du compte est relu à chaque requête ; les parties sont conservées et retrouvées à la réactivation.
+- **Garde-fous** : un superadmin ne peut pas se suspendre lui-même, et le dernier superadmin actif ne peut pas être suspendu.
+- **Création d'un compte** : nom, email, rôle et mot de passe initial, transmis par le superadmin hors de l'application. Ni envoi d'email ni changement de mot de passe imposé avant la Phase 9.
+- **Hors périmètre** : changement de rôle d'un compte existant, modification d'email, suppression ; l'inscription libre (`/auth/signup`) reste en l'état, et crée toujours un `player`, jusqu'aux modalités d'inscription de la Phase 9.
+
 ### Contenu
 
 - Interface superadmin minimale, ajoutée au sein du package `back-office` déjà créé en Phase 5 (pas de nouveau package à créer) :

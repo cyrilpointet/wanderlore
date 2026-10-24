@@ -299,7 +299,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 **Phases 0 à 5 terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable. Depuis la Phase 4, les objets sont des instances détenues par le personnage, un PNJ ou un lieu, les jets comptent circonstances (labels) et objets, chacun tracé avec son origine, et l'inventaire du personnage s'affiche au front. Depuis la Phase 5, le contenu de jeu est en base (univers, scénarios, catalogues de PNJ, lieux et objets, avec surcharge par scénario et noms par langue) ; le joueur lance une partie depuis un catalogue de scénarios publiés, avec le personnage prétiré du scénario ; un `game_master` crée, teste et publie univers et scénarios depuis le back-office.
 
-**Phase actuelle : Phase 5bis (gestion des comptes, rôle `superadmin`)**, à cadrer et découper. Voir la roadmap, Phase 5bis.
+**Phase actuelle : Phase 5bis (gestion des comptes, rôle `superadmin`)**, cadrée et découpée (epic `KAN-71`). Voir la roadmap, Phase 5bis.
 
 ---
 

@@ -213,8 +213,12 @@ de données, section 2) :
 - front, back-office et API sur **trois sous-domaines** d'un domaine à nous (`CORS_ORIGINS`,
   `COOKIE_DOMAIN`) ; premier `game_master` par seeder.
 
-**Phase actuelle : Phase 5bis (gestion des comptes, rôle `superadmin`)**, à cadrer et
-découper. Voir la roadmap, Phase 5bis.
+**Phase actuelle : Phase 5bis (gestion des comptes, rôle `superadmin`)**, cadrée et découpée —
+epic Jira `KAN-71`. Décisions (détail : roadmap, Phase 5bis, « Décisions de cadrage ») :
+premier superadmin par la commande `account:create-superadmin` ; un compte = un rôle, le
+superadmin ne gère que les comptes ; suspension par `users.suspended_at`, session ouverte
+coupée à la requête suivante, parties conservées ; ni auto-suspension ni suspension du dernier
+superadmin ; pas de changement de rôle, d'email ni de suppression.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
