@@ -4,15 +4,15 @@ import type TurnLog from '#models/turn_log'
 import type { ContentLabels } from '#services/game/content_labels'
 import type { Labelled } from '#services/game/content_labels'
 import type { AppliedEffects, AppliedHolder, AppliedItems } from '#services/game/prompts/types'
-import type { Characteristic, Degree, RollBase, RollOutcome } from '#services/rules/types'
+import type { RollResolution } from '#services/rules/types'
 
 /**
  * A logged turn, as the journal shows it — and as a client reads it back after
  * missing the end of its SSE stream.
  *
- * The log keeps everything, dice included, for debugging. What leaves is
- * what the player may see: the skill or characteristic, the verdict and its
- * degree. Scenario flags never leave.
+ * The log keeps everything, for debugging. What leaves is what the player
+ * may see: the detail of each roll, as at the table — but never the
+ * circumstance arbitration named, nor the scenario flags.
  */
 export default class TurnTransformer extends BaseTransformer<TurnLog> {
   #labels: ContentLabels
@@ -56,51 +56,37 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
       return null
     }
 
-    const base = rollResult.base as RollBase | undefined
-
-    if (base === undefined) {
+    if (!('base' in rollResult)) {
       throw new Error(`Turn ${this.resource.id} logged a roll without what it rolled.`)
     }
 
-    const modifiers = rollResult.appliedModifiers as { source: string; origin: string }[]
-
-    return presentRoll(
-      {
-        skill: base.kind === 'skill' ? base.skill : null,
-        characteristic: base.kind === 'characteristic' ? base.characteristic : null,
-        result: rollResult.result as RollOutcome,
-        degree: rollResult.degree as Degree,
-        items: [
-          ...new Set(
-            modifiers.filter(({ source }) => source === 'item').map(({ origin }) => origin)
-          ),
-        ],
-      },
-      this.#labels
-    )
+    return presentRoll(rollResult as unknown as RollResolution, this.#labels)
   }
 }
 
 /**
- * The items that weighed on the roll are named. A characteristic is a closed
- * enum of the system: it leaves as its reference, which the front labels.
+ * The detail of a roll, for the player: what was rolled and at how much, the
+ * difficulty, every modifier with its value, the chance, the d100 and the
+ * degree. A skill leaves labelled; a characteristic is a closed enum of the
+ * system, which the front labels. A circumstance leaves as its label of
+ * effect, never as the words arbitration named it with.
  */
-export function presentRoll(
-  roll: {
-    skill: string | null
-    characteristic: Characteristic | null
-    result: RollOutcome
-    degree: Degree
-    items: string[]
-  },
-  labels: ContentLabels
-) {
+export function presentRoll(roll: RollResolution, labels: ContentLabels) {
   return {
-    skill: roll.skill === null ? null : labels.of('skill', roll.skill),
-    characteristic: roll.characteristic,
+    skill: roll.base.kind === 'skill' ? labels.of('skill', roll.base.skill) : null,
+    characteristic: roll.base.kind === 'characteristic' ? roll.base.characteristic : null,
+    value: roll.base.value,
+    baseChance: roll.baseChance,
+    difficulty: roll.difficulty,
+    modifiers: roll.appliedModifiers.map((modifier) =>
+      modifier.source === 'contextual'
+        ? { source: modifier.source, effect: modifier.effect, value: modifier.value }
+        : { source: modifier.source, item: labels.of('item', modifier.origin), value: modifier.value }
+    ),
+    chance: roll.chance,
+    roll: roll.roll,
     result: roll.result,
     degree: roll.degree,
-    items: roll.items.map((item) => labels.of('item', item)),
   }
 }
 

@@ -110,7 +110,7 @@ export function isBusy(state: TurnState): boolean {
 /** Changes whenever the turn in flight shows something new: the journal follows it. */
 export function progressKey(state: TurnState): string {
   if (state.status !== 'in_progress') return state.status
-  return [state.status, state.step, state.roll?.margin, state.narration?.length].join(':')
+  return [state.status, state.step, state.roll?.degree, state.narration?.length].join(':')
 }
 
 /**
@@ -263,9 +263,15 @@ function onMessage(state: TurnState, message: TurnMessage): TurnState {
         ...current,
         roll: {
           skill: message.skill,
+          characteristic: message.characteristic,
+          value: message.value,
+          baseChance: message.baseChance,
+          difficulty: message.difficulty,
+          modifiers: message.modifiers,
+          chance: message.chance,
+          roll: message.roll,
           result: message.result,
-          margin: message.margin,
-          items: message.items,
+          degree: message.degree,
         },
       }
     case 'narration_chunk':

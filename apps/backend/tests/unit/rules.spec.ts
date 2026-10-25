@@ -251,9 +251,9 @@ test.group('RulesEngine | modifiers', () => {
     })
 
     assert.deepEqual(resolution.appliedModifiers, [
-      { source: 'contextual', origin: 'favorable_reputation', value: 20 },
-      { source: 'contextual', origin: 'late_hour', value: 10 },
-      { source: 'contextual', origin: 'unsuitable_attire', value: -20 },
+      { source: 'contextual', origin: 'favorable_reputation', effect: 'major_bonus', value: 20 },
+      { source: 'contextual', origin: 'late_hour', effect: 'minor_bonus', value: 10 },
+      { source: 'contextual', origin: 'unsuitable_attire', effect: 'major_penalty', value: -20 },
     ])
     assert.equal(resolution.chance, 55 + 20 + 10 - 20)
   })
@@ -280,7 +280,7 @@ test.group('RulesEngine | modifiers', () => {
     })
 
     assert.deepEqual(resolution.appliedModifiers, [
-      { source: 'contextual', origin: 'favorable_reputation', value: 10 },
+      { source: 'contextual', origin: 'favorable_reputation', effect: 'minor_bonus', value: 10 },
       { source: 'item', origin: 'letter_to_treville', value: 20 },
     ])
     assert.equal(resolution.chance, 70)

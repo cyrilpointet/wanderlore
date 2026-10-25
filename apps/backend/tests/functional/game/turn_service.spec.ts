@@ -18,6 +18,7 @@ import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import type { JobQueue } from '#services/queue/types'
 import { ConcurrentTurnError, QueueUnavailableError, StaleTurnError } from '#services/game/errors'
 import { TurnValidationError } from '#services/game/turn_validator'
+import { toMessage } from '#services/game/turn_events'
 import { createItem, equipItem, unequipItem } from '#services/game/inventory'
 import { enterScene } from '#services/game/npcs'
 import InventoryItem from '#models/inventory_item'
@@ -942,7 +943,7 @@ test.group('TurnService | items in the roll', (group) => {
     const turn = await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
 
     assert.deepEqual(modifiersOf(turn), [
-      { source: 'contextual', origin: 'favorable_reputation', value: 10 },
+      { source: 'contextual', origin: 'favorable_reputation', effect: 'minor_bonus', value: 10 },
       { source: 'item', origin: 'letter_to_treville', value: 10 },
     ])
     assert.equal(turn.rollResult!.chance, 60 + 10 + 10)
@@ -960,16 +961,25 @@ test.group('TurnService | items in the roll', (group) => {
     }
   })
 
-  test('the player is told which items weighed, and what they now hold', async ({ assert }) => {
+  test('the player is told the roll in full, and what they now hold', async ({ assert }) => {
     const { sessionId, userId } = await arrangeArmedScene()
     const { events, play } = buildService([NEEDS_ROLL, ...NARRATED])
 
     const turn = await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
 
-    const rolled = events.recorded.find(({ event }) => event.type === 'roll_resolved')!.event
+    const rolled = events.recorded.find(({ event }) => event.type === 'roll_resolved')!
     const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!.event
-    assert.deepInclude(rolled, { items: ['letter_to_treville'] })
-    assert.notProperty(rolled, 'appliedModifiers')
+    assert.deepInclude(toMessage(rolled.ref, rolled.event), {
+      modifiers: [
+        {
+          source: 'item',
+          item: { reference: 'letter_to_treville', label: 'Letter for M. de Tréville' },
+          value: 10,
+        },
+      ],
+      chance: 70,
+      roll: 30,
+    })
     assert.equal(turn.status, 'completed')
     assert.deepEqual(
       completed.type === 'turn_completed'

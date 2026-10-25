@@ -179,7 +179,7 @@ export class RulesEngine {
 }
 
 function contextual({ source, effect }: ContextualModifier): AppliedModifier {
-  return { source: 'contextual', origin: source, value: contextualValue(effect) }
+  return { source: 'contextual', origin: source, effect, value: contextualValue(effect) }
 }
 
 /**

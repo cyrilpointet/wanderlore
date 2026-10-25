@@ -272,7 +272,7 @@ test.group('Turn events | sequence', (group) => {
 test.group('Turn events | what goes over the wire', (group) => {
   useTransaction(group)
 
-  test('a roll carries its labelled skill and qualitative outcome, never a number', async ({
+  test('a roll carries its full detail for the player, its skill labelled', async ({
     assert,
   }) => {
     const { turn, events } = await playOne([NEEDS_ROLL, ...NARRATED])
@@ -286,10 +286,15 @@ test.group('Turn events | what goes over the wire', (group) => {
       idempotencyKey: roll.ref.idempotencyKey,
       skill: { reference: 'persuasion', label: 'Persuasion' },
       characteristic: null,
+      value: 60,
+      baseChance: 60,
+      difficulty: 'average',
+      modifiers: [],
+      chance: 60,
+      roll: 4,
       result: 'success',
       /** A 4 against a persuasion of 60: within a fifth of it. */
       degree: 'special',
-      items: [],
     })
   })
 
@@ -309,7 +314,7 @@ test.group('Turn events | what goes over the wire', (group) => {
     assert.deepEqual(message.character.inventory, [])
   })
 
-  test('nothing mechanical or internal leaves in any event', async ({ assert }) => {
+  test('nothing internal leaves in any event: no circumstance, no flag', async ({ assert }) => {
     const { events } = await playOne(SETTLED_TURN)
     const second = await playOne([NEEDS_ROLL, ...NARRATED])
 
@@ -317,7 +322,7 @@ test.group('Turn events | what goes over the wire', (group) => {
       [...events.recorded, ...second.events.recorded].map(({ ref, event }) => toMessage(ref, event))
     )
 
-    for (const leak of ['dice', 'threshold', 'total', 'skillValue', 'street_seen']) {
+    for (const leak of ['appliedModifiers', 'origin', 'actionType', 'street_seen']) {
       assert.notInclude(wire, leak)
     }
   })

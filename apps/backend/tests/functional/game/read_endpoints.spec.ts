@@ -352,13 +352,18 @@ test.group('GET /sessions/:id/turns', (group) => {
 
     assert.equal(turn.playerInput, 'Action 1')
     assert.equal(turn.narration, 'Narration 1')
-    /** No item weighed, none changed. */
+    /** The roll in full, as at the table: no modifier weighed. */
     assert.deepEqual(turn.roll, {
       skill: { reference: 'persuasion', label: 'Persuasion' },
       characteristic: null,
+      value: 45,
+      baseChance: 45,
+      difficulty: 'average',
+      modifiers: [],
+      chance: 45,
+      roll: 8,
       result: 'success',
       degree: 'special',
-      items: [],
     })
     assert.deepEqual(turn.effects, {
       hitPointsDelta: -2,
@@ -367,15 +372,23 @@ test.group('GET /sessions/:id/turns', (group) => {
     })
   })
 
-  test('names the items that weighed on a roll, never their value', async ({ client, assert }) => {
+  test('shows every modifier of a roll with its value, a circumstance by its label', async ({
+    client,
+    assert,
+  }) => {
     const player = await User.findOrFail(await createUser())
     const session = await arrangeGame(player.id)
     const turn = await completedTurn(session.id, 1)
     turn.rollResult = {
       ...turn.rollResult,
       appliedModifiers: [
-        { source: 'contextual', origin: 'favorable_reputation', value: 1 },
-        { source: 'item', origin: 'letter_to_treville', value: 1 },
+        {
+          source: 'contextual',
+          origin: 'favorable_reputation',
+          effect: 'minor_bonus',
+          value: 10,
+        },
+        { source: 'item', origin: 'letter_to_treville', value: 10 },
       ],
     }
     await turn.save()
@@ -383,9 +396,15 @@ test.group('GET /sessions/:id/turns', (group) => {
     const response = await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player)
     const [read] = dataOf(response)
 
-    assert.deepEqual(read.roll.items, [
-      { reference: 'letter_to_treville', label: 'Letter for M. de Tréville' },
+    assert.deepEqual(read.roll.modifiers, [
+      { source: 'contextual', effect: 'minor_bonus', value: 10 },
+      {
+        source: 'item',
+        item: { reference: 'letter_to_treville', label: 'Letter for M. de Tréville' },
+        value: 10,
+      },
     ])
+    /** The words arbitration named the circumstance with never leave. */
     assert.notInclude(JSON.stringify(read), 'favorable_reputation')
     assert.notInclude(JSON.stringify(read), 'appliedModifiers')
   })
@@ -484,7 +503,7 @@ test.group('GET /sessions/:id/turns', (group) => {
     ])
   })
 
-  test('never exposes the dice, the threshold, the total or the flags', async ({
+  test('never exposes the circumstance arbitration named, nor the flags', async ({
     client,
     assert,
   }) => {
@@ -495,7 +514,7 @@ test.group('GET /sessions/:id/turns', (group) => {
     const response = await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player)
     const body = response.text()
 
-    for (const leak of ['baseChance', '"chance"', 'letter_read']) {
+    for (const leak of ['appliedModifiers', 'actionType', 'letter_read']) {
       assert.notInclude(body, leak)
     }
   })

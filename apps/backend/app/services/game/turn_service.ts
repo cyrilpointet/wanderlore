@@ -12,7 +12,6 @@ import type { Clock } from '#services/clock'
 import type { JobQueue } from '#services/queue/types'
 import type { TurnEvents, TurnRef } from '#services/game/turn_events'
 import { toNarrationOutcome } from '#services/rules/engine'
-import type { AppliedModifier } from '#services/rules/types'
 
 import {
   ConcurrentTurnError,
@@ -539,10 +538,7 @@ export class TurnService {
 
     this.#events.emit(refOf(turn), {
       type: 'roll_resolved',
-      skill: base.kind === 'skill' ? base.skill : null,
-      characteristic: base.kind === 'characteristic' ? base.characteristic : null,
-      ...toNarrationOutcome(resolution),
-      items: itemsThatWeighed(resolution.appliedModifiers),
+      resolution,
       labels: new ContentLabels(scene.world, turn.language),
     })
 
@@ -726,12 +722,6 @@ function buildContext(
 }
 
 /** The definitions of the items that moved a roll: which, never by how much. */
-function itemsThatWeighed(modifiers: AppliedModifier[]): string[] {
-  return [
-    ...new Set(modifiers.filter(({ source }) => source === 'item').map(({ origin }) => origin)),
-  ]
-}
-
 /** Every way an item of the scene can be named: its definition, and its handle if it has one. */
 function itemReferencesOf(items: ItemsInScene): string[] {
   const held = [...items.character, ...items.npcs.flatMap((npc) => npc.items), ...items.location]

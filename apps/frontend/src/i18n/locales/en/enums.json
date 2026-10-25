@@ -17,12 +17,32 @@
     "success": "Success",
     "failure": "Failure"
   },
-  "margin": {
-    "critical_success": "Critical success",
-    "comfortable": "Clear success",
-    "narrow": "Narrow success",
-    "minor_failure": "Failure",
-    "critical_failure": "Critical failure"
+  "degree": {
+    "critical": "Critical success",
+    "special": "Special success",
+    "success": "Success",
+    "failure": "Failure",
+    "fumble": "Fumble"
+  },
+  "difficulty": {
+    "easy": "Easy",
+    "average": "Average",
+    "difficult": "Difficult"
+  },
+  "contextualEffect": {
+    "major_bonus": "Strong advantage",
+    "minor_bonus": "Advantage",
+    "minor_penalty": "Hindrance",
+    "major_penalty": "Strong hindrance"
+  },
+  "characteristic": {
+    "STR": "Strength",
+    "CON": "Constitution",
+    "SIZ": "Size",
+    "INT": "Intelligence",
+    "POW": "Power",
+    "DEX": "Dexterity",
+    "CHA": "Charisma"
   },
   "itemChange": {
     "gained": "You gain {{item}}",

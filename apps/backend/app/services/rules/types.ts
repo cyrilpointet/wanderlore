@@ -63,13 +63,14 @@ export type RollBase =
  * One modifier counted in a roll, with where it came from: proposed by
  * arbitration for the situation, or read by the backend from an item. Kept
  * apart so the log always tells which side moved the chance.
+ *
+ * `origin` is what the modifier stems from: the circumstance arbitration
+ * named in free English, or the reference of an item. A circumstance keeps
+ * its label too, which is what the player is shown of it.
  */
-export type AppliedModifier = {
-  source: 'contextual' | 'item'
-  /** Stable reference of what the modifier stems from: a circumstance, an item. */
-  origin: string
-  value: number
-}
+export type AppliedModifier =
+  | { source: 'contextual'; origin: string; effect: ContextualEffect; value: number }
+  | { source: 'item'; origin: string; value: number }
 
 /**
  * How much a circumstance weighs on a roll, as arbitration qualifies it. A

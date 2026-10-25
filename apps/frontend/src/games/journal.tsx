@@ -2,7 +2,7 @@ import { ArrowDown, Dice5, Heart, MapPin, Package } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { Margin } from '@/api/enums'
+import type { Degree } from '@/api/enums'
 import { paragraphs } from './presentation'
 import type { Game, ItemChangeEffect, Roll, Turn } from './queries'
 import { useStickToBottom } from './use_stick_to_bottom'
@@ -90,39 +90,55 @@ const ROLL_TONE = {
   failure: 'border-danger/40 bg-danger/10 text-danger',
 }
 
-/** Critical outcomes stand out, a narrow success stays quiet. */
-const MARGIN_EMPHASIS: Record<Margin, string> = {
-  critical_success: 'font-semibold',
-  comfortable: '',
-  narrow: 'opacity-80',
-  minor_failure: '',
-  critical_failure: 'font-semibold',
+/** A critical or a fumble stands out; the other degrees read plainly. */
+const DEGREE_EMPHASIS: Record<Degree, string> = {
+  critical: 'font-semibold',
+  special: '',
+  success: '',
+  failure: '',
+  fumble: 'font-semibold',
 }
 
 /**
- * Which skill was rolled and how it went — never a number. The colour only
- * doubles the words, it never carries the outcome alone. When an item weighed
- * on the roll, it is named, never with what it was worth.
+ * The roll in full, as at the table: what was rolled and at how much, the
+ * difficulty when it is not average, each modifier with its value, the chance
+ * when it moved, the d100 and the degree. Every number comes from the backend;
+ * the colour only doubles the words, it never carries the outcome alone.
  */
 export function RollChip({ roll }: { roll: Roll }) {
   const { t } = useTranslation('game')
 
+  const parts = [
+    roll.skill !== null
+      ? t('journal.roll.skill', { name: roll.skill.label, value: roll.value })
+      : t('journal.roll.characteristic', {
+          name: t(`characteristic.${roll.characteristic!}`, { ns: 'enums' }),
+          value: roll.value,
+        }),
+    ...(roll.difficulty === 'average'
+      ? []
+      : [t(`difficulty.${roll.difficulty}`, { ns: 'enums' })]),
+    ...roll.modifiers.map((modifier) =>
+      t('journal.roll.modifier', {
+        label:
+          modifier.source === 'item'
+            ? modifier.item.label
+            : t(`contextualEffect.${modifier.effect}`, { ns: 'enums' }),
+        value: modifier.value,
+      })
+    ),
+    ...(roll.chance === roll.value ? [] : [t('journal.roll.chance', { chance: roll.chance })]),
+    t('journal.roll.rolled', { roll: roll.roll }),
+    t(`degree.${roll.degree}`, { ns: 'enums' }),
+  ]
+
   return (
     <p className="flex justify-center">
       <span
-        className={`inline-flex items-center gap-2 rounded-sm border px-3 py-1 text-label ${ROLL_TONE[roll.result]} ${MARGIN_EMPHASIS[roll.margin]}`}
+        className={`inline-flex flex-wrap items-center justify-center gap-x-2 rounded-sm border px-3 py-1 text-label ${ROLL_TONE[roll.result]} ${DEGREE_EMPHASIS[roll.degree]}`}
       >
         <Dice5 aria-hidden className="size-4 shrink-0" />
-        {roll.items.length > 0
-          ? t('journal.rollWith', {
-              skill: roll.skill.label,
-              outcome: t(`margin.${roll.margin}`, { ns: 'enums' }),
-              items: roll.items.map((item) => item.label),
-            })
-          : t('journal.roll', {
-              skill: roll.skill.label,
-              outcome: t(`margin.${roll.margin}`, { ns: 'enums' }),
-            })}
+        {parts.join(' · ')}
       </span>
     </p>
   )

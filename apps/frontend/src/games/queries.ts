@@ -2,9 +2,12 @@ import { queryOptions } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
 import type {
+  Characteristic,
+  ContextualEffect,
+  Degree,
+  Difficulty,
   GameStatus,
   ItemChange,
-  Margin,
   Result,
   ScenarioStatus,
   TurnStatus,
@@ -65,13 +68,30 @@ export type Game = GameHeader & {
   pendingTurn: { id: string } | null
 }
 
-/** Only what the player may see of a roll: never the dice, the threshold or the total. */
+/** A modifier of a roll: a circumstance by its label of effect, an item by its name. */
+export type RollModifier =
+  | { source: 'contextual'; effect: ContextualEffect; value: number }
+  | { source: 'item'; item: ContentLabel; value: number }
+
+/**
+ * A roll in full, as at the table: what was rolled and at how much, the
+ * difficulty, the modifiers, the chance, the d100 and the degree. Everything
+ * comes computed from the backend.
+ */
 export type Roll = {
-  skill: ContentLabel
+  /** The skill rolled, or null for a characteristic roll. */
+  skill: ContentLabel | null
+  characteristic: Characteristic | null
+  /** The skill in percent, or the characteristic's score. */
+  value: number
+  baseChance: number
+  difficulty: Difficulty
+  modifiers: RollModifier[]
+  chance: number
+  /** The d100, 1 to 100. */
+  roll: number
   result: Result
-  margin: Margin
-  /** The items that weighed on the roll — which, never by how much. */
-  items: ContentLabel[]
+  degree: Degree
 }
 
 /** What happened to one of the character's items, with whom when someone was involved. */
