@@ -87,8 +87,10 @@ Ces principes découlent des invariants du projet. Ils s'appliquent à toutes le
 | 3 | La narration s'affiche progressivement (streaming) |
 | 4 | Onglet inventaire dans la fiche (lecture seule) |
 | 5 | Démarrer une partie à partir d'un scénario ; nom de l'univers et libellés venus de la base |
+| 6 | Fiche au format BRP (caractéristiques, compétences en pourcentage) ; détail de chaque jet dans le journal |
 | 8 | Rien de visible (mémoire long terme côté backend) |
 | 9 | Création de personnage guidée, combat en rounds, pause / reprise, écrans de fin |
+| 9bis | Santé mentale, passions et réputation sur la fiche, selon l'univers |
 | 10 | Inscription, mot de passe oublié, choix de la langue, paramètres du compte |
 
 Les évolutions des phases 3 à 10 sont détaillées en section 9. **Elles ne s'implémentent pas
@@ -562,12 +564,20 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   les scénarios publiés ; un compte `game_master` y voit aussi les brouillons, pour les
   tester. Le nom de l'univers et tous les libellés viennent de la base. Le back-office est
   un package séparé.
+- **Phase 6 — Bascule sur le BRP.** La fiche montre les sept caractéristiques, les
+  compétences en pourcentage et les points de vie. **La pastille de jet montre désormais le
+  détail du jet** : compétence ou caractéristique et sa valeur, modificateurs appliqués avec
+  leur valeur (une circonstance par son label d'effet, un objet par son nom), chance finale,
+  résultat du d100 et degré de réussite. Tout vient du backend, le front ne calcule rien.
 - **Phase 8 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
   probablement nécessaire.
 - **Phase 9 — Cycle de vie et combat.** Création de personnage guidée ; combat en rounds
   (même pipeline, donc même journal, avec un repère visuel de round et l'état de
   l'adversaire si le backend le transmet) ; mise en pause et reprise ; écrans de fin
   (victoire, mort du personnage, abandon).
+- **Phase 9bis — Règles optionnelles par univers.** Santé mentale, passions et réputation
+  sur la fiche, pour les seuls univers qui les emploient ; un jet caché n'affiche pas son
+  détail.
 - **Phase 10 — Ouverture.** Inscription, validation d'email, mot de passe oublié ; choix de la
   langue de la partie et de l'interface (traductions ajoutées à l'i18n posée en Phase 2) ; paramètres du
   compte ; messages de modération.

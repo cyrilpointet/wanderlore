@@ -30,7 +30,7 @@ Les invariants non négociables sont dans `CLAUDE.md` (déjà chargé). Ce skill
 | Contrat d'API front/backend, événements SSE | `doc/architecture-mj-virtuel-llm.md` | 8bis |
 | Tables, colonnes, exemples de contenu JSONB | `doc/base-de-donnees-mj-virtuel-postgresql.md` | 2, 3, 4, 5 |
 | Index, pgvector, partitionnement, profils d'accès | `doc/base-de-donnees-mj-virtuel-postgresql.md` | 7 |
-| Formule de jet, difficulté, marge, dégâts, combat | `doc/systeme-regles-jeu-mj-virtuel.md` | 2, 4, 6, 7, 8 |
+| Formule de jet, difficulté, degrés, dégâts, combat (BRP) | `doc/systeme-regles-jeu-mj-virtuel.md` | 2, 4, 6, 7, 8 |
 | Modificateurs contextuels vs objets | `doc/systeme-regles-jeu-mj-virtuel.md` | 5 |
 | Contraintes à inscrire dans le prompt d'arbitrage | `doc/systeme-regles-jeu-mj-virtuel.md` | 10 |
 | Contenu et critère de sortie d'une phase | `doc/roadmap-mj-virtuel-llm.md` | Phase concernée |
@@ -70,24 +70,33 @@ pour la narration (D), **rien** pour l'extraction (E).
 
 ## Moteur de règles — l'essentiel
 
+Le **BRP de Chaosium** (édition 2023, licence ORC), pour tous les univers, depuis la Phase 6.
+
 ```
-Résultat = 2d6 + valeur de compétence + modificateurs contextuels + modificateurs d'objets
+d100 ≤ chance
+chance = base × difficulté + modificateurs contextuels + modificateurs d'objets
 ```
 
-- Seuils par défaut : `easy` 7 · `medium` 9 · `hard` 11 · `very_hard` 13.
-- Marge : `≥+5 critical_success` · `+1..+4 comfortable` · `0 narrow` ·
-  `-1..-3 minor_failure` · `≤-4 critical_failure`.
-- Dégâts = dégâts du coup (marge ÷ 2, arrondi au supérieur, au moins 1) + bonus de l'arme
-  (modificateur d'objet ciblant les dégâts). Pas de second jet.
-- Modificateurs contextuels : labels qualitatifs convertis par le backend (`minor_bonus` +1,
-  `major_bonus` +2, `minor_penalty` -1, `major_penalty` -2), 3 au plus.
+- Base : la compétence associée à l'`action_type` (absente de la fiche = sa chance de base),
+  ou une caractéristique × 5.
+- Difficulté : `easy` × 2 · `average` × 1 · `difficult` ÷ 2 (arrondi au supérieur), appliquée
+  à la base seule ; les modificateurs s'ajoutent après. 01–05 réussit, 96–00 échoue toujours.
+- Degrés (`degree`, ex-`margin`) : `critical` ≤ chance/20 · `special` ≤ chance/5 · `success` ·
+  `failure` · `fumble` (5 % supérieurs de la plage d'échec, 00 toujours).
+- Modificateurs contextuels : labels convertis par le backend (`minor_bonus` +10,
+  `major_bonus` +20, `minor_penalty` -10, `major_penalty` -20), 3 au plus.
+- Sept caractéristiques fixes (`STR`, `CON`, `SIZ`, `INT`, `POW`, `DEX`, `CHA`) ; points de vie
+  du personnage = (CON + SIZ) ÷ 2.
+- Dégâts = dés de l'arme (profil d'arme) + modificateur de dégâts (STR + SIZ) − armure ;
+  critique au maximum, armure ignorée. Posée en Phase 6, branchée en Phase 9.
+- Le narrateur ne reçoit que `result` + `degree` ; le joueur voit le détail du jet.
 - Combat = répétition du pipeline standard, même moteur pour joueur et PNJ. Pas de
-  sous-système dédié.
+  sous-système dédié ; matrice attaque / défense et jets opposés en Phase 9.
 
-**Fixe dans le code** : la formule, l'échelle de difficulté, la logique de marge, la
-formule de dégâts.
-**Variable en base, par univers** : liste des attributs, liste des compétences et leur
-rattachement, barème alternatif éventuel, modificateurs possibles, conditions spécifiques.
+**Fixe dans le code** : la formule, l'échelle de difficulté, les degrés, le barème
+contextuel, les caractéristiques et leurs dérivés, la formule de dégâts.
+**Variable en base, par univers** : compétences (catégorie, chance de base), catégories
+d'action et ce qui les résout, objets et leurs modificateurs, profils de PNJ.
 
 Ajouter un univers ne doit **jamais** exiger de toucher au moteur de règles.
 
@@ -126,9 +135,11 @@ jamais de valeur numérique de règle — uniquement des labels qualitatifs.
 | 4 | `inventory_items` et modificateurs d'objets | — |
 | 5 | Multi-univers (`worlds`, `scenarios`), package `back-office` | `game_master` |
 | 5bis | Gestion des comptes | `superadmin` |
+| 6 | Bascule sur le système BRP (Chaosium, licence ORC) | — |
 | 7 | `lore_fragments`, filtrage par tags | — |
 | 8 | `narrative_summaries`, mémoire long terme | — |
 | 9 | Combat étendu, cycle de vie complet de la partie | — |
+| 9bis | Règles optionnelles par univers (santé mentale, passions, réputation) | — |
 | 10 | Production-ready : observabilité, versionning de prompts, modération, beta test | — |
 
 Les simplifications d'une phase sont **volontaires** — ne pas implémenter le pipeline

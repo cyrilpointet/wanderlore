@@ -44,7 +44,7 @@ Pas de deadline formelle — projet mené sur le temps libre du porteur, sans co
 
 **Risque identifié** : un projet sans échéance peut dériver indéfiniment. Un rythme indicatif (ex. un jalon de roadmap par mois, ou un volume d'heures hebdomadaire) est recommandé comme repère, sans devenir une contrainte qui nuirait au plaisir de développement (objectif premier du projet, voir Pourquoi).
 
-**Séquencement** : phasé en 12 étapes (Phase 0 à 10, plus 5bis) selon la roadmap dédiée, chaque phase restant jouable de bout en bout avant de passer à la suivante.
+**Séquencement** : phasé en 13 étapes (Phase 0 à 10, plus 5bis et 9bis) selon la roadmap dédiée, chaque phase restant jouable de bout en bout avant de passer à la suivante.
 
 ---
 

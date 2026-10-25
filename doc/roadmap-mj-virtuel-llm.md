@@ -190,9 +190,9 @@ Tranchées à l'ouverture de la phase (epic `KAN-44`) :
 - **Trois détenteurs : le personnage, un PNJ, un lieu.** Un objet de quête peut être aux mains d'un PNJ ou rangé dans un lieu ; un PNJ qui prend la lettre du joueur l'ajoute à son inventaire ; une lettre cachée dans un coffre passe dans celui du lieu. Donner, voler, cacher, poser, ramasser sont des **transferts** ; `gone` est réservé à l'objet détruit ou consommé. À la mort d'un PNJ, ses objets passent au lieu courant.
 - **Table `inventory_items`** : une ligne par instance, trois clés étrangères de détenteur dont exactement une renseignée, handle d'exemplaire stable d'un détenteur à l'autre, état `carried` / `equipped` / `gone`, `equipped` réservé au personnage (document de base de données).
 - **Objets en scène** : ceux du personnage, des PNJ présents et du lieu courant. Seuls eux sont transmis au pipeline et peuvent changer de mains dans un tour. Pas d'indicateur « caché » : le narrateur ne révèle pas sans raison ce que détient un PNJ ou un lieu.
-- **Modificateurs contextuels** : labels qualitatifs (`minor_bonus` +1, `major_bonus` +2, `minor_penalty` -1, `major_penalty` -2), convertis par le backend, 3 au plus par jet (règles, section 5.1).
+- **Modificateurs contextuels** : labels qualitatifs (`minor_bonus` +1, `major_bonus` +2, `minor_penalty` -1, `major_penalty` -2), convertis par le backend, 3 au plus par jet (règles, section 5.1). Barème passé en pourcentage en Phase 6.
 - **Modificateurs d'objets** : ne comptent que pour leur détenteur, une fois par définition, sans emplacements d'équipement (règles, section 5.2).
-- **Dégâts = dégâts du coup + bonus de l'arme**, le bonus étant un modificateur d'objet ciblant les dégâts ; dégâts du coup = marge ÷ 2 arrondie au supérieur, au moins 1 (règles, section 7). La formule est posée et testée ici, son branchement dans le tour attend la Phase 9.
+- **Dégâts = dégâts du coup + bonus de l'arme**, le bonus étant un modificateur d'objet ciblant les dégâts ; dégâts du coup = marge ÷ 2 arrondie au supérieur, au moins 1 (règles, section 7). La formule est posée et testée ici, son branchement dans le tour attend la Phase 9. Remplacée en Phase 6 par celle du BRP, la marge disparaissant.
 - **Arme ordinaire d'un PNJ** : simple référence dans son profil de combat ; un objet spécial est détenu par lui comme tout objet (règles, section 8).
 - **Durabilité et charges différées** ; les consommables passent par la quantité.
 - **`world_states.world_objects` retiré**, remplacé par l'inventaire des lieux.
@@ -310,6 +310,48 @@ Tranchés en cours de phase :
 
 ---
 
+## Phase 6 — Bascule sur le système BRP
+
+**Objectif** : remplacer le moteur de règles maison (2d6 + compétence) par le *Basic Roleplaying* de Chaosium (édition 2023, licence ORC), pour s'appuyer sur un système existant et éprouvé plutôt que sur des règles inventées. Insérée avant le lore étendu : tout contenu écrit ensuite l'est directement au format BRP.
+
+### Décisions de cadrage
+
+Tranchées à l'ouverture de la phase (2026-10-25, epic `KAN-78`), d'après une lecture complète de l'« ORC Content Document » du livre (détail : système de règles, sections 2 à 7) :
+
+- **Le BRP pour tous les univers**, Trois Mousquetaires et Mythe compris : un seul système, un seul moteur.
+- **Jet d100 sous la chance**, calculée par le backend : base (compétence, ou caractéristique × 5), multipliée par la difficulté, puis modificateurs contextuels et d'objets ajoutés. 01–05 réussit toujours, 96–00 échoue toujours.
+- **Difficulté en trois labels** : `easy` (× 2), `average`, `difficult` (÷ 2). Les modes de résolution de l'arbitrage (succès automatique, échec automatique, jet) ne changent pas et couvrent l'« automatique » et l'« impossible » du livre.
+- **Modificateurs contextuels** : mêmes quatre labels, 3 au plus, barème en pourcentage — `minor` ±10, `major` ±20. Le livre va jusqu'à ±50 ; les cas extrêmes passent par la difficulté, pour borner l'influence de l'arbitrage.
+- **Sept caractéristiques fixes** (`STR`, `CON`, `SIZ`, `INT`, `POW`, `DEX`, `CHA`), enum fermé du système : **les attributs par univers disparaissent**. Une règle de résolution désigne une compétence ou une caractéristique (jet à × 5) ; chaque univers choisit d'exposer ou non des jets de caractéristique comme `action_type`.
+- **Compétences en pourcentage**, avec une catégorie (enum fermé) et une chance de base (fixe, ou caractéristique × multiplicateur) ; **une compétence absente de la fiche vaut sa chance de base**. Une spécialité est une compétence à part entière ; pas de bonus de catégorie.
+- **Cinq degrés de réussite** (`critical`, `special`, `success`, `failure`, `fumble`) remplacent les paliers de marge ; le champ **`margin` devient `degree`**.
+- **Le joueur voit le détail de chaque jet** : compétence ou caractéristique et sa valeur, modificateurs appliqués avec leur valeur (une circonstance par son label d'effet, un objet par son nom), chance finale, résultat du d100, degré. Transmis par `roll_resolved` et la lecture du tour ; le front n'en calcule rien. **Le narrateur, lui, ne reçoit toujours que le résultat et le degré** : l'invariant tient.
+- **Points de vie du personnage dérivés** de la fiche, `(CON + SIZ) ÷ 2` ; ceux des PNJ restent saisis. Les points de vie totaux attendent la Phase 9.
+- **Modificateurs d'objets en pourcentage**, même mécanisme. Le bonus d'arme disparaît, remplacé par un **profil d'arme** sur la définition d'objet : compétence, dés de dégâts, usage du modificateur de dégâts, type d'effet spécial.
+- **Formule de dégâts du BRP** (dés de l'arme + modificateur de dégâts − armure ; critique au maximum, armure ignorée) posée et testée ici ; son branchement reste en Phase 9. La décision « pas de second jet » est abandonnée : un jet de dés backend ne coûte aucun appel LLM.
+- **Aucune règle optionnelle** : pas de jet opposé, de table de résistance, de progression ni de drapeau de règle par univers. Santé mentale, Passions, Réputation et jets cachés attendent la Phase 9bis.
+- **Bascule sans reprise de données** : les parties sont vidées par `game:reset --no-seed` avant la migration, le contenu créé à la main dans les bases de dev est supprimé plutôt que converti, et le seeder réécrit les deux univers au format BRP.
+- **Licence ORC** : notice à la racine du dépôt et mention « Powered by BRP » dans le front ; le texte du livre n'est jamais recopié.
+
+### Contenu
+
+- **Moteur de règles** (`app/services/rules/`) : formule d100, difficulté multiplicative, bornes, degrés de réussite, barème contextuel, jets de caractéristique, formule de dégâts du BRP. `DiceService` gagne le d100 et le jet d'une expression de dés (`1D6+1`).
+- **Tour et prompts** : labels de difficulté et de degré dans l'arbitrage, la narration (guide de lecture des degrés) et l'extraction ; validation de la sortie d'arbitrage ; trace et `turn_log` au nouveau format ; détail du jet dans `roll_resolved` ; règle de l'attaque ouverte sur les nouveaux degrés.
+- **Contenu** : types de contenu (compétences avec catégorie et chance de base, règles de résolution vers compétence ou caractéristique, prétiré à sept caractéristiques, profil d'arme), vérification de cohérence (`checkScenario`), réécriture des Trois Mousquetaires et du Mythe d'après les valeurs du livre (chances de base, armes, profils de PNJ).
+- **Base** : migrations des colonnes de contenu et des fiches de personnage ; plus de colonne d'attributs.
+- **Back-office** : éditeur d'univers sans attributs, compétences avec catégorie et chance de base, règles de résolution, prétiré, profils de combat et d'arme.
+- **Front joueur** : fiche (caractéristiques, compétences en pourcentage, points de vie), détail de chaque jet dans le journal, enums et traductions.
+- **Documentation** : architecture, base de données, flux du tour, cahier des charges du front et synthèse alignés sur le BRP ; notice ORC.
+
+### Critère de sortie de phase
+
+- Une partie des Trois Mousquetaires et une partie du Mythe se jouent de bout en bout sur le moteur BRP : jet d100, difficulté en label, cinq degrés de réussite, compétences en pourcentage avec chance de base.
+- Le joueur voit le détail de chaque jet ; le narrateur n'en reçoit que le résultat et le degré.
+- Un `game_master` édite compétences, règles de résolution, prétirés et profils au format BRP depuis le back-office.
+- Il ne reste aucune trace du moteur 2d6 (code, contenu, prompts, documentation), et la notice ORC est en place.
+
+---
+
 ## Phase 7 — Lore étendu et RAG
 
 **Objectif** : dépasser les limites de la connaissance native du LLM sur un univers, ou construire un lore original détaillé.
@@ -351,7 +393,9 @@ Tranchés en cours de phase :
 ### Contenu
 
 - Combat modélisé comme séquence de jets alternés joueur/PNJ, conformément au modèle générique déjà défini dans le système de règles — cette phase implémente concrètement la boucle round par round, le modèle mécanique sous-jacent existant déjà depuis la Phase 3/4.
-- Branchement de la formule de dégâts posée en Phase 4 (dégâts du coup + bonus de l'arme) : l'arbitrage désigne attaquant et cible, le backend calcule les dégâts et les applique, et l'extraction cesse de chiffrer les blessures. Une arme détenue par un PNJ l'emporte sur l'arme ordinaire de son profil.
+- Branchement de la formule de dégâts du BRP posée en Phase 6 (dés de l'arme + modificateur de dégâts − armure) : l'arbitrage désigne attaquant et cible, le backend calcule les dégâts et les applique, et l'extraction cesse de chiffrer les blessures. Une arme détenue par un PNJ l'emporte sur l'arme ordinaire de son profil, et c'est l'arme qui désigne la compétence d'attaque.
+- Reste du combat du BRP (système de règles, sections 8 et 11) : matrice attaque / défense avec parade et esquive, jets opposés et table de résistance, armure, blessures grave et mortelle, effets spéciaux, table réduite de maladresses ; choix des points de vie totaux pour le personnage.
+- Progression du personnage : tests d'expérience et jets d'amélioration du BRP, en fin de scénario.
 - Cycle de vie complet de la partie :
   - création de personnage guidée (au-delà d'un simple formulaire technique),
   - conditions de fin de partie (victoire, mort du personnage, abandon volontaire),
@@ -365,6 +409,23 @@ Tranchés en cours de phase :
 
 - Un combat complet est jouable de bout en bout avec plusieurs rounds.
 - Une partie peut être créée, mise en pause, reprise et menée jusqu'à une fin définie.
+
+---
+
+## Phase 9bis — Règles optionnelles par univers
+
+**Objectif** : activer, univers par univers, les règles optionnelles du BRP qui font le genre — sans toucher au moteur commun. Placée après la Phase 9, dont elle réutilise la progression (une passion s'améliore comme une compétence).
+
+### Contenu
+
+- **Drapeaux de règles par univers** : chaque univers déclare les règles optionnelles qu'il emploie ; un univers sans drapeau joue le BRP de base.
+- **Santé mentale** (Mythe) : score de santé mentale, jet sous ce score face à l'horreur, pertes et folie temporaire tirées par le backend. L'arbitrage ou l'extraction ne fournit qu'un déclencheur en label fermé, choisi dans la liste de l'univers ; le narrateur ne reçoit qu'un état qualitatif.
+- **Passions et Réputation** (Trois Mousquetaires) : honneur, loyauté, amour, renommée, comme bonus ou malus tirés par le backend, d'après un label fermé.
+- **Jets cachés** : une compétence marquée cachée est jetée sans que le joueur en voie le détail, et le narrateur reçoit la consigne de taire ou d'égarer sur un échec — l'exception prévue à la règle « le joueur voit le détail de chaque jet » (Phase 6).
+
+### Critère de sortie de phase
+
+- Le Mythe se joue avec la santé mentale, les Trois Mousquetaires avec les passions et la réputation, chaque univers n'activant que ses propres règles.
 
 ---
 
@@ -409,9 +470,11 @@ Tranchés en cours de phase :
 | 4 | Inventaire et modificateurs d'objets | — |
 | 5 | Généricité multi-univers, back-office minimal | `game_master` |
 | 5bis | Gestion des comptes | `superadmin` |
+| 6 | Bascule sur le système BRP | — |
 | 7 | Lore étendu et RAG | — |
 | 8 | Mémoire long terme | — |
 | 9 | Combat étendu, cycle de vie complet | — |
+| 9bis | Règles optionnelles par univers | — |
 | 10 | Production-ready | — |
 
 ---
@@ -463,6 +526,7 @@ Ces points sont pénibles à rattraper après coup :
 | 3 | Un test de contrat par étape du pipeline, filet de sécurité lors des modifications de prompt |
 | 4 | Séparation des deux familles de modificateurs, conditions `owned`/`equipped`, traçabilité de l'origine, refus d'un identifiant d'objet hors liste ou hors scène, transferts entre détenteurs, formule de dégâts |
 | 5 | Contrôle d'accès par rôle, route par route — rend continu l'audit prévu en Phase 10 |
+| 6 | Moteur BRP : bornes 01–05 et 96–00, seuils des degrés, difficulté multiplicative, ordre des modificateurs, jets de caractéristique, formule de dégâts sur dés simulés ; le narrateur ne reçoit jamais le détail du jet |
 | 7 | Qualité de récupération du lore : sur un jeu annoté, les bons fragments remontent-ils, et avec quel bruit |
 | 8 | Le résumé ne perd pas les faits critiques (eval, pas test) |
 | 10 | Evals automatisés, détection de dérive de prompt, taux d'échec de schéma |
