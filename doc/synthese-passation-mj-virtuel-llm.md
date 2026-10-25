@@ -126,8 +126,8 @@ Ce document de synthèse s'appuie sur cinq documents détaillés, à fournir en 
 |---|---|
 | **architecture-mj-virtuel-llm.md** | Pipeline complet du tour de jeu (5 étapes), modèle de données conceptuel, gestion du contexte (lore/state/mémoire), exemple de flow complet avec prompts LLM détaillés, principes de sécurité anti prompt-injection, architecture applicative AdonisJS |
 | **base-de-donnees-mj-virtuel-postgresql.md** | Structure complète des tables PostgreSQL, types de colonnes, exemples de contenu JSONB, schéma relationnel, recommandations spécifiques PostgreSQL (JSONB/GIN, pgvector, partitionnement) |
-| **systeme-regles-jeu-mj-virtuel.md** | Système de règles générique (formule 2d6 + compétence + modificateurs), attributs/compétences paramétrables par univers, échelle de difficulté, gestion des modificateurs contextuels (LLM) vs modificateurs d'objets (backend), points de vie et dégâts, modélisation du combat |
-| **roadmap-mj-virtuel-llm.md** | Roadmap détaillée en phases (0 à 9 + 5bis), contenu et critères de sortie de chaque phase, intégration de la gestion de comptes (`player` / `game_master` / `superadmin`), **stratégie de test transverse**, synthèse et points ouverts |
+| **systeme-regles-jeu-mj-virtuel.md** | Système de règles : le BRP de Chaosium (licence ORC) depuis la Phase 6 — d100 sous la chance, cinq degrés, sept caractéristiques fixes, compétences en pourcentage paramétrables par univers, échelle de difficulté, gestion des modificateurs contextuels (LLM) vs modificateurs d'objets (backend), points de vie et dégâts, modélisation du combat |
+| **roadmap-mj-virtuel-llm.md** | Roadmap détaillée en phases (0 à 10 + 5bis et 9bis), contenu et critères de sortie de chaque phase, intégration de la gestion de comptes (`player` / `game_master` / `superadmin`), **stratégie de test transverse**, synthèse et points ouverts |
 | **aide-memoire-dev-testeur.md** | Aide-mémoire du dev testeur : toutes les commandes (démarrage, migrations, seeders, remise à zéro des parties, consommation de jetons, comptes, tests, codegen), les comptes de test et les variables d'environnement utiles |
 | **cahier-des-charges-front-mj-virtuel.md** | Cahier des charges du front joueur : principes, parcours et écrans de la Phase 2, machine d'état d'un tour, gestion des erreurs, besoins d'API, direction visuelle, évolutions par phase, et base de prompts pour générer les maquettes avec Stitch |
 
@@ -158,10 +158,11 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - **File de jobs substituable, pg-boss puis BullMQ** : port + adaptateur, pg-boss (PostgreSQL) tant qu'il n'y a qu'une instance — pas de Redis à héberger —, BullMQ au passage à plusieurs instances, qui ramène Redis pour Transmit. Condition de la bascule : idempotence, sérialisation des tours et événements SSE ne dépendent jamais de la file (voir architecture, section 8bis).
 
 ### Système de règles
-- Formule unique : `2d6 + valeur de compétence + modificateurs`, comparée à un seuil de difficulté qualitatif (facile/moyenne/difficile/très difficile).
-- Attributs et compétences définis par univers (donnée, pas structure figée dans le code).
-- **Modificateurs contextuels** (situationnels, proposés par le LLM en labels qualitatifs — `minor_bonus` +1, `major_bonus` +2, `minor_penalty` -1, `major_penalty` -2 —, convertis par le backend, 3 au plus par jet) strictement séparés des **modificateurs d'objets** (fixes, calculés par le backend à partir des objets du détenteur, une fois par définition, jamais chiffrés par le LLM).
-- **Dégâts = dégâts du coup + bonus de l'arme** : les dégâts du coup se dérivent de la marge du jet d'attaque (÷ 2 arrondi au supérieur, au moins 1) — pas de second jet —, et le bonus d'arme est un modificateur d'objet ciblant les dégâts. Formule posée en Phase 4, branchée dans le tour en Phase 9.
+- **Le BRP de Chaosium pour tous les univers** (Phase 6, licence ORC) : d100 sous la chance, la chance étant la compétence — ou la caractéristique × 5 — multipliée par une difficulté qualitative (`easy` × 2, `average`, `difficult` ÷ 2), plus les modificateurs ; cinq degrés de réussite (critique, spécial, réussite, échec, maladresse).
+- Sept caractéristiques fixes du système ; compétences en pourcentage définies par univers, avec catégorie et chance de base (donnée, pas structure figée dans le code).
+- **Le joueur voit le détail de chaque jet** ; le narrateur n'en reçoit que le résultat et le degré.
+- **Modificateurs contextuels** (situationnels, proposés par le LLM en labels qualitatifs — `minor_bonus` +10, `major_bonus` +20, `minor_penalty` -10, `major_penalty` -20 —, convertis par le backend, 3 au plus par jet) strictement séparés des **modificateurs d'objets** (fixes, calculés par le backend à partir des objets du détenteur, une fois par définition, jamais chiffrés par le LLM).
+- **Dégâts du BRP** : dés de l'arme (profil d'arme de sa définition) + modificateur de dégâts − armure ; un critique fait le maximum de l'arme et ignore l'armure. Formule posée en Phase 6 (elle remplace celle de la marge, posée en Phase 4), branchée dans le tour en Phase 9.
 - Combat modélisé comme une simple répétition du pipeline standard (pas de sous-système dédié).
 - **Liberté du joueur** : le MJ ne refuse jamais une action parce qu'elle est imprudente, immorale ou interdite dans l'univers — il la résout et en fait assumer les conséquences. Seul l'impossible matériel mène à un échec automatique, et le personnage y tente quand même l'action. Voir règles, section 10.
 - **Réaction des PNJ** : tout personnage touché par une action réagit dans la même narration. Une réaction peut ouvrir une menace, jamais la trancher contre le joueur — c'est son action suivante, et le jet qui la résout, qui en décide. Une attaque ouverte est toujours tranchée par l'action suivante, quelle qu'elle soit, par un jet : sur un échec, elle porte et blesse. Voir règles, section 10.
@@ -231,7 +232,7 @@ L'inventaire se scinde exactement sur la ligne « le LLM propose, le backend dé
 ### Base de données et infrastructure
 - PostgreSQL choisi comme moteur de base de données.
 - RAG choisi pour la recherche de lore, avec pgvector comme option native envisageable.
-- JSONB utilisé pour toute structure variable par univers ou par scénario (attributs, compétences, conditions spécifiques, state).
+- JSONB utilisé pour toute structure variable par univers ou par scénario (compétences, prétirés, profils, conditions spécifiques, state).
 - `turn_log` isolé dès la conception pour ne jamais alourdir les tables d'état courant.
 - **Convention de langue** : documentation et échanges de conception en français ; nommage technique (tables, colonnes, enums, clés JSON, code) exclusivement en anglais, appliqué directement dans tous les documents techniques ; langue par défaut de l'application (interface et narration) en anglais, support multi-langue en complément (modalités non tranchées).
 - **Environnement technique** : dev et tests locaux sous Docker (PostgreSQL + Redis), repo en monorepo AdonisJS (`--kit=api`, Turborepo) avec packages `backend` et `frontend` dès la Phase 0, `back-office` ajouté en Phase 5.
@@ -302,7 +303,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 **Phases 0 à 5bis terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable. Depuis la Phase 4, les objets sont des instances détenues par le personnage, un PNJ ou un lieu, les jets comptent circonstances (labels) et objets, chacun tracé avec son origine, et l'inventaire du personnage s'affiche au front. Depuis la Phase 5, le contenu de jeu est en base (univers, scénarios, catalogues de PNJ, lieux et objets, avec surcharge par scénario et noms par langue) ; le joueur lance une partie depuis un catalogue de scénarios publiés, avec le personnage prétiré du scénario ; un `game_master` crée, teste et publie univers et scénarios depuis le back-office. Depuis la Phase 5bis, un superadmin gère les comptes depuis le back-office : il les crée avec un rôle, les suspend et les réactive.
 
-**Phase actuelle : Phase 6 (bascule sur le système BRP)**, à cadrer et découper : le Basic Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les univers. Voir la roadmap, Phase 6. Le lore étendu et le RAG passent en Phase 7.
+**Phase actuelle : Phase 6 (bascule sur le système BRP)**, epic Jira `KAN-78` : le Basic Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les univers. Voir la roadmap, Phase 6. Le lore étendu et le RAG passent en Phase 7.
 
 ---
 

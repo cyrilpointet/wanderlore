@@ -62,7 +62,7 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
   - **aucun jet requis** → un seul appel fusionné A+B+C+D, retournant narration + effets ;
   - **jet requis** → un premier appel d'arbitrage (A+B+C, sans narration), puis calcul du jet par le backend, puis un second appel de narration.
   Cela reste en deçà de la séparation complète en cinq étapes, toujours reportée à la Phase 3 : A, B et C restent fusionnés et l'étape E n'existe pas.
-- **Résolution simplifiée à un seul type de jet** : `2d6 + valeur de compétence` contre un seuil unique. Pas de distinction combat / social / autre à ce stade — uniquement "jet requis" ou "pas de jet".
+- **Résolution simplifiée à un seul type de jet** : `2d6 + valeur de compétence` contre un seuil unique (moteur remplacé par le BRP en Phase 6). Pas de distinction combat / social / autre à ce stade — uniquement "jet requis" ou "pas de jet".
 - **Pas de modificateurs**, ni contextuels ni d'objets. Ajoutés en Phase 4.
 - **Pas d'étape E séparée.** Le delta de `world_states` est extrait dans le même appel que la narration : un JSON de sortie avec un champ `narration` et un champ `effects`. Conséquence du découpage en deux branches : ce sont **toujours** les effets de l'appel de narration qui font foi, y compris dans la branche avec jet — ils dépendent de l'issue du jet et ne peuvent donc pas sortir de l'arbitrage.
 

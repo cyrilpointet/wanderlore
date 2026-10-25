@@ -77,7 +77,7 @@ flowchart TD
 
 **Invariants qui traversent tout le flux** [CLAUDE.md, archi §7] :
 
-- **Le LLM propose, le backend décide** : dés, seuils, formules et écriture du state sont
+- **Le LLM propose, le backend décide** : dés, chances, formules et écriture du state sont
   déterministes, côté backend.
 - **Aucune confiance dans une sortie LLM** : toute sortie structurée est validée avant usage.
 - **Listes fermées** : le LLM ne désigne une entité (compétence, catégorie d'action, PNJ,
@@ -235,26 +235,28 @@ flowchart TD
 
 ## 6. Étape 2 — Calcul du jet (backend, aucun LLM)
 
+Le système est le BRP de Chaosium depuis la Phase 6 [règles §2 à §6].
+
 ```mermaid
 flowchart TD
-    A([action_type, difficulty,<br/>contextual_modifiers]) --> B[(resolution_rules :<br/>action_type → compétence)]
-    B --> C[Valeur de compétence<br/>du personnage]
-    A --> K[Modificateurs contextuels :<br/>3 au plus, label → valeur<br/>±1 / ±2]
+    A([action_type, difficulty,<br/>contextual_modifiers]) --> B[(resolution_rules :<br/>action_type → compétence<br/>ou caractéristique)]
+    B --> C[Base : compétence de la fiche,<br/>sinon sa chance de base ;<br/>ou caractéristique × 5]
+    C --> D[Difficulté : easy × 2 ·<br/>average × 1 · difficult ÷ 2]
+    A --> K[Modificateurs contextuels :<br/>3 au plus, label → valeur<br/>±10 / ±20]
     B --> I[(Objets du personnage dont un<br/>modificateur cible la compétence<br/>et dont la condition owned /<br/>equipped est satisfaite<br/>une fois par définition)]
-    C --> T["Total = 2d6 + compétence<br/>+ modificateurs contextuels<br/>+ modificateurs d'objets"]
+    D --> T["Chance = base × difficulté<br/>+ modificateurs contextuels<br/>+ modificateurs d'objets"]
     K --> T
     I --> T
-    DICE[Service de dés<br/>injectable] --> T
-    T --> S[Seuil par difficulté<br/>easy 7 · medium 9 ·<br/>hard 11 · very_hard 13]
-    S --> MG["Marge = total − seuil<br/>≥ +5 critical_success<br/>+1..+4 comfortable · 0 narrow<br/>−1..−3 minor_failure<br/>≤ −4 critical_failure"]
-    MG --> L[(turn_log : roll_result<br/>dés, total, seuil, marge,<br/>applied_modifiers avec origine)]
-    L -.-> SSE[/roll_resolved<br/>compétence libellée, result, marge<br/>jamais les chiffres/]
-    L --> O([Vers la narration :<br/>result + marge qualitative seulement])
+    DICE[Service de dés<br/>injectable : d100] --> R
+    T --> R["Degré du d100 sur la chance<br/>01–05 réussit, 96–00 échoue<br/>critical ≤ chance/20 · special ≤ chance/5<br/>success · failure · fumble"]
+    R --> L[(turn_log : roll_result<br/>base, chance, d100, degré,<br/>applied_modifiers avec origine)]
+    L -.-> SSE[/roll_resolved<br/>le détail du jet, pour le joueur/]
+    L --> O([Vers la narration :<br/>result + degré seulement])
 ```
 
-- **Dégâts** : dégâts du coup (marge ÷ 2 arrondie au supérieur, au moins 1) + bonus de
-  l'arme, sans second jet [règles §7]. La fonction est posée en Phase 4 ; son branchement dans
-  le tour (désigner attaquant et cible) attend la Phase 9.
+- **Dégâts** : dés de l'arme + modificateur de dégâts (FOR + TAI) − armure ; un critique fait
+  le maximum de l'arme et ignore l'armure [règles §7]. La formule est posée en Phase 6 ; son
+  branchement dans le tour (désigner attaquant et cible) attend la Phase 9.
 - **Combat** : aucun sous-système dédié ; un round est un tour normal de ce pipeline, avec le
   même moteur pour le joueur et les PNJ [règles §8]. *À trancher en Phase 9 : la cible d'un jet
   opposé contre un PNJ improvisé pas encore instancié* [roadmap P8].

@@ -4,6 +4,7 @@ import { CircleAlert, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { AppHeader } from '@/components/app_header'
+import { RulesCredit } from '@/components/rules_credit'
 import { GameCard } from '@/games/game_card'
 import { gamesQuery } from '@/games/queries'
 import { failureMessage } from '@/i18n/errors'
@@ -32,6 +33,7 @@ function Games() {
           </Link>
         </div>
         <GameList />
+        <RulesCredit />
       </main>
     </>
   )

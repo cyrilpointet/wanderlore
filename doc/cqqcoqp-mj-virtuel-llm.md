@@ -54,7 +54,7 @@ Axe le plus abouti du projet à date. Voir les documents de référence dédiés
 
 - **Architecture et pipeline** : pipeline LLM en étapes à responsabilité unique, séparation stricte front (affichage)/backend (calcul et autorité), sécurité anti prompt-injection, gestion différenciée du lore/state/mémoire. Exécution asynchrone via une file de jobs (pg-boss en instance unique, BullMQ au passage à plusieurs instances), retour progressif au front via AdonisJS Transmit (SSE).
 - **Base de données** : schéma PostgreSQL complet, usage de JSONB pour les structures variables par univers.
-- **Système de règles** : formule générique `2d6 + compétence + modificateurs`, séparation modificateurs contextuels (LLM) / modificateurs d'objets (backend).
+- **Système de règles** : le BRP de Chaosium (licence ORC) pour tous les univers — d100 sous la chance, cinq degrés —, séparation modificateurs contextuels (LLM) / modificateurs d'objets (backend).
 - **Roadmap** : développement incrémental par fonctionnalités minimales, intégrant la gestion de comptes (joueur / maître du jeu / superadmin).
 
 **Gestion des erreurs** : pas de retry automatique dans un premier temps, message différencié par type d'erreur, système de log différé en Phase 10.
