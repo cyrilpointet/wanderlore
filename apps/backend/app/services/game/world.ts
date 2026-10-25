@@ -5,7 +5,10 @@ import type {
   ItemHolderReference,
   ItemModifier,
   NpcDisposition,
+  SkillCategory,
+  WeaponProfile,
 } from './content/types.js'
+import type { BaseChance } from '#services/rules/types'
 
 export {
   ITEM_CONDITIONS,
@@ -15,6 +18,7 @@ export {
   type ItemHolderReference,
   type ItemModifier,
   type NpcDisposition,
+  type WeaponProfile,
 } from './content/types.js'
 
 /**
@@ -41,8 +45,9 @@ export type ContentEntry = {
 }
 
 export type WorldSkill = ContentEntry & {
-  /** Reference of the attribute the skill hangs off. */
-  attribute: string
+  category: SkillCategory
+  /** What a character who never trained the skill has in it. */
+  baseChance: BaseChance
 }
 
 export type WorldDefinition = {
@@ -61,12 +66,11 @@ export type WorldDefinition = {
    * only pay for tokens it cannot act on.
    */
   ambiance: string[]
-  attributes: ContentEntry[]
   skills: WorldSkill[]
   resources: ContentEntry[]
   /**
-   * The categories arbitration picks from, each tied to the skill that
-   * resolves it. Part of the world so a turn reads them from the same
+   * The categories arbitration picks from, each tied to the skill or the
+   * characteristic that resolves it. Part of the world so a turn reads them from the same
    * snapshot as everything else.
    */
   actionTypes: ActionTypeContent[]
@@ -128,6 +132,7 @@ export type LocationDefinition = DescribedEntry &
 export type ItemDefinition = DescribedEntry & {
   equippable: boolean
   modifiers: ItemModifier[]
+  weapon: WeaponProfile | null
 } & (
     | { kind: 'unique'; initialHolder: ItemHolderReference | null }
     | { kind: 'archetype'; generic: boolean; stackable: boolean }

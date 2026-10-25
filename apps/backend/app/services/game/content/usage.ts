@@ -6,7 +6,6 @@ import { Refusal } from '#exceptions/refusal'
 export type ContentKind =
   | 'world'
   | 'scenario'
-  | 'attribute'
   | 'skill'
   | 'resource'
   | 'action_type'
@@ -51,17 +50,17 @@ export async function refuseIfPlayed(kind: 'world' | 'scenario', scope: GamesSco
 }
 
 /**
- * Refuses the removal of attributes, skills or resources that a character of
- * these games still has a score in.
+ * Refuses the removal of skills or resources that a character of these games
+ * still has a score in.
  */
 export async function refuseRemovedScores(
-  kind: 'attribute' | 'skill' | 'resource',
+  kind: 'skill' | 'resource',
   scope: GamesScope,
   removed: string[]
 ) {
   if (removed.length === 0) return
 
-  const column = { attribute: 'attributes', skill: 'skills', resource: 'resources' }[kind]
+  const column = { skill: 'skills', resource: 'resources' }[kind]
   const rows: { reference: string }[] = await db
     .from('characters')
     .whereIn('session_id', sessionsOf(scope))

@@ -31,8 +31,11 @@ export function resolveWorld(world: WorldLevelContent, scenario: ScenarioContent
     tone: world.narrativeTone,
     rules: world.rules,
     ambiance: world.ambiance,
-    attributes: world.attributes.map(entryOf),
-    skills: world.skills.map((skill) => ({ ...entryOf(skill), attribute: skill.attribute })),
+    skills: world.skills.map((skill) => ({
+      ...entryOf(skill),
+      category: skill.category,
+      baseChance: skill.baseChance,
+    })),
     resources: world.resources.map(entryOf),
     actionTypes: world.actionTypes,
     npcs: overlay(world.npcs, scenario.npcs).map(npcOf),
@@ -92,6 +95,7 @@ function itemOf(item: ItemDefinitionContent): ItemDefinition {
     description: item.description,
     equippable: item.equippable,
     modifiers: item.modifiers,
+    weapon: item.weapon,
   }
 
   return item.kind === 'unique'

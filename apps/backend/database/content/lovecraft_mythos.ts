@@ -39,53 +39,85 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
     'The ocean is vast, cold and older than anything that walks; it keeps what it takes.',
     'Near a place where the Outer Gods have been called, the world wears thin: clocks disagree, a corridor runs longer than the house, a familiar face is wrong for an instant.',
   ],
-  attributes: [
-    { reference: 'physical', labels: { en: 'Physical', fr: 'Physique' } },
-    { reference: 'mental', labels: { en: 'Mental', fr: 'Mental' } },
-    { reference: 'social', labels: { en: 'Social', fr: 'Social' } },
-  ],
   /**
-   * Flat and short, as in the first world. `composure` stands where a sanity
-   * score would: the nerve to face the unnatural is rolled, and what it costs
-   * comes off hit points.
+   * Flat and short, as in the first world, with the base chances of BRP.
+   * `composure` stands where a sanity score would: the nerve to face the
+   * unnatural is rolled, and what it costs comes off hit points — until BRP's
+   * own sanity rules arrive with the optional rules (Phase 9bis).
    */
   skills: [
     {
       reference: 'brawling',
       labels: { en: 'Brawling', fr: 'Corps à corps' },
-      attribute: 'physical',
+      category: 'combat',
+      baseChance: 25,
     },
-    { reference: 'firearms', labels: { en: 'Firearms', fr: 'Armes à feu' }, attribute: 'physical' },
+    {
+      reference: 'firearms',
+      labels: { en: 'Firearms', fr: 'Armes à feu' },
+      category: 'combat',
+      baseChance: 20,
+    },
     {
       reference: 'athletics',
       labels: { en: 'Athletics', fr: 'Athlétisme' },
-      attribute: 'physical',
+      category: 'physical',
+      baseChance: 25,
     },
-    { reference: 'stealth', labels: { en: 'Stealth', fr: 'Discrétion' }, attribute: 'physical' },
+    {
+      reference: 'stealth',
+      labels: { en: 'Stealth', fr: 'Discrétion' },
+      category: 'physical',
+      baseChance: 10,
+    },
     {
       reference: 'observation',
       labels: { en: 'Observation', fr: 'Observation' },
-      attribute: 'mental',
+      category: 'perception',
+      baseChance: 25,
     },
     {
       reference: 'scholarship',
       labels: { en: 'Scholarship', fr: 'Érudition' },
-      attribute: 'mental',
+      category: 'mental',
+      baseChance: 5,
     },
-    { reference: 'occultism', labels: { en: 'Occultism', fr: 'Occultisme' }, attribute: 'mental' },
-    { reference: 'composure', labels: { en: 'Composure', fr: 'Sang-froid' }, attribute: 'mental' },
-    { reference: 'survival', labels: { en: 'Survival', fr: 'Survie' }, attribute: 'mental' },
+    {
+      reference: 'occultism',
+      labels: { en: 'Occultism', fr: 'Occultisme' },
+      category: 'mental',
+      baseChance: 5,
+    },
+    {
+      reference: 'composure',
+      labels: { en: 'Composure', fr: 'Sang-froid' },
+      category: 'mental',
+      baseChance: { characteristic: 'POW', multiplier: 2 },
+    },
+    {
+      reference: 'survival',
+      labels: { en: 'Survival', fr: 'Survie' },
+      category: 'perception',
+      baseChance: 10,
+    },
     {
       reference: 'persuasion',
       labels: { en: 'Persuasion', fr: 'Persuasion' },
-      attribute: 'social',
+      category: 'communication',
+      baseChance: 15,
     },
     {
       reference: 'intimidation',
       labels: { en: 'Intimidation', fr: 'Intimidation' },
-      attribute: 'social',
+      category: 'communication',
+      baseChance: 5,
     },
-    { reference: 'deception', labels: { en: 'Deception', fr: 'Tromperie' }, attribute: 'social' },
+    {
+      reference: 'deception',
+      labels: { en: 'Deception', fr: 'Tromperie' },
+      category: 'communication',
+      baseChance: 5,
+    },
   ],
   resources: [{ reference: 'money', labels: { en: 'Dollars', fr: 'Dollars' } }],
   /** The gods, places and books people speak of, none of them met in play. */
@@ -112,66 +144,78 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       description:
         'Fighting at close quarters: fists, a knife, a club, a rifle butt or whatever is at hand.',
       associatedSkill: 'brawling',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'ranged_combat',
       description: 'Shooting or throwing at a target: revolver, shotgun, rifle, thrown stone.',
       associatedSkill: 'firearms',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'physical_feat',
       description: 'Climbing, jumping, running, swimming, or forcing a door by strength.',
       associatedSkill: 'athletics',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'sneaking',
       description: 'Moving unseen or unheard, hiding, shadowing someone, or lifting something.',
       associatedSkill: 'stealth',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'perception',
       description:
         'Noticing, searching, spotting a detail, a hidden door or a lie, reading a scene.',
       associatedSkill: 'observation',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'knowledge',
       description:
         'Recalling or working out what ordinary learning teaches: history, languages, science, medicine, a library search.',
       associatedSkill: 'scholarship',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'occult_lore',
       description:
         'Reading a forbidden text, recognising a sigil or a rite, performing a ritual or an alchemical operation.',
       associatedSkill: 'occultism',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'resisting_horror',
       description:
         'Keeping nerve and mind before the unnatural: resisting terror, a compulsion, a vision or a wrongness of the world.',
       associatedSkill: 'composure',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'survival_craft',
       description:
         'Finding a way through wild land or open sea, reading weather and tides, handling a boat, living off a hostile place.',
       associatedSkill: 'survival',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'social_persuasion',
       description: 'Winning someone over by argument, charm or an appeal to their interest.',
       associatedSkill: 'persuasion',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'social_intimidation',
       description: "Getting one's way through threats, menace or sheer force of presence.",
       associatedSkill: 'intimidation',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'social_deception',
       description: "Lying, bluffing, or disguising oneself or one's intentions.",
       associatedSkill: 'deception',
+      associatedCharacteristic: null,
     },
   ],
   /**
@@ -188,7 +232,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { athletics: 1, observation: 1 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { athletics: 30, observation: 30 }, hitPointsMax: 7, weapon: null },
     },
     {
       reference: 'sailor',
@@ -198,7 +242,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { brawling: 2, athletics: 2, survival: 2 },
+        skills: { brawling: 45, athletics: 45, survival: 45 },
         hitPointsMax: 10,
         weapon: 'knife',
       },
@@ -210,7 +254,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { scholarship: 3, persuasion: 2 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { scholarship: 60, persuasion: 45 }, hitPointsMax: 7, weapon: null },
     },
     {
       reference: 'lawman',
@@ -220,7 +264,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { firearms: 2, brawling: 2, intimidation: 2 },
+        skills: { firearms: 45, brawling: 45, intimidation: 45 },
         hitPointsMax: 10,
         weapon: 'revolver',
       },
@@ -233,7 +277,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'unfriendly',
       combat: {
-        skills: { brawling: 3, intimidation: 2, stealth: 1 },
+        skills: { brawling: 60, intimidation: 45, stealth: 30 },
         hitPointsMax: 10,
         weapon: 'knife',
       },
@@ -247,7 +291,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'hostile',
       combat: {
-        skills: { brawling: 2, occultism: 2, deception: 2, stealth: 2 },
+        skills: { brawling: 45, occultism: 45, deception: 45, stealth: 45 },
         hitPointsMax: 9,
         weapon: 'knife',
       },
@@ -261,7 +305,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'hostile',
       combat: {
-        skills: { brawling: 4, athletics: 4, stealth: 3, intimidation: 4 },
+        skills: { brawling: 75, athletics: 75, stealth: 60, intimidation: 75 },
         hitPointsMax: 16,
         weapon: null,
       },
@@ -275,7 +319,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'unfriendly',
       combat: {
-        skills: { brawling: 3, athletics: 3, deception: 2, stealth: 2 },
+        skills: { brawling: 60, athletics: 60, deception: 45, stealth: 45 },
         hitPointsMax: 12,
         weapon: null,
       },
@@ -349,7 +393,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
   ],
   /**
    * The arms and gear of the 1920s, then generic archetypes for anything else
-   * the player picks up. Values stay small, as in the first world.
+   * the player picks up. Modifiers in percent, weapons with the dice of BRP —
+   * a shotgun at its middle range, 2D6, until range bands exist.
    */
   items: [
     {
@@ -360,9 +405,13 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: false,
       stackable: false,
       equippable: true,
-      modifiers: [
-        { target: 'damage', value: 3, condition: 'equipped', description: 'Revolver bullet' },
-      ],
+      modifiers: [],
+      weapon: {
+        skill: 'firearms',
+        damage: '1D8',
+        damageModifier: 'none',
+        special: 'impaling',
+      },
       initialHolder: null,
     },
     {
@@ -375,19 +424,19 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       equippable: true,
       modifiers: [
         {
-          target: 'damage',
-          value: 4,
-          condition: 'equipped',
-          description: 'Buckshot at close range',
-        },
-        {
           target: 'skill',
           skill: 'stealth',
-          value: -1,
+          value: -10,
           condition: 'equipped',
           description: 'A long gun is hard to hide',
         },
       ],
+      weapon: {
+        skill: 'firearms',
+        damage: '2D6',
+        damageModifier: 'none',
+        special: null,
+      },
       initialHolder: null,
     },
     {
@@ -399,15 +448,20 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       stackable: false,
       equippable: true,
       modifiers: [
-        { target: 'damage', value: 3, condition: 'equipped', description: 'Rifle bullet' },
         {
           target: 'skill',
           skill: 'firearms',
-          value: 1,
+          value: 10,
           condition: 'equipped',
           description: 'A steady, aimed long gun',
         },
       ],
+      weapon: {
+        skill: 'firearms',
+        damage: '2D6+4',
+        damageModifier: 'none',
+        special: 'impaling',
+      },
       initialHolder: null,
     },
     {
@@ -418,9 +472,13 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: false,
       stackable: false,
       equippable: true,
-      modifiers: [
-        { target: 'damage', value: 1, condition: 'equipped', description: 'Short blade' },
-      ],
+      modifiers: [],
+      weapon: {
+        skill: 'brawling',
+        damage: '1D3+1',
+        damageModifier: 'full',
+        special: 'impaling',
+      },
       initialHolder: null,
     },
     {
@@ -431,14 +489,13 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: true,
       stackable: false,
       equippable: true,
-      modifiers: [
-        {
-          target: 'damage',
-          value: 1,
-          condition: 'equipped',
-          description: 'Something heavy to hit with',
-        },
-      ],
+      modifiers: [],
+      weapon: {
+        skill: 'brawling',
+        damage: '1D6',
+        damageModifier: 'full',
+        special: 'crushing',
+      },
       initialHolder: null,
     },
     {
@@ -453,11 +510,12 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         {
           target: 'skill',
           skill: 'athletics',
-          value: 1,
+          value: 10,
           condition: 'owned',
           description: 'A rope to climb or haul with',
         },
       ],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -469,6 +527,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       stackable: false,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -480,6 +539,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       stackable: false,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -491,6 +551,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       stackable: false,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -502,6 +563,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       stackable: true,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -513,6 +575,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       stackable: true,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: null,
     },
   ],
@@ -547,17 +610,17 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       ],
       pregeneratedCharacter: {
         name: 'Jack Callahan',
-        attributes: { physical: 3, mental: 2, social: 2 },
+        /** An able seaman, strong and weathered, more at home on deck than in a library. */
+        characteristics: { STR: 15, CON: 15, SIZ: 14, INT: 11, POW: 11, DEX: 13, CHA: 9 },
         skills: {
-          athletics: 3,
-          survival: 3,
-          brawling: 2,
-          observation: 1,
-          firearms: 1,
-          composure: 1,
-          intimidation: 1,
+          athletics: 60,
+          survival: 60,
+          brawling: 45,
+          observation: 30,
+          firearms: 30,
+          composure: 30,
+          intimidation: 30,
         },
-        hitPointsMax: 10,
         resources: { money: 6 },
         /** What an able seaman takes ashore: his knife, a line, a lantern, a day's food. */
         items: [
@@ -610,7 +673,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'neutral',
           combat: {
-            skills: { firearms: 3, survival: 4, intimidation: 3, deception: 3, occultism: 2 },
+            skills: { firearms: 60, survival: 75, intimidation: 60, deception: 60, occultism: 45 },
             hitPointsMax: 12,
             weapon: 'revolver',
           },
@@ -624,7 +687,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'friendly',
           combat: {
-            skills: { brawling: 4, athletics: 3, survival: 3, intimidation: 3 },
+            skills: { brawling: 75, athletics: 60, survival: 60, intimidation: 60 },
             hitPointsMax: 14,
             weapon: 'knife',
           },
@@ -638,7 +701,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'friendly',
           combat: {
-            skills: { athletics: 3, observation: 3, stealth: 2, survival: 2 },
+            skills: { athletics: 60, observation: 60, stealth: 45, survival: 45 },
             hitPointsMax: 9,
             weapon: 'knife',
           },
@@ -652,7 +715,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'neutral',
           combat: {
-            skills: { scholarship: 4, occultism: 2, observation: 2 },
+            skills: { scholarship: 75, occultism: 45, observation: 45 },
             hitPointsMax: 7,
             weapon: null,
           },
@@ -666,7 +729,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'unfriendly',
           combat: {
-            skills: { brawling: 4, stealth: 3, deception: 3, occultism: 3 },
+            skills: { brawling: 75, stealth: 60, deception: 60, occultism: 60 },
             hitPointsMax: 13,
             weapon: null,
           },
@@ -680,7 +743,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'hostile',
           combat: {
-            skills: { brawling: 5, occultism: 5, intimidation: 5, athletics: 3 },
+            skills: { brawling: 90, occultism: 90, intimidation: 90, athletics: 60 },
             hitPointsMax: 22,
             weapon: null,
           },
@@ -758,11 +821,12 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             {
               target: 'skill',
               skill: 'athletics',
-              value: -1,
+              value: -10,
               condition: 'owned',
               description: 'Lugging a heavy iron box',
             },
           ],
+          weapon: null,
           initialHolder: { holder: 'location', reference: 'sovereign_wreck' },
         },
         {
@@ -778,11 +842,12 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             {
               target: 'skill',
               skill: 'occultism',
-              value: 1,
+              value: 10,
               condition: 'owned',
               description: 'The rites and names the drowned crew wrote down',
             },
           ],
+          weapon: null,
           initialHolder: { holder: 'location', reference: 'sovereign_wreck' },
         },
         {
@@ -798,11 +863,12 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             {
               target: 'skill',
               skill: 'composure',
-              value: 2,
+              value: 20,
               condition: 'owned',
               description: 'The Elder Sign steadies the mind against what comes from the deep',
             },
           ],
+          weapon: null,
           initialHolder: { holder: 'location', reference: 'cyclopean_ruins' },
         },
         {
@@ -818,11 +884,12 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             {
               target: 'skill',
               skill: 'composure',
-              value: -1,
+              value: -10,
               condition: 'owned',
               description: 'Its alien patterns gnaw at the mind of whoever keeps it',
             },
           ],
+          weapon: null,
           initialHolder: { holder: 'npc', reference: 'the_drowned_priest' },
         },
       ],
@@ -859,17 +926,17 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       ],
       pregeneratedCharacter: {
         name: 'Edmund Ward',
-        attributes: { physical: 2, mental: 3, social: 2 },
+        /** A Boston scholar, sharp and bookish, unused to hardship. */
+        characteristics: { STR: 10, CON: 11, SIZ: 12, INT: 16, POW: 14, DEX: 11, CHA: 12 },
         skills: {
-          scholarship: 3,
-          observation: 2,
-          persuasion: 2,
-          occultism: 1,
-          composure: 1,
-          athletics: 1,
-          firearms: 1,
+          scholarship: 60,
+          observation: 45,
+          persuasion: 45,
+          occultism: 30,
+          composure: 30,
+          athletics: 30,
+          firearms: 30,
         },
-        hitPointsMax: 8,
         resources: { money: 40 },
         /** What the heir brings from Boston: the attorney's letter, the keys he sent, a torch. */
         items: [
@@ -921,7 +988,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'neutral',
           combat: {
-            skills: { persuasion: 3, scholarship: 3, observation: 3, deception: 2 },
+            skills: { persuasion: 60, scholarship: 60, observation: 60, deception: 45 },
             hitPointsMax: 7,
             weapon: null,
           },
@@ -935,7 +1002,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'friendly',
           combat: {
-            skills: { observation: 3, stealth: 2, composure: 2 },
+            skills: { observation: 60, stealth: 45, composure: 45 },
             hitPointsMax: 7,
             weapon: null,
           },
@@ -949,7 +1016,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'neutral',
           combat: {
-            skills: { scholarship: 5, occultism: 4, composure: 3 },
+            skills: { scholarship: 90, occultism: 75, composure: 60 },
             hitPointsMax: 7,
             weapon: null,
           },
@@ -963,7 +1030,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'neutral',
           combat: {
-            skills: { occultism: 4, deception: 4, persuasion: 3, firearms: 2 },
+            skills: { occultism: 75, deception: 75, persuasion: 60, firearms: 45 },
             hitPointsMax: 10,
             weapon: 'revolver',
           },
@@ -977,7 +1044,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'neutral',
           combat: {
-            skills: { occultism: 5, deception: 4, scholarship: 4, intimidation: 3 },
+            skills: { occultism: 90, deception: 75, scholarship: 75, intimidation: 60 },
             hitPointsMax: 10,
             weapon: null,
           },
@@ -991,7 +1058,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'unfriendly',
           combat: {
-            skills: { occultism: 4, stealth: 3, brawling: 2 },
+            skills: { occultism: 75, stealth: 60, brawling: 45 },
             hitPointsMax: 8,
             weapon: null,
           },
@@ -1004,7 +1071,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           kind: 'archetype',
           generic: false,
           defaultDisposition: 'hostile',
-          combat: { skills: { brawling: 3, athletics: 2 }, hitPointsMax: 10, weapon: null },
+          combat: { skills: { brawling: 60, athletics: 45 }, hitPointsMax: 10, weapon: null },
         },
         {
           reference: 'piping_servitor',
@@ -1015,7 +1082,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'hostile',
           combat: {
-            skills: { brawling: 4, stealth: 3, intimidation: 5 },
+            skills: { brawling: 75, stealth: 60, intimidation: 90 },
             hitPointsMax: 18,
             weapon: null,
           },
@@ -1098,11 +1165,12 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             {
               target: 'skill',
               skill: 'occultism',
-              value: 1,
+              value: 10,
               condition: 'owned',
               description: "Silas's notes on the salts and on the rite",
             },
           ],
+          weapon: null,
           initialHolder: { holder: 'location', reference: 'ward_house' },
         },
         {
@@ -1115,6 +1183,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           stackable: false,
           equippable: false,
           modifiers: [],
+          weapon: null,
           initialHolder: { holder: 'location', reference: 'ward_house' },
         },
         {
@@ -1130,18 +1199,19 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             {
               target: 'skill',
               skill: 'occultism',
-              value: 2,
+              value: 20,
               condition: 'owned',
               description: 'The rites and formulae it holds',
             },
             {
               target: 'skill',
               skill: 'composure',
-              value: -1,
+              value: -10,
               condition: 'owned',
               description: "Reading it erodes the reader's hold on the world",
             },
           ],
+          weapon: null,
           initialHolder: { holder: 'location', reference: 'ward_laboratory' },
         },
         {
@@ -1154,6 +1224,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           stackable: false,
           equippable: false,
           modifiers: [],
+          weapon: null,
           initialHolder: { holder: 'location', reference: 'ward_laboratory' },
         },
         {
@@ -1166,15 +1237,21 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           stackable: false,
           equippable: true,
           modifiers: [
-            { target: 'damage', value: 1, condition: 'equipped', description: 'Glass-sharp edge' },
             {
               target: 'skill',
               skill: 'occultism',
-              value: 1,
+              value: 10,
               condition: 'equipped',
               description: "The rite's own instrument, in hand",
             },
           ],
+          /** A dagger of the book, keener than it looks. */
+          weapon: {
+            skill: 'brawling',
+            damage: '1D4+2',
+            damageModifier: 'full',
+            special: 'impaling',
+          },
           initialHolder: { holder: 'location', reference: 'sealed_vault' },
         },
         {
@@ -1190,11 +1267,12 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             {
               target: 'skill',
               skill: 'occultism',
-              value: 1,
+              value: 10,
               condition: 'owned',
               description: 'The words that unmake what alchemy raised',
             },
           ],
+          weapon: null,
           initialHolder: { holder: 'npc', reference: 'henry_armitage' },
         },
         {
@@ -1207,6 +1285,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           stackable: false,
           equippable: false,
           modifiers: [],
+          weapon: null,
           initialHolder: null,
         },
         {
@@ -1219,6 +1298,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           stackable: true,
           equippable: false,
           modifiers: [],
+          weapon: null,
           initialHolder: null,
         },
       ],

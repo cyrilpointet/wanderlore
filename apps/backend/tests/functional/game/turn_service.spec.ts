@@ -21,7 +21,7 @@ import { TurnValidationError } from '#services/game/turn_validator'
 import { createItem, equipItem, unequipItem } from '#services/game/inventory'
 import { enterScene } from '#services/game/npcs'
 import InventoryItem from '#models/inventory_item'
-import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
+import { THREE_MUSKETEERS, GASCON } from '#tests/helpers/worlds'
 import {
   FakeLlmProvider,
   streamed,
@@ -61,7 +61,7 @@ const SETTLED_TURN = [SETTLED, streamed(SETTLED_TEXT), SETTLED_EFFECTS]
 const NEEDS_ROLL = {
   intent: { type: 'social_dialogue', target: null, summary: 'Talking past the guard' },
   validity: { factual: true, plausibility: 'plausible', justification: 'The guard can be swayed.' },
-  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'medium' },
+  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'average' },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
@@ -84,8 +84,8 @@ async function arrangeScene() {
   const character = await Character.create({
     sessionId,
     name: "d'Artagnan",
-    skills: { persuasion: 3, swordsmanship: 2 },
-    attributes: { social: 3 },
+    skills: { persuasion: 60, swordsmanship: 45 },
+    characteristics: GASCON,
     resources: {},
     progression: {},
     hitPoints: 10,
@@ -102,12 +102,12 @@ async function arrangeScene() {
 }
 
 /**
- * Faces are chosen so the roll lands where each spec needs it: 4 + 4 plus a
- * persuasion of 3 is 11 against the medium threshold of 9.
+ * Faces are chosen so the roll lands where each spec needs it: a 30 on the
+ * d100 against a persuasion of 60, at average difficulty, is a plain success.
  */
 function buildService(
   answers: unknown[],
-  faces: number[] = [4, 4],
+  faces: number[] = [30],
   queue: JobQueue = new MemoryQueue(),
   delayMs = 0,
   onRequest?: FakeLlmProviderOptions['onRequest']
@@ -206,7 +206,7 @@ test.group('TurnService | a turn with a roll', (group) => {
     )
     assert.equal(result.narratedText, NARRATED_TEXT)
     assert.equal(result.rollResult!.result, 'success')
-    assert.equal(result.rollResult!.marginLabel, 'comfortable')
+    assert.equal(result.rollResult!.degree, 'success')
   })
 
   test('never sends the mechanics to the narrator', async ({ assert }) => {
@@ -240,7 +240,8 @@ test.group('TurnService | a turn with a roll', (group) => {
      * made.
      */
     assert.lengthOf(turn.llmUsage!, 3)
-    assert.deepEqual(turn.rollResult!.dice, [4, 4])
+    assert.equal(turn.rollResult!.roll, 30)
+    assert.equal(turn.rollResult!.chance, 60)
   })
 
   test('applies the hit point loss the narration described', async ({ assert }) => {
@@ -865,11 +866,11 @@ test.group('TurnService | items and circumstances', (group) => {
   })
 })
 
-/** A sword thrust: melee_combat, rolled on swordsmanship (2 on this sheet). */
+/** A sword thrust: melee_combat, rolled on swordsmanship (45 on this sheet). */
 const THRUST = {
   ...NEEDS_ROLL,
   intent: { type: 'attack', target: null, summary: 'Lunging at the guard' },
-  resolution: { mode: 'roll_required', action_type: 'melee_combat', difficulty: 'medium' },
+  resolution: { mode: 'roll_required', action_type: 'melee_combat', difficulty: 'average' },
 }
 
 /** The modifiers logged with the roll of a turn. */
@@ -886,12 +887,11 @@ test.group('TurnService | items in the roll', (group) => {
 
     const turn = await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
 
-    /** 4 + 4, persuasion 3, the letter +1: 12 against 9. */
+    /** Persuasion 60, the letter +10: a chance of 70. */
     assert.deepEqual(modifiersOf(turn), [
-      { source: 'item', origin: 'letter_to_treville', value: 1 },
+      { source: 'item', origin: 'letter_to_treville', value: 10 },
     ])
-    assert.equal(turn.rollResult!.total, 12)
-    assert.equal(turn.rollResult!.margin, 3)
+    assert.equal(turn.rollResult!.chance, 70)
   })
 
   test('given to someone else, the letter no longer counts', async ({ assert }) => {
@@ -910,11 +910,11 @@ test.group('TurnService | items in the roll', (group) => {
     const turn = await play({ sessionId, userId, playerInput: 'I plead with the guard.' })
 
     assert.deepEqual(modifiersOf(turn), [])
-    assert.equal(turn.rollResult!.total, 4 + 4 + 3)
+    assert.equal(turn.rollResult!.chance, 60)
     assert.equal(letter.npcInstanceId, rochefort.id)
   })
 
-  test('the rapier counts on swordsmanship only while drawn', async ({ assert }) => {
+  test('a drawn rapier adds nothing to the roll: its dice are for damage', async ({ assert }) => {
     const { sessionId, userId, sword } = await arrangeArmedScene()
     const drawn = await buildService([THRUST, ...NARRATED]).play({
       sessionId,
@@ -929,9 +929,10 @@ test.group('TurnService | items in the roll', (group) => {
       playerInput: 'I lunge again.',
     })
 
-    /** Its damage bonus never weighs on the roll itself. */
-    assert.deepEqual(modifiersOf(drawn), [{ source: 'item', origin: 'rapier', value: 1 }])
+    /** Its weapon profile never weighs on the roll itself, drawn or not. */
+    assert.deepEqual(modifiersOf(drawn), [])
     assert.deepEqual(modifiersOf(sheathed), [])
+    assert.equal(drawn.rollResult!.chance, 45)
   })
 
   test('a circumstance and an item are traced side by side', async ({ assert }) => {
@@ -941,10 +942,10 @@ test.group('TurnService | items in the roll', (group) => {
     const turn = await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
 
     assert.deepEqual(modifiersOf(turn), [
-      { source: 'contextual', origin: 'favorable_reputation', value: 1 },
-      { source: 'item', origin: 'letter_to_treville', value: 1 },
+      { source: 'contextual', origin: 'favorable_reputation', value: 10 },
+      { source: 'item', origin: 'letter_to_treville', value: 10 },
     ])
-    assert.equal(turn.rollResult!.total, 4 + 4 + 3 + 1 + 1)
+    assert.equal(turn.rollResult!.chance, 60 + 10 + 10)
   })
 
   test('the narrator never learns a number of the roll', async ({ assert }) => {
@@ -1010,7 +1011,7 @@ test.group('TurnService | the world a turn reads', (group) => {
      */
     const { play } = buildService(
       [NEEDS_ROLL, ...NARRATED, NEEDS_ROLL, ...NARRATED],
-      [4, 4, 4, 4],
+      [30, 30],
       undefined,
       20,
       (request) => {
@@ -1027,7 +1028,7 @@ test.group('TurnService | the world a turn reads', (group) => {
     await edit
     const second = await play({ sessionId, userId, playerInput: 'I ask him again.' })
 
-    assert.equal(first.rollResult!.skill, 'persuasion')
-    assert.equal(second.rollResult!.skill, 'athletics')
+    assert.deepInclude(first.rollResult!.base, { skill: 'persuasion' })
+    assert.deepInclude(second.rollResult!.base, { skill: 'athletics' })
   })
 })

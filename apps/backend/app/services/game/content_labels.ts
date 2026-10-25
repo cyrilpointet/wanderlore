@@ -1,4 +1,4 @@
-import type { Labels } from './content/types.js'
+import type { Labels, SkillCategory } from './content/types.js'
 import type { ContentEntry, WorldDefinition } from './world.js'
 
 /**
@@ -25,15 +25,7 @@ export type PlacedLocation = {
 }
 
 export type ContentKind =
-  | 'attribute'
-  | 'skill'
-  | 'resource'
-  | 'npc'
-  | 'location'
-  | 'location_archetype'
-  | 'item'
-  | 'chapter'
-  | 'quest'
+  'skill' | 'resource' | 'npc' | 'location' | 'location_archetype' | 'item' | 'chapter' | 'quest'
 
 /**
  * A reference with no label is a bug — state written against a list it does
@@ -79,7 +71,6 @@ export class ContentLabels {
     this.#world = world
     this.#language = language
     this.#entries = {
-      attribute: index(world.attributes),
       skill: index(world.skills),
       resource: index(world.resources),
       npc: index(world.npcs),
@@ -107,7 +98,7 @@ export class ContentLabels {
   }
 
   /**
-   * Scores keyed by reference — a character's attributes, skills or resources —
+   * Scores keyed by reference — a character's skills or resources —
    * labelled and put in the order the world declares them, so the sheet reads
    * the same from one request to the next whatever order the jsonb kept.
    */
@@ -147,11 +138,11 @@ export class ContentLabels {
     return { reference: place.handle, label: `${archetype.label} · ${parent.label}` }
   }
 
-  /** Reference of the attribute a skill hangs off, for grouping the sheet. */
-  attributeOf(skill: string): string {
+  /** The BRP category of a skill, for grouping the sheet. */
+  categoryOf(skill: string): SkillCategory {
     this.#find('skill', skill)
 
-    return this.#world.skills.find((entry) => entry.reference === skill)!.attribute
+    return this.#world.skills.find((entry) => entry.reference === skill)!.category
   }
 
   #find(kind: ContentKind, reference: string): FoundEntry {

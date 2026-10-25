@@ -27,7 +27,8 @@ export class FakeRandomSource implements RandomSource {
   }
 
   /**
-   * Builds a source that yields the given die faces, 1 through 6.
+   * Builds a source that yields the given die faces, from 1 — whatever the
+   * die: a 42 on the d100, a 3 on a d6.
    */
   static fromFaces(faces: number[]): FakeRandomSource {
     return new FakeRandomSource(faces.map((face) => face - 1))

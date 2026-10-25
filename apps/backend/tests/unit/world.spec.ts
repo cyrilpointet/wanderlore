@@ -1,5 +1,9 @@
 import { test } from '@japa/runner'
 
+import { SKILL_CATEGORIES } from '#services/game/content/types'
+import { CHARACTERISTICS } from '#services/rules/types'
+import { isDiceExpression } from '#services/rules/dice_expression'
+
 import {
   ITEM_CONDITIONS,
   itemArchetypeReferences,
@@ -20,7 +24,6 @@ const REFERENCE = /^[a-z][a-z0-9_]{0,63}$/
  * reference plus a number.
  */
 const CONTENT: [string, ContentEntry[]][] = [
-  ['attributes', THREE_MUSKETEERS.attributes],
   ['skills', THREE_MUSKETEERS.skills],
   ['resources', THREE_MUSKETEERS.resources],
   ['npcs', THREE_MUSKETEERS.npcs],
@@ -46,11 +49,15 @@ test.group('World definition | content', () => {
     })
   }
 
-  test('every skill hangs off an attribute the world defines', ({ assert }) => {
-    const attributes = THREE_MUSKETEERS.attributes.map((attribute) => attribute.reference)
-
+  test('every skill has a BRP category and a base chance in percent', ({ assert }) => {
     for (const skill of THREE_MUSKETEERS.skills) {
-      assert.include(attributes, skill.attribute)
+      assert.include(SKILL_CATEGORIES, skill.category, skill.reference)
+
+      if (typeof skill.baseChance === 'number') {
+        assert.isTrue(skill.baseChance >= 0 && skill.baseChance <= 100, skill.reference)
+      } else {
+        assert.include(CHARACTERISTICS, skill.baseChance.characteristic, skill.reference)
+      }
     }
   })
 })
@@ -92,14 +99,14 @@ test.group('World definition | npcs', () => {
 test.group('World definition | combat profiles', () => {
   const skills = THREE_MUSKETEERS.skills.map((skill) => skill.reference)
   const weapons = THREE_MUSKETEERS.items
-    .filter((item) => item.modifiers.some((modifier) => modifier.target === 'damage'))
+    .filter((item) => item.weapon !== null)
     .map((item) => item.reference)
 
-  test('every skill of a profile is a skill of the world, at a sheet value', ({ assert }) => {
+  test('every skill of a profile is a skill of the world, in percent', ({ assert }) => {
     for (const npc of THREE_MUSKETEERS.npcs) {
       for (const [skill, value] of Object.entries(npc.combat.skills)) {
         assert.include(skills, skill, npc.reference)
-        assert.isTrue(Number.isInteger(value) && value >= 0 && value <= 5, npc.reference)
+        assert.isTrue(Number.isInteger(value) && value >= 0 && value <= 100, npc.reference)
       }
     }
   })
@@ -215,12 +222,10 @@ test.group('World definition | items', () => {
     }
   })
 
-  test('every skill modifier aims at a skill of the world', ({ assert }) => {
+  test('every modifier aims at a skill of the world', ({ assert }) => {
     for (const item of items) {
       for (const modifier of item.modifiers) {
-        if (modifier.target === 'skill') {
-          assert.include(skills, modifier.skill, item.reference)
-        }
+        assert.include(skills, modifier.skill, item.reference)
       }
     }
   })
@@ -233,20 +238,11 @@ test.group('World definition | items', () => {
     }
   })
 
-  test('a damage bonus is positive and comes from a wielded item', ({ assert }) => {
-    for (const item of items) {
-      for (const modifier of item.modifiers.filter((entry) => entry.target === 'damage')) {
-        assert.isAbove(modifier.value, 0, item.reference)
-        assert.isTrue(item.equippable, item.reference)
-      }
-    }
-  })
-
-  test('an item counts its bonus to damage once at most', ({ assert }) => {
-    for (const item of items) {
-      const damage = item.modifiers.filter((modifier) => modifier.target === 'damage')
-
-      assert.isAtMost(damage.length, 1, item.reference)
+  test('a weapon is wielded with a skill of the world, and deals dice', ({ assert }) => {
+    for (const item of items.filter((entry) => entry.weapon !== null)) {
+      assert.isTrue(item.equippable, item.reference)
+      assert.include(skills, item.weapon!.skill, item.reference)
+      assert.isTrue(isDiceExpression(item.weapon!.damage), item.reference)
     }
   })
 

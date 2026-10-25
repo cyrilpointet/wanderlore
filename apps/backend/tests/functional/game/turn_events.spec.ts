@@ -22,6 +22,7 @@ import { CHARACTER, extracted } from '#tests/helpers/turns'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { seedMusketeers } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
+import { GASCON } from '#tests/helpers/worlds'
 
 /**
  * The sequence of events a turn emits, required by the test strategy for
@@ -43,7 +44,7 @@ const SETTLED_TURN = [
 
 const NEEDS_ROLL = {
   ...SETTLED,
-  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'medium' },
+  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'average' },
 }
 
 const NARRATED_TEXT = 'The guard steps aside.'
@@ -68,8 +69,8 @@ async function arrangeScene() {
   await Character.create({
     sessionId,
     name: "d'Artagnan",
-    skills: { persuasion: 3 },
-    attributes: { social: 3 },
+    skills: { persuasion: 60 },
+    characteristics: GASCON,
     resources: {},
     progression: {},
     hitPoints: 10,
@@ -284,8 +285,10 @@ test.group('Turn events | what goes over the wire', (group) => {
       turnId: turn.id,
       idempotencyKey: roll.ref.idempotencyKey,
       skill: { reference: 'persuasion', label: 'Persuasion' },
+      characteristic: null,
       result: 'success',
-      margin: 'comfortable',
+      /** A 4 against a persuasion of 60: within a fifth of it. */
+      degree: 'special',
       items: [],
     })
   })
@@ -577,6 +580,6 @@ test.group('Turn events | the language of the turn', (group) => {
       reference: 'persuasion',
       label: 'Éloquence',
     })
-    assert.equal(message.character.attributes[0].label, 'Social')
+    assert.equal(message.character.skills[0].label, 'Éloquence')
   })
 })

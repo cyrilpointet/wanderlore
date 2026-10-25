@@ -20,6 +20,7 @@ import { extracted } from '#tests/helpers/turns'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { seedMusketeers } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
+import { GASCON } from '#tests/helpers/worlds'
 
 /**
  * The worker end to end, on the in-memory queue: a submission answered at
@@ -43,7 +44,7 @@ const SETTLED_TURN = [
 
 const INVALID = {
   ...SETTLED,
-  resolution: { mode: 'roll_required', action_type: 'alchemy', difficulty: 'medium' },
+  resolution: { mode: 'roll_required', action_type: 'alchemy', difficulty: 'average' },
 }
 
 async function arrangeScene() {
@@ -55,8 +56,8 @@ async function arrangeScene() {
   await Character.create({
     sessionId,
     name: "d'Artagnan",
-    skills: { persuasion: 3 },
-    attributes: { social: 3 },
+    skills: { persuasion: 60 },
+    characteristics: GASCON,
     resources: {},
     progression: {},
     hitPoints: 10,

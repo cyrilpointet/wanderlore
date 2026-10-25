@@ -20,25 +20,41 @@ export default rules
 
 export {
   MAX_CONTEXTUAL_MODIFIERS,
+  applyDifficulty,
   contextualValue,
-  qualifyMargin,
-  thresholdFor,
+  degreeOf,
+  outcomeOf,
   toNarrationOutcome,
 } from './rules/engine.js'
-export { CONTEXTUAL_EFFECTS } from './rules/types.js'
+export {
+  CHARACTERISTICS,
+  CONTEXTUAL_EFFECTS,
+  DAMAGE_MODIFIER_USES,
+  DEGREES,
+  DIFFICULTIES,
+  SPECIAL_EFFECTS,
+} from './rules/types.js'
 export { itemModifiers } from './rules/modifiers.js'
-export { resolveDamage } from './rules/damage.js'
+export { baseChanceOf, damageModifierFor, hitPointsFor } from './rules/derived.js'
+export { isDiceExpression, parseDice } from './rules/dice_expression.js'
 export type {
   AppliedModifier,
+  BaseChance,
+  Characteristic,
+  Characteristics,
   ContextualEffect,
   ContextualModifier,
+  DamageModifierUse,
+  DamageRequest,
   DamageResolution,
+  Degree,
+  Difficulty,
   ModifierSource,
   ModifierTarget,
-  Difficulty,
-  MarginLabel,
   NarrationOutcome,
+  RollBase,
   RollModifiers,
   RollOutcome,
   RollResolution,
+  SpecialEffect,
 } from './rules/types.js'

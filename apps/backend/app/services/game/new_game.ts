@@ -7,6 +7,7 @@ import Scenario from '#models/scenario'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
 import { Refusal } from '#exceptions/refusal'
+import { hitPointsFor } from '#services/rules/derived'
 
 import { loadContent } from './content/load.js'
 import { resolveWorld } from './content/resolve.js'
@@ -106,10 +107,11 @@ export async function startGame(user: User, scenarioId: string): Promise<Session
       {
         sessionId: session.id,
         name: pregenerated.name,
-        attributes: pregenerated.attributes,
+        characteristics: pregenerated.characteristics,
         skills: pregenerated.skills,
-        hitPoints: pregenerated.hitPointsMax,
-        hitPointsMax: pregenerated.hitPointsMax,
+        /** Derived, never written by hand: half of CON + SIZ. */
+        hitPoints: hitPointsFor(pregenerated.characteristics),
+        hitPointsMax: hitPointsFor(pregenerated.characteristics),
         resources: pregenerated.resources,
         progression: {},
       },

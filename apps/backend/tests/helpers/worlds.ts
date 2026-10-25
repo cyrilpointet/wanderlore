@@ -1,4 +1,5 @@
 import { resolveWorld } from '#services/game/content/resolve'
+import type { Characteristics } from '#services/rules/types'
 import type { ContentEntry, WorldDefinition } from '#services/game/world'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 
@@ -11,6 +12,20 @@ export const THREE_MUSKETEERS: WorldDefinition = resolveWorld(
   THREE_MUSKETEERS_CONTENT,
   THREE_MUSKETEERS_CONTENT.scenarios[0]
 )
+
+/**
+ * The characteristics of a sheet a spec writes by hand: d'Artagnan's, as the
+ * scenario gives them. CON 14 and SIZ 12 make 13 hit points.
+ */
+export const GASCON: Characteristics = {
+  STR: 13,
+  CON: 14,
+  SIZ: 12,
+  INT: 13,
+  POW: 12,
+  DEX: 16,
+  CHA: 14,
+}
 
 /** Adds a French name to the entries of a list it has one for. */
 function translated<Entry extends ContentEntry>(entries: Entry[], french: Record<string, string>) {

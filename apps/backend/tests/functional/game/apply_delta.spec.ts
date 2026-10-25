@@ -12,7 +12,7 @@ import { ContentLabels } from '#services/game/content_labels'
 import { visitUniqueLocation } from '#services/game/locations'
 import { enterScene } from '#services/game/npcs'
 import type { TurnEffects } from '#services/game/prompts/types'
-import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
+import { THREE_MUSKETEERS, GASCON } from '#tests/helpers/worlds'
 import { countRows, createSession, createUser, useTransaction } from '#tests/helpers/database'
 
 /** A delta that changes nothing: a spec names only what it is about. */
@@ -41,7 +41,7 @@ async function arrangeScene() {
   const character = await Character.create({
     sessionId,
     name: "d'Artagnan",
-    attributes: {},
+    characteristics: GASCON,
     skills: {},
     resources: {},
     progression: {},

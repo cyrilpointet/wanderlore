@@ -39,9 +39,8 @@ export default class WorldsController {
   }
 
   /**
-   * Any field but the reference. A list sent replaces the stored one; an
-   * attribute, skill or resource a character of a game still has cannot be
-   * removed from it.
+   * Any field but the reference. A list sent replaces the stored one; a skill
+   * or resource a character of a game still has cannot be removed from it.
    */
   async update({ params, request, serialize }: HttpContext) {
     const world = await World.findOrFail(params.worldId)
@@ -50,11 +49,6 @@ export default class WorldsController {
     const payload = await request.validateUsing(updateWorldValidator)
     const scope = { worldId: world.id }
 
-    await refuseRemovedScores(
-      'attribute',
-      scope,
-      removedReferences(world.attributes, payload.attributes)
-    )
     await refuseRemovedScores('skill', scope, removedReferences(world.skills, payload.skills))
     await refuseRemovedScores(
       'resource',

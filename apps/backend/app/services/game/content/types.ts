@@ -9,7 +9,30 @@
  *
  * Everything is in English except the names in `labels`: the model reads
  * references and descriptions, the player reads labels.
+ *
+ * The rules are BRP's for every world: the seven characteristics belong to
+ * the system, not to a world; a world brings its skills, each with a category
+ * and the chance a character who never trained it has.
  */
+
+import type {
+  BaseChance,
+  Characteristic,
+  Characteristics,
+  DamageModifierUse,
+  SpecialEffect,
+} from '#services/rules/types'
+
+export {
+  CHARACTERISTICS,
+  DAMAGE_MODIFIER_USES,
+  SPECIAL_EFFECTS,
+  type BaseChance,
+  type Characteristic,
+  type Characteristics,
+  type DamageModifierUse,
+  type SpecialEffect,
+} from '#services/rules/types'
 
 /**
  * Display names by language code. English is required — it is the fallback
@@ -23,9 +46,22 @@ export type LabelledEntry = {
   labels: Labels
 }
 
+/** The six skill categories of BRP: a closed enum of the system, to group a sheet by. */
+export const SKILL_CATEGORIES = [
+  'combat',
+  'communication',
+  'manipulation',
+  'mental',
+  'perception',
+  'physical',
+] as const
+
+export type SkillCategory = (typeof SKILL_CATEGORIES)[number]
+
 export type SkillEntry = LabelledEntry & {
-  /** Reference of the attribute the skill hangs off. */
-  attribute: string
+  category: SkillCategory
+  /** What a character who never trained the skill has in it. */
+  baseChance: BaseChance
 }
 
 /**
@@ -35,15 +71,20 @@ export type SkillEntry = LabelledEntry & {
  */
 export type GlossaryEntry = LabelledEntry
 
-/** Which skill resolves which category of action. A row of `resolution_rules`. */
+/**
+ * What resolves a category of action: a world skill, or a characteristic
+ * rolled at five times its score. A row of `resolution_rules`, which holds
+ * exactly one of the two.
+ */
 export type ActionTypeContent = {
   /** Stable English reference arbitration picks from a closed list. */
   actionType: string
   /** One sentence on what the category covers, for arbitration. */
   description: string
-  /** Reference of the world skill that resolves the category. */
-  associatedSkill: string
-}
+} & (
+  | { associatedSkill: string; associatedCharacteristic: null }
+  | { associatedSkill: null; associatedCharacteristic: Characteristic }
+)
 
 export const DEFINITION_KINDS = ['unique', 'archetype'] as const
 
@@ -60,12 +101,12 @@ export type NpcDisposition = (typeof NPC_DISPOSITIONS)[number]
  * so one engine resolves everyone. Never sent to the model.
  */
 export type CombatProfile = {
-  /** Skill values by reference; a skill left out is worth 0, as for a character. */
+  /** Skill values in percent, by reference. */
   skills: Record<string, number>
   hitPointsMax: number
   /**
-   * The ordinary weapon they fight with: an item definition carrying a damage
-   * bonus, not an item they hold — it cannot be taken from them. A special
+   * The ordinary weapon they fight with: an item definition carrying a weapon
+   * profile, not an item they hold — it cannot be taken from them. A special
    * weapon is held, as an item, and outranks it once fights are wired (Phase 9).
    */
   weapon: string | null
@@ -80,16 +121,33 @@ export const ITEM_CONDITIONS = ['owned', 'equipped'] as const
 export type ItemCondition = (typeof ITEM_CONDITIONS)[number]
 
 /**
- * A fixed bonus or malus an item brings to its holder, aimed at a skill or at
- * the damage a hit deals — the weapon's bonus. Read by the backend only: the
- * model never sees it, proposes it or prices it.
+ * A fixed bonus or malus an item brings to its holder's rolls with a skill,
+ * in percent. Read by the backend only: the model never sees it, proposes it
+ * or prices it.
  */
 export type ItemModifier = {
+  target: 'skill'
+  skill: string
   value: number
   condition: ItemCondition
   /** English, for audit: why the modifier applies. Never shown, never translated. */
   description: string
-} & ({ target: 'skill'; skill: string } | { target: 'damage' })
+}
+
+/**
+ * What a weapon deals when it hits, as BRP writes it. Read by the backend
+ * only; wired into the turn with the combat loop (Phase 9).
+ */
+export type WeaponProfile = {
+  /** Reference of the world skill the weapon is wielded with. */
+  skill: string
+  /** A dice expression: `1D6+1` for a rapier. */
+  damage: string
+  /** How much of the wielder's damage modifier it adds: melee, thrown, firearm. */
+  damageModifier: DamageModifierUse
+  /** What a special success with it does. Recorded, without effect before Phase 9. */
+  special: SpecialEffect | null
+}
 
 /**
  * Who holds a unique item when the game starts, if anyone: it comes into
@@ -133,6 +191,8 @@ export type ItemDefinitionContent = DefinitionContent & {
   stackable: boolean
   equippable: boolean
   modifiers: ItemModifier[]
+  /** Null for anything that is no weapon. */
+  weapon: WeaponProfile | null
   initialHolder: ItemHolderReference | null
 }
 
@@ -165,9 +225,13 @@ export type StartingItem = {
  */
 export type PregeneratedCharacter = {
   name: string
-  attributes: Record<string, number>
+  characteristics: Characteristics
+  /**
+   * Skill values in percent, for the skills the character trained. Any other
+   * skill of the world is worth its base chance. Hit points are no field:
+   * they derive from CON and SIZ.
+   */
   skills: Record<string, number>
-  hitPointsMax: number
   resources: Record<string, number>
   items: StartingItem[]
 }
@@ -206,7 +270,6 @@ export type WorldContent = Catalogues & {
   rules: string[]
   /** Sensory material for the narrator. Never sent to arbitration. */
   ambiance: string[]
-  attributes: LabelledEntry[]
   skills: SkillEntry[]
   resources: LabelledEntry[]
   glossary: GlossaryEntry[]

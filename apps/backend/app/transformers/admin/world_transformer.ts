@@ -26,7 +26,6 @@ export default class WorldTransformer extends BaseTransformer<World> {
       'narrativeTone',
       'rules',
       'ambiance',
-      'attributes',
       'skills',
       'resources',
       'glossary',

@@ -1,5 +1,7 @@
+import { isDiceExpression } from '#services/rules/dice_expression'
+
 import { overlay, type WorldLevelContent } from './resolve.js'
-import type { LabelledEntry, ScenarioContent } from './types.js'
+import { CHARACTERISTICS, type LabelledEntry, type ScenarioContent } from './types.js'
 
 /**
  * Whether a world and one of its scenarios hold together well enough to be
@@ -14,7 +16,9 @@ import type { LabelledEntry, ScenarioContent } from './types.js'
 
 export type CoherenceIssueCode =
   | 'missing_english_label'
-  | 'unknown_attribute'
+  | 'unknown_characteristic'
+  | 'characteristic_out_of_range'
+  | 'invalid_dice'
   | 'unknown_skill'
   | 'unknown_resource'
   | 'unknown_location'
@@ -55,7 +59,6 @@ export function checkScenario(
   const locations = overlay(world.locations, scenario.locations)
   const items = overlay(world.items, scenario.items)
 
-  const attributes = referencesOf(world.attributes)
   const skills = referencesOf(world.skills)
   const resources = referencesOf(world.resources)
   const uniqueNpcs = new Set(
@@ -68,7 +71,6 @@ export function checkScenario(
 
   /** Every name has an English version, the fallback of every language. */
   const labelled: [string, LabelledEntry[]][] = [
-    ['attributes', world.attributes],
     ['skills', world.skills],
     ['resources', world.resources],
     ['glossary', [...world.glossary, ...scenario.glossary]],
@@ -85,8 +87,15 @@ export function checkScenario(
   }
 
   for (const skill of world.skills) {
-    if (!attributes.has(skill.attribute)) {
-      report('unknown_attribute', `skills.${skill.reference}.attribute`, skill.attribute)
+    if (
+      typeof skill.baseChance !== 'number' &&
+      !isCharacteristic(skill.baseChance.characteristic)
+    ) {
+      report(
+        'unknown_characteristic',
+        `skills.${skill.reference}.baseChance.characteristic`,
+        skill.baseChance.characteristic
+      )
     }
   }
 
@@ -94,11 +103,21 @@ export function checkScenario(
     report('no_action_type', 'actionTypes')
   }
   for (const rule of world.actionTypes) {
-    if (!skills.has(rule.associatedSkill)) {
+    if (rule.associatedSkill !== null && !skills.has(rule.associatedSkill)) {
       report(
         'unknown_skill',
         `actionTypes.${rule.actionType}.associatedSkill`,
         rule.associatedSkill
+      )
+    }
+    if (
+      rule.associatedCharacteristic !== null &&
+      !isCharacteristic(rule.associatedCharacteristic)
+    ) {
+      report(
+        'unknown_characteristic',
+        `actionTypes.${rule.actionType}.associatedCharacteristic`,
+        rule.associatedCharacteristic
       )
     }
   }
@@ -120,10 +139,19 @@ export function checkScenario(
 
   for (const item of items) {
     item.modifiers.forEach((modifier, index) => {
-      if (modifier.target === 'skill' && !skills.has(modifier.skill)) {
+      if (!skills.has(modifier.skill)) {
         report('unknown_skill', `items.${item.reference}.modifiers.${index}.skill`, modifier.skill)
       }
     })
+
+    if (item.weapon !== null) {
+      if (!skills.has(item.weapon.skill)) {
+        report('unknown_skill', `items.${item.reference}.weapon.skill`, item.weapon.skill)
+      }
+      if (!isDiceExpression(item.weapon.damage)) {
+        report('invalid_dice', `items.${item.reference}.weapon.damage`, item.weapon.damage)
+      }
+    }
 
     const holder = item.initialHolder
     if (holder !== null) {
@@ -145,7 +173,7 @@ export function checkScenario(
     report('missing_generic_item', 'items')
   }
 
-  checkCharacter(scenario, { attributes, skills, resources, itemsByReference }, report)
+  checkCharacter(scenario, { skills, resources, itemsByReference }, report)
   checkInitialState(scenario, uniqueLocations, report)
 
   return issues
@@ -156,7 +184,6 @@ type Report = (code: CoherenceIssueCode, location: string, reference?: string) =
 function checkCharacter(
   scenario: ScenarioContent,
   known: {
-    attributes: Set<string>
     skills: Set<string>
     resources: Set<string>
     itemsByReference: Map<string, ScenarioContent['items'][number]>
@@ -170,8 +197,25 @@ function checkCharacter(
     return
   }
 
+  for (const characteristic of CHARACTERISTICS) {
+    const score = character.characteristics?.[characteristic]
+    const [min, max] = CHARACTERISTIC_RANGE[characteristic] ?? HUMAN_RANGE
+
+    if (typeof score !== 'number' || !Number.isInteger(score) || score < min || score > max) {
+      report(
+        'characteristic_out_of_range',
+        `pregeneratedCharacter.characteristics.${characteristic}`,
+        characteristic
+      )
+    }
+  }
+  for (const reference of Object.keys(character.characteristics ?? {})) {
+    if (!isCharacteristic(reference)) {
+      report('unknown_characteristic', 'pregeneratedCharacter.characteristics', reference)
+    }
+  }
+
   const scores: [keyof typeof character & string, Set<string>, CoherenceIssueCode][] = [
-    ['attributes', known.attributes, 'unknown_attribute'],
     ['skills', known.skills, 'unknown_skill'],
     ['resources', known.resources, 'unknown_resource'],
   ]
@@ -229,6 +273,17 @@ function checkInitialState(
       report('unknown_quest', `initialState.quests.${index}`, quest.reference)
     }
   })
+}
+
+/** A human's characteristics: 3 to 21, INT and SIZ at least 8 (rules, section 3). */
+const HUMAN_RANGE: [number, number] = [3, 21]
+const CHARACTERISTIC_RANGE: Partial<Record<string, [number, number]>> = {
+  INT: [8, 21],
+  SIZ: [8, 21],
+}
+
+function isCharacteristic(value: string): boolean {
+  return (CHARACTERISTICS as readonly string[]).includes(value)
 }
 
 function referencesOf(entries: { reference: string }[]): Set<string> {

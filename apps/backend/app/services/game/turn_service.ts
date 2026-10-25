@@ -30,7 +30,7 @@ import {
   modifierSources,
   sceneItemsOf,
 } from './inventory.js'
-import { actionTypesOf, skillFor } from './resolution_rules.js'
+import { actionTypesOf, resolutionFor, rollBaseFor } from './resolution_rules.js'
 import { ContentLabels } from './content_labels.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
@@ -74,12 +74,6 @@ import {
   recordCall,
   traceColumns,
 } from './turn_trace.js'
-
-/**
- * A skill missing from the character sheet is one they never learnt: rolled
- * at zero, so the dice alone carry the attempt.
- */
-const UNTRAINED = 0
 
 /** The delta of a turn that changes nothing. */
 const NO_CHANGE: TurnEffects = {
@@ -392,7 +386,7 @@ export class TurnService {
       turn,
       buildNarrationMessage({
         ...context,
-        /** A verdict and a qualitative margin. Never the dice or the threshold. */
+        /** A verdict and a qualitative degree. Never the dice or the chance. */
         outcome,
         intent_summary: decision.intent.summary,
         aside,
@@ -510,7 +504,8 @@ export class TurnService {
 
   /**
    * The outcome arbitration's ruling leads to. A roll is made by the backend
-   * alone, on the skill `resolution_rules` ties to the chosen action type,
+   * alone, on the skill or characteristic `resolution_rules` ties to the
+   * chosen action type — a skill never trained at its base chance —
    * with the circumstances arbitration labelled and the modifiers of the
    * items the character holds; without a roll, the outcome was certain from
    * the start.
@@ -527,30 +522,25 @@ export class TurnService {
       return {
         mode,
         result: mode === 'automatic_success' ? 'success' : 'failure',
-        margin: null,
+        degree: null,
         reason: mode === 'narrative_automatic_failure' ? decision.validity.justification : null,
       }
     }
 
-    const skill = skillFor(scene.world, actionType!)
-    /** A skill the character never learnt is rolled untrained. */
-    const resolution = this.#rules.resolve(
-      scene.character.skills[skill] ?? UNTRAINED,
-      difficulty!,
-      {
-        skill,
-        contextual: decision.resolution.contextual_modifiers,
-        /** The character's own, never what someone else or the place holds. */
-        items: modifierSources(scene.world, scene.items.character),
-      }
-    )
+    const base = rollBaseFor(scene.world, resolutionFor(scene.world, actionType!), scene.character)
+    const resolution = this.#rules.resolve(base, difficulty!, {
+      contextual: decision.resolution.contextual_modifiers,
+      /** The character's own, never what someone else or the place holds. */
+      items: modifierSources(scene.world, scene.items.character),
+    })
 
     /** Every modifier with its origin, contextual and item side by side, for the log. */
-    trace.roll = { skill, actionType: actionType!, ...resolution }
+    trace.roll = { actionType: actionType!, ...resolution }
 
     this.#events.emit(refOf(turn), {
       type: 'roll_resolved',
-      skill,
+      skill: base.kind === 'skill' ? base.skill : null,
+      characteristic: base.kind === 'characteristic' ? base.characteristic : null,
       ...toNarrationOutcome(resolution),
       items: itemsThatWeighed(resolution.appliedModifiers),
       labels: new ContentLabels(scene.world, turn.language),

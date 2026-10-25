@@ -10,6 +10,10 @@ import type { WorldContent } from '#services/game/content/types'
  * Everything is in English, labels included: only the narration is ever
  * produced in the player's language. Every definition lives at world level;
  * the one scenario adds none of its own.
+ *
+ * On the BRP rules: skills in percent, with the base chances of the book;
+ * weapons with its damage dice. A world may name its skills its own way — one
+ * swordsmanship skill stands for the book's Melee Weapon (Sword).
  */
 export const THREE_MUSKETEERS_CONTENT: WorldContent = {
   reference: 'three_musketeers',
@@ -31,27 +35,57 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
     'A musketeer is known by his cloak and his swagger before he is known by his name.',
     'The court glitters, and everyone in it is calculating something.',
   ],
-  attributes: [
-    { reference: 'physical', labels: { en: 'Physical' } },
-    { reference: 'mental', labels: { en: 'Mental' } },
-    { reference: 'social', labels: { en: 'Social' } },
-  ],
   /**
    * Flat and short on purpose: the rules document warns that the simpler the
    * skill list, the more reliably the arbitration step resolves an action onto
    * exactly one of them.
    */
   skills: [
-    { reference: 'swordsmanship', labels: { en: 'Swordsmanship' }, attribute: 'physical' },
-    { reference: 'athletics', labels: { en: 'Athletics' }, attribute: 'physical' },
-    { reference: 'stealth', labels: { en: 'Stealth' }, attribute: 'physical' },
-    { reference: 'marksmanship', labels: { en: 'Marksmanship' }, attribute: 'physical' },
-    { reference: 'observation', labels: { en: 'Observation' }, attribute: 'mental' },
-    { reference: 'scholarship', labels: { en: 'Scholarship' }, attribute: 'mental' },
-    { reference: 'persuasion', labels: { en: 'Persuasion' }, attribute: 'social' },
-    { reference: 'intimidation', labels: { en: 'Intimidation' }, attribute: 'social' },
-    { reference: 'deception', labels: { en: 'Deception' }, attribute: 'social' },
-    { reference: 'etiquette', labels: { en: 'Etiquette' }, attribute: 'social' },
+    {
+      reference: 'swordsmanship',
+      labels: { en: 'Swordsmanship' },
+      category: 'combat',
+      baseChance: 15,
+    },
+    { reference: 'athletics', labels: { en: 'Athletics' }, category: 'physical', baseChance: 25 },
+    { reference: 'stealth', labels: { en: 'Stealth' }, category: 'physical', baseChance: 10 },
+    {
+      reference: 'marksmanship',
+      labels: { en: 'Marksmanship' },
+      category: 'combat',
+      baseChance: 20,
+    },
+    {
+      reference: 'observation',
+      labels: { en: 'Observation' },
+      category: 'perception',
+      baseChance: 25,
+    },
+    { reference: 'scholarship', labels: { en: 'Scholarship' }, category: 'mental', baseChance: 5 },
+    {
+      reference: 'persuasion',
+      labels: { en: 'Persuasion' },
+      category: 'communication',
+      baseChance: 15,
+    },
+    {
+      reference: 'intimidation',
+      labels: { en: 'Intimidation' },
+      category: 'communication',
+      baseChance: 5,
+    },
+    {
+      reference: 'deception',
+      labels: { en: 'Deception' },
+      category: 'communication',
+      baseChance: 5,
+    },
+    {
+      reference: 'etiquette',
+      labels: { en: 'Etiquette' },
+      category: 'communication',
+      baseChance: 5,
+    },
   ],
   resources: [{ reference: 'purse', labels: { en: 'Purse' } }],
   glossary: [],
@@ -66,53 +100,63 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description:
         'Fighting at close quarters, with a sword, a dagger, bare fists or whatever is at hand.',
       associatedSkill: 'swordsmanship',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'ranged_combat',
       description: 'Shooting or throwing at a target: pistol, musket, thrown knife or stone.',
       associatedSkill: 'marksmanship',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'physical_feat',
       description:
         'Climbing, jumping, running, swimming, riding hard, or forcing a door by strength.',
       associatedSkill: 'athletics',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'sneaking',
       description: 'Moving unseen or unheard, hiding, shadowing someone, or lifting a purse.',
       associatedSkill: 'stealth',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'perception',
       description: 'Noticing, searching, spotting a detail or a lie, or reading a scene.',
       associatedSkill: 'observation',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'knowledge',
       description:
         'Recalling or working out what learning teaches: law, heraldry, history, medicine, a cipher.',
       associatedSkill: 'scholarship',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'social_persuasion',
       description: 'Winning someone over by argument, charm or an appeal to their interest.',
       associatedSkill: 'persuasion',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'social_intimidation',
       description: "Getting one's way through threats, menace or sheer force of presence.",
       associatedSkill: 'intimidation',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'social_deception',
       description: "Lying, bluffing, or disguising oneself or one's intentions.",
       associatedSkill: 'deception',
+      associatedCharacteristic: null,
     },
     {
       actionType: 'social_etiquette',
       description: 'Behaving as rank and custom demand: at court, before a superior, among nobles.',
       associatedSkill: 'etiquette',
+      associatedCharacteristic: null,
     },
   ],
   /**
@@ -130,7 +174,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { swordsmanship: 4, persuasion: 3, intimidation: 3, observation: 3 },
+        skills: { swordsmanship: 75, persuasion: 60, intimidation: 60, observation: 60 },
         hitPointsMax: 14,
         weapon: 'rapier',
       },
@@ -144,7 +188,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { swordsmanship: 5, observation: 3, etiquette: 3 },
+        skills: { swordsmanship: 90, observation: 60, etiquette: 60 },
         hitPointsMax: 14,
         weapon: 'rapier',
       },
@@ -157,7 +201,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { swordsmanship: 4, athletics: 4, intimidation: 3 },
+        skills: { swordsmanship: 75, athletics: 75, intimidation: 60 },
         hitPointsMax: 16,
         weapon: 'rapier',
       },
@@ -171,7 +215,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { swordsmanship: 4, deception: 3, scholarship: 3 },
+        skills: { swordsmanship: 75, deception: 60, scholarship: 60 },
         hitPointsMax: 12,
         weapon: 'rapier',
       },
@@ -184,7 +228,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { stealth: 2, athletics: 2, observation: 2 },
+        skills: { stealth: 45, athletics: 45, observation: 45 },
         hitPointsMax: 8,
         weapon: null,
       },
@@ -198,7 +242,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'unfriendly',
       combat: {
-        skills: { swordsmanship: 4, deception: 3, intimidation: 3 },
+        skills: { swordsmanship: 75, deception: 60, intimidation: 60 },
         hitPointsMax: 13,
         weapon: 'rapier',
       },
@@ -212,7 +256,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { deception: 5, persuasion: 4, stealth: 3 },
+        skills: { deception: 90, persuasion: 75, stealth: 60 },
         hitPointsMax: 9,
         weapon: 'dagger',
       },
@@ -224,7 +268,11 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'unique',
       generic: false,
       defaultDisposition: 'unfriendly',
-      combat: { skills: { swordsmanship: 4, intimidation: 2 }, hitPointsMax: 12, weapon: 'rapier' },
+      combat: {
+        skills: { swordsmanship: 75, intimidation: 45 },
+        hitPointsMax: 12,
+        weapon: 'rapier',
+      },
     },
     {
       reference: 'monsieur_bonacieux',
@@ -233,7 +281,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'unique',
       generic: false,
       defaultDisposition: 'neutral',
-      combat: { skills: { deception: 1, observation: 1 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { deception: 30, observation: 30 }, hitPointsMax: 7, weapon: null },
     },
     {
       reference: 'constance_bonacieux',
@@ -242,7 +290,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'unique',
       generic: false,
       defaultDisposition: 'neutral',
-      combat: { skills: { stealth: 2, persuasion: 2 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { stealth: 45, persuasion: 45 }, hitPointsMax: 7, weapon: null },
     },
     {
       reference: 'richelieu',
@@ -252,7 +300,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { persuasion: 4, deception: 4, observation: 4, intimidation: 4 },
+        skills: { persuasion: 75, deception: 75, observation: 75, intimidation: 75 },
         hitPointsMax: 9,
         weapon: null,
       },
@@ -265,7 +313,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'unique',
       generic: false,
       defaultDisposition: 'neutral',
-      combat: { skills: { etiquette: 4, marksmanship: 2 }, hitPointsMax: 10, weapon: null },
+      combat: { skills: { etiquette: 75, marksmanship: 45 }, hitPointsMax: 10, weapon: null },
     },
     {
       reference: 'anne_of_austria',
@@ -274,7 +322,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'unique',
       generic: false,
       defaultDisposition: 'neutral',
-      combat: { skills: { etiquette: 4, persuasion: 3 }, hitPointsMax: 8, weapon: null },
+      combat: { skills: { etiquette: 75, persuasion: 60 }, hitPointsMax: 8, weapon: null },
     },
     {
       reference: 'buckingham',
@@ -285,7 +333,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { swordsmanship: 3, persuasion: 4, etiquette: 4 },
+        skills: { swordsmanship: 60, persuasion: 75, etiquette: 75 },
         hitPointsMax: 11,
         weapon: 'rapier',
       },
@@ -299,7 +347,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { swordsmanship: 3, athletics: 2, marksmanship: 2 },
+        skills: { swordsmanship: 60, athletics: 45, marksmanship: 45 },
         hitPointsMax: 11,
         weapon: 'rapier',
       },
@@ -313,7 +361,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'unfriendly',
       combat: {
-        skills: { swordsmanship: 3, intimidation: 2, marksmanship: 2 },
+        skills: { swordsmanship: 60, intimidation: 45, marksmanship: 45 },
         hitPointsMax: 11,
         weapon: 'rapier',
       },
@@ -326,7 +374,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { swordsmanship: 2, observation: 2 },
+        skills: { swordsmanship: 45, observation: 45 },
         hitPointsMax: 10,
         weapon: 'common_sword',
       },
@@ -338,7 +386,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { athletics: 1 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { athletics: 30 }, hitPointsMax: 7, weapon: null },
     },
     {
       reference: 'merchant',
@@ -347,7 +395,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { persuasion: 2, observation: 1 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { persuasion: 45, observation: 30 }, hitPointsMax: 7, weapon: null },
     },
     {
       reference: 'servant',
@@ -356,7 +404,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { stealth: 1, observation: 1 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { stealth: 30, observation: 30 }, hitPointsMax: 7, weapon: null },
     },
     {
       reference: 'noble',
@@ -365,7 +413,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { etiquette: 3, swordsmanship: 2 }, hitPointsMax: 9, weapon: 'rapier' },
+      combat: { skills: { etiquette: 60, swordsmanship: 45 }, hitPointsMax: 9, weapon: 'rapier' },
     },
     {
       reference: 'clergyman',
@@ -374,7 +422,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { scholarship: 3, persuasion: 2 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { scholarship: 60, persuasion: 45 }, hitPointsMax: 7, weapon: null },
     },
     {
       reference: 'soldier',
@@ -384,7 +432,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'neutral',
       combat: {
-        skills: { swordsmanship: 2, marksmanship: 2, athletics: 2 },
+        skills: { swordsmanship: 45, marksmanship: 45, athletics: 45 },
         hitPointsMax: 10,
         weapon: 'common_sword',
       },
@@ -397,7 +445,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'unfriendly',
       combat: {
-        skills: { swordsmanship: 2, intimidation: 2, stealth: 2 },
+        skills: { swordsmanship: 45, intimidation: 45, stealth: 45 },
         hitPointsMax: 9,
         weapon: 'dagger',
       },
@@ -574,8 +622,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
   ],
   /**
    * The items the plot turns on, then the arms and gear of the novel, then
-   * generic archetypes for anything else the player picks up. Values stay
-   * small: three contextual modifiers already move a 2d6 by up to six.
+   * generic archetypes for anything else the player picks up. Modifiers are
+   * in percent, as BRP prices equipment; weapons carry the dice of the book.
    */
   items: [
     {
@@ -591,11 +639,12 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         {
           target: 'skill',
           skill: 'persuasion',
-          value: 1,
+          value: 10,
           condition: 'owned',
           description: 'A gentleman vouched for by an old friend of Tréville',
         },
       ],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -608,6 +657,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       stackable: false,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: { holder: 'npc', reference: 'buckingham' },
     },
     {
@@ -623,11 +673,12 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         {
           target: 'skill',
           skill: 'intimidation',
-          value: 2,
+          value: 20,
           condition: 'owned',
           description: "The Cardinal's own signature covers the bearer",
         },
       ],
+      weapon: null,
       initialHolder: { holder: 'npc', reference: 'milady' },
     },
     {
@@ -642,11 +693,12 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         {
           target: 'skill',
           skill: 'deception',
-          value: 2,
+          value: 20,
           condition: 'owned',
           description: 'Forged orders carry a genuine seal',
         },
       ],
+      weapon: null,
       initialHolder: { holder: 'location', reference: 'palais_cardinal' },
     },
     {
@@ -657,16 +709,13 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       stackable: false,
       equippable: true,
-      modifiers: [
-        {
-          target: 'skill',
-          skill: 'swordsmanship',
-          value: 1,
-          condition: 'equipped',
-          description: 'A well-balanced duelling blade',
-        },
-        { target: 'damage', value: 2, condition: 'equipped', description: 'Rapier point' },
-      ],
+      modifiers: [],
+      weapon: {
+        skill: 'swordsmanship',
+        damage: '1D6+1',
+        damageModifier: 'full',
+        special: 'impaling',
+      },
       initialHolder: null,
     },
     {
@@ -677,9 +726,13 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       stackable: false,
       equippable: true,
-      modifiers: [
-        { target: 'damage', value: 1, condition: 'equipped', description: 'Short blade' },
-      ],
+      modifiers: [],
+      weapon: {
+        skill: 'swordsmanship',
+        damage: '1D4+2',
+        damageModifier: 'full',
+        special: 'impaling',
+      },
       initialHolder: null,
     },
     {
@@ -690,14 +743,13 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       stackable: false,
       equippable: true,
-      modifiers: [
-        {
-          target: 'damage',
-          value: 3,
-          condition: 'equipped',
-          description: 'Pistol ball at close range',
-        },
-      ],
+      modifiers: [],
+      weapon: {
+        skill: 'marksmanship',
+        damage: '1D6+1',
+        damageModifier: 'none',
+        special: 'impaling',
+      },
       initialHolder: null,
     },
     {
@@ -709,15 +761,20 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       stackable: false,
       equippable: true,
       modifiers: [
-        { target: 'damage', value: 4, condition: 'equipped', description: 'Musket ball' },
         {
           target: 'skill',
           skill: 'stealth',
-          value: -1,
+          value: -10,
           condition: 'equipped',
           description: 'A long, smoking matchlock is hard to hide',
         },
       ],
+      weapon: {
+        skill: 'marksmanship',
+        damage: '1D10+4',
+        damageModifier: 'none',
+        special: 'impaling',
+      },
       initialHolder: null,
     },
     {
@@ -732,11 +789,12 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         {
           target: 'skill',
           skill: 'intimidation',
-          value: 1,
+          value: 10,
           condition: 'equipped',
           description: "Wearing the King's colours",
         },
       ],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -747,14 +805,13 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: true,
       stackable: false,
       equippable: true,
-      modifiers: [
-        {
-          target: 'damage',
-          value: 1,
-          condition: 'equipped',
-          description: 'Something heavy to hit with',
-        },
-      ],
+      modifiers: [],
+      weapon: {
+        skill: 'swordsmanship',
+        damage: '1D6',
+        damageModifier: 'full',
+        special: 'crushing',
+      },
       initialHolder: null,
     },
     {
@@ -765,9 +822,13 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: true,
       stackable: false,
       equippable: true,
-      modifiers: [
-        { target: 'damage', value: 2, condition: 'equipped', description: 'A plain blade' },
-      ],
+      modifiers: [],
+      weapon: {
+        skill: 'swordsmanship',
+        damage: '1D8+1',
+        damageModifier: 'full',
+        special: 'bleeding',
+      },
       initialHolder: null,
     },
     {
@@ -782,11 +843,12 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         {
           target: 'skill',
           skill: 'athletics',
-          value: 1,
+          value: 10,
           condition: 'owned',
           description: 'A rope to climb or swing with',
         },
       ],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -798,6 +860,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       stackable: false,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -809,6 +872,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       stackable: false,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -820,6 +884,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       stackable: false,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -831,6 +896,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       stackable: true,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: null,
     },
     {
@@ -842,6 +908,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       stackable: true,
       equippable: false,
       modifiers: [],
+      weapon: null,
       initialHolder: null,
     },
   ],
@@ -856,9 +923,15 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       quests: [{ reference: 'deliver_the_letter', labels: { en: 'Deliver the letter' } }],
       pregeneratedCharacter: {
         name: "d'Artagnan",
-        attributes: { physical: 3, mental: 2, social: 3 },
-        skills: { swordsmanship: 3, athletics: 1, observation: 1, persuasion: 2, etiquette: 1 },
-        hitPointsMax: 10,
+        /** Quick, hot-headed and charming: a young Gascon of eighteen. */
+        characteristics: { STR: 13, CON: 14, SIZ: 12, INT: 13, POW: 12, DEX: 16, CHA: 14 },
+        skills: {
+          swordsmanship: 60,
+          athletics: 30,
+          observation: 30,
+          persuasion: 45,
+          etiquette: 30,
+        },
         resources: { purse: 15 },
         /**
          * What d'Artagnan leaves Gascony with: his father's letter for

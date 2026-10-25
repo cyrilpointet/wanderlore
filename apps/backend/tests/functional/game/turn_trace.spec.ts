@@ -19,22 +19,20 @@ import { createSession, createTurn, createUser, useTransaction } from '#tests/he
 const ARBITRATION = {
   intent: { type: 'social_dialogue', target: 'guard', summary: 'Talking past the guard' },
   validity: { factual: true, plausibility: 'plausible', justification: 'The guard can be swayed.' },
-  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'medium' },
+  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'average' },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 } as unknown as ArbitrationOutput
 
 const ROLL: TracedRoll = {
   actionType: 'social_persuasion',
-  skill: 'persuasion',
-  dice: [4, 5],
-  skillValue: 2,
+  base: { kind: 'skill', skill: 'persuasion', value: 45 },
+  baseChance: 45,
+  difficulty: 'average',
   appliedModifiers: [],
-  total: 11,
-  difficulty: 'medium',
-  threshold: 9,
-  margin: 2,
+  chance: 45,
+  roll: 30,
   result: 'success',
-  marginLabel: 'comfortable',
+  degree: 'success',
 }
 
 const NARRATION = 'He weighs you for a long moment, then steps aside.'

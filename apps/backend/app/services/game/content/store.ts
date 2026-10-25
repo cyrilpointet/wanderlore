@@ -8,6 +8,7 @@ import ResolutionRule from '#models/resolution_rule'
 import LocationDefinition from '#models/location_definition'
 
 import type {
+  ActionTypeContent,
   Catalogues,
   ItemDefinitionContent,
   LocationDefinitionContent,
@@ -44,7 +45,6 @@ export async function storeWorldContent(
       narrativeTone: content.narrativeTone,
       rules: content.rules,
       ambiance: content.ambiance,
-      attributes: content.attributes,
       skills: content.skills,
       resources: content.resources,
       glossary: content.glossary,
@@ -184,15 +184,10 @@ export async function readWorldLevel(
     narrativeTone: world.narrativeTone,
     rules: world.rules,
     ambiance: world.ambiance,
-    attributes: world.attributes,
     skills: world.skills,
     resources: world.resources,
     glossary: world.glossary,
-    actionTypes: rules.map(({ actionType, description, associatedSkill }) => ({
-      actionType,
-      description,
-      associatedSkill,
-    })),
+    actionTypes: rules.map(actionTypeOf),
     ...(await readCatalogues(worldId, null, client)),
   }
 }
@@ -265,9 +260,28 @@ export async function readCatalogues(
       stackable: item.stackable,
       equippable: item.equippable,
       modifiers: item.modifiers,
+      weapon: item.weapon,
       initialHolder: item.initialHolder,
     })),
   }
+}
+
+/**
+ * A category of action as stored: the check constraint of the table keeps
+ * exactly one of skill and characteristic.
+ */
+export function actionTypeOf(rule: ResolutionRule): ActionTypeContent {
+  const { actionType, description, associatedSkill, associatedCharacteristic } = rule
+
+  if (associatedSkill !== null) {
+    return { actionType, description, associatedSkill, associatedCharacteristic: null }
+  }
+
+  if (associatedCharacteristic !== null) {
+    return { actionType, description, associatedSkill: null, associatedCharacteristic }
+  }
+
+  throw new Error(`Action type ${actionType} is resolved by neither a skill nor a characteristic.`)
 }
 
 async function sequentially<Item, Result>(

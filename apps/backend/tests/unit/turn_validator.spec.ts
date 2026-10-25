@@ -63,7 +63,7 @@ function arbitration(overrides: Record<string, unknown> = {}) {
       summary: 'Talking past the guard',
     },
     validity: { factual: true, plausibility: 'plausible', justification: 'The letter is real.' },
-    resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'medium' },
+    resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'average' },
     alert: { prompt_injection_suspected: false, out_of_scope: false },
     ...overrides,
   }
@@ -137,7 +137,7 @@ test.group('Turn validator | closed lists', () => {
     const error = await reject(() =>
       validateArbitration(
         arbitration({
-          resolution: { mode: 'roll_required', action_type: 'alchemy', difficulty: 'medium' },
+          resolution: { mode: 'roll_required', action_type: 'alchemy', difficulty: 'average' },
         }),
         META
       )
@@ -156,7 +156,7 @@ test.group('Turn validator | closed lists', () => {
     const error = await reject(() =>
       validateArbitration(
         arbitration({
-          resolution: { mode: 'roll_required', action_type: 'persuasion', difficulty: 'medium' },
+          resolution: { mode: 'roll_required', action_type: 'persuasion', difficulty: 'average' },
         }),
         META
       )
@@ -522,7 +522,7 @@ test.group('Turn validator | contextual modifiers', () => {
       resolution: {
         mode: 'roll_required',
         action_type: 'social_persuasion',
-        difficulty: 'medium',
+        difficulty: 'average',
         contextual_modifiers: modifiers,
       },
     })

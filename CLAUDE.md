@@ -139,8 +139,9 @@ Ses choix d'exécution restent en vigueur (détail : roadmap Phase 2, architectu
 
 **Pipeline d'un tour** (séparé depuis KAN-40, `#runPipeline` dans `turn_service.ts`) :
 arbitrage A+B+C (`action_type` et circonstances en labels, jamais de narration) → jet côté
-backend si requis (compétence déduite via `resolution_rules`, une compétence absente de la
-fiche vaut 0 ; circonstances et objets du personnage ajoutés, chacun tracé avec son origine) →
+backend si requis (d100 BRP sur la compétence ou la caractéristique déduite via
+`resolution_rules`, une compétence absente de la fiche valant sa chance de base ; circonstances
+et objets du personnage ajoutés, chacun tracé avec son origine) →
 narration D en **texte libre streamé** (`narration_chunk`) → extraction E, structurée, qui lit
 la narration et renvoie le delta complet, validé contre les listes fermées → application par
 `applyDelta` (`app/services/game/apply_delta.ts`) dans la transaction du tour, dans un ordre

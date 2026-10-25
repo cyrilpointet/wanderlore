@@ -1,6 +1,7 @@
 import { ContentLabels } from '#services/game/content_labels'
 import type { ItemsInScene } from '#services/game/inventory'
 import type { WorldDefinition } from '#services/game/world'
+import { DIFFICULTIES } from '#services/rules/types'
 
 import type { ArbitrationContext, RecentTurn } from './types.js'
 
@@ -100,7 +101,7 @@ export const ARBITRATION_SCHEMA = {
           enum: ['automatic_success', 'narrative_automatic_failure', 'roll_required'],
         },
         action_type: { type: ['string', 'null'] },
-        difficulty: { type: ['string', 'null'], enum: ['easy', 'medium', 'hard', 'very_hard'] },
+        difficulty: { type: ['string', 'null'], enum: [...DIFFICULTIES] },
         contextual_modifiers: {
           type: 'array',
           items: {

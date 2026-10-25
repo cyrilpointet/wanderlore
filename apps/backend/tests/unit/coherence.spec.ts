@@ -34,12 +34,12 @@ test.group('Coherence | the seeded content', () => {
 })
 
 test.group('Coherence | references', () => {
-  test('a skill hangs off an attribute of the world', ({ assert }) => {
+  test('a base chance reads a characteristic of BRP', ({ assert }) => {
     assert.deepEqual(
       issuesAfter((world) => {
-        world.skills[0].attribute = 'agility'
+        world.skills[0].baseChance = { characteristic: 'LUCK' as never, multiplier: 2 }
       }),
-      [['unknown_attribute', 'skills.swordsmanship.attribute', 'agility']]
+      [['unknown_characteristic', 'skills.swordsmanship.baseChance.characteristic', 'LUCK']]
     )
   })
 
@@ -57,6 +57,42 @@ test.group('Coherence | references', () => {
         world.actionTypes = []
       }),
       [['no_action_type', 'actionTypes', undefined]]
+    )
+  })
+
+  test('a category of action may resolve with a characteristic of BRP instead', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((world) => {
+        world.actionTypes[0] = {
+          ...world.actionTypes[0],
+          associatedSkill: null,
+          associatedCharacteristic: 'DEX',
+        }
+      }),
+      []
+    )
+    assert.deepEqual(
+      issuesAfter((world) => {
+        world.actionTypes[0] = {
+          ...world.actionTypes[0],
+          associatedSkill: null,
+          associatedCharacteristic: 'LUCK' as never,
+        }
+      }),
+      [['unknown_characteristic', 'actionTypes.melee_combat.associatedCharacteristic', 'LUCK']]
+    )
+  })
+
+  test('a weapon is wielded with a skill of the world, and deals dice', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((world) => {
+        const rapier = world.items.find((item) => item.reference === 'rapier')!
+        rapier.weapon = { ...rapier.weapon!, skill: 'fencing', damage: 'a lot' }
+      }),
+      [
+        ['unknown_skill', 'items.rapier.weapon.skill', 'fencing'],
+        ['invalid_dice', 'items.rapier.weapon.damage', 'a lot'],
+      ]
     )
   })
 
@@ -108,7 +144,7 @@ test.group('Coherence | references', () => {
   test('a scenario definition counts like a world one', ({ assert }) => {
     assert.deepEqual(
       issuesAfter((world, scenario) => {
-        world.skills[0].attribute = 'agility'
+        world.skills[0].baseChance = { characteristic: 'LUCK' as never, multiplier: 2 }
         scenario.npcs = [
           {
             ...world.npcs[0],
@@ -117,7 +153,7 @@ test.group('Coherence | references', () => {
           },
         ]
       }).map(([code]) => code),
-      ['unknown_attribute', 'unknown_item']
+      ['unknown_characteristic', 'unknown_item']
     )
   })
 })
@@ -159,14 +195,33 @@ test.group('Coherence | the character and where the story starts', () => {
   test('the character only has scores the world defines', ({ assert }) => {
     assert.deepEqual(
       issuesAfter((_world, scenario) => {
-        scenario.pregeneratedCharacter!.attributes.agility = 2
         scenario.pregeneratedCharacter!.skills.fencing = 3
         scenario.pregeneratedCharacter!.resources.gold = 3
       }),
       [
-        ['unknown_attribute', 'pregeneratedCharacter.attributes', 'agility'],
         ['unknown_skill', 'pregeneratedCharacter.skills', 'fencing'],
         ['unknown_resource', 'pregeneratedCharacter.resources', 'gold'],
+      ]
+    )
+  })
+
+  test('the character has the seven characteristics, within human bounds', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        const characteristics = scenario.pregeneratedCharacter!.characteristics as Record<
+          string,
+          number
+        >
+        characteristics.STR = 22
+        characteristics.SIZ = 7
+        delete characteristics.CHA
+        characteristics.LUCK = 10
+      }),
+      [
+        ['characteristic_out_of_range', 'pregeneratedCharacter.characteristics.STR', 'STR'],
+        ['characteristic_out_of_range', 'pregeneratedCharacter.characteristics.SIZ', 'SIZ'],
+        ['characteristic_out_of_range', 'pregeneratedCharacter.characteristics.CHA', 'CHA'],
+        ['unknown_characteristic', 'pregeneratedCharacter.characteristics', 'LUCK'],
       ]
     )
   })

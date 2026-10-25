@@ -4,15 +4,15 @@ import type TurnLog from '#models/turn_log'
 import type { ContentLabels } from '#services/game/content_labels'
 import type { Labelled } from '#services/game/content_labels'
 import type { AppliedEffects, AppliedHolder, AppliedItems } from '#services/game/prompts/types'
-import type { MarginLabel, RollOutcome } from '#services/rules/types'
+import type { Characteristic, Degree, RollBase, RollOutcome } from '#services/rules/types'
 
 /**
  * A logged turn, as the journal shows it — and as a client reads it back after
  * missing the end of its SSE stream.
  *
- * The log keeps everything, dice included, for debugging. What leaves is only
- * what the player may see: the skill, the verdict and a qualitative margin,
- * never the dice, the threshold or the total. Scenario flags never leave.
+ * The log keeps everything, dice included, for debugging. What leaves is
+ * what the player may see: the skill or characteristic, the verdict and its
+ * degree. Scenario flags never leave.
  */
 export default class TurnTransformer extends BaseTransformer<TurnLog> {
   #labels: ContentLabels
@@ -45,32 +45,31 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
   }
 
   /**
-   * The roll carries the skill the backend derived from the action type.
-   * Turns logged before that derivation existed have it in the arbitration
-   * output instead, where the model picked it.
+   * The roll carries what the backend derived from the action type: a skill
+   * or a characteristic. Every logged turn is on the BRP rules — the switch
+   * deleted the games played before it.
    */
   #roll() {
-    const { rollResult, arbitrationOutput } = this.resource
+    const { rollResult } = this.resource
 
     if (rollResult === null) {
       return null
     }
 
-    const legacy = arbitrationOutput?.resolution as { skill_used?: string } | undefined
-    const skill = (rollResult.skill as string | undefined) ?? legacy?.skill_used
+    const base = rollResult.base as RollBase | undefined
 
-    if (skill === undefined) {
-      throw new Error(`Turn ${this.resource.id} logged a roll without its skill.`)
+    if (base === undefined) {
+      throw new Error(`Turn ${this.resource.id} logged a roll without what it rolled.`)
     }
 
-    /** Turns rolled before Phase 4 have no modifier at all. */
-    const modifiers = (rollResult.appliedModifiers ?? []) as { source: string; origin: string }[]
+    const modifiers = rollResult.appliedModifiers as { source: string; origin: string }[]
 
     return presentRoll(
       {
-        skill,
+        skill: base.kind === 'skill' ? base.skill : null,
+        characteristic: base.kind === 'characteristic' ? base.characteristic : null,
         result: rollResult.result as RollOutcome,
-        margin: rollResult.marginLabel as MarginLabel,
+        degree: rollResult.degree as Degree,
         items: [
           ...new Set(
             modifiers.filter(({ source }) => source === 'item').map(({ origin }) => origin)
@@ -83,17 +82,24 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
 }
 
 /**
- * The items that weighed on the roll are named, never with what they were
- * worth: the pill says an item counted, not by how much.
+ * The items that weighed on the roll are named. A characteristic is a closed
+ * enum of the system: it leaves as its reference, which the front labels.
  */
 export function presentRoll(
-  roll: { skill: string; result: RollOutcome; margin: MarginLabel; items: string[] },
+  roll: {
+    skill: string | null
+    characteristic: Characteristic | null
+    result: RollOutcome
+    degree: Degree
+    items: string[]
+  },
   labels: ContentLabels
 ) {
   return {
-    skill: labels.of('skill', roll.skill),
+    skill: roll.skill === null ? null : labels.of('skill', roll.skill),
+    characteristic: roll.characteristic,
     result: roll.result,
-    margin: roll.margin,
+    degree: roll.degree,
     items: roll.items.map((item) => labels.of('item', item)),
   }
 }

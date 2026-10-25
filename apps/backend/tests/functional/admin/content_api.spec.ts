@@ -43,8 +43,14 @@ const NEW_WORLD = {
   narrativeTone: 'London, 1890: fog, gaslight and deduction.',
   rules: ['There is no magic.'],
   ambiance: ['Fog rolls along the Thames.'],
-  attributes: [{ reference: 'mind', labels: { en: 'Mind' } }],
-  skills: [{ reference: 'deduction', labels: { en: 'Deduction' }, attribute: 'mind' }],
+  skills: [
+    {
+      reference: 'deduction',
+      labels: { en: 'Deduction' },
+      category: 'mental',
+      baseChance: { characteristic: 'INT', multiplier: 2 },
+    },
+  ],
   resources: [{ reference: 'shillings', labels: { en: 'Shillings' } }],
   glossary: [{ reference: 'scotland_yard', labels: { en: 'Scotland Yard' } }],
 }
@@ -56,7 +62,7 @@ const GUARD = {
   kind: 'archetype',
   generic: false,
   defaultDisposition: 'neutral',
-  combat: { skills: { deduction: 1 }, hitPointsMax: 9, weapon: null },
+  combat: { skills: { deduction: 30 }, hitPointsMax: 9, weapon: null },
 }
 
 /** A game in the seeded world whose character has a score in `persuasion`. */
@@ -67,7 +73,7 @@ async function gameInMusketeers() {
   await db
     .from('characters')
     .where('id', characterId)
-    .update({ skills: JSON.stringify({ persuasion: 2 }) })
+    .update({ skills: JSON.stringify({ persuasion: 45 }) })
 
   return { ...content, sessionId }
 }
@@ -111,13 +117,19 @@ test.group('Content API | worlds', (group) => {
     })
     const twice = await as(client, user).post('/worlds', {
       ...NEW_WORLD,
-      attributes: [...NEW_WORLD.attributes, ...NEW_WORLD.attributes],
+      skills: [...NEW_WORLD.skills, ...NEW_WORLD.skills],
+    })
+    const uncategorised = await as(client, user).post('/worlds', {
+      ...NEW_WORLD,
+      skills: [{ ...NEW_WORLD.skills[0], category: 'magic', baseChance: 150 }],
     })
 
     for (const [response, field] of [
       [noEnglish, 'labels.en'],
       [badReference, 'reference'],
-      [twice, 'attributes'],
+      [twice, 'skills'],
+      [uncategorised, 'skills.0.category'],
+      [uncategorised, 'skills.0.baseChance'],
     ] as const) {
       response.assertStatus(422)
       assert.include(
@@ -210,6 +222,51 @@ test.group('Content API | categories of action', (group) => {
     response3.assertStatus(204)
   })
 
+  test('resolves a category by a skill or a characteristic, exactly one', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+    const post = (fields: Record<string, unknown>) =>
+      as(client, user).post(`/worlds/${worldId}/action-types`, {
+        actionType: 'trusting_luck',
+        description: 'Hoping chance favours you.',
+        ...fields,
+      })
+
+    const neither = await post({})
+    const both = await post({ associatedSkill: 'deduction', associatedCharacteristic: 'POW' })
+    const characteristic = await post({ associatedCharacteristic: 'POW' })
+
+    for (const refused of [neither, both]) {
+      refused.assertStatus(422)
+      assert.equal(bodyOf(refused).error.code, 'one_resolution')
+    }
+    characteristic.assertStatus(201)
+    assert.include(bodyOf(characteristic).data, {
+      associatedSkill: null,
+      associatedCharacteristic: 'POW',
+    })
+
+    /** Switching to a skill means letting go of the characteristic. */
+    const { id } = bodyOf(characteristic).data
+    const kept = await as(client, user).patch(`/action-types/${id}`, {
+      associatedSkill: 'deduction',
+    })
+    const switched = await as(client, user).patch(`/action-types/${id}`, {
+      associatedSkill: 'deduction',
+      associatedCharacteristic: null,
+    })
+
+    kept.assertStatus(422)
+    switched.assertStatus(200)
+    assert.include(bodyOf(switched).data, {
+      associatedSkill: 'deduction',
+      associatedCharacteristic: null,
+    })
+  })
+
   test('keeps a category a logged roll resolved', async ({ client, assert }) => {
     const { worldId, sessionId } = await gameInMusketeers()
     const user = await gameMaster()
@@ -266,19 +323,17 @@ test.group('Content API | scenarios', (group) => {
     const response = await as(client, user).patch(`/scenarios/${scenario.id}`, {
       pregeneratedCharacter: {
         name: 'Dr Watson',
-        attributes: {},
-        skills: { deduction: 1 },
-        hitPointsMax: 0,
+        characteristics: { STR: 11, CON: 12, SIZ: 13, INT: 14, POW: 12, DEX: 11 },
+        skills: { deduction: 250 },
         resources: {},
         items: [],
       },
     })
 
     response.assertStatus(422)
-    assert.include(
-      bodyOf(response).errors.map((error: { field: string }) => error.field),
-      'pregeneratedCharacter.hitPointsMax'
-    )
+    const fields = bodyOf(response).errors.map((error: { field: string }) => error.field)
+    assert.include(fields, 'pregeneratedCharacter.characteristics.CHA')
+    assert.include(fields, 'pregeneratedCharacter.skills.deduction')
   })
 
   test('keeps a chapter a game stands in', async ({ client, assert }) => {

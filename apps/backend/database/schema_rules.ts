@@ -72,7 +72,6 @@ export default {
         labels,
         rules: { tsType: 'string[]', decorators: arrayColumn },
         ambiance: { tsType: 'string[]', decorators: arrayColumn },
-        attributes: content('LabelledEntry[]', { array: true }),
         skills: content('SkillEntry[]', { array: true }),
         resources: content('LabelledEntry[]', { array: true }),
         glossary: content('GlossaryEntry[]', { array: true }),
@@ -109,6 +108,7 @@ export default {
         labels,
         kind,
         modifiers: content('ItemModifier[]', { array: true }),
+        weapon: content('WeaponProfile'),
         initial_holder: content('ItemHolderReference'),
       },
     },
@@ -144,9 +144,15 @@ export default {
       },
     },
 
+    resolution_rules: {
+      columns: {
+        associated_characteristic: content('Characteristic'),
+      },
+    },
+
     characters: {
       columns: {
-        attributes: numbersByKey,
+        characteristics: content('Characteristics'),
         skills: numbersByKey,
         resources: numbersByKey,
         progression: jsonObject,

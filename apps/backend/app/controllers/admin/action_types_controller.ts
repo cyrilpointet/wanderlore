@@ -1,4 +1,5 @@
 import World from '#models/world'
+import { Refusal } from '#exceptions/refusal'
 import ResolutionRule from '#models/resolution_rule'
 import { createActionTypeValidator, updateActionTypeValidator } from '#validators/content'
 import { refuseRemovedActionTypes } from '#services/game/content/usage'
@@ -7,7 +8,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 import { referenceTaken, refuseReferenceChange } from './content.js'
 
-/** The categories of action of a world, each tied to the skill that resolves it. */
+/** The categories of action of a world, each tied to the skill or characteristic that resolves it. */
 export default class ActionTypesController {
   async index({ params, serialize }: HttpContext) {
     const world = await World.findOrFail(params.worldId)
@@ -29,14 +30,25 @@ export default class ActionTypesController {
       throw referenceTaken(payload.actionType)
     }
 
-    const rule = await ResolutionRule.create({ ...payload, worldId: world.id })
+    const resolution = {
+      associatedSkill: payload.associatedSkill ?? null,
+      associatedCharacteristic: payload.associatedCharacteristic ?? null,
+    }
+    refuseUnlessOneResolution(resolution)
+
+    const rule = await ResolutionRule.create({
+      actionType: payload.actionType,
+      description: payload.description,
+      ...resolution,
+      worldId: world.id,
+    })
 
     response.status(201)
 
     return serialize(ActionTypeTransformer.transform(rule))
   }
 
-  /** The description and the skill; the category's own reference never changes. */
+  /** The description and what resolves it; the category's own reference never changes. */
   async update({ params, request, serialize }: HttpContext) {
     const rule = await ResolutionRule.findOrFail(params.id)
 
@@ -48,6 +60,15 @@ export default class ActionTypesController {
     }
 
     const payload = await request.validateUsing(updateActionTypeValidator)
+    refuseUnlessOneResolution({
+      associatedSkill:
+        payload.associatedSkill === undefined ? rule.associatedSkill : payload.associatedSkill,
+      associatedCharacteristic:
+        payload.associatedCharacteristic === undefined
+          ? rule.associatedCharacteristic
+          : payload.associatedCharacteristic,
+    })
+
     await rule.merge(payload).save()
 
     return serialize(ActionTypeTransformer.transform(rule))
@@ -61,5 +82,26 @@ export default class ActionTypesController {
     await rule.delete()
 
     return response.noContent()
+  }
+}
+
+/**
+ * A skill or a characteristic, exactly one: the table refuses anything else,
+ * but with a message the back-office cannot show.
+ */
+function refuseUnlessOneResolution(resolution: {
+  associatedSkill: string | null
+  associatedCharacteristic: string | null
+}) {
+  const set = [resolution.associatedSkill, resolution.associatedCharacteristic].filter(
+    (value) => value !== null
+  )
+
+  if (set.length !== 1) {
+    throw new Refusal(
+      422,
+      'one_resolution',
+      'A category of action is resolved by a skill or by a characteristic, exactly one of them.'
+    )
   }
 }

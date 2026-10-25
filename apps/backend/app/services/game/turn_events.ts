@@ -1,6 +1,6 @@
 import type Character from '#models/character'
 import type TurnLog from '#models/turn_log'
-import type { MarginLabel, RollOutcome } from '#services/rules/types'
+import type { Characteristic, Degree, RollOutcome } from '#services/rules/types'
 import type { ContentLabels, PlacedLocation } from '#services/game/content_labels'
 import type { HeldItem } from '#services/game/inventory'
 import CharacterTransformer from '#transformers/character_transformer'
@@ -17,15 +17,15 @@ import TurnTransformer, { presentRoll } from '#transformers/turn_transformer'
 export type TurnEvent =
   | { type: 'step_started'; step: 'arbitration' | 'narration' }
   /**
-   * The skill, the verdict and a qualitative margin — never the dice, the
-   * threshold or the skill value. The items that weighed on the roll, by
-   * definition, never with what they were worth.
+   * The skill or characteristic rolled, the verdict and its degree. The items
+   * that weighed on the roll, by definition.
    */
   | {
       type: 'roll_resolved'
-      skill: string
+      skill: string | null
+      characteristic: Characteristic | null
       result: RollOutcome
-      margin: MarginLabel
+      degree: Degree
       items: string[]
       /** The labels of the world the turn is played in, for the wire. */
       labels: ContentLabels

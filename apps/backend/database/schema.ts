@@ -6,7 +6,7 @@
 
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
-import type { ItemHolderReference, DefinitionKind, Labels, ItemModifier, CombatProfile, NpcDisposition, LabelledEntry, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
+import type { Characteristics, ItemHolderReference, DefinitionKind, Labels, ItemModifier, WeaponProfile, CombatProfile, NpcDisposition, Characteristic, LabelledEntry, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
 
 export class AuthAccessTokenSchema extends BaseModel {
   static $columns = ['abilities', 'createdAt', 'expiresAt', 'hash', 'id', 'lastUsedAt', 'name', 'tokenableId', 'type', 'updatedAt'] as const
@@ -34,10 +34,10 @@ export class AuthAccessTokenSchema extends BaseModel {
 }
 
 export class CharacterSchema extends BaseModel {
-  static $columns = ['attributes', 'createdAt', 'hitPoints', 'hitPointsMax', 'id', 'name', 'progression', 'resources', 'sessionId', 'skills', 'updatedAt'] as const
+  static $columns = ['characteristics', 'createdAt', 'hitPoints', 'hitPointsMax', 'id', 'name', 'progression', 'resources', 'sessionId', 'skills', 'updatedAt'] as const
   $columns = CharacterSchema.$columns
   @column()
-  declare attributes: Record<string, number>
+  declare characteristics: Characteristics
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -90,7 +90,7 @@ export class InventoryItemSchema extends BaseModel {
 }
 
 export class ItemDefinitionSchema extends BaseModel {
-  static $columns = ['createdAt', 'description', 'equippable', 'generic', 'id', 'initialHolder', 'kind', 'labels', 'modifiers', 'reference', 'scenarioId', 'stackable', 'updatedAt', 'worldId'] as const
+  static $columns = ['createdAt', 'description', 'equippable', 'generic', 'id', 'initialHolder', 'kind', 'labels', 'modifiers', 'reference', 'scenarioId', 'stackable', 'updatedAt', 'weapon', 'worldId'] as const
   $columns = ItemDefinitionSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -118,6 +118,8 @@ export class ItemDefinitionSchema extends BaseModel {
   declare stackable: boolean
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+  @column()
+  declare weapon: WeaponProfile | null
   @column()
   declare worldId: string
 }
@@ -227,12 +229,14 @@ export class NpcInstanceSchema extends BaseModel {
 }
 
 export class ResolutionRuleSchema extends BaseModel {
-  static $columns = ['actionType', 'associatedSkill', 'createdAt', 'description', 'id', 'updatedAt', 'worldId'] as const
+  static $columns = ['actionType', 'associatedCharacteristic', 'associatedSkill', 'createdAt', 'description', 'id', 'updatedAt', 'worldId'] as const
   $columns = ResolutionRuleSchema.$columns
   @column()
   declare actionType: string
   @column()
-  declare associatedSkill: string
+  declare associatedCharacteristic: Characteristic | null
+  @column()
+  declare associatedSkill: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -379,12 +383,10 @@ export class WorldStateSchema extends BaseModel {
 }
 
 export class WorldSchema extends BaseModel {
-  static $columns = ['ambiance', 'attributes', 'createdAt', 'createdBy', 'glossary', 'id', 'labels', 'narrativeTone', 'reference', 'resources', 'rules', 'skills', 'updatedAt'] as const
+  static $columns = ['ambiance', 'createdAt', 'createdBy', 'glossary', 'id', 'labels', 'narrativeTone', 'reference', 'resources', 'rules', 'skills', 'updatedAt'] as const
   $columns = WorldSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare ambiance: string[]
-  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
-  declare attributes: LabelledEntry[]
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()

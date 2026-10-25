@@ -1,10 +1,5 @@
 import type { PlacedLocation } from '#services/game/content_labels'
-import type {
-  ContextualModifier,
-  Difficulty,
-  MarginLabel,
-  RollOutcome,
-} from '#services/rules/types'
+import type { ContextualModifier, Degree, Difficulty, RollOutcome } from '#services/rules/types'
 import type { NpcDisposition, WorldDefinition } from '#services/game/world'
 import type { ActionType } from '#services/game/resolution_rules'
 import type { PresentNpc } from '#services/game/npcs'
@@ -219,14 +214,14 @@ export type ArbitrationContext = TurnContext & {
 }
 
 /**
- * The settled outcome the narrator stages: a verdict, and a qualitative margin
+ * The settled outcome the narrator stages: a verdict, and a qualitative degree
  * when a roll decided it — never a number.
  */
 export type OutcomeToNarrate = {
   mode: ResolutionMode
   result: RollOutcome
-  /** Null when no roll was made: an automatic outcome has no margin. */
-  margin: MarginLabel | null
+  /** Null when no roll was made: an automatic outcome has no degree. */
+  degree: Degree | null
   /** Why the world stops the character, for an automatic failure only. */
   reason: string | null
 }
