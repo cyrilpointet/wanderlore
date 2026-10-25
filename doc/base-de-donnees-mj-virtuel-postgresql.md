@@ -459,11 +459,19 @@ Résumés hiérarchiques générés par le job asynchrone.
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant |
-| `email` | text | identifiant de connexion |
-| `password_hash` | text | authentification |
-| `role` | enum | `player` / `game_master` / `superadmin` |
-| `preferences` | jsonb | préférences éventuelles (ton préféré, options d'affichage, langue) |
-| `created_at` | timestamp | — |
+| `full_name` | varchar, nullable | nom affiché |
+| `email` | varchar(254), unique | identifiant de connexion |
+| `password` | varchar | hash du mot de passe |
+| `role` | enum `user_role` | `player` (défaut) / `game_master` / `superadmin` ; un seul par compte |
+| `suspended_at` | timestamptz, nullable | date de suspension ; null pour un compte actif (Phase 5bis) |
+| `created_at` / `updated_at` | timestamptz | — |
+
+- **Suspension** : un compte suspendu ne se connecte plus, et sa session déjà ouverte est
+  coupée à la requête suivante — la session est un cookie chiffré, impossible à révoquer côté
+  serveur, l'état du compte est donc relu à chaque requête. Ses parties sont conservées.
+- **Pas de suppression de compte** ni de changement de rôle à ce stade.
+- **Envisagé plus tard** : `preferences` (jsonb : langue, options d'affichage), avec le choix
+  de langue de la Phase 9.
 
 ### `usage_quotas` (optionnel, selon modèle économique)
 

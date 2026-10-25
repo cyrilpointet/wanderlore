@@ -289,6 +289,12 @@ Tranchées à l'ouverture de la phase (epic `KAN-71`) :
 - **Création d'un compte** : nom, email, rôle et mot de passe initial, transmis par le superadmin hors de l'application. Ni envoi d'email ni changement de mot de passe imposé avant la Phase 9.
 - **Hors périmètre** : changement de rôle d'un compte existant, modification d'email, suppression ; l'inscription libre (`/auth/signup`) reste en l'état, et crée toujours un `player`, jusqu'aux modalités d'inscription de la Phase 9.
 
+Tranchés en cours de phase :
+
+- **Un email déjà pris** à la création d'un compte est refusé par la validation, sur le champ `email` (422), plutôt que par un code dédié.
+- **Une session coupée** renvoie vers la connexion sans message particulier ; le message « compte suspendu » s'affiche à la tentative de reconnexion.
+- **Le dernier superadmin actif** ne peut pas être suspendu, règle portée par le service : par l'API, celui qui agit est lui-même un superadmin actif, qui ne peut pas se suspendre.
+
 ### Contenu
 
 - Interface superadmin minimale, ajoutée au sein du package `back-office` déjà créé en Phase 5 (pas de nouveau package à créer) :

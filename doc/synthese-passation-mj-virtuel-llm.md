@@ -128,6 +128,7 @@ Ce document de synthèse s'appuie sur cinq documents détaillés, à fournir en 
 | **base-de-donnees-mj-virtuel-postgresql.md** | Structure complète des tables PostgreSQL, types de colonnes, exemples de contenu JSONB, schéma relationnel, recommandations spécifiques PostgreSQL (JSONB/GIN, pgvector, partitionnement) |
 | **systeme-regles-jeu-mj-virtuel.md** | Système de règles générique (formule 2d6 + compétence + modificateurs), attributs/compétences paramétrables par univers, échelle de difficulté, gestion des modificateurs contextuels (LLM) vs modificateurs d'objets (backend), points de vie et dégâts, modélisation du combat |
 | **roadmap-mj-virtuel-llm.md** | Roadmap détaillée en phases (0 à 9 + 5bis), contenu et critères de sortie de chaque phase, intégration de la gestion de comptes (`player` / `game_master` / `superadmin`), **stratégie de test transverse**, synthèse et points ouverts |
+| **aide-memoire-dev-testeur.md** | Aide-mémoire du dev testeur : toutes les commandes (démarrage, migrations, seeders, remise à zéro des parties, consommation de jetons, comptes, tests, codegen), les comptes de test et les variables d'environnement utiles |
 | **cahier-des-charges-front-mj-virtuel.md** | Cahier des charges du front joueur : principes, parcours et écrans de la Phase 2, machine d'état d'un tour, gestion des erreurs, besoins d'API, direction visuelle, évolutions par phase, et base de prompts pour générer les maquettes avec Stitch |
 
 **Ordre de lecture conseillé** : ce document de synthèse en premier, puis architecture, puis base de données, puis système de règles, puis roadmap, puis cahier des charges du front — chaque document référence les précédents sans les répéter intégralement.
@@ -241,6 +242,8 @@ L'inventaire se scinde exactement sur la ligne « le LLM propose, le backend dé
 - Trois rôles distincts : `player`, `game_master`, `superadmin`.
 - Un compte = un rôle unique pour l'instant, pas de cumul.
 - Champ `role` posé dès la Phase 0 dans la table `users`, même si un seul rôle est utilisé au départ.
+- **Chaque rôle à son périmètre** (Phase 5bis) : le `game_master` écrit le contenu, le `superadmin` gère les comptes et seulement eux, le `player` joue. Le premier superadmin se crée par une commande, les autres comptes depuis le back-office.
+- **Suspension plutôt que suppression** (Phase 5bis) : un compte suspendu ne se connecte plus et sa session ouverte est coupée à la requête suivante ; ses parties sont conservées. Ni suspension de soi-même, ni du dernier superadmin actif.
 
 ### Tests
 
@@ -297,9 +300,9 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 ## 9. État d'avancement
 
-**Phases 0 à 5 terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable. Depuis la Phase 4, les objets sont des instances détenues par le personnage, un PNJ ou un lieu, les jets comptent circonstances (labels) et objets, chacun tracé avec son origine, et l'inventaire du personnage s'affiche au front. Depuis la Phase 5, le contenu de jeu est en base (univers, scénarios, catalogues de PNJ, lieux et objets, avec surcharge par scénario et noms par langue) ; le joueur lance une partie depuis un catalogue de scénarios publiés, avec le personnage prétiré du scénario ; un `game_master` crée, teste et publie univers et scénarios depuis le back-office.
+**Phases 0 à 5bis terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable. Depuis la Phase 4, les objets sont des instances détenues par le personnage, un PNJ ou un lieu, les jets comptent circonstances (labels) et objets, chacun tracé avec son origine, et l'inventaire du personnage s'affiche au front. Depuis la Phase 5, le contenu de jeu est en base (univers, scénarios, catalogues de PNJ, lieux et objets, avec surcharge par scénario et noms par langue) ; le joueur lance une partie depuis un catalogue de scénarios publiés, avec le personnage prétiré du scénario ; un `game_master` crée, teste et publie univers et scénarios depuis le back-office. Depuis la Phase 5bis, un superadmin gère les comptes depuis le back-office : il les crée avec un rôle, les suspend et les réactive.
 
-**Phase actuelle : Phase 5bis (gestion des comptes, rôle `superadmin`)**, cadrée et découpée (epic `KAN-71`). Voir la roadmap, Phase 5bis.
+**Phase actuelle : Phase 6 (lore étendu et RAG)**, à cadrer et découper. Voir la roadmap, Phase 6.
 
 ---
 

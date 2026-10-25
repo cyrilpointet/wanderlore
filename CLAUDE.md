@@ -213,12 +213,23 @@ de données, section 2) :
 - front, back-office et API sur **trois sous-domaines** d'un domaine à nous (`CORS_ORIGINS`,
   `COOKIE_DOMAIN`) ; premier `game_master` par seeder.
 
-**Phase actuelle : Phase 5bis (gestion des comptes, rôle `superadmin`)**, cadrée et découpée —
-epic Jira `KAN-71`. Décisions (détail : roadmap, Phase 5bis, « Décisions de cadrage ») :
-premier superadmin par la commande `account:create-superadmin` ; un compte = un rôle, le
-superadmin ne gère que les comptes ; suspension par `users.suspended_at`, session ouverte
-coupée à la requête suivante, parties conservées ; ni auto-suspension ni suspension du dernier
-superadmin ; pas de changement de rôle, d'email ni de suppression.
+**Phase 5bis (gestion des comptes) terminée** — epic Jira `KAN-71`. Un superadmin crée,
+suspend et réactive un compte de n'importe quel rôle depuis le back-office. Ses choix restent
+en vigueur (détail : roadmap Phase 5bis, « Décisions de cadrage ») :
+- **premier superadmin** par `node ace account:create-superadmin`, production comprise ; les
+  autres comptes depuis le back-office ;
+- **un compte = un rôle** : le superadmin ne gère que les comptes (`/api/v1/admin/accounts`),
+  le `game_master` que le contenu ; le back-office ne montre à chacun que ses sections ;
+- **suspension** par `users.suspended_at` : connexion refusée (`403 account_suspended`),
+  session déjà ouverte coupée à la requête suivante (`401`, l'état du compte étant relu à
+  chaque requête — le cookie de session ne se révoque pas), parties conservées ;
+- ni suspension de soi-même (`cannot_suspend_self`) ni du dernier superadmin actif
+  (`last_superadmin`) ;
+- pas de changement de rôle, de modification d'email ni de suppression ; l'inscription libre
+  attend la Phase 9.
+
+**Phase actuelle : Phase 6 (lore étendu et RAG)**, à cadrer et découper. Voir la roadmap,
+Phase 6.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
@@ -388,6 +399,8 @@ serverless pour le backend).
 - On ne teste pas le framework (routes AdonisJS, génération d'uuid, middleware d'auth).
 
 ## Commandes
+
+Aide-mémoire complet, comptes de test compris : `doc/aide-memoire-dev-testeur.md`.
 
 ```bash
 docker compose up -d              # PostgreSQL + Redis (à la racine)
