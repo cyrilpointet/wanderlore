@@ -81,7 +81,11 @@ export function presentRoll(roll: RollResolution, labels: ContentLabels) {
     modifiers: roll.appliedModifiers.map((modifier) =>
       modifier.source === 'contextual'
         ? { source: modifier.source, effect: modifier.effect, value: modifier.value }
-        : { source: modifier.source, item: labels.of('item', modifier.origin), value: modifier.value }
+        : {
+            source: modifier.source,
+            item: labels.of('item', modifier.origin),
+            value: modifier.value,
+          }
     ),
     chance: roll.chance,
     roll: roll.roll,

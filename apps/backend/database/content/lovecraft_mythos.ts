@@ -232,7 +232,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { athletics: 30, observation: 30 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { athletics: 30, observation: 30 }, hitPointsMax: 10, weapon: null },
     },
     {
       reference: 'sailor',
@@ -243,7 +243,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       defaultDisposition: 'neutral',
       combat: {
         skills: { brawling: 45, athletics: 45, survival: 45 },
-        hitPointsMax: 10,
+        hitPointsMax: 12,
         weapon: 'knife',
       },
     },
@@ -254,7 +254,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { scholarship: 60, persuasion: 45 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { scholarship: 60, persuasion: 45 }, hitPointsMax: 10, weapon: null },
     },
     {
       reference: 'lawman',
@@ -265,7 +265,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       defaultDisposition: 'neutral',
       combat: {
         skills: { firearms: 45, brawling: 45, intimidation: 45 },
-        hitPointsMax: 10,
+        hitPointsMax: 12,
         weapon: 'revolver',
       },
     },
@@ -278,7 +278,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       defaultDisposition: 'unfriendly',
       combat: {
         skills: { brawling: 60, intimidation: 45, stealth: 30 },
-        hitPointsMax: 10,
+        hitPointsMax: 12,
         weapon: 'knife',
       },
     },
@@ -292,7 +292,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       defaultDisposition: 'hostile',
       combat: {
         skills: { brawling: 45, occultism: 45, deception: 45, stealth: 45 },
-        hitPointsMax: 9,
+        hitPointsMax: 11,
         weapon: 'knife',
       },
     },
@@ -320,7 +320,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       defaultDisposition: 'unfriendly',
       combat: {
         skills: { brawling: 60, athletics: 60, deception: 45, stealth: 45 },
-        hitPointsMax: 12,
+        hitPointsMax: 13,
         weapon: null,
       },
     },
@@ -674,7 +674,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           defaultDisposition: 'neutral',
           combat: {
             skills: { firearms: 60, survival: 75, intimidation: 60, deception: 60, occultism: 45 },
-            hitPointsMax: 12,
+            hitPointsMax: 13,
             weapon: 'revolver',
           },
         },
@@ -702,7 +702,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           defaultDisposition: 'friendly',
           combat: {
             skills: { athletics: 60, observation: 60, stealth: 45, survival: 45 },
-            hitPointsMax: 9,
+            hitPointsMax: 11,
             weapon: 'knife',
           },
         },
@@ -716,7 +716,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           defaultDisposition: 'neutral',
           combat: {
             skills: { scholarship: 75, occultism: 45, observation: 45 },
-            hitPointsMax: 7,
+            hitPointsMax: 10,
             weapon: null,
           },
         },
@@ -730,7 +730,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           defaultDisposition: 'unfriendly',
           combat: {
             skills: { brawling: 75, stealth: 60, deception: 60, occultism: 60 },
-            hitPointsMax: 13,
+            hitPointsMax: 14,
             weapon: null,
           },
         },
@@ -989,7 +989,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           defaultDisposition: 'neutral',
           combat: {
             skills: { persuasion: 60, scholarship: 60, observation: 60, deception: 45 },
-            hitPointsMax: 7,
+            hitPointsMax: 10,
             weapon: null,
           },
         },
@@ -1003,7 +1003,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           defaultDisposition: 'friendly',
           combat: {
             skills: { observation: 60, stealth: 45, composure: 45 },
-            hitPointsMax: 7,
+            hitPointsMax: 10,
             weapon: null,
           },
         },
@@ -1017,7 +1017,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           defaultDisposition: 'neutral',
           combat: {
             skills: { scholarship: 90, occultism: 75, composure: 60 },
-            hitPointsMax: 7,
+            hitPointsMax: 10,
             weapon: null,
           },
         },
@@ -1031,7 +1031,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           defaultDisposition: 'neutral',
           combat: {
             skills: { occultism: 75, deception: 75, persuasion: 60, firearms: 45 },
-            hitPointsMax: 10,
+            hitPointsMax: 12,
             weapon: 'revolver',
           },
         },
@@ -1045,7 +1045,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           defaultDisposition: 'neutral',
           combat: {
             skills: { occultism: 90, deception: 75, scholarship: 75, intimidation: 60 },
-            hitPointsMax: 10,
+            hitPointsMax: 12,
             weapon: null,
           },
         },
@@ -1059,7 +1059,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           defaultDisposition: 'unfriendly',
           combat: {
             skills: { occultism: 75, stealth: 60, brawling: 45 },
-            hitPointsMax: 8,
+            hitPointsMax: 11,
             weapon: null,
           },
         },
@@ -1071,7 +1071,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           kind: 'archetype',
           generic: false,
           defaultDisposition: 'hostile',
-          combat: { skills: { brawling: 60, athletics: 45 }, hitPointsMax: 10, weapon: null },
+          combat: { skills: { brawling: 60, athletics: 45 }, hitPointsMax: 12, weapon: null },
         },
         {
           reference: 'piping_servitor',

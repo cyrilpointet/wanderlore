@@ -272,9 +272,7 @@ test.group('Turn events | sequence', (group) => {
 test.group('Turn events | what goes over the wire', (group) => {
   useTransaction(group)
 
-  test('a roll carries its full detail for the player, its skill labelled', async ({
-    assert,
-  }) => {
+  test('a roll carries its full detail for the player, its skill labelled', async ({ assert }) => {
     const { turn, events } = await playOne([NEEDS_ROLL, ...NARRATED])
     const roll = events.recorded.find(({ event }) => event.type === 'roll_resolved')!
 

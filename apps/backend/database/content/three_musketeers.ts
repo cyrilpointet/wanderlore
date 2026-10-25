@@ -163,6 +163,11 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
    * Named characters the plot turns on, then the archetypes the novel fills
    * its streets with. The generic archetypes cover anyone else the player
    * runs into. d'Artagnan is the player, not a definition.
+   *
+   * Profiles on the scale of the book's people: a dozen hit points for an
+   * ordinary adult, 14 to 16 for a fighting man, 10 or 11 for the frail;
+   * 30 to 45% for a hand, 60 to 75% for a veteran, 90% for the best blade of
+   * the regiment.
    */
   npcs: [
     {
@@ -216,7 +221,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'neutral',
       combat: {
         skills: { swordsmanship: 75, deception: 60, scholarship: 60 },
-        hitPointsMax: 12,
+        hitPointsMax: 13,
         weapon: 'rapier',
       },
     },
@@ -229,7 +234,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'neutral',
       combat: {
         skills: { stealth: 45, athletics: 45, observation: 45 },
-        hitPointsMax: 8,
+        hitPointsMax: 11,
         weapon: null,
       },
     },
@@ -243,7 +248,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'unfriendly',
       combat: {
         skills: { swordsmanship: 75, deception: 60, intimidation: 60 },
-        hitPointsMax: 13,
+        hitPointsMax: 14,
         weapon: 'rapier',
       },
     },
@@ -257,7 +262,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'neutral',
       combat: {
         skills: { deception: 90, persuasion: 75, stealth: 60 },
-        hitPointsMax: 9,
+        hitPointsMax: 11,
         weapon: 'dagger',
       },
     },
@@ -270,7 +275,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'unfriendly',
       combat: {
         skills: { swordsmanship: 75, intimidation: 45 },
-        hitPointsMax: 12,
+        hitPointsMax: 13,
         weapon: 'rapier',
       },
     },
@@ -281,7 +286,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'unique',
       generic: false,
       defaultDisposition: 'neutral',
-      combat: { skills: { deception: 30, observation: 30 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { deception: 30, observation: 30 }, hitPointsMax: 10, weapon: null },
     },
     {
       reference: 'constance_bonacieux',
@@ -290,7 +295,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'unique',
       generic: false,
       defaultDisposition: 'neutral',
-      combat: { skills: { stealth: 45, persuasion: 45 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { stealth: 45, persuasion: 45 }, hitPointsMax: 10, weapon: null },
     },
     {
       reference: 'richelieu',
@@ -301,7 +306,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'neutral',
       combat: {
         skills: { persuasion: 75, deception: 75, observation: 75, intimidation: 75 },
-        hitPointsMax: 9,
+        hitPointsMax: 11,
         weapon: null,
       },
     },
@@ -313,7 +318,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'unique',
       generic: false,
       defaultDisposition: 'neutral',
-      combat: { skills: { etiquette: 75, marksmanship: 45 }, hitPointsMax: 10, weapon: null },
+      combat: { skills: { etiquette: 75, marksmanship: 45 }, hitPointsMax: 12, weapon: null },
     },
     {
       reference: 'anne_of_austria',
@@ -322,7 +327,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'unique',
       generic: false,
       defaultDisposition: 'neutral',
-      combat: { skills: { etiquette: 75, persuasion: 60 }, hitPointsMax: 8, weapon: null },
+      combat: { skills: { etiquette: 75, persuasion: 60 }, hitPointsMax: 11, weapon: null },
     },
     {
       reference: 'buckingham',
@@ -334,7 +339,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'neutral',
       combat: {
         skills: { swordsmanship: 60, persuasion: 75, etiquette: 75 },
-        hitPointsMax: 11,
+        hitPointsMax: 13,
         weapon: 'rapier',
       },
     },
@@ -348,7 +353,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'neutral',
       combat: {
         skills: { swordsmanship: 60, athletics: 45, marksmanship: 45 },
-        hitPointsMax: 11,
+        hitPointsMax: 13,
         weapon: 'rapier',
       },
     },
@@ -362,7 +367,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'unfriendly',
       combat: {
         skills: { swordsmanship: 60, intimidation: 45, marksmanship: 45 },
-        hitPointsMax: 11,
+        hitPointsMax: 13,
         weapon: 'rapier',
       },
     },
@@ -375,7 +380,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'neutral',
       combat: {
         skills: { swordsmanship: 45, observation: 45 },
-        hitPointsMax: 10,
+        hitPointsMax: 12,
         weapon: 'common_sword',
       },
     },
@@ -386,7 +391,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { athletics: 30 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { athletics: 30 }, hitPointsMax: 10, weapon: null },
     },
     {
       reference: 'merchant',
@@ -395,7 +400,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { persuasion: 45, observation: 30 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { persuasion: 45, observation: 30 }, hitPointsMax: 10, weapon: null },
     },
     {
       reference: 'servant',
@@ -404,7 +409,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { stealth: 30, observation: 30 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { stealth: 30, observation: 30 }, hitPointsMax: 10, weapon: null },
     },
     {
       reference: 'noble',
@@ -413,7 +418,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { etiquette: 60, swordsmanship: 45 }, hitPointsMax: 9, weapon: 'rapier' },
+      combat: { skills: { etiquette: 60, swordsmanship: 45 }, hitPointsMax: 11, weapon: 'rapier' },
     },
     {
       reference: 'clergyman',
@@ -422,7 +427,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       kind: 'archetype',
       generic: true,
       defaultDisposition: 'neutral',
-      combat: { skills: { scholarship: 60, persuasion: 45 }, hitPointsMax: 7, weapon: null },
+      combat: { skills: { scholarship: 60, persuasion: 45 }, hitPointsMax: 10, weapon: null },
     },
     {
       reference: 'soldier',
@@ -433,7 +438,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'neutral',
       combat: {
         skills: { swordsmanship: 45, marksmanship: 45, athletics: 45 },
-        hitPointsMax: 10,
+        hitPointsMax: 12,
         weapon: 'common_sword',
       },
     },
@@ -446,7 +451,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       defaultDisposition: 'unfriendly',
       combat: {
         skills: { swordsmanship: 45, intimidation: 45, stealth: 45 },
-        hitPointsMax: 9,
+        hitPointsMax: 11,
         weapon: 'dagger',
       },
     },
