@@ -40,7 +40,7 @@ export type NewAccount = {
 
 /**
  * Creates an account of any role, active, with the password given: no email
- * is sent before Phase 10 — whoever creates it hands the password over.
+ * is sent before Phase 11 — whoever creates it hands the password over.
  * Expects input already validated by `createAccountValidator`.
  */
 export async function createAccount(account: NewAccount): Promise<User> {

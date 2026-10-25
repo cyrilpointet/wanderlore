@@ -8,7 +8,7 @@
 | broadcast from the job straight to the SSE connections of that same process.
 |
 | Does not scale past one instance: a separate worker would need Transmit's
-| Redis transport, BullMQ and a lock per session (Phase 10).
+| Redis transport, BullMQ and a lock per session (Phase 11).
 |
 */
 

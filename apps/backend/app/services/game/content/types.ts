@@ -107,7 +107,7 @@ export type CombatProfile = {
   /**
    * The ordinary weapon they fight with: an item definition carrying a weapon
    * profile, not an item they hold — it cannot be taken from them. A special
-   * weapon is held, as an item, and outranks it once fights are wired (Phase 9).
+   * weapon is held, as an item, and outranks it once fights are wired (Phase 10).
    */
   weapon: string | null
 }
@@ -136,7 +136,7 @@ export type ItemModifier = {
 
 /**
  * What a weapon deals when it hits, as BRP writes it. Read by the backend
- * only; wired into the turn with the combat loop (Phase 9).
+ * only; wired into the turn with the combat loop (Phase 10).
  */
 export type WeaponProfile = {
   /** Reference of the world skill the weapon is wielded with. */
@@ -145,7 +145,7 @@ export type WeaponProfile = {
   damage: string
   /** How much of the wielder's damage modifier it adds: melee, thrown, firearm. */
   damageModifier: DamageModifierUse
-  /** What a special success with it does. Recorded, without effect before Phase 9. */
+  /** What a special success with it does. Recorded, without effect before Phase 10. */
   special: SpecialEffect | null
 }
 
@@ -221,7 +221,7 @@ export type StartingItem = {
 
 /**
  * The character a scenario is played with, copied into every game started
- * from it. Guided creation comes in Phase 9.
+ * from it. Guided creation comes in Phase 10.
  */
 export type PregeneratedCharacter = {
   name: string

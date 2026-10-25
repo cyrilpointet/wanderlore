@@ -187,7 +187,7 @@ restent en vigueur (détail : roadmap Phase 4, architecture §6bis, base de donn
 - **modificateurs contextuels** en labels, convertis par le backend, 3 au plus (barème
   passé en pourcentage en Phase 6) ;
   **modificateurs d'objets** du seul détenteur, une fois par définition ;
-- formule de dégâts posée en Phase 4, branchée dans le tour en Phase 9 — **remplacée en
+- formule de dégâts posée en Phase 4, branchée dans le tour en Phase 10 — **remplacée en
   Phase 6 par celle du BRP** ; l'arme ordinaire d'un PNJ est une référence de son profil de
   combat ;
 - durabilité et charges différées, consommables par la quantité.
@@ -228,7 +228,7 @@ en vigueur (détail : roadmap Phase 5bis, « Décisions de cadrage ») :
 - ni suspension de soi-même (`cannot_suspend_self`) ni du dernier superadmin actif
   (`last_superadmin`) ;
 - pas de changement de rôle, de modification d'email ni de suppression ; l'inscription libre
-  attend la Phase 10.
+  attend la Phase 11.
 
 **Phase actuelle : Phase 6 (bascule sur le système BRP)**, cadrée et découpée — epic Jira
 `KAN-78` (tickets `KAN-79` à `KAN-88`). Le Basic
@@ -245,10 +245,12 @@ univers. Décisions de cadrage (détail : roadmap Phase 6, système de règles) 
 - **le joueur voit le détail du jet** (compétence, modificateurs, chance, d100, degré) ; le
   narrateur n'en reçoit toujours que le résultat et le degré ;
 - points de vie du personnage dérivés (`(CON + SIZ) ÷ 2`) ; profil d'arme et formule de
-  dégâts du BRP posés, branchés en Phase 9 ; aucune règle optionnelle avant la Phase 9bis ;
+  dégâts du BRP posés, branchés en Phase 10 ; aucune règle optionnelle avant la Phase 10bis ;
 - bascule sans reprise de données ; texte du livre jamais recopié, notice ORC dans le produit.
 
-Le lore étendu et le RAG passent en Phase 7. Le livre (« ORC Content Document ») est rangé
+Phase suivante : **Phase 7 (gestion du temps et des lieux)**, insérée avant le lore étendu,
+qui passe en Phase 8 ; pas encore cadrée (pistes et questions ouvertes : roadmap, Phase 7).
+Le livre (« ORC Content Document ») est rangé
 hors du dépôt, dans `tmp/` (ignoré par git).
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
@@ -342,7 +344,7 @@ serverless pour le backend).
   (`#services/game/content_labels`) et sort en `{ reference, label }`, construit sur l'univers
   de la partie concernée — par requête, ou par tour pour les événements SSE qui le portent —
   et dans une langue (celle du tour pour les événements, l'anglais ailleurs jusqu'au choix
-  de langue de la Phase 10), avec repli sur l'anglais. Une référence sans libellé lève
+  de langue de la Phase 11), avec repli sur l'anglais. Une référence sans libellé lève
   `MissingLabelError` : jamais de référence brute ni « embellie » en repli.
 - **Seule la narration reçoit des noms traduits** (`names`, `items_in_scene`), dans la seule
   langue du tour, et le glossaire réduit à ses entrées traduites dans cette langue. Arbitrage

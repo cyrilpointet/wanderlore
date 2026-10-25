@@ -5,7 +5,7 @@ import { BaseSchema } from '@adonisjs/lucid/schema'
  * definition declares. Set from the profile when they first enter the scene.
  *
  * Nullable: people met before this column existed have none, and read as
- * unhurt. Nothing deals them damage before fights are wired (Phase 9).
+ * unhurt. Nothing deals them damage before fights are wired (Phase 10).
  */
 export default class extends BaseSchema {
   protected tableName = 'npc_instances'

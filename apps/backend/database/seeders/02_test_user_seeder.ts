@@ -4,7 +4,7 @@ import User from '#models/user'
 
 /**
  * Test account used to exercise the game loop before self-service signup exists
- * (see roadmap, Phase 0 — signup only lands in Phase 10).
+ * (see roadmap, Phase 0 — signup only lands in Phase 11).
  *
  * Restricted to local environments so these credentials can never reach a
  * deployed database.

@@ -88,10 +88,10 @@ chance = base × difficulté + modificateurs contextuels + modificateurs d'objet
 - Sept caractéristiques fixes (`STR`, `CON`, `SIZ`, `INT`, `POW`, `DEX`, `CHA`) ; points de vie
   du personnage = (CON + SIZ) ÷ 2.
 - Dégâts = dés de l'arme (profil d'arme) + modificateur de dégâts (STR + SIZ) − armure ;
-  critique au maximum, armure ignorée. Posée en Phase 6, branchée en Phase 9.
+  critique au maximum, armure ignorée. Posée en Phase 6, branchée en Phase 10.
 - Le narrateur ne reçoit que `result` + `degree` ; le joueur voit le détail du jet.
 - Combat = répétition du pipeline standard, même moteur pour joueur et PNJ. Pas de
-  sous-système dédié ; matrice attaque / défense et jets opposés en Phase 9.
+  sous-système dédié ; matrice attaque / défense et jets opposés en Phase 10.
 
 **Fixe dans le code** : la formule, l'échelle de difficulté, les degrés, le barème
 contextuel, les caractéristiques et leurs dérivés, la formule de dégâts.
@@ -136,11 +136,12 @@ jamais de valeur numérique de règle — uniquement des labels qualitatifs.
 | 5 | Multi-univers (`worlds`, `scenarios`), package `back-office` | `game_master` |
 | 5bis | Gestion des comptes | `superadmin` |
 | 6 | Bascule sur le système BRP (Chaosium, licence ORC) | — |
-| 7 | `lore_fragments`, filtrage par tags | — |
-| 8 | `narrative_summaries`, mémoire long terme | — |
-| 9 | Combat étendu, cycle de vie complet de la partie | — |
-| 9bis | Règles optionnelles par univers (santé mentale, passions, réputation) | — |
-| 10 | Production-ready : observabilité, versionning de prompts, modération, beta test | — |
+| 7 | Gestion du temps et des lieux : horloge de jeu, jour/nuit, sorties entre lieux | — |
+| 8 | `lore_fragments`, filtrage par tags | — |
+| 9 | `narrative_summaries`, mémoire long terme | — |
+| 10 | Combat étendu, cycle de vie complet de la partie | — |
+| 10bis | Règles optionnelles par univers (santé mentale, passions, réputation) | — |
+| 11 | Production-ready : observabilité, versionning de prompts, modération, beta test | — |
 
 Les simplifications d'une phase sont **volontaires** — ne pas implémenter le pipeline
 complet en Phase 1, ni les modificateurs avant la Phase 4. Chaque phase a un critère de

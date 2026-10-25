@@ -153,7 +153,7 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - **Objets : même modèle que les PNJ** (principe acté avant la Phase 3, schéma à l'ouverture de la Phase 4) : définitions univers / scénario, `unique` ou `archetype`, archétypes génériques pour l'improvisé, ligne d'inventaire réduite à l'état de l'instance, `stackable` pour les objets interchangeables ; le front affiche le libellé de l'archétype, jamais le descripteur. Voir architecture, section 6bis, et document de base de données, `inventory_items`.
 - **Trois détenteurs d'objets : le personnage, un PNJ, un lieu** (Phase 4). Donner, voler, cacher, ramasser sont des transferts, l'objet gardant son identité ; seuls les objets en scène (personnage, PNJ présents, lieu courant) sont transmis au pipeline ; à la mort d'un PNJ, ses objets passent au lieu courant. Voir architecture, section 6bis.
 - **Budget de 3 minutes par tour** (Phase 3) : chaque appel LLM reçoit au plus le temps restant, un budget épuisé fait échouer le tour (`llm_timeout`) ; le balayage des tours `pending` reste à 5 minutes. Voir architecture, section 8bis.
-- **Un seul modèle LLM pour toutes les étapes** pendant les phases de test (`gemini-3.8-flash`, qui remplace en octobre 2026 `gemini-2.5-flash`, fermé aux nouvelles clés API). La différenciation par étape attend les mesures de coût réelles (Phase 10).
+- **Un seul modèle LLM pour toutes les étapes** pendant les phases de test (`gemini-3.8-flash`, qui remplace en octobre 2026 `gemini-2.5-flash`, fermé aux nouvelles clés API). La différenciation par étape attend les mesures de coût réelles (Phase 11).
 - **Soumission d'un tour idempotente** : clé fournie par le client, une par soumission, enregistrée avant la mise en file. En Phase 2, worker unique dans le process HTTP, en `concurrency: 1` et sans retry — simplification à reprendre avant le beta test.
 - **File de jobs substituable, pg-boss puis BullMQ** : port + adaptateur, pg-boss (PostgreSQL) tant qu'il n'y a qu'une instance — pas de Redis à héberger —, BullMQ au passage à plusieurs instances, qui ramène Redis pour Transmit. Condition de la bascule : idempotence, sérialisation des tours et événements SSE ne dépendent jamais de la file (voir architecture, section 8bis).
 
@@ -162,7 +162,7 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - Sept caractéristiques fixes du système ; compétences en pourcentage définies par univers, avec catégorie et chance de base (donnée, pas structure figée dans le code).
 - **Le joueur voit le détail de chaque jet** ; le narrateur n'en reçoit que le résultat et le degré.
 - **Modificateurs contextuels** (situationnels, proposés par le LLM en labels qualitatifs — `minor_bonus` +10, `major_bonus` +20, `minor_penalty` -10, `major_penalty` -20 —, convertis par le backend, 3 au plus par jet) strictement séparés des **modificateurs d'objets** (fixes, calculés par le backend à partir des objets du détenteur, une fois par définition, jamais chiffrés par le LLM).
-- **Dégâts du BRP** : dés de l'arme (profil d'arme de sa définition) + modificateur de dégâts − armure ; un critique fait le maximum de l'arme et ignore l'armure. Formule posée en Phase 6 (elle remplace celle de la marge, posée en Phase 4), branchée dans le tour en Phase 9.
+- **Dégâts du BRP** : dés de l'arme (profil d'arme de sa définition) + modificateur de dégâts − armure ; un critique fait le maximum de l'arme et ignore l'armure. Formule posée en Phase 6 (elle remplace celle de la marge, posée en Phase 4), branchée dans le tour en Phase 10.
 - Combat modélisé comme une simple répétition du pipeline standard (pas de sous-système dédié).
 - **Liberté du joueur** : le MJ ne refuse jamais une action parce qu'elle est imprudente, immorale ou interdite dans l'univers — il la résout et en fait assumer les conséquences. Seul l'impossible matériel mène à un échec automatique, et le personnage y tente quand même l'action. Voir règles, section 10.
 - **Réaction des PNJ** : tout personnage touché par une action réagit dans la même narration. Une réaction peut ouvrir une menace, jamais la trancher contre le joueur — c'est son action suivante, et le jet qui la résout, qui en décide. Une attaque ouverte est toujours tranchée par l'action suivante, quelle qu'elle soit, par un jet : sur un échec, elle porte et blesse. Voir règles, section 10.
@@ -261,7 +261,7 @@ L'inventaire se scinde exactement sur la ligne « le LLM propose, le backend dé
 - **Sur la sécurité, le confinement se teste, la détection s'évalue** : même quand la détection
   d'injection échoue, aucun état ne doit avoir été modifié.
 - **Le corpus d'évaluation s'accumule depuis `turn_log` dès la Phase 1**, bien avant que les
-  evals eux-mêmes soient outillés en Phase 10.
+  evals eux-mêmes soient outillés en Phase 11.
 
 Voir le document de roadmap, section « Stratégie de test », pour le détail par phase.
 
@@ -269,7 +269,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 - **Pas de retry automatique** des erreurs de transport (timeout, API injoignable, erreur HTTP).
 - **Une seule nouvelle tentative sur une sortie structurée rejetée** (tranché avant la Phase 3) : quand le backend rejette la sortie JSON d'une étape (A+B+C ou E) — JSON illisible, hors schéma, hors bornes, ou référence absente de la liste fermée —, l'appel est renvoyé une fois, avec un message correctif qui nomme les valeurs rejetées et rappelle la liste valide. Un second rejet fait échouer le tour. Détail : architecture, section 7.
 - Chaque erreur est renvoyée au front avec un `code` spécifique selon sa catégorie (timeout/API injoignable, sortie LLM hors schéma, erreur HTTP de l'API externe, échec de validation backend). Le front en affiche la traduction via son i18n ; le `message` textuel de l'API sert au débogage et de repli pour un code inconnu.
-- Système de log d'erreurs API structuré explicitement différé (prévu en Phase 10 / todolist).
+- Système de log d'erreurs API structuré explicitement différé (prévu en Phase 11 / todolist).
 
 ### Scope
 - **Multi-joueur explicitement exclu du projet** — à traiter, le cas échéant, dans un projet distinct avec ses propres réflexions d'architecture (concurrence d'accès au state, infrastructure temps réel, visibilité narrative différenciée).
@@ -303,7 +303,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 **Phases 0 à 5bis terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable. Depuis la Phase 4, les objets sont des instances détenues par le personnage, un PNJ ou un lieu, les jets comptent circonstances (labels) et objets, chacun tracé avec son origine, et l'inventaire du personnage s'affiche au front. Depuis la Phase 5, le contenu de jeu est en base (univers, scénarios, catalogues de PNJ, lieux et objets, avec surcharge par scénario et noms par langue) ; le joueur lance une partie depuis un catalogue de scénarios publiés, avec le personnage prétiré du scénario ; un `game_master` crée, teste et publie univers et scénarios depuis le back-office. Depuis la Phase 5bis, un superadmin gère les comptes depuis le back-office : il les crée avec un rôle, les suspend et les réactive.
 
-**Phase actuelle : Phase 6 (bascule sur le système BRP)**, epic Jira `KAN-78` : le Basic Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les univers. Voir la roadmap, Phase 6. Le lore étendu et le RAG passent en Phase 7.
+**Phase actuelle : Phase 6 (bascule sur le système BRP)**, epic Jira `KAN-78` : le Basic Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les univers. Voir la roadmap, Phase 6. Le lore étendu et le RAG passent en Phase 8.
 
 ---
 

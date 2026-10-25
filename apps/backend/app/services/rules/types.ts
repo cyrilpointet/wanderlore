@@ -158,7 +158,7 @@ export type DamageModifierUse = (typeof DAMAGE_MODIFIER_USES)[number]
 
 /**
  * The effect a special success with the weapon has. Recorded on the weapon
- * profile from now on; its mechanics come with the combat loop (Phase 9).
+ * profile from now on; its mechanics come with the combat loop (Phase 10).
  */
 export const SPECIAL_EFFECTS = [
   'bleeding',

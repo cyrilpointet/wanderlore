@@ -146,7 +146,7 @@ export type SubmittedTurn = {
  *
  * Split in two on purpose: `submit` records the turn and queues it, answering
  * the player at once; `run` plays it, in a job. Regenerating the narrative
- * summary is Phase 8.
+ * summary is Phase 9.
  */
 export class TurnService {
   #llm: LlmGateway

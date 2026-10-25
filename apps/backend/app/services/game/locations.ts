@@ -75,7 +75,7 @@ export async function visitUniqueLocation(
 /**
  * A new instance of an archetype, numbered by the backend within the game
  * (`tavern_1`, `tavern_2`), never by the model. Going back to an improvised
- * place is not tracked before Phase 8: every call is a new place.
+ * place is not tracked before Phase 9: every call is a new place.
  *
  * Turns of a game are played one at a time, so counting is enough; the unique
  * `(session_id, handle)` is the last line of defence.

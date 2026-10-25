@@ -9,7 +9,7 @@ import { TurnValidationError } from '#services/game/turn_validator'
  * player. The least it can do is say which kind it was: waiting longer is a
  * sensible answer to a timeout and a pointless one to a rejected payload.
  *
- * Structured error logging is explicitly deferred to Phase 10.
+ * Structured error logging is explicitly deferred to Phase 11.
  */
 export type TurnFailure = {
   status: number

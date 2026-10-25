@@ -23,7 +23,7 @@ export type LlmGatewayOptions = {
  *
  * Deliberately absent: retries. A transient failure is surfaced to the player
  * with a category-specific message; a schema failure means the prompt needs
- * fixing, not retrying (see roadmap, Phase 10 for the eventual reassessment).
+ * fixing, not retrying (see roadmap, Phase 11 for the eventual reassessment).
  */
 export class LlmGateway {
   #provider: LlmProvider

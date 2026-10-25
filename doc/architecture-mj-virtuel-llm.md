@@ -731,14 +731,14 @@ produit la langue du joueur.
   jamais supprimé. Seuls les PNJ `present` partent dans le contexte : le coût reste borné.
 - **Un PNJ absent n'est pas rappelé** en Phase 3 : revenu à l'auberge, le joueur peut
   croiser une nouvelle instance plutôt que la même servante. Le rappel des PNJ connus d'un
-  lieu relève de la mémoire long terme (Phase 8).
+  lieu relève de la mémoire long terme (Phase 9).
 - Le narrateur reste libre d'évoquer qui il veut. Seul un PNJ qui entre en scène — avec qui
   le joueur peut interagir — devient une instance.
 
 ### Définitions transmises au LLM
 
 Les archétypes génériques, toujours (quelques entrées). Le reste du catalogue : en entier en
-Phase 3 (liste courte, en dur), filtré par scénario en Phase 5, puis par tags en Phase 7.
+Phase 3 (liste courte, en dur), filtré par scénario en Phase 5, puis par tags en Phase 8.
 
 ### Découpage par phase
 
@@ -747,8 +747,8 @@ Phase 3 (liste courte, en dur), filtré par scénario en Phase 5, puis par tags 
   label qualitatif.
 - **Phase 4** : profil de combat sur les définitions, points de vie propres à chaque instance.
 - **Phase 5** : table `npc_definitions` (univers, scénario nullable).
-- **Phase 9** : un PNJ improvisé doit pouvoir être la cible d'un jet opposé dès le tour où il
-  apparaît (voir roadmap, Phase 9).
+- **Phase 10** : un PNJ improvisé doit pouvoir être la cible d'un jet opposé dès le tour où il
+  apparaît (voir roadmap, Phase 10).
 
 Les lieux suivent le même modèle, dès la Phase 3 : voir section 6quater.
 
@@ -780,7 +780,7 @@ modèle des PNJ (section 6ter), avec trois adaptations qui leur sont propres.
 1. **Les lieux s'emboîtent.** Chaque définition unique déclare son parent (Rue des Fossoyeurs →
    Paris → France) ; une instance d'archétype reçoit un **parent** choisi parmi les lieux
    uniques (l'auberge est *dans* Meung). Le parent situe le lieu pour le narrateur, pour le
-   filtrage du lore par tags (Phase 7) et pour son affichage. Un voyage vers un lieu
+   filtrage du lore par tags (Phase 8) et pour son affichage. Un voyage vers un lieu
    improvisé prend pour parent le lieu unique le plus englobant pertinent : le catalogue porte
    donc quelques lieux de grande échelle (`france`, `england`) qui servent de racines.
 2. **Le grain reste la règle.** Passer de la salle commune à l'écurie n'est pas un
@@ -802,7 +802,7 @@ L'extraction propose un déplacement vers :
 
 Revenir dans un lieu improvisé déjà visité (la même auberge) n'est pas pris en charge en
 Phase 3, pour la même raison que le rappel des PNJ absents : cela relève de la mémoire long
-terme (Phase 8). Un retour crée une nouvelle instance.
+terme (Phase 9). Un retour crée une nouvelle instance.
 
 **Lien avec les PNJ.** La présence d'un PNJ est celle de la scène : quand le joueur change de
 lieu, les PNJ présents passent `absent`, sauf ceux que l'extraction désigne comme le suivant
@@ -923,7 +923,7 @@ La bascule n'est simple que si **rien de ce qui garantit l'intégrité d'un tour
 - **3 minutes de budget par tour**, comptées depuis sa prise en charge par le worker. Avant chaque appel LLM, le code du tour passe au gateway un `AbortSignal` limité à `min(timeout d'un appel, temps restant)` — le gateway combine déjà son timeout avec le signal de l'appelant.
 - **Budget épuisé = échec `llm_timeout`**, code que le front sait déjà afficher. Une nouvelle tentative ne dispose que du temps restant.
 - **Le balayage reste à 5 minutes** : 3 minutes de budget au plus, 2 minutes de marge pour l'attente en file. Le balayage ne rattrape plus un tour vivant, par construction.
-- **Limite connue** : le balayage compte depuis `created_at`, attente en file comprise. Négligeable avec un seul testeur ; avec plusieurs joueurs sous `concurrency: 1`, il faudra un `started_at` et deux seuils (tour jamais démarré, tour démarré) — à reprendre avec le passage à plusieurs instances (Phase 10).
+- **Limite connue** : le balayage compte depuis `created_at`, attente en file comprise. Négligeable avec un seul testeur ; avec plusieurs joueurs sous `concurrency: 1`, il faudra un `started_at` et deux seuils (tour jamais démarré, tour démarré) — à reprendre avec le passage à plusieurs instances (Phase 11).
 
 **Schéma `pgboss`.** pg-boss crée ses tables dans son propre schéma, hors des migrations Lucid. La génération de `database/schema.ts`, `db:truncate` et `db:wipe` ne regardent que `public` : ce schéma leur est invisible. La suite de tests n'utilise jamais pg-boss (pilote mémoire, `QUEUE_DRIVER=memory`).
 

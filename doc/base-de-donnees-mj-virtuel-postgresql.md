@@ -41,7 +41,7 @@ en `jsonb`, lues et écrites avec l'univers ; les catalogues ont leurs tables.
 | `created_at` / `updated_at` | timestamptz | — |
 
 - `general_rules` n'existe pas : il est éclaté en colonnes distinctes. `content_boundaries`
-  (tabous) est différé à la modération de la Phase 10.
+  (tabous) est différé à la modération de la Phase 11.
 - **Les catégories d'action** vivent dans `resolution_rules` ; **les PNJ, lieux et objets**
   dans les trois tables de définitions.
 
@@ -90,7 +90,7 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
   génériques, personnage, état initial, nom anglais partout) et renvoie la liste complète des
   incohérences ; la vérification est refaite au lancement de chaque partie.
 - **Lancer une partie** copie le prétiré et l'état initial dans une partie neuve, dans une
-  transaction. La création guidée de personnage attend la Phase 9.
+  transaction. La création guidée de personnage attend la Phase 10.
 - Différés : `branch_points`, conditions de progression des chapitres.
 
 **`glossary`** fige la traduction des noms propres, pour éviter qu'un même nom soit rendu
@@ -267,7 +267,7 @@ lieux ; en base depuis la Phase 5 (`item_definitions`, section 2). Chaque défin
   transferts. `gone` est réservé à l'objet détruit ou consommé ; une ligne n'est jamais
   supprimée, comme un PNJ passe `absent`.
 - **`equipped` est réservé au personnage** en Phase 4 (CHECK) ; l'équipement d'un PNJ arrive
-  avec ses jets, en Phase 9.
+  avec ses jets, en Phase 10.
 - **Placement initial** : un unique doté d'un `initial_holder` est instancié avec lui à la
   première instanciation de ce détenteur (entrée en scène du PNJ, première visite du lieu) ;
   sans détenteur initial, il est instancié à son premier gain.
@@ -376,7 +376,7 @@ la définition à l'instanciation ; null sur une instance antérieure, lu comme 
 objets qu'un PNJ détient sont des lignes d'`inventory_items`.
 
 **Colonnes prévues plus tard** : `revealed_information` (jsonb, ce que ce PNJ a révélé au
-joueur), quand un tour le lira ; `last_location`, si la mémoire long terme (Phase 8) rappelle
+joueur), quand un tour le lira ; `last_location`, si la mémoire long terme (Phase 9) rappelle
 les PNJ connus d'un lieu.
 
 ---
@@ -474,7 +474,7 @@ Résumés hiérarchiques générés par le job asynchrone.
   serveur, l'état du compte est donc relu à chaque requête. Ses parties sont conservées.
 - **Pas de suppression de compte** ni de changement de rôle à ce stade.
 - **Envisagé plus tard** : `preferences` (jsonb : langue, options d'affichage), avec le choix
-  de langue de la Phase 10.
+  de langue de la Phase 11.
 
 ### `usage_quotas` (optionnel, selon modèle économique)
 
@@ -491,7 +491,7 @@ Résumés hiérarchiques générés par le job asynchrone.
 ## 6. Schéma relationnel synthétique
 
 ```
-worlds ──┬── lore_fragments (Phase 7)
+worlds ──┬── lore_fragments (Phase 8)
          ├── resolution_rules
          ├── npc_ / location_ / item_definitions ──┐ (univers, ou scénario qui surcharge)
          └── scenarios ────────────────────────────┘
@@ -500,7 +500,7 @@ worlds ──┬── lore_fragments (Phase 7)
                               ├── location_instances ─┘   (un détenteur parmi trois)
                               ├── world_states (1:1)
                               ├── turn_log
-                              └── narrative_summaries (Phase 8)
+                              └── narrative_summaries (Phase 9)
 
 users ──── sessions
 users ──── worlds, scenarios (created_by)
@@ -525,5 +525,5 @@ users ──── usage_quotas (optionnel)
 - Choix définitif du mécanisme RAG : pgvector intégré vs vector store externe (Pinecone, Qdrant, etc.).
 - Politique de rétention/archivage de `turn_log` pour les parties terminées anciennes.
 - ~~Emplacement définitif du glossaire~~ — tranché en Phase 5 : univers, complété par le scénario, réduit aux noms propres qui ne sont pas des entités.
-- Faut-il indexer `inventory_items.definition_reference` — dépend du volume d'objets par partie, probablement inutile avant la Phase 9.
+- Faut-il indexer `inventory_items.definition_reference` — dépend du volume d'objets par partie, probablement inutile avant la Phase 10.
 - Stratégie de migration de schéma pour les colonnes jsonb (versionnement de structure interne si le format évolue avec de nouveaux univers) — différée en Phase 5 : chaque `jsonb` saisi est validé côté backend, et aucune donnée de production n'existe encore.

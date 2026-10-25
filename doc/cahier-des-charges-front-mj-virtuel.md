@@ -90,12 +90,13 @@ Ces principes découlent des invariants du projet. Ils s'appliquent à toutes le
 | 4 | Onglet inventaire dans la fiche (lecture seule) |
 | 5 | Démarrer une partie à partir d'un scénario ; nom de l'univers et libellés venus de la base |
 | 6 | Fiche au format BRP (caractéristiques, compétences en pourcentage) ; détail de chaque jet dans le journal |
-| 8 | Rien de visible (mémoire long terme côté backend) |
-| 9 | Création de personnage guidée, combat en rounds, pause / reprise, écrans de fin |
-| 9bis | Santé mentale, passions et réputation sur la fiche, selon l'univers |
-| 10 | Inscription, mot de passe oublié, choix de la langue, paramètres du compte |
+| 7 | Heure et période de jeu à côté du lieu ; éventuellement les sorties visibles du lieu courant |
+| 9 | Rien de visible (mémoire long terme côté backend) |
+| 10 | Création de personnage guidée, combat en rounds, pause / reprise, écrans de fin |
+| 10bis | Santé mentale, passions et réputation sur la fiche, selon l'univers |
+| 11 | Inscription, mot de passe oublié, choix de la langue, paramètres du compte |
 
-Les évolutions des phases 3 à 10 sont détaillées en section 9. **Elles ne s'implémentent pas
+Les évolutions des phases 3 à 11 sont détaillées en section 9. **Elles ne s'implémentent pas
 en Phase 2** ; seule la structure des écrans doit leur laisser la place.
 
 ---
@@ -121,7 +122,7 @@ en Phase 2** ; seule la structure des écrans doit leur laisser la place.
 
 Pas d'inscription, pas de mot de passe oublié, pas de création de partie en Phase 2 : les
 comptes et parties sont créés en base (seeders). La route `POST /auth/signup` du scaffolding
-existe côté backend, mais le front ne l'expose pas avant la Phase 10.
+existe côté backend, mais le front ne l'expose pas avant la Phase 11.
 
 ---
 
@@ -229,7 +230,7 @@ lieu de départ, quête en cours s'il y en a une, et l'invitation *« Your story
 you do? »*.
 
 **Historique long** : chargé en entier en Phase 2. Une pagination vers le haut (**Load
-earlier**) sera à prévoir quand les parties s'allongeront (Phase 8) ; la structure du
+earlier**) sera à prévoir quand les parties s'allongeront (Phase 9) ; la structure du
 journal doit la permettre.
 
 #### 5.3.3 Zone de saisie
@@ -466,7 +467,7 @@ traduction.
 - **Dates et nombres** formatés selon la langue active (`Intl`), jamais à la main : dernière
   activité relative, points de vie, compteur de caractères.
 - **Langue active fixée à `en`** en Phase 2, sans sélecteur : le choix par le joueur arrive
-  en Phase 10.
+  en Phase 11.
 - **Ce que l'i18n ne couvre pas** : les références de contenu, dont le libellé vient du
   backend (principe 2), et la narration, produite par le LLM dans la langue de la partie. Les polices retenues couvrent le latin
 étendu (accents, ligatures) : la narration sera un jour dans la langue du joueur.
@@ -568,7 +569,7 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   mentionne l'objet qui a pesé sur le jet (avec sa valeur depuis la Phase 6).
 - **Phase 5 — Multi-univers.** Un écran **New game** : choix d'un scénario dans un
   catalogue (univers, synopsis, ton), puis démarrage avec le personnage prétiré du
-  scénario — aucune création de personnage avant la Phase 9. Le catalogue ne montre que
+  scénario — aucune création de personnage avant la Phase 10. Le catalogue ne montre que
   les scénarios publiés ; un compte `game_master` y voit aussi les brouillons, pour les
   tester. Le nom de l'univers et tous les libellés viennent de la base. Le back-office est
   un package séparé.
@@ -577,16 +578,19 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   détail du jet** : compétence ou caractéristique et sa valeur, modificateurs appliqués avec
   leur valeur (une circonstance par son label d'effet, un objet par son nom), chance finale,
   résultat du d100 et degré de réussite. Tout vient du backend, le front ne calcule rien.
-- **Phase 8 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
+- **Phase 7 — Temps et lieux.** L'heure et la période de jeu (nuit, aube, soir…) s'affichent à
+  côté du lieu, mises en forme par l'i18n à partir de ce que transmet le backend ; les sorties
+  visibles du lieu courant peuvent s'afficher. Le front ne calcule ni durée ni période.
+- **Phase 9 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
   probablement nécessaire.
-- **Phase 9 — Cycle de vie et combat.** Création de personnage guidée ; combat en rounds
+- **Phase 10 — Cycle de vie et combat.** Création de personnage guidée ; combat en rounds
   (même pipeline, donc même journal, avec un repère visuel de round et l'état de
   l'adversaire si le backend le transmet) ; mise en pause et reprise ; écrans de fin
   (victoire, mort du personnage, abandon).
-- **Phase 9bis — Règles optionnelles par univers.** Santé mentale, passions et réputation
+- **Phase 10bis — Règles optionnelles par univers.** Santé mentale, passions et réputation
   sur la fiche, pour les seuls univers qui les emploient ; un jet caché n'affiche pas son
   détail.
-- **Phase 10 — Ouverture.** Inscription, validation d'email, mot de passe oublié ; choix de la
+- **Phase 11 — Ouverture.** Inscription, validation d'email, mot de passe oublié ; choix de la
   langue de la partie et de l'interface (traductions ajoutées à l'i18n posée en Phase 2) ; paramètres du
   compte ; messages de modération.
 
