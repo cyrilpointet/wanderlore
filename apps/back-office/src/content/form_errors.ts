@@ -2,7 +2,7 @@ import { ApiError } from '@/api/client'
 import { failureMessage } from '@/i18n/errors'
 import i18n from '@/i18n'
 
-/** Messages by field path (`skills.0.attribute`), as the backend names fields. */
+/** Messages by field path (`skills.0.category`), as the backend names fields. */
 export type FieldErrors = Record<string, string>
 
 export type FormFailure = {
@@ -54,7 +54,7 @@ function validationMessage(entry: ValidationError): string {
   })
 }
 
-/** The first error found under a path: `skills.0` catches `skills.0.attribute`. */
+/** The first error found under a path: `skills.0` catches `skills.0.category`. */
 export function errorUnder(fields: FieldErrors, path: string): string | undefined {
   if (fields[path]) return fields[path]
 

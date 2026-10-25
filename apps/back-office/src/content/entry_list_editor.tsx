@@ -10,7 +10,7 @@ import { suggestReference } from './references'
 import { DANGER, INPUT, SECONDARY } from './ui'
 
 /**
- * A list of entries — attributes, skills, chapters… — each with its
+ * A list of entries — skills, resources, chapters… — each with its
  * reference, its names, and whatever else `renderExtra` adds.
  */
 export function EntryListEditor<Draft extends EntryDraft>({

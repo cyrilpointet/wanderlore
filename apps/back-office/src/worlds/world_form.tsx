@@ -8,12 +8,14 @@ import { errorUnder, type FieldErrors } from '@/content/form_errors'
 import { LabelsEditor } from '@/content/labels_editor'
 import { PhraseListEditor } from '@/content/phrase_list_editor'
 import { INPUT, SECTION, TEXTAREA } from '@/content/ui'
-import type { SkillDraft, WorldDraft } from './world_draft'
+import { CHARACTERISTICS, SKILL_CATEGORIES, type Characteristic, type SkillCategory } from './queries'
+import { newSkillDraft, type SkillDraft, type WorldDraft } from './world_draft'
 
 /**
  * Everything a world holds itself: its names and tone, the rules arbitration
- * reads and the ambiance the narrator reads, the attributes, skills and
- * resources of a character sheet, and its glossary.
+ * reads and the ambiance the narrator reads, the skills and resources of a
+ * character sheet, and its glossary. The characteristics are BRP's, the same
+ * in every world: there is nothing to edit about them.
  */
 export function WorldForm({
   draft,
@@ -38,13 +40,11 @@ export function WorldForm({
     narrativeTone: set('narrativeTone'),
     rules: set('rules'),
     ambiance: set('ambiance'),
-    attributes: set('attributes'),
     skills: set('skills'),
     resources: set('resources'),
     glossary: set('glossary'),
   }
   const labelsError = errorUnder(errors, 'labels')
-  const attributes = draft.attributes.map(({ reference }) => reference).filter(Boolean)
 
   return (
     <div className="flex flex-col gap-6">
@@ -104,45 +104,74 @@ export function WorldForm({
             />
           </Section>
 
-          <Section title={t('form.attributes')}>
-            <EntryListEditor
-              entries={draft.attributes}
-              onChange={on.attributes}
-              errors={errors}
-              path="attributes"
-              create={newEntryDraft}
-            />
-          </Section>
-
           <Section title={t('form.skills')} hint={t('form.skillsHint')}>
             <EntryListEditor<SkillDraft>
               entries={draft.skills}
               onChange={on.skills}
               errors={errors}
               path="skills"
-              create={() => ({ ...newEntryDraft(), attribute: attributes[0] ?? '' })}
+              create={newSkillDraft}
               renderExtra={(skill, update, index) => (
-                <Field
-                  id={`${skill.key}-attribute`}
-                  label={t('form.attribute')}
-                  error={errors[`skills.${index}.attribute`]}
-                >
-                  <select
-                    id={`${skill.key}-attribute`}
-                    value={skill.attribute}
-                    onChange={(event) => update({ attribute: event.target.value })}
-                    className={INPUT}
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field
+                    id={`${skill.key}-category`}
+                    label={t('form.category')}
+                    error={errors[`skills.${index}.category`]}
                   >
-                    {!attributes.includes(skill.attribute) && (
-                      <option value={skill.attribute}>{skill.attribute || '—'}</option>
-                    )}
-                    {attributes.map((reference) => (
-                      <option key={reference} value={reference}>
-                        {reference}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                    <select
+                      id={`${skill.key}-category`}
+                      value={skill.category}
+                      onChange={(event) =>
+                        update({ category: event.target.value as SkillCategory })
+                      }
+                      className={INPUT}
+                    >
+                      {SKILL_CATEGORIES.map((category) => (
+                        <option key={category} value={category}>
+                          {t(`categories.${category}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field
+                    id={`${skill.key}-base-from`}
+                    label={t('form.baseFrom')}
+                    error={errorUnder(errors, `skills.${index}.baseChance`)}
+                  >
+                    <select
+                      id={`${skill.key}-base-from`}
+                      value={skill.baseCharacteristic}
+                      onChange={(event) =>
+                        update({ baseCharacteristic: event.target.value as Characteristic | '' })
+                      }
+                      className={INPUT}
+                    >
+                      <option value="">{t('form.baseFixed')}</option>
+                      {CHARACTERISTICS.map((characteristic) => (
+                        <option key={characteristic} value={characteristic}>
+                          {t(`characteristics.${characteristic}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field
+                    id={`${skill.key}-base-value`}
+                    label={
+                      skill.baseCharacteristic === ''
+                        ? t('form.baseChance')
+                        : t('form.baseMultiplier')
+                    }
+                  >
+                    <input
+                      id={`${skill.key}-base-value`}
+                      type="number"
+                      inputMode="numeric"
+                      value={skill.baseValue}
+                      onChange={(event) => update({ baseValue: event.target.value })}
+                      className={INPUT}
+                    />
+                  </Field>
+                </div>
               )}
             />
           </Section>

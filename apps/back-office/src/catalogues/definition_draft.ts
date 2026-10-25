@@ -15,7 +15,8 @@ import type {
 /**
  * A definition being edited, whatever its catalogue: the fields a catalogue
  * does not have are simply never sent. The structures written by hand — a
- * fighting profile, item modifiers — are held as the JSON text typed.
+ * fighting profile, item modifiers, a weapon profile — are held as the JSON
+ * text typed.
  */
 export type DefinitionDraft = {
   reference: string
@@ -29,11 +30,13 @@ export type DefinitionDraft = {
   stackable: boolean
   equippable: boolean
   modifiers: string
+  /** JSON text; empty for no weapon. */
+  weapon: string
   /** `npc:athos`, `location:paris`, or empty for none. */
   initialHolder: string
 }
 
-const NEW_COMBAT = { skills: {}, hitPointsMax: 8, weapon: null }
+const NEW_COMBAT = { skills: {}, hitPointsMax: 12, weapon: null }
 
 export function emptyDefinitionDraft(): DefinitionDraft {
   return {
@@ -48,6 +51,7 @@ export function emptyDefinitionDraft(): DefinitionDraft {
     stackable: false,
     equippable: false,
     modifiers: '[]',
+    weapon: '',
     initialHolder: '',
   }
 }
@@ -70,6 +74,7 @@ export function definitionDraftOf(definition: Definition): DefinitionDraft {
     stackable: item.stackable ?? false,
     equippable: item.equippable ?? false,
     modifiers: item.modifiers === undefined ? '[]' : json(item.modifiers),
+    weapon: item.weapon === undefined || item.weapon === null ? '' : json(item.weapon),
     initialHolder: item.initialHolder
       ? `${item.initialHolder.holder}:${item.initialHolder.reference}`
       : '',
@@ -92,7 +97,7 @@ export function definitionPayloadOf(
   options: { creating: boolean }
 ): DefinitionPayload {
   const errors: FieldErrors = {}
-  const parse = (field: 'combat' | 'modifiers') => {
+  const parse = (field: 'combat' | 'modifiers' | 'weapon') => {
     try {
       return JSON.parse(draft[field]) as unknown
     } catch {
@@ -123,6 +128,7 @@ export function definitionPayloadOf(
       stackable: !unique && draft.stackable,
       equippable: draft.equippable,
       modifiers: parse('modifiers'),
+      weapon: draft.weapon.trim() === '' ? null : parse('weapon'),
       initialHolder: unique ? holderOf(draft.initialHolder) : null,
     })
   }

@@ -1,8 +1,17 @@
-import { entryDraftOf, entryPayloadOf, type EntryDraft } from '@/content/drafts'
+import { entryDraftOf, entryPayloadOf, newEntryDraft, type EntryDraft } from '@/content/drafts'
 import { labelsOf, rowsOf, type LabelRow } from '@/content/labels'
-import type { WorldDetail, WorldPayload } from './queries'
+import type { Characteristic, Skill, SkillCategory, WorldDetail, WorldPayload } from './queries'
 
-export type SkillDraft = EntryDraft & { attribute: string }
+/**
+ * A skill being edited. Its base chance is held as typed: a fixed chance, or
+ * a characteristic and a multiplier when `baseCharacteristic` is set.
+ */
+export type SkillDraft = EntryDraft & {
+  category: SkillCategory
+  baseCharacteristic: Characteristic | ''
+  /** The fixed chance, or the multiplier of the characteristic. */
+  baseValue: string
+}
 
 /** A world being edited, as the form holds it. */
 export type WorldDraft = {
@@ -11,7 +20,6 @@ export type WorldDraft = {
   narrativeTone: string
   rules: string[]
   ambiance: string[]
-  attributes: EntryDraft[]
   skills: SkillDraft[]
   resources: EntryDraft[]
   glossary: EntryDraft[]
@@ -25,10 +33,25 @@ export function emptyWorldDraft(): WorldDraft {
     narrativeTone: '',
     rules: [],
     ambiance: [],
-    attributes: [],
     skills: [],
     resources: [],
     glossary: [],
+  }
+}
+
+/** A new skill: physical, at the 5% most skills of the book start from. */
+export function newSkillDraft(): SkillDraft {
+  return { ...newEntryDraft(), category: 'physical', baseCharacteristic: '', baseValue: '5' }
+}
+
+export function skillDraftOf(skill: Skill): SkillDraft {
+  const base = skill.baseChance
+
+  return {
+    ...entryDraftOf(skill),
+    category: skill.category,
+    baseCharacteristic: typeof base === 'number' ? '' : base.characteristic,
+    baseValue: String(typeof base === 'number' ? base : base.multiplier),
   }
 }
 
@@ -39,8 +62,7 @@ export function worldDraftOf(world: WorldDetail): WorldDraft {
     narrativeTone: world.narrativeTone,
     rules: world.rules,
     ambiance: world.ambiance,
-    attributes: world.attributes.map(entryDraftOf),
-    skills: world.skills.map((skill) => ({ ...entryDraftOf(skill), attribute: skill.attribute })),
+    skills: world.skills.map(skillDraftOf),
     resources: world.resources.map(entryDraftOf),
     glossary: world.glossary.map(entryDraftOf),
   }
@@ -59,10 +81,13 @@ export function worldPayloadOf(draft: WorldDraft): WorldPayload {
     narrativeTone: draft.narrativeTone.trim(),
     rules: phrases(draft.rules),
     ambiance: phrases(draft.ambiance),
-    attributes: draft.attributes.map(entryPayloadOf),
     skills: draft.skills.map((skill) => ({
       ...entryPayloadOf(skill),
-      attribute: skill.attribute,
+      category: skill.category,
+      baseChance:
+        skill.baseCharacteristic === ''
+          ? Number(skill.baseValue)
+          : { characteristic: skill.baseCharacteristic, multiplier: Number(skill.baseValue) },
     })),
     resources: draft.resources.map(entryPayloadOf),
     glossary: draft.glossary.map(entryPayloadOf),

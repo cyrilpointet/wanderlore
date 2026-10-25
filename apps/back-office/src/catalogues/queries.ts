@@ -42,6 +42,8 @@ export type ItemDefinition = DefinitionBase & {
   stackable: boolean
   equippable: boolean
   modifiers: unknown
+  /** Null for anything that is no weapon. */
+  weapon: unknown
   initialHolder: ItemHolder | null
 }
 

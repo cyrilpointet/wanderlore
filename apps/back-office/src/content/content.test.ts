@@ -46,7 +46,7 @@ describe('formFailureOf', () => {
   test('puts each validation error on its field, in the interface language', () => {
     const error = new ApiError(422, undefined, 'raw', {
       errors: [
-        { field: 'skills.0.attribute', rule: 'regex', message: 'raw' },
+        { field: 'skills.0.category', rule: 'regex', message: 'raw' },
         { field: 'labels.en', rule: 'english_label', message: 'raw' },
         { field: 'combat.weapon', rule: 'brand_new_rule', message: 'Backend says no' },
       ],
@@ -54,7 +54,7 @@ describe('formFailureOf', () => {
 
     expect(formFailureOf(error)).toEqual({
       fields: {
-        'skills.0.attribute': 'Lower-case letters, digits and underscores, starting with a letter.',
+        'skills.0.category': 'Lower-case letters, digits and underscores, starting with a letter.',
         'labels.en': 'An English name is required.',
         'combat.weapon': 'Backend says no',
       },
@@ -85,7 +85,7 @@ describe('formFailureOf', () => {
   })
 
   test('finds an error nested under a path', () => {
-    expect(errorUnder({ 'skills.0.attribute': 'Bad' }, 'skills.0')).toBe('Bad')
-    expect(errorUnder({ 'skills.0.attribute': 'Bad' }, 'skills.1')).toBeUndefined()
+    expect(errorUnder({ 'skills.0.category': 'Bad' }, 'skills.0')).toBe('Bad')
+    expect(errorUnder({ 'skills.0.category': 'Bad' }, 'skills.1')).toBeUndefined()
   })
 })

@@ -13,7 +13,10 @@ const SCENARIO: Scenario = {
   status: 'draft',
   chapters: [{ reference: 'the_road_to_paris', labels: { en: 'The Road to Paris' } }],
   quests: [{ reference: 'deliver_the_letter', labels: { en: 'Deliver the letter' } }],
-  pregeneratedCharacter: { name: "d'Artagnan", hitPointsMax: 10 },
+  pregeneratedCharacter: {
+    name: "d'Artagnan",
+    characteristics: { STR: 13, CON: 14, SIZ: 12, INT: 13, POW: 12, DEX: 16, CHA: 14 },
+  },
   initialState: {
     location: 'meung_sur_loire',
     chapter: 'the_road_to_paris',
