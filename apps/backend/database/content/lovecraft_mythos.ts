@@ -43,7 +43,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
    * Flat and short, as in the first world, with the base chances of BRP.
    * `composure` stands where a sanity score would: the nerve to face the
    * unnatural is rolled, and what it costs comes off hit points — until BRP's
-   * own sanity rules arrive with the optional rules (Phase 9bis).
+   * own sanity rules arrive with the optional rules (Phase 10bis).
    */
   skills: [
     {
@@ -955,9 +955,9 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           { definition: 'tool', descriptor: 'an electric torch', quantity: 1, equipped: false },
         ],
       },
-      /** The story opens on the heir's arrival at the house. */
+      /** The story opens as the heir lets himself into the house. */
       initialState: {
-        location: 'ward_house',
+        location: 'ward_house_entrance_hall',
         chapter: 'the_inheritance',
         quests: [
           {
@@ -1088,7 +1088,16 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           },
         },
       ],
-      /** The house, from its grounds to the vault beneath the laboratory, and the towns nearby. */
+      /**
+       * The towns nearby, then the house room by room: an investigation is
+       * played at the grain of a room, so going from the library to the
+       * study is a movement, and what lies in each room stays there. The
+       * house itself only contains them. The pits and the vault hang off the
+       * laboratory, the only way in.
+       *
+       * The model reads a place by its reference alone: each room's says
+       * which room of the house it is.
+       */
       locations: [
         {
           reference: 'new_england',
@@ -1118,9 +1127,25 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           reference: 'ward_house',
           labels: { en: 'Ward House', fr: 'Le manoir Ward' },
           description:
-            'The Ward mansion, a gambrel-roofed Georgian pile on a lonely hill, shuttered for a year: dust sheets, stopped clocks, a library of old books, and a cellar door that sticks.',
+            'The Ward estate on its lonely hill: a gambrel-roofed Georgian mansion shuttered for a year, its grounds, outbuildings and family plot. Every room is a place of its own.',
           kind: 'unique',
           parent: 'new_england',
+        },
+        {
+          reference: 'ward_house_grounds',
+          labels: { en: 'The grounds', fr: 'Le parc' },
+          description:
+            'The overgrown grounds around the house: a weed-choked drive, a dry fountain, dead hedges, and old elms leaning toward the windows.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_carriage_house',
+          labels: { en: 'The carriage house', fr: 'La remise' },
+          description:
+            "The old carriage house by the drive, where Silas's black Packard still stands under a tarpaulin, its tank full: he never drove away.",
+          kind: 'unique',
+          parent: 'ward_house',
         },
         {
           reference: 'ward_family_cemetery',
@@ -1131,12 +1156,108 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'ward_house',
         },
         {
+          reference: 'ward_house_entrance_hall',
+          labels: { en: 'The entrance hall', fr: "Le hall d'entrée" },
+          description:
+            'A tall panelled hall with a staircase rising into shadow, a long-case clock stopped at seventeen minutes past three, and family portraits — one of them turned to the wall.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_parlour',
+          labels: { en: 'The parlour', fr: 'Le salon' },
+          description:
+            'The formal front parlour: furniture under dust sheets, a piano gone out of tune, curtains drawn for a year.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_dining_room',
+          labels: { en: 'The dining room', fr: 'La salle à manger' },
+          description:
+            'A long dining room with the table still laid for two, as if for a guest, its dishes furred with dust.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_library',
+          labels: { en: 'The library', fr: 'La bibliothèque' },
+          description:
+            'Floor-to-ceiling shelves of old books, family papers and county histories, a reading table, and gaps on the shelves where volumes were taken down.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_study',
+          labels: { en: "Silas's study", fr: 'Le bureau de Silas' },
+          description:
+            "Silas Ward's study off the library: a cluttered desk, star charts pinned to the panelling, ash in the grate, and a drawer that locks.",
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_kitchen',
+          labels: { en: 'The kitchen', fr: 'La cuisine' },
+          description:
+            "The kitchen at the back of the house, Martha Pike's domain: a range, a pantry, the servants' stair, and the cellar door that sticks.",
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_upstairs_corridor',
+          labels: { en: 'The upstairs corridor', fr: "Le couloir de l'étage" },
+          description:
+            'The first-floor corridor that serves the bedrooms, lined with closed doors; on some nights it runs longer than the house.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_silas_bedroom',
+          labels: { en: "Silas's bedroom", fr: 'La chambre de Silas' },
+          description:
+            "Silas Ward's bedroom, left as he left it: an unmade bed, clothes in the wardrobe, a pocket watch stopped on the nightstand.",
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_guest_bedroom',
+          labels: { en: 'The guest bedroom', fr: "La chambre d'amis" },
+          description:
+            'The bedroom Martha Pike made ready for the heir, aired and clean, its window on the family plot.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_attic',
+          labels: { en: 'The attic', fr: 'Le grenier' },
+          description:
+            'The attic under the gambrel roof: trunks and crates of two centuries of Wards, an eighteenth-century portrait under a sheet, and a round window on the hill.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_house_cellar',
+          labels: { en: 'The cellar', fr: 'La cave' },
+          description:
+            'The cellar under the kitchen: wine racks, a coal bin, rotting barrels — and behind the racks, a narrow door on stairs going further down.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
           reference: 'ward_laboratory',
           labels: { en: 'The laboratory', fr: 'Le laboratoire' },
           description:
-            'A vaulted laboratory dug beneath the cellars: furnaces, alembics, shelves of jars of grey salts, covered pits in the floor. Here the world is thin — corners do not meet, and the walls seem to breathe.',
+            'A vaulted laboratory dug beneath the cellar: furnaces, alembics, shelves of jars of grey salts, iron lids set in the floor. Here the world is thin — corners do not meet, and the walls seem to breathe.',
           kind: 'unique',
           parent: 'ward_house',
+        },
+        {
+          reference: 'ward_laboratory_pits',
+          labels: { en: 'The pits', fr: 'Les fosses' },
+          description:
+            'Brick-lined pits beneath the iron lids of the laboratory floor, where the Wards kept what they raised imperfectly. Something down there still moves.',
+          kind: 'unique',
+          parent: 'ward_laboratory',
         },
         {
           reference: 'sealed_vault',
@@ -1171,20 +1292,20 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             },
           ],
           weapon: null,
-          initialHolder: { holder: 'location', reference: 'ward_house' },
+          initialHolder: { holder: 'location', reference: 'ward_house_study' },
         },
         {
           reference: 'iron_vault_key',
           labels: { en: 'The iron key', fr: 'La clé de fer' },
           description:
-            "A heavy iron key, hidden in Silas's study, that opens the iron door at the back of the laboratory.",
+            "A heavy iron key, hidden in the hollow bedpost of Silas's bed, that opens the iron door at the back of the laboratory.",
           kind: 'unique',
           generic: false,
           stackable: false,
           equippable: false,
           modifiers: [],
           weapon: null,
-          initialHolder: { holder: 'location', reference: 'ward_house' },
+          initialHolder: { holder: 'location', reference: 'ward_house_silas_bedroom' },
         },
         {
           reference: 'necronomicon',
