@@ -5,7 +5,7 @@ import '@/i18n'
 import { CharacterSheet } from './character_sheet'
 import { Effects, RollChip } from './journal'
 import { withCompletedTurn } from './game_cache'
-import type { Character, Game, InventoryItem } from './queries'
+import type { Character, Game, InventoryItem, Roll } from './queries'
 
 /**
  * Rendered to static markup: enough to read what the player is shown,
@@ -35,8 +35,16 @@ function character(inventory: InventoryItem[]): Character {
     name: "d'Artagnan",
     hitPoints: 10,
     hitPointsMax: 10,
-    attributes: [{ reference: 'social', label: 'Social', value: 3 }],
-    skills: [{ reference: 'persuasion', label: 'Persuasion', value: 3, attribute: 'social' }],
+    characteristics: [
+      { reference: 'STR', value: 13 },
+      { reference: 'CON', value: 14 },
+      { reference: 'SIZ', value: 12 },
+      { reference: 'INT', value: 13 },
+      { reference: 'POW', value: 12 },
+      { reference: 'DEX', value: 16 },
+      { reference: 'CHA', value: 14 },
+    ],
+    skills: [{ reference: 'persuasion', label: 'Persuasion', value: 45, category: 'communication' }],
     resources: [],
     inventory,
   }
@@ -117,23 +125,78 @@ describe('Character sheet | inventory tab', () => {
   })
 })
 
-describe('Journal | items', () => {
-  test('the roll names the item that weighed, never a number', () => {
+const PERSUASION: Roll = {
+  skill: { reference: 'persuasion', label: 'Persuasion' },
+  characteristic: null,
+  value: 60,
+  baseChance: 60,
+  difficulty: 'average',
+  modifiers: [],
+  chance: 60,
+  roll: 42,
+  result: 'success',
+  degree: 'success',
+}
+
+describe('Journal | the roll in full', () => {
+  test('a plain roll: the skill at its value, the d100 and the degree', () => {
+    const text = textOf(renderToStaticMarkup(<RollChip roll={PERSUASION} />))
+
+    expect(text).toBe('Persuasion 60% · rolled 42 · Success')
+  })
+
+  test('every modifier with its value, a circumstance by its label, then the chance', () => {
     const text = textOf(
       renderToStaticMarkup(
         <RollChip
           roll={{
-            skill: { reference: 'persuasion', label: 'Persuasion' },
-            result: 'success',
-            margin: 'comfortable',
-            items: [{ reference: 'letter_to_treville', label: 'Letter for M. de Tréville' }],
+            ...PERSUASION,
+            difficulty: 'difficult',
+            modifiers: [
+              { source: 'contextual', effect: 'minor_bonus', value: 10 },
+              {
+                source: 'item',
+                item: { reference: 'letter_to_treville', label: 'Letter for M. de Tréville' },
+                value: 10,
+              },
+            ],
+            chance: 50,
+            roll: 8,
+            degree: 'special',
           }}
         />
       )
     )
 
-    expect(text).toBe('Persuasion · Clear success · with Letter for M. de Tréville')
+    expect(text).toBe(
+      'Persuasion 60% · Difficult · Advantage +10 · Letter for M. de Tréville +10 · → 50% · rolled 8 · Special success'
+    )
   })
+
+  test('a characteristic roll: its score times five, labelled by the front', () => {
+    const text = textOf(
+      renderToStaticMarkup(
+        <RollChip
+          roll={{
+            ...PERSUASION,
+            skill: null,
+            characteristic: 'CHA',
+            value: 14,
+            baseChance: 70,
+            chance: 70,
+            roll: 100,
+            result: 'failure',
+            degree: 'fumble',
+          }}
+        />
+      )
+    )
+
+    expect(text).toBe('Charisma 14 ×5 · → 70% · rolled 100 · Fumble')
+  })
+})
+
+describe('Journal | items', () => {
 
   test('tells what happened to the character’s items, and with whom', () => {
     const text = textOf(
@@ -196,5 +259,17 @@ describe('A completed turn', () => {
     /** No badge in the event: the place stays as it was. */
     expect(after.location).toEqual(before.location)
     expect(after.pendingTurn).toBeNull()
+  })
+})
+
+describe('CharacterSheet | the BRP sheet', () => {
+  test('shows the seven characteristics, then the skills in percent by category', () => {
+    const text = textOf(renderToStaticMarkup(<CharacterSheet game={game([])} />))
+
+    for (const shown of ['Characteristics', 'Strength13', 'Dexterity16', 'Charisma14']) {
+      expect(text.replace(/\s+/g, '')).toContain(shown)
+    }
+    expect(text).toContain('Communication')
+    expect(text.replace(/\s+/g, '')).toContain('Persuasion45%')
   })
 })

@@ -6,7 +6,7 @@ import Session from '#models/session'
 import TurnLog from '#models/turn_log'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
-import { THREE_MUSKETEERS } from '#tests/helpers/worlds'
+import { THREE_MUSKETEERS, GASCON } from '#tests/helpers/worlds'
 import { improviseLocation, visitUniqueLocation } from '#services/game/locations'
 import { createUser, useTransaction } from '#tests/helpers/database'
 import { seedMusketeers } from '#tests/helpers/content'
@@ -38,8 +38,8 @@ async function arrangeGame(userId: string, lastActivityAt = DateTime.now()) {
   await Character.create({
     sessionId: session.id,
     name: "d'Artagnan",
-    attributes: { social: 3, physical: 3 },
-    skills: { persuasion: 2, swordsmanship: 3 },
+    characteristics: GASCON,
+    skills: { persuasion: 45, swordsmanship: 60 },
     resources: { purse: 15 },
     progression: {},
     hitPoints: 8,
@@ -83,16 +83,17 @@ function completedTurn(sessionId: string, turnNumber: number) {
     status: 'completed',
     playerInput: `Action ${turnNumber}`,
     language: 'en',
-    arbitrationOutput: { resolution: { mode: 'roll_required', skill_used: 'persuasion' } },
+    arbitrationOutput: { resolution: { mode: 'roll_required', action_type: 'social_persuasion' } },
     rollResult: {
-      dice: [6, 5],
-      skillValue: 2,
-      total: 13,
-      threshold: 9,
-      margin: 4,
-      difficulty: 'medium',
+      actionType: 'social_persuasion',
+      base: { kind: 'skill', skill: 'persuasion', value: 45 },
+      baseChance: 45,
+      difficulty: 'average',
+      appliedModifiers: [],
+      chance: 45,
+      roll: 8,
       result: 'success',
-      marginLabel: 'comfortable',
+      degree: 'special',
     },
     narratedText: `Narration ${turnNumber}`,
     appliedEffects: {
@@ -172,13 +173,19 @@ test.group('GET /sessions/:id', (group) => {
     response.assertStatus(200)
     const { character } = dataOf(response)
 
-    assert.deepEqual(character.attributes, [
-      { reference: 'physical', label: 'Physical', value: 3 },
-      { reference: 'social', label: 'Social', value: 3 },
+    /** The seven of BRP, always in the same order, labelled by the front. */
+    assert.deepEqual(character.characteristics, [
+      { reference: 'STR', value: 13 },
+      { reference: 'CON', value: 14 },
+      { reference: 'SIZ', value: 12 },
+      { reference: 'INT', value: 13 },
+      { reference: 'POW', value: 12 },
+      { reference: 'DEX', value: 16 },
+      { reference: 'CHA', value: 14 },
     ])
     assert.deepEqual(character.skills, [
-      { reference: 'swordsmanship', label: 'Swordsmanship', value: 3, attribute: 'physical' },
-      { reference: 'persuasion', label: 'Persuasion', value: 2, attribute: 'social' },
+      { reference: 'swordsmanship', label: 'Swordsmanship', value: 60, category: 'combat' },
+      { reference: 'persuasion', label: 'Persuasion', value: 45, category: 'communication' },
     ])
     assert.deepEqual(character.resources, [{ reference: 'purse', label: 'Purse', value: 15 }])
   })
@@ -345,12 +352,18 @@ test.group('GET /sessions/:id/turns', (group) => {
 
     assert.equal(turn.playerInput, 'Action 1')
     assert.equal(turn.narration, 'Narration 1')
-    /** Logged before Phase 4: no item weighed, none changed. */
+    /** The roll in full, as at the table: no modifier weighed. */
     assert.deepEqual(turn.roll, {
       skill: { reference: 'persuasion', label: 'Persuasion' },
+      characteristic: null,
+      value: 45,
+      baseChance: 45,
+      difficulty: 'average',
+      modifiers: [],
+      chance: 45,
+      roll: 8,
       result: 'success',
-      margin: 'comfortable',
-      items: [],
+      degree: 'special',
     })
     assert.deepEqual(turn.effects, {
       hitPointsDelta: -2,
@@ -359,15 +372,23 @@ test.group('GET /sessions/:id/turns', (group) => {
     })
   })
 
-  test('names the items that weighed on a roll, never their value', async ({ client, assert }) => {
+  test('shows every modifier of a roll with its value, a circumstance by its label', async ({
+    client,
+    assert,
+  }) => {
     const player = await User.findOrFail(await createUser())
     const session = await arrangeGame(player.id)
     const turn = await completedTurn(session.id, 1)
     turn.rollResult = {
       ...turn.rollResult,
       appliedModifiers: [
-        { source: 'contextual', origin: 'favorable_reputation', value: 1 },
-        { source: 'item', origin: 'letter_to_treville', value: 1 },
+        {
+          source: 'contextual',
+          origin: 'favorable_reputation',
+          effect: 'minor_bonus',
+          value: 10,
+        },
+        { source: 'item', origin: 'letter_to_treville', value: 10 },
       ],
     }
     await turn.save()
@@ -375,9 +396,15 @@ test.group('GET /sessions/:id/turns', (group) => {
     const response = await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player)
     const [read] = dataOf(response)
 
-    assert.deepEqual(read.roll.items, [
-      { reference: 'letter_to_treville', label: 'Letter for M. de Tréville' },
+    assert.deepEqual(read.roll.modifiers, [
+      { source: 'contextual', effect: 'minor_bonus', value: 10 },
+      {
+        source: 'item',
+        item: { reference: 'letter_to_treville', label: 'Letter for M. de Tréville' },
+        value: 10,
+      },
     ])
+    /** The words arbitration named the circumstance with never leave. */
     assert.notInclude(JSON.stringify(read), 'favorable_reputation')
     assert.notInclude(JSON.stringify(read), 'appliedModifiers')
   })
@@ -476,7 +503,7 @@ test.group('GET /sessions/:id/turns', (group) => {
     ])
   })
 
-  test('never exposes the dice, the threshold, the total or the flags', async ({
+  test('never exposes the circumstance arbitration named, nor the flags', async ({
     client,
     assert,
   }) => {
@@ -487,7 +514,7 @@ test.group('GET /sessions/:id/turns', (group) => {
     const response = await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player)
     const body = response.text()
 
-    for (const leak of ['dice', 'threshold', 'total', 'skillValue', 'letter_read']) {
+    for (const leak of ['appliedModifiers', 'actionType', 'letter_read']) {
       assert.notInclude(body, leak)
     }
   })

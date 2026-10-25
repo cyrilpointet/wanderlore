@@ -12,7 +12,6 @@ import type { Clock } from '#services/clock'
 import type { JobQueue } from '#services/queue/types'
 import type { TurnEvents, TurnRef } from '#services/game/turn_events'
 import { toNarrationOutcome } from '#services/rules/engine'
-import type { AppliedModifier } from '#services/rules/types'
 
 import {
   ConcurrentTurnError,
@@ -30,7 +29,7 @@ import {
   modifierSources,
   sceneItemsOf,
 } from './inventory.js'
-import { actionTypesOf, skillFor } from './resolution_rules.js'
+import { actionTypesOf, resolutionFor, rollBaseFor } from './resolution_rules.js'
 import { ContentLabels } from './content_labels.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
@@ -74,12 +73,6 @@ import {
   recordCall,
   traceColumns,
 } from './turn_trace.js'
-
-/**
- * A skill missing from the character sheet is one they never learnt: rolled
- * at zero, so the dice alone carry the attempt.
- */
-const UNTRAINED = 0
 
 /** The delta of a turn that changes nothing. */
 const NO_CHANGE: TurnEffects = {
@@ -153,7 +146,7 @@ export type SubmittedTurn = {
  *
  * Split in two on purpose: `submit` records the turn and queues it, answering
  * the player at once; `run` plays it, in a job. Regenerating the narrative
- * summary is Phase 7.
+ * summary is Phase 8.
  */
 export class TurnService {
   #llm: LlmGateway
@@ -392,7 +385,7 @@ export class TurnService {
       turn,
       buildNarrationMessage({
         ...context,
-        /** A verdict and a qualitative margin. Never the dice or the threshold. */
+        /** A verdict and a qualitative degree. Never the dice or the chance. */
         outcome,
         intent_summary: decision.intent.summary,
         aside,
@@ -510,7 +503,8 @@ export class TurnService {
 
   /**
    * The outcome arbitration's ruling leads to. A roll is made by the backend
-   * alone, on the skill `resolution_rules` ties to the chosen action type,
+   * alone, on the skill or characteristic `resolution_rules` ties to the
+   * chosen action type — a skill never trained at its base chance —
    * with the circumstances arbitration labelled and the modifiers of the
    * items the character holds; without a roll, the outcome was certain from
    * the start.
@@ -527,32 +521,24 @@ export class TurnService {
       return {
         mode,
         result: mode === 'automatic_success' ? 'success' : 'failure',
-        margin: null,
+        degree: null,
         reason: mode === 'narrative_automatic_failure' ? decision.validity.justification : null,
       }
     }
 
-    const skill = skillFor(scene.world, actionType!)
-    /** A skill the character never learnt is rolled untrained. */
-    const resolution = this.#rules.resolve(
-      scene.character.skills[skill] ?? UNTRAINED,
-      difficulty!,
-      {
-        skill,
-        contextual: decision.resolution.contextual_modifiers,
-        /** The character's own, never what someone else or the place holds. */
-        items: modifierSources(scene.world, scene.items.character),
-      }
-    )
+    const base = rollBaseFor(scene.world, resolutionFor(scene.world, actionType!), scene.character)
+    const resolution = this.#rules.resolve(base, difficulty!, {
+      contextual: decision.resolution.contextual_modifiers,
+      /** The character's own, never what someone else or the place holds. */
+      items: modifierSources(scene.world, scene.items.character),
+    })
 
     /** Every modifier with its origin, contextual and item side by side, for the log. */
-    trace.roll = { skill, actionType: actionType!, ...resolution }
+    trace.roll = { actionType: actionType!, ...resolution }
 
     this.#events.emit(refOf(turn), {
       type: 'roll_resolved',
-      skill,
-      ...toNarrationOutcome(resolution),
-      items: itemsThatWeighed(resolution.appliedModifiers),
+      resolution,
       labels: new ContentLabels(scene.world, turn.language),
     })
 
@@ -736,12 +722,6 @@ function buildContext(
 }
 
 /** The definitions of the items that moved a roll: which, never by how much. */
-function itemsThatWeighed(modifiers: AppliedModifier[]): string[] {
-  return [
-    ...new Set(modifiers.filter(({ source }) => source === 'item').map(({ origin }) => origin)),
-  ]
-}
-
 /** Every way an item of the scene can be named: its definition, and its handle if it has one. */
 function itemReferencesOf(items: ItemsInScene): string[] {
   const held = [...items.character, ...items.npcs.flatMap((npc) => npc.items), ...items.location]

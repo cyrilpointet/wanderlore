@@ -3,24 +3,21 @@ import { describe, expect, test } from 'vitest'
 import { gaugePercent, groupSkills, paragraphs, showsQuantity } from './presentation'
 
 describe('groupSkills', () => {
-  test('puts each skill under its attribute, keeping the order received', () => {
+  test('puts each skill under its BRP category, in the order of the categories', () => {
     const groups = groupSkills({
-      attributes: [
-        { reference: 'physical', label: 'Physical', value: 3 },
-        { reference: 'mental', label: 'Mental', value: 2 },
-        { reference: 'social', label: 'Social', value: 3 },
-      ],
       skills: [
-        { reference: 'swordsmanship', label: 'Swordsmanship', value: 3, attribute: 'physical' },
-        { reference: 'persuasion', label: 'Persuasion', value: 2, attribute: 'social' },
-        { reference: 'athletics', label: 'Athletics', value: 1, attribute: 'physical' },
+        { reference: 'athletics', label: 'Athletics', value: 30, category: 'physical' },
+        { reference: 'swordsmanship', label: 'Swordsmanship', value: 60, category: 'combat' },
+        { reference: 'persuasion', label: 'Persuasion', value: 45, category: 'communication' },
+        { reference: 'stealth', label: 'Stealth', value: 25, category: 'physical' },
       ],
     })
 
-    expect(groups.map((group) => [group.reference, group.skills.map((s) => s.reference)])).toEqual([
-      ['physical', ['swordsmanship', 'athletics']],
-      ['mental', []],
-      ['social', ['persuasion']],
+    /** Categories without a skill of theirs are left out. */
+    expect(groups.map((group) => [group.category, group.skills.map((s) => s.reference)])).toEqual([
+      ['combat', ['swordsmanship']],
+      ['communication', ['persuasion']],
+      ['physical', ['athletics', 'stealth']],
     ])
   })
 })

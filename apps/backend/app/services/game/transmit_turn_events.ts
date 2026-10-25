@@ -18,7 +18,7 @@ export type Broadcaster = {
  *
  * In-memory transport: the job runs in the HTTP process, so the event reaches
  * the SSE connections of that same process directly. Several instances would
- * need Transmit's Redis transport (Phase 9).
+ * need Transmit's Redis transport (Phase 10).
  */
 export class TransmitTurnEvents implements TurnEvents {
   #transmit: Broadcaster

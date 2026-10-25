@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import type { Character, Turn } from './queries'
+import type { Character, Roll, Turn } from './queries'
 import {
   concerns,
   initialTurnState,
@@ -18,6 +18,18 @@ const TURN_ID = 'turn-1'
 const INPUT = 'I draw my sword.'
 
 const SKILL = { reference: 'swordsmanship', label: 'Swordsmanship' }
+
+/** A roll as the backend sends it: a sword thrust at 60%, a 42 on the d100. */
+const ROLL: Omit<Roll, 'result' | 'degree'> = {
+  skill: SKILL,
+  characteristic: null,
+  value: 60,
+  baseChance: 60,
+  difficulty: 'average',
+  modifiers: [],
+  chance: 60,
+  roll: 42,
+}
 const CHARACTER = {} as Character
 
 function turn(overrides: Partial<Turn> = {}): Turn {
@@ -102,10 +114,9 @@ describe('turn machine — a turn played to the end', () => {
       on(
         message({
           event: 'roll_resolved',
-          skill: SKILL,
+          ...ROLL,
           result: 'success',
-          margin: 'narrow',
-          items: [],
+          degree: 'success',
         })
       ),
       on(message({ event: 'step_started', step: 'narration' }))
@@ -114,7 +125,7 @@ describe('turn machine — a turn played to the end', () => {
     expect(state).toMatchObject({
       status: 'in_progress',
       step: 'narration',
-      roll: { skill: SKILL, result: 'success', margin: 'narrow' },
+      roll: { ...ROLL, result: 'success', degree: 'success' },
     })
   })
 
@@ -147,10 +158,9 @@ describe('turn machine — failures', () => {
       on(
         message({
           event: 'roll_resolved',
-          skill: SKILL,
+          ...ROLL,
           result: 'failure',
-          margin: 'minor_failure',
-          items: [],
+          degree: 'failure',
         })
       ),
       on(message({ event: 'turn_failed', failure }))

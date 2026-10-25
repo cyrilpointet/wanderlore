@@ -53,6 +53,7 @@ export function DefinitionForm({
     stackable: set('stackable'),
     equippable: set('equippable'),
     modifiers: set('modifiers'),
+    weapon: set('weapon'),
     initialHolder: set('initialHolder'),
   }
   const id = (field: string) => `${idPrefix}-${field}`
@@ -61,6 +62,7 @@ export function DefinitionForm({
   const labelsError = errorUnder(errors, 'labels')
   const combatError = errorUnder(errors, 'combat')
   const modifiersError = errorUnder(errors, 'modifiers')
+  const weaponError = errorUnder(errors, 'weapon')
   const holderError = errorUnder(errors, 'initialHolder')
 
   return (
@@ -241,11 +243,28 @@ export function DefinitionForm({
               className={CODE_AREA}
             />
           </Field>
+          <Field id={id('weapon')} label={t('weapon')} hint={t('weaponHint')} error={weaponError}>
+            <textarea
+              id={id('weapon')}
+              value={draft.weapon}
+              spellCheck={false}
+              placeholder={WEAPON_EXAMPLE}
+              onChange={(event) => on.weapon(event.target.value)}
+              className={CODE_AREA}
+            />
+          </Field>
         </>
       )}
     </div>
   )
 }
+
+/** What a weapon profile looks like: a rapier, as the book gives it. Data, not interface text. */
+const WEAPON_EXAMPLE = JSON.stringify(
+  { skill: 'sword', damage: '1D6+1', damageModifier: 'full', special: 'impaling' },
+  null,
+  2
+)
 
 function Checkbox({
   id,

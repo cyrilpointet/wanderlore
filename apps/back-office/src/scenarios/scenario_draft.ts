@@ -28,9 +28,8 @@ export type ScenarioDraft = {
 /** What a new character looks like, to start from rather than from a blank page. */
 export const CHARACTER_TEMPLATE = {
   name: '',
-  attributes: {},
+  characteristics: { STR: 10, CON: 10, SIZ: 13, INT: 13, POW: 10, DEX: 10, CHA: 10 },
   skills: {},
-  hitPointsMax: 10,
   resources: {},
   items: [],
 }

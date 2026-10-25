@@ -9,7 +9,7 @@ import { defaultNS, en } from './resources'
  * narration is written by the LLM in the game's language: neither goes
  * through here.
  *
- * Fixed to English in Phase 2; the player picks a language in Phase 9.
+ * Fixed to English in Phase 2; the player picks a language in Phase 10.
  */
 export const LANGUAGE = 'en'
 

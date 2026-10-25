@@ -62,7 +62,8 @@ test.group('Content | scenario over world', () => {
       reference: 'swordsmanship',
       label: 'Swordsmanship',
       labels: { en: 'Swordsmanship' },
-      attribute: 'physical',
+      category: 'combat',
+      baseChance: 15,
     })
   })
 })
@@ -71,9 +72,15 @@ test.group('Content | seeded worlds', () => {
   for (const world of SEEDED_WORLDS) {
     const skills = world.skills.map((skill) => skill.reference)
 
-    test(`every ${world.reference} category resolves with a skill of its world`, ({ assert }) => {
+    test(`every ${world.reference} category resolves with a skill of its world, or a characteristic`, ({
+      assert,
+    }) => {
       for (const rule of world.actionTypes) {
-        assert.include(skills, rule.associatedSkill, rule.actionType)
+        if (rule.associatedSkill === null) {
+          assert.isNotNull(rule.associatedCharacteristic, rule.actionType)
+        } else {
+          assert.include(skills, rule.associatedSkill, rule.actionType)
+        }
       }
     })
 

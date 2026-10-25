@@ -16,6 +16,26 @@ export type WorldSummary = {
 
 export type Entry = { reference: string; labels: Labels }
 
+/** The seven characteristics of BRP: the system's, the same in every world. */
+export const CHARACTERISTICS = ['STR', 'CON', 'SIZ', 'INT', 'POW', 'DEX', 'CHA'] as const
+export type Characteristic = (typeof CHARACTERISTICS)[number]
+
+/** The six skill categories of BRP. */
+export const SKILL_CATEGORIES = [
+  'combat',
+  'communication',
+  'manipulation',
+  'mental',
+  'perception',
+  'physical',
+] as const
+export type SkillCategory = (typeof SKILL_CATEGORIES)[number]
+
+/** What an untrained character has in a skill: a fixed chance, or a characteristic times a multiplier. */
+export type BaseChance = number | { characteristic: Characteristic; multiplier: number }
+
+export type Skill = Entry & { category: SkillCategory; baseChance: BaseChance }
+
 /** Everything a world holds itself; its scenarios and catalogues have routes of their own. */
 export type WorldDetail = {
   id: string
@@ -24,8 +44,7 @@ export type WorldDetail = {
   narrativeTone: string
   rules: string[]
   ambiance: string[]
-  attributes: Entry[]
-  skills: (Entry & { attribute: string })[]
+  skills: Skill[]
   resources: Entry[]
   glossary: Entry[]
   updatedAt: string | null
@@ -34,11 +53,13 @@ export type WorldDetail = {
 /** A world as it is sent: everything but its id, the reference only on creation. */
 export type WorldPayload = Omit<WorldDetail, 'id' | 'updatedAt'>
 
+/** A category of action, resolved by a skill or by a characteristic — exactly one. */
 export type ActionType = {
   id: string
   actionType: string
   description: string
-  associatedSkill: string
+  associatedSkill: string | null
+  associatedCharacteristic: Characteristic | null
 }
 
 /** The worlds of the game, sorted by reference by the backend. */
@@ -95,7 +116,7 @@ export async function createActionType(
 
 export async function updateActionType(
   id: string,
-  payload: Pick<ActionType, 'description' | 'associatedSkill'>
+  payload: Pick<ActionType, 'description' | 'associatedSkill' | 'associatedCharacteristic'>
 ): Promise<ActionType> {
   return (
     await api<{ data: ActionType }>(`/admin/action-types/${id}`, {

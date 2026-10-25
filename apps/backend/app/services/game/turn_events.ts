@@ -1,6 +1,6 @@
 import type Character from '#models/character'
 import type TurnLog from '#models/turn_log'
-import type { MarginLabel, RollOutcome } from '#services/rules/types'
+import type { RollResolution } from '#services/rules/types'
 import type { ContentLabels, PlacedLocation } from '#services/game/content_labels'
 import type { HeldItem } from '#services/game/inventory'
 import CharacterTransformer from '#transformers/character_transformer'
@@ -17,16 +17,12 @@ import TurnTransformer, { presentRoll } from '#transformers/turn_transformer'
 export type TurnEvent =
   | { type: 'step_started'; step: 'arbitration' | 'narration' }
   /**
-   * The skill, the verdict and a qualitative margin — never the dice, the
-   * threshold or the skill value. The items that weighed on the roll, by
-   * definition, never with what they were worth.
+   * The roll in full: the player sees its detail, as at the table. Only the
+   * narrator is kept from the numbers.
    */
   | {
       type: 'roll_resolved'
-      skill: string
-      result: RollOutcome
-      margin: MarginLabel
-      items: string[]
+      resolution: RollResolution
       /** The labels of the world the turn is played in, for the wire. */
       labels: ContentLabels
     }
@@ -89,7 +85,7 @@ export function toMessage(ref: TurnRef, event: TurnEvent) {
       return { ...header, step: event.step }
 
     case 'roll_resolved':
-      return { ...header, ...presentRoll(event, event.labels) }
+      return { ...header, ...presentRoll(event.resolution, event.labels) }
 
     case 'narration_chunk':
       return { ...header, text: event.text }

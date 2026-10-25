@@ -10,12 +10,17 @@
   "journal": {
     "label": "Story",
     "you": "You",
-    "roll": "{{skill}} · {{outcome}}",
+    "roll": {
+      "skill": "{{name}} {{value, number}}%",
+      "characteristic": "{{name}} {{value, number}} ×5",
+      "modifier": "{{label}} {{value, number(signDisplay: always)}}",
+      "chance": "→ {{chance, number}}%",
+      "rolled": "rolled {{roll, number}}"
+    },
     "newMessage": "New message",
     "welcome": "Your story begins. What do you do?",
     "sending": "Sending…",
-    "considering": "The game master considers your action",
-    "rollWith": "{{skill}} · {{outcome}} · with {{items, list}}"
+    "considering": "The game master considers your action"
   },
   "effects": {
     "hitPoints": "{{delta, number(signDisplay: exceptZero)}} HP",
@@ -24,7 +29,9 @@
   },
   "sheet": {
     "hitPoints": "Hit points",
-    "attributesAndSkills": "Attributes & skills",
+    "characteristics": "Characteristics",
+    "skills": "Skills",
+    "percent": "{{value, number}}%",
     "resources": "Resources",
     "location": "Location",
     "quest": "Quest",

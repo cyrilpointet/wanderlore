@@ -24,21 +24,12 @@ export class SystemRandomSource implements RandomSource {
   }
 }
 
-const DIE_FACES = 6
-
-/**
- * Both dice are kept, not just their sum: the turn log records what was rolled,
- * and a total of 8 does not say whether it came from 4+4 or 6+2.
- */
-export type DiceRoll = {
-  dice: [number, number]
-  total: number
-}
+const D100_FACES = 100
 
 /**
  * Rolls dice, and nothing else.
  *
- * Thresholds, margins and modifiers belong to the rules engine — this service
+ * Chances, degrees and modifiers belong to the rules engine — this service
  * has no notion of success or difficulty.
  */
 export class DiceService {
@@ -48,14 +39,18 @@ export class DiceService {
     this.#source = source
   }
 
-  rollDie(): number {
-    return this.#source.nextInt(DIE_FACES) + 1
+  /** One die of `faces` sides, 1 to `faces`. */
+  rollDie(faces: number): number {
+    if (!Number.isInteger(faces) || faces < 2) {
+      throw new RangeError(`A die has at least two faces, not ${faces}.`)
+    }
+
+    return this.#source.nextInt(faces) + 1
   }
 
-  roll2d6(): DiceRoll {
-    const dice: [number, number] = [this.rollDie(), this.rollDie()]
-
-    return { dice, total: dice[0] + dice[1] }
+  /** The percentile roll of BRP: 1 to 100, where 100 is the "00" of the table. */
+  rollD100(): number {
+    return this.rollDie(D100_FACES)
   }
 }
 

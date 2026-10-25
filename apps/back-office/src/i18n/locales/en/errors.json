@@ -24,12 +24,14 @@
     "boolean": "Yes or no is expected.",
     "object": "An object is expected.",
     "array": "A list is expected.",
-    "string": "Text is expected."
+    "string": "Text is expected.",
+    "dice": "A dice expression such as 1D6+1 is expected."
   },
   "invalid_json": "This is not valid JSON.",
   "content_in_use_detail": "Games are played with: {{references}}.",
   "kind_mismatch": "This only belongs to the other kind of definition.",
   "account_suspended": "This account is suspended.",
   "cannot_suspend_self": "You cannot suspend your own account.",
-  "last_superadmin": "The last active superadmin cannot be suspended."
+  "last_superadmin": "The last active superadmin cannot be suspended.",
+  "one_resolution": "A category is rolled on a skill or on a characteristic: exactly one of them."
 }

@@ -32,24 +32,26 @@ ces documents font foi sur le fond ; celui-ci fait foi sur l'interface.
 Ces principes découlent des invariants du projet. Ils s'appliquent à toutes les phases.
 
 1. **Le front ne calcule rien de ce qui relève du jeu.** Pas de dé, pas de soustraction de
-   points de vie, pas de seuil, pas de déduction d'état. Il affiche ce que le backend
+   points de vie, pas de chance, pas de déduction d'état. Il affiche ce que le backend
    transmet. Les dérivations **purement visuelles** restent permises : largeur d'une jauge,
    formatage d'une date relative, compteur de caractères du champ de saisie.
 
 2. **Deux sources de libellés, jamais confondues.**
-   - Les **enums fermés du système** (`result`, `margin`, `step`, `status`, codes d'erreur)
+   - Les **enums fermés du système** (`result`, `degree`, `difficulty`, effets contextuels,
+     caractéristiques et catégories de compétences du BRP, `step`, `status`, codes d'erreur)
      sont traduits en texte par le front, via les fichiers de traduction de l'i18n (voir
      section 7). Ils sont finis et connus à la compilation.
-   - Les **références de contenu** (compétences, attributs, lieux, quêtes, chapitres, puis
+   - Les **références de contenu** (compétences, lieux, quêtes, chapitres, puis
      objets en Phase 4) arrivent du backend **avec leur libellé**. Le front n'affiche jamais
      `meung_sur_loire` ni ne le transforme lui-même en « Meung Sur Loire » : ce contenu
      dépend de l'univers, puis de la langue (Phase 5 : `display_names`, `glossary`).
 
-3. **La mécanique est visible, mais qualitative.** Le joueur de JDR papier veut savoir
-   qu'un jet a eu lieu, sur quelle compétence, et comment il s'est passé. Il voit donc la
-   compétence, l'issue et la marge qualitative — **jamais** les dés, le seuil ni le total.
-   Sa fiche de personnage, en revanche, affiche ses valeurs : c'est sa feuille de
-   personnage, comme sur table.
+3. **La mécanique est visible, comme à la table** (tranché à l'ouverture de la Phase 6). Le
+   joueur de JDR papier voit chaque jet en entier : la compétence ou la caractéristique et sa
+   valeur, la difficulté, les modificateurs avec leur valeur, la chance, le d100 et le degré
+   de réussite. Le backend calcule tout, le front l'affiche. Seul le narrateur est tenu à
+   l'écart des chiffres. Sa fiche de personnage affiche aussi ses valeurs : c'est sa feuille
+   de personnage, comme sur table.
 
 4. **La narration est le cœur de l'écran.** Tout le reste — fiche, en-tête, indicateurs —
    est secondaire et doit s'effacer devant le confort de lecture.
@@ -87,11 +89,13 @@ Ces principes découlent des invariants du projet. Ils s'appliquent à toutes le
 | 3 | La narration s'affiche progressivement (streaming) |
 | 4 | Onglet inventaire dans la fiche (lecture seule) |
 | 5 | Démarrer une partie à partir d'un scénario ; nom de l'univers et libellés venus de la base |
-| 7 | Rien de visible (mémoire long terme côté backend) |
-| 8 | Création de personnage guidée, combat en rounds, pause / reprise, écrans de fin |
-| 9 | Inscription, mot de passe oublié, choix de la langue, paramètres du compte |
+| 6 | Fiche au format BRP (caractéristiques, compétences en pourcentage) ; détail de chaque jet dans le journal |
+| 8 | Rien de visible (mémoire long terme côté backend) |
+| 9 | Création de personnage guidée, combat en rounds, pause / reprise, écrans de fin |
+| 9bis | Santé mentale, passions et réputation sur la fiche, selon l'univers |
+| 10 | Inscription, mot de passe oublié, choix de la langue, paramètres du compte |
 
-Les évolutions des phases 3 à 9 sont détaillées en section 9. **Elles ne s'implémentent pas
+Les évolutions des phases 3 à 10 sont détaillées en section 9. **Elles ne s'implémentent pas
 en Phase 2** ; seule la structure des écrans doit leur laisser la place.
 
 ---
@@ -117,7 +121,7 @@ en Phase 2** ; seule la structure des écrans doit leur laisser la place.
 
 Pas d'inscription, pas de mot de passe oublié, pas de création de partie en Phase 2 : les
 comptes et parties sont créés en base (seeders). La route `POST /auth/signup` du scaffolding
-existe côté backend, mais le front ne l'expose pas avant la Phase 9.
+existe côté backend, mais le front ne l'expose pas avant la Phase 10.
 
 ---
 
@@ -193,21 +197,24 @@ Le journal se lit comme un livre, pas comme une messagerie. Types d'éléments :
 | Élément | Contenu | Rendu |
 |---|---|---|
 | **Action du joueur** | Texte saisi, tel quel | Bloc compact, discret, marqué « You » ; typographie d'interface ; retrait ou teinte légère pour le distinguer du récit |
-| **Jet** | Compétence + issue qualitative : *« Persuasion · Clear success »* | Pastille centrée entre l'action et la narration, couleur selon l'issue, petite icône de dé **sans chiffre** |
+| **Jet** | Le jet en entier : *« Persuasion 60% · Difficult · Advantage +10 · → 40% · rolled 12 · Special success »* | Pastille centrée entre l'action et la narration, couleur selon l'issue, petite icône de dé ; la chance n'est montrée que quand elle diffère de la valeur, la difficulté que quand elle n'est pas `average` |
 | **Narration** | Texte du MJ, un ou plusieurs paragraphes | Pleine largeur de la colonne, **typographie serif de lecture**, sans bulle, interligne généreux |
 | **Effets** | Conséquences appliquées : *« −2 HP »*, *« You arrive at Paris »* | Ligne discrète sous la narration, icônes ; absente si aucun effet visible |
 | **Attente** | Message d'étape (voir 5.3.5) | Ligne animée sous l'action en cours |
 | **Échec** | Message traduit d'après le `code` d'erreur + **Retry** / **Edit** | Encadré d'alerte sobre à la place de la narration |
 
-Libellés des issues de jet (table du front, à partir de `result` + `margin`) :
+Libellés des degrés de jet (table du front, à partir de `result` + `degree`) :
 
-| `margin` | Libellé | Ton visuel |
+| `degree` | Libellé | Ton visuel |
 |---|---|---|
-| `critical_success` | Critical success | réussite, accentué |
-| `comfortable` | Clear success | réussite |
-| `narrow` | Narrow success | réussite, atténué |
-| `minor_failure` | Failure | échec |
-| `critical_failure` | Critical failure | échec, accentué |
+| `critical` | Critical success | réussite, accentué |
+| `special` | Special success | réussite |
+| `success` | Success | réussite |
+| `failure` | Failure | échec |
+| `fumble` | Fumble | échec, accentué |
+
+Une circonstance s'affiche par son effet (*Advantage*, *Strong hindrance*…), jamais par les
+mots que l'arbitrage lui a donnés ; un objet par son nom.
 
 Les effets affichés sont ceux que le backend transmet sous une forme lisible : variation de
 points de vie et déplacement (lieu, avec libellé). **Les flags de scénario ne sont jamais
@@ -222,7 +229,7 @@ lieu de départ, quête en cours s'il y en a une, et l'invitation *« Your story
 you do? »*.
 
 **Historique long** : chargé en entier en Phase 2. Une pagination vers le haut (**Load
-earlier**) sera à prévoir quand les parties s'allongeront (Phase 7) ; la structure du
+earlier**) sera à prévoir quand les parties s'allongeront (Phase 8) ; la structure du
 journal doit la permettre.
 
 #### 5.3.3 Zone de saisie
@@ -244,9 +251,10 @@ Contenu Phase 2, tout fourni par le backend avec les libellés :
 - **Identité** : nom du personnage, univers.
 - **Points de vie** : jauge et valeur `8 / 10`. Couleur qui se dégrade en dessous du tiers.
   Brève animation quand la valeur change à la fin d'un tour.
-- **Attributs** : *Physical 3 · Mental 2 · Social 3*.
-- **Compétences**, groupées sous leur attribut, avec leur valeur. Seules les compétences
-  que le personnage possède.
+- **Caractéristiques** : les sept du BRP, *Strength 13 · Constitution 14 · Size 12…*
+  (Phase 6 ; elles remplacent les attributs).
+- **Compétences**, groupées sous leur catégorie du BRP, en pourcentage. Seules les
+  compétences que le personnage a entraînées.
 - **Ressources** : *Purse 15*.
 - **Situation** : lieu actuel et quête en cours avec son résumé. Retenu en Phase 2 (KAN-15) :
   l'état d'accueil d'une partie neuve exige déjà ces données, et le bloc sert la reprise
@@ -367,8 +375,9 @@ origine). Les requêtes mutantes portent l'en-tête CSRF attendu par `@adonisjs/
 - chaque référence de contenu accompagnée de son **libellé** (`{ reference, label }`) ;
 - la partie : univers, chapitre, statut, dernière activité, personnage complet, et
   l'identifiant du tour en cours s'il y en a un ;
-- un tour d'historique : action du joueur, jet éventuel (compétence avec libellé, `result`,
-  `margin`, et depuis la Phase 4 les objets qui ont pesé, libellés, sans valeur), narration,
+- un tour d'historique : action du joueur, jet éventuel (depuis la Phase 6 en entier :
+  compétence libellée ou caractéristique, valeur, difficulté, modificateurs avec leur valeur,
+  chance, d100, `result`, `degree`), narration,
   effets visibles avec libellés — points de vie, déplacement, et depuis la Phase 4 ce qui est
   arrivé aux objets du personnage (`items` : `change` parmi `gained` / `lost` / `used_up` /
   `equipped` / `unequipped`, l'objet, la quantité, et le PNJ ou le lieu concerné quand il y en
@@ -407,8 +416,8 @@ Exemple indicatif de la vue d'une partie :
     "name": "d'Artagnan",
     "hitPoints": 8,
     "hitPointsMax": 10,
-    "attributes": [{ "reference": "physical", "label": "Physical", "value": 3 }],
-    "skills": [{ "reference": "swordsmanship", "label": "Swordsmanship", "attribute": "physical", "value": 3 }],
+    "characteristics": [{ "reference": "STR", "value": 13 }, { "reference": "CON", "value": 14 }],
+    "skills": [{ "reference": "swordsmanship", "label": "Swordsmanship", "category": "combat", "value": 60 }],
     "resources": [{ "reference": "purse", "label": "Purse", "value": 15 }],
     "inventory": [
       { "handle": "letter_to_treville", "item": { "reference": "letter_to_treville", "label": "Letter for M. de Tréville" }, "quantity": 1, "equipped": false },
@@ -457,7 +466,7 @@ traduction.
 - **Dates et nombres** formatés selon la langue active (`Intl`), jamais à la main : dernière
   activité relative, points de vie, compteur de caractères.
 - **Langue active fixée à `en`** en Phase 2, sans sélecteur : le choix par le joueur arrive
-  en Phase 9.
+  en Phase 10.
 - **Ce que l'i18n ne couvre pas** : les références de contenu, dont le libellé vient du
   backend (principe 2), et la narration, produite par le LLM dans la langue de la partie. Les polices retenues couvrent le latin
 étendu (accents, ligatures) : la narration sera un jour dans la langue du joueur.
@@ -529,12 +538,13 @@ change, points de suspension animés pour l'attente.
 **Composants récurrents** (tels que maquettés)
 - *Action du joueur* : libellé « You » en métadonnée neutre, texte en *Inter*, filet laiton
   de 2 px à gauche.
-- *Puce de jet* : centrée entre l'action et la narration, icône de dé, « Compétence ·
-  Issue », teinte sémantique sur fond atténué, sans aucun chiffre.
+- *Puce de jet* : centrée entre l'action et la narration, icône de dé, le jet en entier
+  (« Compétence 60% · modificateurs · d100 · Degré »), teinte sémantique sur fond atténué.
 - *Ligne d'effets* : sous la narration, discrète, icône et couleur sémantique (« −2 HP »).
 - *Carte d'erreur* : à la place de la narration, liseré rouge brique sans fond rouge,
   message et boutons *Retry* (plein) / *Edit* (contour).
-- *Fiche* : attributs avec leurs compétences en retrait, ressources, bloc « Situation » ;
+- *Fiche* : caractéristiques, compétences en retrait sous leur catégorie, ressources, bloc
+  « Situation » ;
   colonne de 320 px sur desktop, feuille couvrant les deux tiers de l'écran sur mobile.
 
 **Iconographie** : jeu d'icônes linéaire (Lucide, courant avec React). Une icône de dé pour
@@ -555,20 +565,28 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
 - **Phase 4 — Inventaire.** Un onglet **Inventory** dans la fiche : objets possédés et
   équipés, noms d'affichage fournis par le backend, en lecture seule. La fiche est conçue
   dès la Phase 2 comme un panneau capable d'accueillir des onglets. La pastille de jet
-  pourra mentionner qu'un objet a pesé sur le jet — sans chiffre.
+  mentionne l'objet qui a pesé sur le jet (avec sa valeur depuis la Phase 6).
 - **Phase 5 — Multi-univers.** Un écran **New game** : choix d'un scénario dans un
   catalogue (univers, synopsis, ton), puis démarrage avec le personnage prétiré du
-  scénario — aucune création de personnage avant la Phase 8. Le catalogue ne montre que
+  scénario — aucune création de personnage avant la Phase 9. Le catalogue ne montre que
   les scénarios publiés ; un compte `game_master` y voit aussi les brouillons, pour les
   tester. Le nom de l'univers et tous les libellés viennent de la base. Le back-office est
   un package séparé.
-- **Phase 7 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
+- **Phase 6 — Bascule sur le BRP.** La fiche montre les sept caractéristiques, les
+  compétences en pourcentage et les points de vie. **La pastille de jet montre désormais le
+  détail du jet** : compétence ou caractéristique et sa valeur, modificateurs appliqués avec
+  leur valeur (une circonstance par son label d'effet, un objet par son nom), chance finale,
+  résultat du d100 et degré de réussite. Tout vient du backend, le front ne calcule rien.
+- **Phase 8 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
   probablement nécessaire.
-- **Phase 8 — Cycle de vie et combat.** Création de personnage guidée ; combat en rounds
+- **Phase 9 — Cycle de vie et combat.** Création de personnage guidée ; combat en rounds
   (même pipeline, donc même journal, avec un repère visuel de round et l'état de
   l'adversaire si le backend le transmet) ; mise en pause et reprise ; écrans de fin
   (victoire, mort du personnage, abandon).
-- **Phase 9 — Ouverture.** Inscription, validation d'email, mot de passe oublié ; choix de la
+- **Phase 9bis — Règles optionnelles par univers.** Santé mentale, passions et réputation
+  sur la fiche, pour les seuls univers qui les emploient ; un jet caché n'affiche pas son
+  détail.
+- **Phase 10 — Ouverture.** Inscription, validation d'email, mot de passe oublié ; choix de la
   langue de la partie et de l'interface (traductions ajoutées à l'i18n posée en Phase 2) ; paramètres du
   compte ; messages de modération.
 
@@ -649,9 +667,10 @@ sign-up link.
 ```
 Game: d'Artagnan — The Three Musketeers · The Road to Paris — In progress — 2 hours ago
 Character: d'Artagnan. Hit points 8 / 10.
-Attributes: Physical 3, Mental 2, Social 3.
-Skills — Physical: Swordsmanship 3, Athletics 1. Mental: Observation 1.
-         Social: Persuasion 2, Etiquette 1.
+Characteristics: Strength 13, Constitution 14, Size 12, Intelligence 13, Power 12,
+                 Dexterity 16, Charisma 14.
+Skills — Combat: Swordsmanship 60%. Physical: Athletics 30%. Perception: Observation 30%.
+         Communication: Persuasion 45%, Etiquette 30%.
 Resources: Purse 15.
 Location: Meung-sur-Loire.
 Quest: Deliver the letter — Carry your father's letter to Monsieur de Tréville.
@@ -665,7 +684,7 @@ thin scar running along his temple.
 
 Turn 2
 You: I ask the innkeeper who the gentleman in the dark cloak is.
-Roll: Persuasion · Clear success
+Roll: Persuasion 45% · rolled 23 · Success
 Narration: The innkeeper glances toward the courtyard, then leans across the counter and
 lowers his voice. "A gentleman who pays well and asks no questions, monsieur. He came from
 Paris this morning and speaks of nobody but a certain milady." Beyond the window, the
@@ -681,7 +700,7 @@ Effects: −2 HP
 
 Turn in progress
 You: I draw my sword and follow him inside.
-Roll: Swordsmanship · Narrow success
+Roll: Swordsmanship 60% · rolled 58 · Success
 Status: The game master tells what happens…
 
 Failed turn
@@ -721,12 +740,12 @@ the right, and account initials. Main area: a centered reading column (max ~70 c
 per line) showing the story log from the sample content, turns 1 to 3. Player actions are
 compact, discreet blocks labelled "You", in the sans-serif, slightly tinted. Narration is
 full-width serif prose with no bubble, like a book page. Between action and narration, a
-small centered chip with a dice icon and no number: "Persuasion · Clear success" in sage
-green, "Etiquette · Failure" in brick red. Under the narration of turn 3, a discreet effects
+small centered chip with a dice icon and the roll in full: "Persuasion 45% · rolled 23 ·
+Success" in sage green, "Etiquette 30% · rolled 71 · Failure" in brick red. Under the narration of turn 3, a discreet effects
 line: heart icon "−2 HP". At the bottom, a sticky multi-line input with placeholder
 "What do you do?" and a send button in the accent colour.
-Right sidebar, 320px, the read-only character sheet: name, hit points bar 8 / 10, attributes
-Physical 3 / Mental 2 / Social 3, skills grouped under their attribute with their values,
+Right sidebar, 320px, the read-only character sheet: name, hit points bar 8 / 10, the seven
+characteristics in two columns (Strength 13…), skills in percent grouped under their category,
 "Purse 15", then a "Situation" block with location "Meung-sur-Loire" (map pin icon) and the
 quest "Deliver the letter" with its one-line summary.
 ```
@@ -744,8 +763,8 @@ thirds of the screen, with a drag handle and a close button, showing the full sh
 **S5 — Partie, tour en cours**
 ```
 Mobile game screen while a turn is being played. The last player action "I draw my sword
-and follow him inside." is shown, then the roll chip "Swordsmanship · Narrow success"
-(sage green, lighter), then an animated waiting line in italic: "The game master tells what
+and follow him inside." is shown, then the roll chip "Swordsmanship 60% · rolled 58 · Success"
+(sage green), then an animated waiting line in italic: "The game master tells what
 happens…" with three pulsing dots. The input at the bottom is disabled and dimmed, with the
 hint "The game master is answering…".
 ```

@@ -1,6 +1,7 @@
 import { BaseTransformer } from '@adonisjs/core/transformers'
 
 import type Character from '#models/character'
+import { CHARACTERISTICS } from '#services/rules/types'
 import type { ContentLabels } from '#services/game/content_labels'
 import { type HeldItem, heldItemOf } from '#services/game/inventory'
 
@@ -29,14 +30,21 @@ export default class CharacterTransformer extends BaseTransformer<Character> {
       name: character.name,
       hitPoints: character.hitPoints,
       hitPointsMax: character.hitPointsMax,
-      attributes: this.#labels.valued('attribute', character.attributes),
       /**
-       * Only the skills the character has. Each names its attribute, so the
+       * The seven of BRP, always in the same order. A closed enum of the
+       * system: the front labels them itself.
+       */
+      characteristics: CHARACTERISTICS.map((reference) => ({
+        reference,
+        value: character.characteristics[reference],
+      })),
+      /**
+       * Only the skills the character trained. Each names its category, so the
        * front can group them without knowing the world.
        */
       skills: this.#labels.valued('skill', character.skills).map((skill) => ({
         ...skill,
-        attribute: this.#labels.attributeOf(skill.reference),
+        category: this.#labels.categoryOf(skill.reference),
       })),
       resources: this.#labels.valued('resource', character.resources),
       inventory: presentInventory(this.#heldItems(), this.#labels),

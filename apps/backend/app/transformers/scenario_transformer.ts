@@ -7,7 +7,7 @@ import { inLanguage } from '#services/game/content_labels'
  * A scenario of the catalogue a game is started from. Expects `world`
  * preloaded.
  *
- * Names in English until the player can pick a language (Phase 9). The
+ * Names in English until the player can pick a language (Phase 10). The
  * synopsis and the tone are the game master's own text, written once, in
  * English like all content.
  */

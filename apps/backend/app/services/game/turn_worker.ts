@@ -23,7 +23,7 @@ export type TurnWorkerOptions = {
  * `concurrency: 1` is what serialises turns at this phase: each one reads the
  * state the previous one left, and the race on the turn number disappears. It
  * is a property of this worker, never of the queue — and it only holds while
- * there is a single instance (Phase 9: a PostgreSQL lock per session).
+ * there is a single instance (Phase 10: a PostgreSQL lock per session).
  */
 export class TurnWorker {
   #queue: JobQueue

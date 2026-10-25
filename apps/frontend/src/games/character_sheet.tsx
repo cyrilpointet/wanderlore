@@ -151,36 +151,46 @@ function InventoryTab({ inventory }: { inventory: Character['inventory'] }) {
   )
 }
 
-/** Who they are: attributes, skills and resources. */
+/** Who they are: the seven characteristics, the skills they trained, their resources. */
 function CharacterTab({ character }: { character: Character }) {
   const { t } = useTranslation('game')
 
   return (
     <>
-      <Section title={t('sheet.attributesAndSkills')}>
-        <dl className="flex flex-col gap-5">
-          {groupSkills(character).map((attribute) => (
-            <div key={attribute.reference}>
-              <Row
-                label={attribute.label}
-                value={attribute.value}
-                className="text-body text-text"
-              />
-              {attribute.skills.length > 0 && (
-                <div className="mt-1.5 ml-1 flex flex-col gap-1 border-l border-border-strong pl-4">
-                  {attribute.skills.map((skill) => (
-                    <Row
-                      key={skill.reference}
-                      label={skill.label}
-                      value={skill.value}
-                      className="text-label text-muted"
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+      <Section title={t('sheet.characteristics')}>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+          {character.characteristics.map((characteristic) => (
+            <Row
+              key={characteristic.reference}
+              label={t(`characteristic.${characteristic.reference}`, { ns: 'enums' })}
+              value={characteristic.value}
+              className="text-body text-text"
+            />
           ))}
         </dl>
+      </Section>
+
+      <Section title={t('sheet.skills')}>
+        <div className="flex flex-col gap-5">
+          {groupSkills(character).map((group) => (
+            <div key={group.category}>
+              <h4 className="text-label text-subtle">
+                {t(`skillCategory.${group.category}`, { ns: 'enums' })}
+              </h4>
+              <dl className="mt-1.5 ml-1 flex flex-col gap-1 border-l border-border-strong pl-4">
+                {group.skills.map((skill) => (
+                  <div
+                    key={skill.reference}
+                    className="flex items-baseline justify-between gap-4 text-label text-muted"
+                  >
+                    <dt>{skill.label}</dt>
+                    <dd className="tabular-nums">{t('sheet.percent', { value: skill.value })}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+        </div>
       </Section>
 
       {character.resources.length > 0 && (

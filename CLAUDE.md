@@ -41,8 +41,9 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
    modificateurs situationnels (3 au plus par jet), qualifiés par un label que le backend
    chiffre. Les bonus/malus d'objets sont lus dans l'inventaire et calculés par le backend —
    le LLM ne les chiffre jamais.
-5. **Le narrateur ne reçoit jamais de données mécaniques brutes** (dés, seuils, valeurs de
-   compétence) — uniquement `result` + `margin` qualitative.
+5. **Le narrateur ne reçoit jamais de données mécaniques brutes** (dés, chance, valeurs de
+   compétence) — uniquement `result` + le degré qualitatif (`degree`, ex-`margin`). Le
+   joueur, lui, voit le détail de chaque jet depuis la Phase 6 : l'invariant porte sur le LLM.
 6. **Séparation system prompt / user message.** Le system prompt est statique par étape
    (rôle, contraintes, schéma de sortie). Les données du tour passent en message
    utilisateur, toujours introduites explicitement comme données de jeu et non comme
@@ -138,8 +139,9 @@ Ses choix d'exécution restent en vigueur (détail : roadmap Phase 2, architectu
 
 **Pipeline d'un tour** (séparé depuis KAN-40, `#runPipeline` dans `turn_service.ts`) :
 arbitrage A+B+C (`action_type` et circonstances en labels, jamais de narration) → jet côté
-backend si requis (compétence déduite via `resolution_rules`, une compétence absente de la
-fiche vaut 0 ; circonstances et objets du personnage ajoutés, chacun tracé avec son origine) →
+backend si requis (d100 BRP sur la compétence ou la caractéristique déduite via
+`resolution_rules`, une compétence absente de la fiche valant sa chance de base ; circonstances
+et objets du personnage ajoutés, chacun tracé avec son origine) →
 narration D en **texte libre streamé** (`narration_chunk`) → extraction E, structurée, qui lit
 la narration et renvoie le delta complet, validé contre les listes fermées → application par
 `applyDelta` (`app/services/game/apply_delta.ts`) dans la transaction du tour, dans un ordre
@@ -182,12 +184,12 @@ restent en vigueur (détail : roadmap Phase 4, architecture §6bis, base de donn
   `gone` = détruit ou consommé ; à la mort d'un PNJ, ses objets passent au lieu courant ;
 - seuls les **objets en scène** (personnage, PNJ présents, lieu courant) vont au pipeline ;
   le front n'affiche que l'inventaire du personnage ; `world_states.world_objects` disparaît ;
-- **modificateurs contextuels** en labels (`minor_bonus` +1, `major_bonus` +2,
-  `minor_penalty` -1, `major_penalty` -2), convertis par le backend, 3 au plus ;
+- **modificateurs contextuels** en labels, convertis par le backend, 3 au plus (barème
+  passé en pourcentage en Phase 6) ;
   **modificateurs d'objets** du seul détenteur, une fois par définition ;
-- **dégâts = dégâts du coup (marge ÷ 2 arrondie au supérieur, au moins 1) + bonus de
-  l'arme** ; formule posée en Phase 4, branchée dans le tour en Phase 8 ; l'arme ordinaire d'un
-  PNJ est une référence de son profil de combat ;
+- formule de dégâts posée en Phase 4, branchée dans le tour en Phase 9 — **remplacée en
+  Phase 6 par celle du BRP** ; l'arme ordinaire d'un PNJ est une référence de son profil de
+  combat ;
 - durabilité et charges différées, consommables par la quantité.
 
 **Phase 5 (multi-univers et back-office minimal) terminée** — epic Jira `KAN-58`. Un
@@ -226,10 +228,28 @@ en vigueur (détail : roadmap Phase 5bis, « Décisions de cadrage ») :
 - ni suspension de soi-même (`cannot_suspend_self`) ni du dernier superadmin actif
   (`last_superadmin`) ;
 - pas de changement de rôle, de modification d'email ni de suppression ; l'inscription libre
-  attend la Phase 9.
+  attend la Phase 10.
 
-**Phase actuelle : Phase 6 (lore étendu et RAG)**, à cadrer et découper. Voir la roadmap,
-Phase 6.
+**Phase actuelle : Phase 6 (bascule sur le système BRP)**, cadrée et découpée — epic Jira
+`KAN-78` (tickets `KAN-79` à `KAN-88`). Le Basic
+Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les
+univers. Décisions de cadrage (détail : roadmap Phase 6, système de règles) :
+- **d100 sous la chance** : base (compétence, ou caractéristique × 5) × difficulté (`easy`
+  × 2, `average`, `difficult` ÷ 2), puis modificateurs contextuels (±10, ±20, 3 au plus) et
+  d'objets ; 01–05 réussit, 96–00 échoue toujours ;
+- **sept caractéristiques fixes** (`STR`…`CHA`), enum du système : plus d'attributs par
+  univers ; compétences en pourcentage, avec catégorie et chance de base, une compétence
+  absente valant sa chance de base ;
+- **cinq degrés** (`critical`, `special`, `success`, `failure`, `fumble`) remplacent la marge ;
+  `margin` devient `degree` ;
+- **le joueur voit le détail du jet** (compétence, modificateurs, chance, d100, degré) ; le
+  narrateur n'en reçoit toujours que le résultat et le degré ;
+- points de vie du personnage dérivés (`(CON + SIZ) ÷ 2`) ; profil d'arme et formule de
+  dégâts du BRP posés, branchés en Phase 9 ; aucune règle optionnelle avant la Phase 9bis ;
+- bascule sans reprise de données ; texte du livre jamais recopié, notice ORC dans le produit.
+
+Le lore étendu et le RAG passent en Phase 7. Le livre (« ORC Content Document ») est rangé
+hors du dépôt, dans `tmp/` (ignoré par git).
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
@@ -322,7 +342,7 @@ serverless pour le backend).
   (`#services/game/content_labels`) et sort en `{ reference, label }`, construit sur l'univers
   de la partie concernée — par requête, ou par tour pour les événements SSE qui le portent —
   et dans une langue (celle du tour pour les événements, l'anglais ailleurs jusqu'au choix
-  de langue de la Phase 9), avec repli sur l'anglais. Une référence sans libellé lève
+  de langue de la Phase 10), avec repli sur l'anglais. Une référence sans libellé lève
   `MissingLabelError` : jamais de référence brute ni « embellie » en repli.
 - **Seule la narration reçoit des noms traduits** (`names`, `items_in_scene`), dans la seule
   langue du tour, et le glossaire réduit à ses entrées traduites dans cette langue. Arbitrage

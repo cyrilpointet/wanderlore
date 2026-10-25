@@ -13,7 +13,7 @@
 
 - **Séparer structure fixe et contenu variable.** Les identifiants, clés étrangères et champs systématiquement présents restent en colonnes typées classiques. Les structures qui varient fortement d'un univers ou d'une action à l'autre (barèmes, modificateurs, conditions spécifiques) vont en `jsonb`.
 - **Séparer contenu statique (réutilisable) et état dynamique (propre à une partie).** Un univers, un scénario, un lore fragment ou une règle de résolution existent indépendamment de toute partie jouée. Le state d'une partie, l'inventaire d'un personnage, le journal des tours n'existent qu'en lien avec une partie précise.
-- **Les données mécaniques exactes ne passent jamais par une recherche sémantique.** Barèmes de difficulté, formules, seuils sont récupérés par requête SQL déterministe (`WHERE world_id = ? AND action_type = ?`), jamais par similarité — contrairement au lore narratif qui, lui, relève du RAG.
+- **Les données mécaniques exactes ne passent jamais par une recherche sémantique.** Barèmes de difficulté, formules, chances de base sont récupérés par requête SQL déterministe (`WHERE world_id = ? AND action_type = ?`), jamais par similarité — contrairement au lore narratif qui, lui, relève du RAG.
 - **Le LLM ne manipule jamais de valeurs numériques de règles.** Il propose des labels (`action_type`, `difficulty: "medium"`), le backend résout ces labels en valeurs réelles via les tables de règles.
 
 ---
@@ -23,7 +23,7 @@
 ### `worlds`
 
 Bible de contexte, indépendante de toute partie jouée. **Schéma de la Phase 5** : les listes
-sans identité propre (attributs, compétences, ressources, règles, ambiance, glossaire) restent
+sans identité propre (compétences, ressources, règles, ambiance, glossaire) restent
 en `jsonb`, lues et écrites avec l'univers ; les catalogues ont leurs tables.
 
 | Colonne | Type | Contenu |
@@ -34,15 +34,14 @@ en `jsonb`, lues et écrites avec l'univers ; les catalogues ont leurs tables.
 | `narrative_tone` | text | une ligne, transmise à l'arbitrage et à la narration |
 | `rules` | jsonb | liste de phrases anglaises : ce qui est possible dans l'univers, pour la seule arbitration |
 | `ambiance` | jsonb | liste de phrases anglaises : matière sensorielle pour le seul narrateur |
-| `attributes` | jsonb | `[{ reference, labels }]` |
-| `skills` | jsonb | `[{ reference, labels, attribute }]`, chaque compétence rattachée à un attribut |
+| `skills` | jsonb | `[{ reference, labels, category, baseChance }]` : catégorie du BRP (`combat`, `communication`, `manipulation`, `mental`, `perception`, `physical`) et chance de base, fixe (`25`) ou caractéristique × multiplicateur (`{ characteristic: "DEX", multiplier: 2 }`). Plus de colonne `attributes` depuis la Phase 6 : les sept caractéristiques sont celles du système |
 | `resources` | jsonb | `[{ reference, labels }]` (ex. `purse`) |
 | `glossary` | jsonb | `[{ reference, labels }]` : noms propres qui ne sont pas des entités du jeu (factions, figures hors scène) et leurs traductions |
 | `created_by` | FK → users, nullable | auteur ; null pour le contenu que possède le seeder |
 | `created_at` / `updated_at` | timestamptz | — |
 
 - `general_rules` n'existe pas : il est éclaté en colonnes distinctes. `content_boundaries`
-  (tabous) est différé à la modération de la Phase 9.
+  (tabous) est différé à la modération de la Phase 10.
 - **Les catégories d'action** vivent dans `resolution_rules` ; **les PNJ, lieux et objets**
   dans les trois tables de définitions.
 
@@ -77,7 +76,7 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
 | `status` | enum `scenario_status` | `draft` / `published` ; seul un scénario publié est proposé aux joueurs |
 | `chapters` | jsonb | `[{ reference, labels }]`, dans l'ordre ; sans conditions de progression à ce stade |
 | `quests` | jsonb | `[{ reference, labels }]` |
-| `pregenerated_character` | jsonb, nullable | le personnage copié dans chaque partie : `name`, `attributes`, `skills`, `resources` (valeurs par référence), `hitPointsMax`, `items` (`definition`, `descriptor`, `quantity`, `equipped`) |
+| `pregenerated_character` | jsonb, nullable | le personnage copié dans chaque partie : `name`, `characteristics` (les sept du BRP), `skills` (en pourcentage, les seules compétences entraînées), `resources` (valeurs par référence), `items` (`definition`, `descriptor`, `quantity`, `equipped`). Pas de points de vie : ils se dérivent de CON et TAI au lancement de la partie |
 | `initial_state` | jsonb, nullable | là où une partie commence : `location` (lieu unique), `chapter`, `quests` (`reference`, `step`, `summary`) |
 | `glossary` | jsonb | complète le glossaire de l'univers |
 | `created_by` | FK → users, nullable | auteur |
@@ -91,7 +90,7 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
   génériques, personnage, état initial, nom anglais partout) et renvoie la liste complète des
   incohérences ; la vérification est refaite au lancement de chaque partie.
 - **Lancer une partie** copie le prétiré et l'état initial dans une partie neuve, dans une
-  transaction. La création guidée de personnage attend la Phase 8.
+  transaction. La création guidée de personnage attend la Phase 9.
 - Différés : `branch_points`, conditions de progression des chapitres.
 
 **`glossary`** fige la traduction des noms propres, pour éviter qu'un même nom soit rendu
@@ -121,9 +120,9 @@ Colonnes propres à chaque catalogue :
 
 | Table | Colonnes |
 |---|---|
-| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills`, `hitPointsMax`, `weapon` — référence d'objet ou null) |
+| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null) |
 | `location_definitions` | `parent` (lieu unique englobant ; null pour un archétype, qui reçoit son parent par instance) |
-| `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement) |
+| `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `weapon` (jsonb, nullable depuis la Phase 6 : `skill`, `damage` en dés comme `1D6+1`, `damageModifier` `full` / `half` / `none`, `special`), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement) |
 
 - Unicité de la référence parmi les définitions de l'univers, et parmi celles de chaque
   scénario (index uniques partiels) : une définition de scénario peut reprendre la référence
@@ -147,17 +146,19 @@ d'arbitrage choisit la catégorie dans une liste fermée, le backend en déduit 
 | `world_id` | FK → worlds (cascade) | univers (remplace `world_reference` en Phase 5) |
 | `action_type` | varchar | catégorie d'action, référence anglaise stable (ex : `melee_combat`, `social_persuasion`) |
 | `description` | text | une phrase anglaise sur ce que couvre la catégorie, transmise à l'arbitrage |
-| `associated_skill` | varchar | référence d'une compétence de l'univers |
+| `associated_skill` | varchar, nullable | référence d'une compétence de l'univers |
+| `associated_characteristic` | enum `characteristic`, nullable | caractéristique jetée à × 5 (Phase 6) ; une contrainte impose exactement l'un des deux |
 | `created_at` / `updated_at` | timestamptz | — |
 
 Contrainte d'unicité sur `(world_id, action_type)`. `action_type` est un `varchar`, pas un
 enum : la liste est propre à chaque univers, donc ouverte.
 
 - **Pas de clé étrangère vers les compétences**, qui vivent dans `worlds.skills` : la
-  publication d'un scénario vérifie que chaque `associated_skill` existe.
+  publication d'un scénario vérifie que chaque `associated_skill` existe ; une
+  caractéristique est un enum natif.
 - **Lue avec l'univers** : les catégories font partie de la photo de l'univers prise au début
   du tour, comme le reste du contenu.
-- **Pas de seuils par ligne** : l'échelle de difficulté est fixe dans le code.
+- **Pas de barème par ligne** : l'échelle de difficulté du BRP est fixe dans le code.
 - **Édition** par le back-office ; le seeder de contenu écrit celles des univers en code
   (`database/content/`). Une catégorie qu'un jet journalisé a résolue ne se supprime pas.
 
@@ -207,16 +208,16 @@ Le personnage joué dans une partie donnée.
 |---|---|---|
 | `id` | uuid | identifiant |
 | `session_id` | FK → sessions | partie parente |
-| `attributes` | jsonb | statistiques de base (force, dextérité, etc.) |
-| `skills` | jsonb | compétences avec valeurs numériques |
+| `characteristics` | jsonb | les sept caractéristiques du BRP (`STR`, `CON`, `SIZ`, `INT`, `POW`, `DEX`, `CHA`) |
+| `skills` | jsonb | compétences entraînées, en pourcentage ; une compétence absente vaut sa chance de base |
 | `hit_points` | int | PV courants |
 | `hit_points_max` | int | PV maximum |
 | `resources` | jsonb | autres ressources courantes (mana, endurance, etc.) |
 | `progression` | jsonb | niveau, expérience si applicable |
 | `created_at` / `updated_at` | timestamp | — |
 
-**Exemple de contenu `attributes`** : `{ "Physical": 3, "Mental": 2, "Social": 4 }`
-**Exemple de contenu `skills`** : `{ "persuasion": 3, "melee_combat": 1, "stealth": 2 }`
+**Exemple de contenu `characteristics`** : `{ "STR": 13, "CON": 14, "SIZ": 12, "INT": 13, "POW": 12, "DEX": 16, "CHA": 14 }`
+**Exemple de contenu `skills`** : `{ "swordsmanship": 60, "persuasion": 45, "athletics": 30 }`
 
 ### `inventory_items`
 
@@ -266,7 +267,7 @@ lieux ; en base depuis la Phase 5 (`item_definitions`, section 2). Chaque défin
   transferts. `gone` est réservé à l'objet détruit ou consommé ; une ligne n'est jamais
   supprimée, comme un PNJ passe `absent`.
 - **`equipped` est réservé au personnage** en Phase 4 (CHECK) ; l'équipement d'un PNJ arrive
-  avec ses jets, en Phase 8.
+  avec ses jets, en Phase 9.
 - **Placement initial** : un unique doté d'un `initial_holder` est instancié avec lui à la
   première instanciation de ce détenteur (entrée en scène du PNJ, première visite du lieu) ;
   sans détenteur initial, il est instancié à son premier gain.
@@ -283,20 +284,20 @@ noms par langue, en Phase 5, ne demandera aucune migration de données de partie
 narration, **seule la langue de la partie est injectée**, jamais la table complète des
 traductions.
 
-**Structure de `modifiers`** : liste de modificateurs fixes, chacun ciblant une compétence ou
-les dégâts, avec une condition d'activation.
+**Structure de `modifiers`** : liste de modificateurs fixes, en pourcentage, chacun ciblant une
+compétence, avec une condition d'activation. Depuis la Phase 6, une arme ne porte plus de bonus
+de dégâts : ses dés sont dans son profil d'arme (`weapon`).
 
 ```json
 [
-  { "target_skill": "persuasion", "value": 2, "condition": "owned", "description": "Recognised official seal" },
-  { "target_skill": "swordsmanship", "value": 1, "condition": "equipped", "description": "Well-balanced blade" },
-  { "target": "damage", "value": 2, "condition": "equipped", "description": "Rapier point" },
-  { "target_skill": "stealth", "value": -2, "condition": "equipped", "description": "Heavy, noisy armour" }
+  { "target": "skill", "skill": "persuasion", "value": 20, "condition": "owned", "description": "Recognised official seal" },
+  { "target": "skill", "skill": "fine_manipulation", "value": 20, "condition": "equipped", "description": "Locksmith's picks" },
+  { "target": "skill", "skill": "stealth", "value": -20, "condition": "equipped", "description": "Heavy, noisy armour" }
 ]
 ```
 
 - `condition: "owned"` — le bonus s'applique dès que l'objet est détenu (`carried` ou `equipped`), sans besoin d'être activement porté (ex : un document, une lettre).
-- `condition: "equipped"` — le bonus ne s'applique que si l'instance est `equipped` (ex : une arme, une armure).
+- `condition: "equipped"` — le bonus ne s'applique que si l'instance est `equipped` (ex : un outil en main, une armure).
 - Les modificateurs d'une même définition ne comptent **qu'une fois par jet**, quel que soit le nombre d'exemplaires détenus.
 - Le champ `description` **interne à un modificateur reste en anglais** et n'est jamais traduit : il sert l'audit et le debug (« pourquoi ce bonus s'applique-t-il ? »). Sans cette distinction, on finit par traduire des données de debug.
 - Ces valeurs sont **exclusivement calculées par le backend** au moment du jet ou des dégâts, à partir des objets du détenteur — elles ne transitent jamais par un appel LLM et ne sont jamais proposées ou réinterprétées par le modèle.
@@ -375,7 +376,7 @@ la définition à l'instanciation ; null sur une instance antérieure, lu comme 
 objets qu'un PNJ détient sont des lignes d'`inventory_items`.
 
 **Colonnes prévues plus tard** : `revealed_information` (jsonb, ce que ce PNJ a révélé au
-joueur), quand un tour le lira ; `last_location`, si la mémoire long terme (Phase 7) rappelle
+joueur), quand un tour le lira ; `last_location`, si la mémoire long terme (Phase 8) rappelle
 les PNJ connus d'un lieu.
 
 ---
@@ -394,7 +395,7 @@ Log complet de chaque tour, table à plus forte volumétrie du système. Indispe
 | `idempotency_key` | uuid | clé fournie par le client à la soumission, unique par partie |
 | `player_input` | text | texte brut soumis par le joueur |
 | `arbitration_output` | jsonb | sortie complète de l'étape A+B+C (intent, validity, resolution, alerts) |
-| `roll_result` | jsonb | détail du jet le cas échéant (compétence, dé, seuil, résultat, modificateurs appliqués avec leur origine) |
+| `roll_result` | jsonb | détail du jet le cas échéant (compétence ou caractéristique, chance, d100, degré, modificateurs appliqués avec leur origine) |
 | `narrated_text` | text | sortie de l'étape D |
 | `extraction_output` | jsonb, nullable | sortie validée de l'étape E, telle que proposée — avant application |
 | `applied_effects` | jsonb | delta réellement appliqué au state après validation (étape E) |
@@ -416,16 +417,18 @@ avec le tracking de consommation.
 **Exemple de contenu `roll_result`**, avec traçabilité de l'origine de chaque modificateur :
 ```json
 {
-  "skill": "persuasion",
-  "skill_value": 3,
-  "applied_modifiers": [
-    { "source": "contextual", "origin": "favorable_reputation", "value": 3 },
-    { "source": "item", "origin": "recommendation_letter", "value": 2 }
+  "actionType": "social_persuasion",
+  "base": { "kind": "skill", "skill": "persuasion", "value": 45 },
+  "baseChance": 45,
+  "difficulty": "average",
+  "appliedModifiers": [
+    { "source": "contextual", "origin": "favorable_reputation", "effect": "major_bonus", "value": 20 },
+    { "source": "item", "origin": "recommendation_letter", "value": 10 }
   ],
-  "total_modifiers": 5,
-  "dice_roll": 14,
-  "threshold": 12,
-  "result": "success"
+  "chance": 75,
+  "roll": 12,
+  "result": "success",
+  "degree": "special"
 }
 ```
 
@@ -471,7 +474,7 @@ Résumés hiérarchiques générés par le job asynchrone.
   serveur, l'état du compte est donc relu à chaque requête. Ses parties sont conservées.
 - **Pas de suppression de compte** ni de changement de rôle à ce stade.
 - **Envisagé plus tard** : `preferences` (jsonb : langue, options d'affichage), avec le choix
-  de langue de la Phase 9.
+  de langue de la Phase 10.
 
 ### `usage_quotas` (optionnel, selon modèle économique)
 
@@ -488,7 +491,7 @@ Résumés hiérarchiques générés par le job asynchrone.
 ## 6. Schéma relationnel synthétique
 
 ```
-worlds ──┬── lore_fragments (Phase 6)
+worlds ──┬── lore_fragments (Phase 7)
          ├── resolution_rules
          ├── npc_ / location_ / item_definitions ──┐ (univers, ou scénario qui surcharge)
          └── scenarios ────────────────────────────┘
@@ -497,7 +500,7 @@ worlds ──┬── lore_fragments (Phase 6)
                               ├── location_instances ─┘   (un détenteur parmi trois)
                               ├── world_states (1:1)
                               ├── turn_log
-                              └── narrative_summaries (Phase 7)
+                              └── narrative_summaries (Phase 8)
 
 users ──── sessions
 users ──── worlds, scenarios (created_by)
@@ -522,5 +525,5 @@ users ──── usage_quotas (optionnel)
 - Choix définitif du mécanisme RAG : pgvector intégré vs vector store externe (Pinecone, Qdrant, etc.).
 - Politique de rétention/archivage de `turn_log` pour les parties terminées anciennes.
 - ~~Emplacement définitif du glossaire~~ — tranché en Phase 5 : univers, complété par le scénario, réduit aux noms propres qui ne sont pas des entités.
-- Faut-il indexer `inventory_items.definition_reference` — dépend du volume d'objets par partie, probablement inutile avant la Phase 8.
+- Faut-il indexer `inventory_items.definition_reference` — dépend du volume d'objets par partie, probablement inutile avant la Phase 9.
 - Stratégie de migration de schéma pour les colonnes jsonb (versionnement de structure interne si le format évolue avec de nouveaux univers) — différée en Phase 5 : chaque `jsonb` saisi est validé côté backend, et aucune donnée de production n'existe encore.

@@ -1,6 +1,6 @@
 import vine from '@vinejs/vine'
 
-import { CONTEXTUAL_EFFECTS } from '#services/rules/types'
+import { CONTEXTUAL_EFFECTS, DIFFICULTIES } from '#services/rules/types'
 import { MAX_CONTEXTUAL_MODIFIERS } from '#services/rules/engine'
 
 import { NPC_DISPOSITIONS } from './world.js'
@@ -134,7 +134,7 @@ const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
      * never a skill and never one it invented. The backend derives the skill.
      */
     action_type: vine.enum((field) => (field.meta as ValidationMeta).actionTypes).nullable(),
-    difficulty: vine.enum(['easy', 'medium', 'hard', 'very_hard'] as const).nullable(),
+    difficulty: vine.enum(DIFFICULTIES).nullable(),
     /**
      * Labels, never values; three at most. Optional on the wire: a model that
      * leaves it out saw no circumstance worth one.

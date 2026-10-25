@@ -2,11 +2,15 @@ import { queryOptions } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
 import type {
+  Characteristic,
+  ContextualEffect,
+  Degree,
+  Difficulty,
   GameStatus,
   ItemChange,
-  Margin,
   Result,
   ScenarioStatus,
+  SkillCategory,
   TurnStatus,
 } from '@/api/enums'
 import type { ContentLabel } from '@/api/types'
@@ -38,9 +42,10 @@ export type Character = {
   name: string
   hitPoints: number
   hitPointsMax: number
-  attributes: LabelledValue[]
-  /** Each skill names the reference of its attribute. */
-  skills: (LabelledValue & { attribute: string })[]
+  /** The seven of BRP, always in the same order; the front labels them. */
+  characteristics: { reference: Characteristic; value: number }[]
+  /** The skills the character trained, in percent, each with its BRP category. */
+  skills: (LabelledValue & { category: SkillCategory })[]
   resources: LabelledValue[]
   /** What the character holds. What others hold is never sent. */
   inventory: InventoryItem[]
@@ -65,13 +70,30 @@ export type Game = GameHeader & {
   pendingTurn: { id: string } | null
 }
 
-/** Only what the player may see of a roll: never the dice, the threshold or the total. */
+/** A modifier of a roll: a circumstance by its label of effect, an item by its name. */
+export type RollModifier =
+  | { source: 'contextual'; effect: ContextualEffect; value: number }
+  | { source: 'item'; item: ContentLabel; value: number }
+
+/**
+ * A roll in full, as at the table: what was rolled and at how much, the
+ * difficulty, the modifiers, the chance, the d100 and the degree. Everything
+ * comes computed from the backend.
+ */
 export type Roll = {
-  skill: ContentLabel
+  /** The skill rolled, or null for a characteristic roll. */
+  skill: ContentLabel | null
+  characteristic: Characteristic | null
+  /** The skill in percent, or the characteristic's score. */
+  value: number
+  baseChance: number
+  difficulty: Difficulty
+  modifiers: RollModifier[]
+  chance: number
+  /** The d100, 1 to 100. */
+  roll: number
   result: Result
-  margin: Margin
-  /** The items that weighed on the roll — which, never by how much. */
-  items: ContentLabel[]
+  degree: Degree
 }
 
 /** What happened to one of the character's items, with whom when someone was involved. */

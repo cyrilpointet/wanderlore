@@ -5,6 +5,7 @@ import { CircleAlert, LoaderCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { currentUserQuery, redirectTarget, signIn, signInErrorMessage } from '@/auth/session'
+import { RulesCredit } from '@/components/rules_credit'
 import { Wordmark } from '@/components/wordmark'
 
 type LoginSearch = {
@@ -114,6 +115,7 @@ function Login() {
             )}
           </div>
         </form>
+        <RulesCredit />
       </div>
     </main>
   )

@@ -19,7 +19,7 @@ const ATHOS: NpcDefinition = {
   kind: 'unique',
   generic: false,
   defaultDisposition: 'neutral',
-  combat: { skills: { swordsmanship: 5 }, hitPointsMax: 14, weapon: 'rapier' },
+  combat: { skills: { swordsmanship: 90 }, hitPointsMax: 14, weapon: 'rapier' },
 }
 
 const STUDS: ItemDefinition = {
@@ -30,6 +30,7 @@ const STUDS: ItemDefinition = {
   stackable: false,
   equippable: false,
   modifiers: [],
+  weapon: null,
   initialHolder: { holder: 'npc', reference: 'buckingham' },
 }
 
@@ -78,6 +79,29 @@ describe('definition draft', () => {
     expect(
       definitionPayloadOf('items', { ...unique, kind: 'archetype' }, { creating: false }).payload
     ).toMatchObject({ initialHolder: null })
+  })
+
+  test('sends a weapon profile as written, and no weapon for an empty field', () => {
+    const rapier: ItemDefinition = {
+      ...STUDS,
+      reference: 'rapier',
+      kind: 'archetype',
+      equippable: true,
+      initialHolder: null,
+      weapon: { skill: 'swordsmanship', damage: '1D6+1', damageModifier: 'full', special: 'impaling' },
+    }
+
+    expect(
+      definitionPayloadOf('items', definitionDraftOf(rapier), { creating: false }).payload
+    ).toMatchObject({ weapon: rapier.weapon })
+    expect(
+      definitionPayloadOf('items', definitionDraftOf(STUDS), { creating: false }).payload
+    ).toMatchObject({ weapon: null })
+    expect(
+      definitionPayloadOf('items', { ...definitionDraftOf(STUDS), weapon: '{ skill' }, {
+        creating: false,
+      })
+    ).toEqual({ errors: { weapon: 'This is not valid JSON.' } })
   })
 
   test('names JSON that does not parse, and sends nothing', () => {

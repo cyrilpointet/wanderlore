@@ -8,7 +8,7 @@ import { defaultNS, en } from './resources'
  * Interface language only: the content a game master writes is never
  * translated here — its names by language are content, stored by the backend.
  *
- * English only, like the player front until Phase 9.
+ * English only, like the player front until Phase 10.
  */
 export const LANGUAGE = 'en'
 

@@ -13,6 +13,7 @@ import {
   createWorldState,
   useTransaction,
 } from '#tests/helpers/database'
+import { GASCON } from '#tests/helpers/worlds'
 
 /**
  * Rows are arranged through the query-builder factories rather than through the
@@ -76,7 +77,7 @@ test.group('Lucid models', (group) => {
       name: "d'Artagnan",
       hitPoints: 10,
       hitPointsMax: 10,
-      attributes: { physical: 3 },
+      characteristics: GASCON,
       skills: { swordsmanship: 2 },
       resources: {},
       progression: {},
@@ -88,7 +89,7 @@ test.group('Lucid models', (group) => {
      */
     const reloaded = await Character.findOrFail(created.id)
 
-    assert.deepEqual(reloaded.attributes, { physical: 3 })
+    assert.deepEqual(reloaded.characteristics, GASCON)
     assert.deepEqual(reloaded.skills, { swordsmanship: 2 })
   })
 

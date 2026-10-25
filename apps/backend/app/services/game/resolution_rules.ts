@@ -1,6 +1,9 @@
+import { baseChanceOf } from '#services/rules/derived'
+import type { Characteristic, Characteristics, RollBase } from '#services/rules/types'
+
 import type { WorldDefinition } from './world.js'
 
-/** A category arbitration may pick, with what it covers. Never the skill. */
+/** A category arbitration may pick, with what it covers. Never what resolves it. */
 export type ActionType = {
   actionType: string
   description: string
@@ -33,13 +36,62 @@ export function actionTypesOf(world: WorldDefinition): ActionType[] {
     .sort((a, b) => a.actionType.localeCompare(b.actionType))
 }
 
-/** The skill a roll uses for this category. Arbitration never sees it. */
-export function skillFor(world: WorldDefinition, actionType: string): string {
+/** What a roll of this category tests: a skill, or a characteristic. */
+export type Resolution =
+  { kind: 'skill'; skill: string } | { kind: 'characteristic'; characteristic: Characteristic }
+
+/** What resolves this category. Arbitration never sees it. */
+export function resolutionFor(world: WorldDefinition, actionType: string): Resolution {
   const rule = world.actionTypes.find((candidate) => candidate.actionType === actionType)
 
   if (rule === undefined) {
     throw new UnknownActionTypeError(world.reference, actionType)
   }
 
-  return rule.associatedSkill
+  return rule.associatedSkill !== null
+    ? { kind: 'skill', skill: rule.associatedSkill }
+    : { kind: 'characteristic', characteristic: rule.associatedCharacteristic }
+}
+
+/** The sheet a roll reads its base from. */
+export type RollingSheet = {
+  characteristics: Characteristics
+  skills: Record<string, number>
+}
+
+/**
+ * What the roller has in what the category tests: the skill as their sheet
+ * has it — or, never trained, its base chance in this world — or the score of
+ * the characteristic.
+ */
+export function rollBaseFor(
+  world: WorldDefinition,
+  resolution: Resolution,
+  sheet: RollingSheet
+): RollBase {
+  if (resolution.kind === 'characteristic') {
+    return {
+      kind: 'characteristic',
+      characteristic: resolution.characteristic,
+      value: sheet.characteristics[resolution.characteristic],
+    }
+  }
+
+  const trained = sheet.skills[resolution.skill]
+
+  if (trained !== undefined) {
+    return { kind: 'skill', skill: resolution.skill, value: trained }
+  }
+
+  const skill = world.skills.find((entry) => entry.reference === resolution.skill)
+
+  if (skill === undefined) {
+    throw new Error(`Skill "${resolution.skill}" is not one of the ${world.reference} world.`)
+  }
+
+  return {
+    kind: 'skill',
+    skill: resolution.skill,
+    value: baseChanceOf(skill.baseChance, sheet.characteristics),
+  }
 }

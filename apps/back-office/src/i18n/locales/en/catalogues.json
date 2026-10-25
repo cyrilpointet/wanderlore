@@ -25,7 +25,7 @@
     "allied": "Allied"
   },
   "combat": "Fighting profile",
-  "combatHint": "JSON: skills by reference, hitPointsMax, and the item reference of the ordinary weapon (or null).",
+  "combatHint": "JSON: skills in percent by reference, hitPointsMax, and the item reference of the ordinary weapon (or null).",
   "parent": "Inside",
   "parentHint": "The named place that contains this one, if any.",
   "none": "None",
@@ -36,7 +36,9 @@
   "people": "People",
   "places": "Places",
   "modifiers": "Modifiers",
-  "modifiersHint": "JSON list: each with target (skill or damage), skill when the target is a skill, value, condition (owned or equipped) and description.",
+  "modifiersHint": "JSON list: each with target \"skill\", the skill, a value in percent (±20 for a tool of quality), condition (owned or equipped) and description.",
+  "weapon": "Weapon profile",
+  "weaponHint": "JSON, empty for anything that is no weapon: the skill it is wielded with, its damage dice (1D6+1), how much of the wielder's damage modifier it adds (full, half or none) and its special effect (bleeding, crushing, entangling, impaling, knockback, or null).",
   "overrides": "Overrides the world's",
   "empty": "Nothing here yet.",
   "intro": {

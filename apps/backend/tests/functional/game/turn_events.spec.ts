@@ -22,6 +22,7 @@ import { CHARACTER, extracted } from '#tests/helpers/turns'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { seedMusketeers } from '#tests/helpers/content'
 import { createSession, createUser, useTransaction } from '#tests/helpers/database'
+import { GASCON } from '#tests/helpers/worlds'
 
 /**
  * The sequence of events a turn emits, required by the test strategy for
@@ -43,7 +44,7 @@ const SETTLED_TURN = [
 
 const NEEDS_ROLL = {
   ...SETTLED,
-  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'medium' },
+  resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'average' },
 }
 
 const NARRATED_TEXT = 'The guard steps aside.'
@@ -68,8 +69,8 @@ async function arrangeScene() {
   await Character.create({
     sessionId,
     name: "d'Artagnan",
-    skills: { persuasion: 3 },
-    attributes: { social: 3 },
+    skills: { persuasion: 60 },
+    characteristics: GASCON,
     resources: {},
     progression: {},
     hitPoints: 10,
@@ -271,9 +272,7 @@ test.group('Turn events | sequence', (group) => {
 test.group('Turn events | what goes over the wire', (group) => {
   useTransaction(group)
 
-  test('a roll carries its labelled skill and qualitative outcome, never a number', async ({
-    assert,
-  }) => {
+  test('a roll carries its full detail for the player, its skill labelled', async ({ assert }) => {
     const { turn, events } = await playOne([NEEDS_ROLL, ...NARRATED])
     const roll = events.recorded.find(({ event }) => event.type === 'roll_resolved')!
 
@@ -284,9 +283,16 @@ test.group('Turn events | what goes over the wire', (group) => {
       turnId: turn.id,
       idempotencyKey: roll.ref.idempotencyKey,
       skill: { reference: 'persuasion', label: 'Persuasion' },
+      characteristic: null,
+      value: 60,
+      baseChance: 60,
+      difficulty: 'average',
+      modifiers: [],
+      chance: 60,
+      roll: 4,
       result: 'success',
-      margin: 'comfortable',
-      items: [],
+      /** A 4 against a persuasion of 60: within a fifth of it. */
+      degree: 'special',
     })
   })
 
@@ -306,7 +312,7 @@ test.group('Turn events | what goes over the wire', (group) => {
     assert.deepEqual(message.character.inventory, [])
   })
 
-  test('nothing mechanical or internal leaves in any event', async ({ assert }) => {
+  test('nothing internal leaves in any event: no circumstance, no flag', async ({ assert }) => {
     const { events } = await playOne(SETTLED_TURN)
     const second = await playOne([NEEDS_ROLL, ...NARRATED])
 
@@ -314,7 +320,7 @@ test.group('Turn events | what goes over the wire', (group) => {
       [...events.recorded, ...second.events.recorded].map(({ ref, event }) => toMessage(ref, event))
     )
 
-    for (const leak of ['dice', 'threshold', 'total', 'skillValue', 'street_seen']) {
+    for (const leak of ['appliedModifiers', 'origin', 'actionType', 'street_seen']) {
       assert.notInclude(wire, leak)
     }
   })
@@ -577,6 +583,6 @@ test.group('Turn events | the language of the turn', (group) => {
       reference: 'persuasion',
       label: 'Éloquence',
     })
-    assert.equal(message.character.attributes[0].label, 'Social')
+    assert.equal(message.character.skills[0].label, 'Éloquence')
   })
 })

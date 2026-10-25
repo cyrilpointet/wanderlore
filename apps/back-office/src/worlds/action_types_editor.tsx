@@ -7,7 +7,9 @@ import { Field, FormAlert } from '@/content/field'
 import { formFailureOf, type FormFailure } from '@/content/form_errors'
 import { DANGER, INPUT, PRIMARY, SECONDARY, SECTION, TEXTAREA } from '@/content/ui'
 import {
+  CHARACTERISTICS,
   type ActionType,
+  type Characteristic,
   actionTypesQuery,
   createActionType,
   deleteActionType,
@@ -16,7 +18,8 @@ import {
 
 /**
  * The categories arbitration picks an action from, each tied to the skill
- * that resolves it. Edited one by one: each row saves on its own.
+ * that resolves it — or to a characteristic, rolled at five times its score.
+ * Edited one by one: each row saves on its own.
  */
 export function ActionTypesEditor({
   worldId,
@@ -69,17 +72,30 @@ function ActionTypeRow({
   const queryClient = useQueryClient()
   const [reference, setReference] = useState(actionType?.actionType ?? '')
   const [description, setDescription] = useState(actionType?.description ?? '')
-  const [skill, setSkill] = useState(actionType?.associatedSkill ?? skills[0] ?? '')
+  /** `skill:<reference>` or `characteristic:<STR…>`: one select for both. */
+  const [resolution, setResolution] = useState(
+    actionType?.associatedCharacteristic
+      ? `characteristic:${actionType.associatedCharacteristic}`
+      : `skill:${actionType?.associatedSkill ?? skills[0] ?? ''}`
+  )
   const [failure, setFailure] = useState<FormFailure | null>(null)
   const prefix = actionType?.id ?? 'new-action-type'
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: actionTypesQuery(worldId).queryKey })
 
+  const [resolvedBy, resolvedWith] = resolution.split(':') as [string, string]
+  const resolvedPayload = {
+    associatedSkill: resolvedBy === 'skill' ? resolvedWith : null,
+    associatedCharacteristic:
+      resolvedBy === 'characteristic' ? (resolvedWith as Characteristic) : null,
+  }
+  const knownSkill = resolvedBy !== 'skill' || skills.includes(resolvedWith)
+
   const save = useMutation({
     mutationFn: () =>
       actionType
-        ? updateActionType(actionType.id, { description, associatedSkill: skill })
-        : createActionType(worldId, { actionType: reference, description, associatedSkill: skill }),
+        ? updateActionType(actionType.id, { description, ...resolvedPayload })
+        : createActionType(worldId, { actionType: reference, description, ...resolvedPayload }),
     onMutate: () => setFailure(null),
     onSuccess: async () => {
       await refresh()
@@ -119,19 +135,34 @@ function ActionTypeRow({
             className={`${INPUT} font-mono`}
           />
         </Field>
-        <Field id={`${prefix}-skill`} label={t('actionTypes.skill')} error={errors.associatedSkill}>
+        <Field
+          id={`${prefix}-resolution`}
+          label={t('actionTypes.resolvedBy')}
+          error={errors.associatedSkill ?? errors.associatedCharacteristic}
+        >
           <select
-            id={`${prefix}-skill`}
-            value={skill}
-            onChange={(event) => setSkill(event.target.value)}
+            id={`${prefix}-resolution`}
+            value={resolution}
+            onChange={(event) => setResolution(event.target.value)}
             className={INPUT}
           >
-            {!skills.includes(skill) && <option value={skill}>{skill || '—'}</option>}
-            {skills.map((reference) => (
-              <option key={reference} value={reference}>
-                {reference}
-              </option>
-            ))}
+            {!knownSkill && <option value={resolution}>{resolvedWith || '—'}</option>}
+            <optgroup label={t('actionTypes.skills')}>
+              {skills.map((skill) => (
+                <option key={skill} value={`skill:${skill}`}>
+                  {skill}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label={t('actionTypes.characteristics')}>
+              {CHARACTERISTICS.map((characteristic) => (
+                <option key={characteristic} value={`characteristic:${characteristic}`}>
+                  {t('actionTypes.characteristicRoll', {
+                    characteristic: t(`characteristics.${characteristic}`),
+                  })}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </Field>
       </div>

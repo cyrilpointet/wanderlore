@@ -1,3 +1,4 @@
+import { SKILL_CATEGORIES, type SkillCategory } from '@/api/enums'
 import type { Character, InventoryItem, LabelledValue } from './queries'
 
 /**
@@ -5,16 +6,20 @@ import type { Character, InventoryItem, LabelledValue } from './queries'
  * principle 1).
  */
 
-export type AttributeGroup = LabelledValue & { skills: LabelledValue[] }
+export type SkillGroup = { category: SkillCategory; skills: LabelledValue[] }
 
-/** Each attribute with the character's skills under it, in the backend's order. */
-export function groupSkills(character: Pick<Character, 'attributes' | 'skills'>): AttributeGroup[] {
-  return character.attributes.map((attribute) => ({
-    ...attribute,
+/**
+ * The character's skills under their BRP category, in the fixed order of the
+ * categories, the skills in the backend's order. A category with no skill of
+ * theirs is left out.
+ */
+export function groupSkills(character: Pick<Character, 'skills'>): SkillGroup[] {
+  return SKILL_CATEGORIES.map((category) => ({
+    category,
     skills: character.skills
-      .filter((skill) => skill.attribute === attribute.reference)
+      .filter((skill) => skill.category === category)
       .map(({ reference, label, value }) => ({ reference, label, value })),
-  }))
+  })).filter((group) => group.skills.length > 0)
 }
 
 /**

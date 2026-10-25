@@ -22,7 +22,7 @@ test.group('NPCs | entering the scene', (group) => {
     assert.equal(rochefort.status, 'present')
     /** Read from the definition, never proposed. */
     assert.equal(rochefort.disposition, 'unfriendly')
-    assert.equal(rochefort.hitPoints, 13)
+    assert.equal(rochefort.hitPoints, 14)
   })
 
   test('a unique character met again is made present, never duplicated', async ({ assert }) => {
@@ -77,7 +77,7 @@ test.group('NPCs | entering the scene', (group) => {
     assert.equal(second.descriptor, 'a young guard, visibly bored')
     assert.equal(second.disposition, 'unfriendly')
     /** Each copy of an archetype has hit points of its own, from the profile. */
-    assert.deepEqual([first.hitPoints, second.hitPoints], [11, 11])
+    assert.deepEqual([first.hitPoints, second.hitPoints], [13, 13])
   })
 
   test('numbers per archetype and per game', async ({ assert }) => {

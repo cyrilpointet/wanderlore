@@ -4,15 +4,15 @@ import type TurnLog from '#models/turn_log'
 import type { ContentLabels } from '#services/game/content_labels'
 import type { Labelled } from '#services/game/content_labels'
 import type { AppliedEffects, AppliedHolder, AppliedItems } from '#services/game/prompts/types'
-import type { MarginLabel, RollOutcome } from '#services/rules/types'
+import type { RollResolution } from '#services/rules/types'
 
 /**
  * A logged turn, as the journal shows it — and as a client reads it back after
  * missing the end of its SSE stream.
  *
- * The log keeps everything, dice included, for debugging. What leaves is only
- * what the player may see: the skill, the verdict and a qualitative margin,
- * never the dice, the threshold or the total. Scenario flags never leave.
+ * The log keeps everything, for debugging. What leaves is what the player
+ * may see: the detail of each roll, as at the table — but never the
+ * circumstance arbitration named, nor the scenario flags.
  */
 export default class TurnTransformer extends BaseTransformer<TurnLog> {
   #labels: ContentLabels
@@ -45,56 +45,52 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
   }
 
   /**
-   * The roll carries the skill the backend derived from the action type.
-   * Turns logged before that derivation existed have it in the arbitration
-   * output instead, where the model picked it.
+   * The roll carries what the backend derived from the action type: a skill
+   * or a characteristic. Every logged turn is on the BRP rules — the switch
+   * deleted the games played before it.
    */
   #roll() {
-    const { rollResult, arbitrationOutput } = this.resource
+    const { rollResult } = this.resource
 
     if (rollResult === null) {
       return null
     }
 
-    const legacy = arbitrationOutput?.resolution as { skill_used?: string } | undefined
-    const skill = (rollResult.skill as string | undefined) ?? legacy?.skill_used
-
-    if (skill === undefined) {
-      throw new Error(`Turn ${this.resource.id} logged a roll without its skill.`)
+    if (!('base' in rollResult)) {
+      throw new Error(`Turn ${this.resource.id} logged a roll without what it rolled.`)
     }
 
-    /** Turns rolled before Phase 4 have no modifier at all. */
-    const modifiers = (rollResult.appliedModifiers ?? []) as { source: string; origin: string }[]
-
-    return presentRoll(
-      {
-        skill,
-        result: rollResult.result as RollOutcome,
-        margin: rollResult.marginLabel as MarginLabel,
-        items: [
-          ...new Set(
-            modifiers.filter(({ source }) => source === 'item').map(({ origin }) => origin)
-          ),
-        ],
-      },
-      this.#labels
-    )
+    return presentRoll(rollResult as unknown as RollResolution, this.#labels)
   }
 }
 
 /**
- * The items that weighed on the roll are named, never with what they were
- * worth: the pill says an item counted, not by how much.
+ * The detail of a roll, for the player: what was rolled and at how much, the
+ * difficulty, every modifier with its value, the chance, the d100 and the
+ * degree. A skill leaves labelled; a characteristic is a closed enum of the
+ * system, which the front labels. A circumstance leaves as its label of
+ * effect, never as the words arbitration named it with.
  */
-export function presentRoll(
-  roll: { skill: string; result: RollOutcome; margin: MarginLabel; items: string[] },
-  labels: ContentLabels
-) {
+export function presentRoll(roll: RollResolution, labels: ContentLabels) {
   return {
-    skill: labels.of('skill', roll.skill),
+    skill: roll.base.kind === 'skill' ? labels.of('skill', roll.base.skill) : null,
+    characteristic: roll.base.kind === 'characteristic' ? roll.base.characteristic : null,
+    value: roll.base.value,
+    baseChance: roll.baseChance,
+    difficulty: roll.difficulty,
+    modifiers: roll.appliedModifiers.map((modifier) =>
+      modifier.source === 'contextual'
+        ? { source: modifier.source, effect: modifier.effect, value: modifier.value }
+        : {
+            source: modifier.source,
+            item: labels.of('item', modifier.origin),
+            value: modifier.value,
+          }
+    ),
+    chance: roll.chance,
+    roll: roll.roll,
     result: roll.result,
-    margin: roll.margin,
-    items: roll.items.map((item) => labels.of('item', item)),
+    degree: roll.degree,
   }
 }
 

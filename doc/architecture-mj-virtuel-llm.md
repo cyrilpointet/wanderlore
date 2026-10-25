@@ -17,7 +17,7 @@
 
 Un seul appel LLM géant ("voici tout, décide de tout") produit des résultats instables : hallucinations sur les règles, incohérences de statistiques, vulnérabilité au prompt injection, coûts et latence imprévisibles, et absence de point de contrôle pour déboguer.
 
-**Principe directeur** : découper le tour de jeu en un **pipeline d'étapes à responsabilité unique**. Chaque étape LLM reçoit une entrée minimale et produit une sortie structurée (JSON), à l'exception de l'étape de narration qui produit du texte libre. Tout calcul déterministe (dés, seuils, formules) est effectué par le backend, jamais délégué au LLM.
+**Principe directeur** : découper le tour de jeu en un **pipeline d'étapes à responsabilité unique**. Chaque étape LLM reçoit une entrée minimale et produit une sortie structurée (JSON), à l'exception de l'étape de narration qui produit du texte libre. Tout calcul déterministe (dés, chances, formules) est effectué par le backend, jamais délégué au LLM.
 
 **Principe multi-langue (acté)** : le produit vise un support multi-langue pour le joueur, avec l'anglais comme langue par défaut. La règle est **« tout en anglais en interne, traduction au dernier moment »** : la langue cible n'intervient qu'à l'étape de narration (D), seule étape produisant du texte destiné à l'œil humain. Elle est transmise via le paramètre explicite `language` du contexte, jamais supposée fixe.
 
@@ -73,7 +73,7 @@ Transforme le texte libre du joueur en décision structurée :
 - Détection de tentative de prompt injection ou de sortie de cadre
 
 **Calcul du jet — Backend, déterministe**
-Dé + compétence + modificateurs contextuels (proposés par le LLM en labels qualitatifs, convertis par le backend, 3 au plus) + modificateurs d'objets (calculés par le backend à partir de l'inventaire du personnage, jamais proposés par le LLM) vs seuil de difficulté. Jamais délégué au LLM : c'est le seul point du pipeline qui garantit que les stats du joueur ne sont jamais soumises à l'interprétation du modèle.
+d100 sous la chance, selon le BRP (système de règles, section 2) : compétence — ou caractéristique × 5 — multipliée par la difficulté, puis modificateurs contextuels (proposés par le LLM en labels qualitatifs, convertis par le backend, 3 au plus) et modificateurs d'objets (calculés par le backend à partir de l'inventaire du personnage, jamais proposés par le LLM). Le résultat est l'un des cinq degrés du BRP. Jamais délégué au LLM : c'est le seul point du pipeline qui garantit que les stats du joueur ne sont jamais soumises à l'interprétation du modèle.
 
 **Modificateurs d'objets — un cas particulier à part entière**
 Un objet possédé ou équipé (arme, outil, document) peut apporter un bonus/malus fixe à certaines compétences. Cette valeur est une donnée factuelle stockée dans l'inventaire, pas une appréciation narrative : le LLM d'arbitrage ne doit jamais chiffrer ni proposer ce bonus. Il se contente de juger la plausibilité factuelle de l'usage de l'objet (le joueur le possède-t-il, est-ce cohérent de l'utiliser ici). Le backend, à l'étape de calcul du jet, interroge lui-même l'inventaire du personnage, sélectionne les objets dont un modificateur cible la compétence utilisée et dont la condition (`owned`/`equipped`) est satisfaite, et additionne leur valeur au total — une fois par définition. Un modificateur d'objet peut aussi cibler les dégâts : c'est le bonus d'une arme — indépendamment de ce que le LLM a proposé comme modificateurs contextuels. Voir le document dédié au système de règles pour le détail de ce mécanisme.
@@ -349,29 +349,27 @@ Analyse cette action et retourne ta décision selon le schéma défini.
 
 Le LLM ne propose ici aucun modificateur contextuel supplémentaire : la lettre de recommandation a déjà été prise en compte dans le jugement de `plausibility`, mais sa valeur chiffrée n'est ni connue ni proposée par le modèle — elle sera résolue au calcul du jet.
 
-**Le LLM choisit une catégorie d'action, pas une compétence** (tranché avant la Phase 3). `action_type` provient de la liste fermée transmise dans `world_context.action_types` — chaque entrée avec sa description, jamais sa compétence ni aucun chiffre. Le backend lit la compétence associée dans `resolution_rules` : le modèle n'a plus deux choix à accorder entre eux (`melee_combat` avec `persuasion`). Un `action_type` hors liste déclenche la nouvelle tentative unique (section 7).
+**Le LLM choisit une catégorie d'action, pas une compétence** (tranché avant la Phase 3). `action_type` provient de la liste fermée transmise dans `world_context.action_types` — chaque entrée avec sa description, jamais sa compétence ni aucun chiffre. Le backend lit dans `resolution_rules` la compétence associée — ou la caractéristique, depuis la Phase 6 : le modèle n'a plus deux choix à accorder entre eux (`melee_combat` avec `persuasion`). Un `action_type` hors liste déclenche la nouvelle tentative unique (section 7).
 
-**L'arbitrage ne reçoit plus les valeurs de compétence du personnage** (tranché avant la Phase 3). Elles ne lui servaient qu'à choisir une compétence, ce qu'il ne fait plus, et leur présence contredisait la règle « jamais de valeur numérique de règle » : un modèle qui voit `persuasion: 3` finit par en tenir compte pour la difficulté. La difficulté se juge sur la situation, jamais sur le niveau du personnage — c'est le jet qui confronte les deux.
+**L'arbitrage ne reçoit plus les valeurs de compétence du personnage** (tranché avant la Phase 3). Elles ne lui servaient qu'à choisir une compétence, ce qu'il ne fait plus, et leur présence contredisait la règle « jamais de valeur numérique de règle » : un modèle qui voit `persuasion: 60` finit par en tenir compte pour la difficulté. La difficulté se juge sur la situation, jamais sur le niveau du personnage — c'est le jet qui confronte les deux.
 
 ### Étape 2 — Calcul du jet (backend, aucun LLM)
 
-Le backend déduit la compétence (`persuasion`) de l'`action_type`, lit les objets du personnage, trouve que la définition `recommendation_letter` porte un modificateur `+2` sur `persuasion` avec condition `owned`, et l'ajoute au total. Un modificateur contextuel proposé par l'arbitrage y serait ajouté de la même façon, converti depuis son label et tracé avec `source: "contextual"`.
+Le backend déduit la compétence (`persuasion`) de l'`action_type`, lit sa valeur sur la fiche (ou sa chance de base si le personnage ne l'a pas), la multiplie par la difficulté, lit les objets du personnage, trouve que la définition `recommendation_letter` porte un modificateur `+10` sur `persuasion` avec condition `owned`, et l'ajoute à la chance. Un modificateur contextuel proposé par l'arbitrage y serait ajouté de la même façon, converti depuis son label et tracé avec `source: "contextual"` et son label d'effet. Puis il lance le d100.
 
 ```json
 {
   "roll": {
-    "skill": "persuasion",
-    "skill_value": 3,
-    "dice": [4, 2],
-    "applied_modifiers": [
-      { "source": "item", "origin": "recommendation_letter", "value": 2 }
+    "base": { "kind": "skill", "skill": "persuasion", "value": 60 },
+    "baseChance": 60,
+    "difficulty": "average",
+    "appliedModifiers": [
+      { "source": "item", "origin": "recommendation_letter", "value": 10 }
     ],
-    "total": 11,
-    "difficulty": "medium",
-    "threshold": 9,
-    "margin": 2,
+    "chance": 70,
+    "roll": 42,
     "result": "success",
-    "margin_label": "comfortable"
+    "degree": "success"
   }
 }
 ```
@@ -405,13 +403,13 @@ Règles impératives :
   cette menace plutôt que de la trancher.
 - Une attaque ouverte avant cette action est tranchée par le résultat :
   sur une réussite, le personnage l'évite ; sur un échec, elle porte et
-  il est blessé — légèrement sur un échec mineur ou automatique,
-  gravement sur un échec critique. La blessure est dite clairement ;
+  il est blessé — légèrement sur un échec ou un échec automatique,
+  gravement sur une maladresse. La blessure est dite clairement ;
   perdre son arme peut s'y ajouter, jamais la remplacer.
 - Ton doit rester fidèle au ton de l'univers indiqué.
 - Longueur cible : 2 à 5 phrases, sauf si le résultat est un moment
   clé du scénario (auquel cas tu peux développer davantage).
-- Tu ne mentionnes jamais de mécanique de jeu (dés, seuils, compétences)
+- Tu ne mentionnes jamais de mécanique de jeu (dés, chances, compétences, degrés)
   dans le texte : tout doit rester diégétique.
 - Le texte du champ "narration" doit être rédigé dans la langue précisée
   par le paramètre "language" du contexte. Le champ "ambiance_flags"
@@ -447,7 +445,7 @@ uniquement l'état du jeu.
   "resolution_to_narrate": {
     "action": "persuasion via lettre de recommandation",
     "result": "success",
-    "margin": "comfortable"
+    "degree": "success"
   },
   "memory": {
     "summary": "Le joueur, apprenti forgeron, cherche à accéder à la zone noble pour retrouver son maître disparu.",
@@ -733,14 +731,14 @@ produit la langue du joueur.
   jamais supprimé. Seuls les PNJ `present` partent dans le contexte : le coût reste borné.
 - **Un PNJ absent n'est pas rappelé** en Phase 3 : revenu à l'auberge, le joueur peut
   croiser une nouvelle instance plutôt que la même servante. Le rappel des PNJ connus d'un
-  lieu relève de la mémoire long terme (Phase 7).
+  lieu relève de la mémoire long terme (Phase 8).
 - Le narrateur reste libre d'évoquer qui il veut. Seul un PNJ qui entre en scène — avec qui
   le joueur peut interagir — devient une instance.
 
 ### Définitions transmises au LLM
 
 Les archétypes génériques, toujours (quelques entrées). Le reste du catalogue : en entier en
-Phase 3 (liste courte, en dur), filtré par scénario en Phase 5, puis par tags en Phase 6.
+Phase 3 (liste courte, en dur), filtré par scénario en Phase 5, puis par tags en Phase 7.
 
 ### Découpage par phase
 
@@ -749,8 +747,8 @@ Phase 3 (liste courte, en dur), filtré par scénario en Phase 5, puis par tags 
   label qualitatif.
 - **Phase 4** : profil de combat sur les définitions, points de vie propres à chaque instance.
 - **Phase 5** : table `npc_definitions` (univers, scénario nullable).
-- **Phase 8** : un PNJ improvisé doit pouvoir être la cible d'un jet opposé dès le tour où il
-  apparaît (voir roadmap, Phase 8).
+- **Phase 9** : un PNJ improvisé doit pouvoir être la cible d'un jet opposé dès le tour où il
+  apparaît (voir roadmap, Phase 9).
 
 Les lieux suivent le même modèle, dès la Phase 3 : voir section 6quater.
 
@@ -782,7 +780,7 @@ modèle des PNJ (section 6ter), avec trois adaptations qui leur sont propres.
 1. **Les lieux s'emboîtent.** Chaque définition unique déclare son parent (Rue des Fossoyeurs →
    Paris → France) ; une instance d'archétype reçoit un **parent** choisi parmi les lieux
    uniques (l'auberge est *dans* Meung). Le parent situe le lieu pour le narrateur, pour le
-   filtrage du lore par tags (Phase 6) et pour son affichage. Un voyage vers un lieu
+   filtrage du lore par tags (Phase 7) et pour son affichage. Un voyage vers un lieu
    improvisé prend pour parent le lieu unique le plus englobant pertinent : le catalogue porte
    donc quelques lieux de grande échelle (`france`, `england`) qui servent de racines.
 2. **Le grain reste la règle.** Passer de la salle commune à l'écurie n'est pas un
@@ -804,7 +802,7 @@ L'extraction propose un déplacement vers :
 
 Revenir dans un lieu improvisé déjà visité (la même auberge) n'est pas pris en charge en
 Phase 3, pour la même raison que le rappel des PNJ absents : cela relève de la mémoire long
-terme (Phase 7). Un retour crée une nouvelle instance.
+terme (Phase 8). Un retour crée une nouvelle instance.
 
 **Lien avec les PNJ.** La présence d'un PNJ est celle de la scène : quand le joueur change de
 lieu, les PNJ présents passent `absent`, sauf ceux que l'extraction désigne comme le suivant
@@ -825,8 +823,8 @@ lieu, les PNJ présents passent `absent`, sauf ceux que l'extraction désigne co
   - Les erreurs de transport (timeout, API injoignable, erreur HTTP) ne sont **jamais** retentées : elles font échouer le tour sur-le-champ.
   - La boucle vit dans le code de l'étape, pas dans le LLM Gateway : le gateway garantit un JSON parsable, la validation métier appartient à l'appelant. Elle est indépendante de la file de jobs, qui reste sans retry.
   - La tentative rejetée est tracée dans `turn_log` (sortie, motifs de rejet, tokens) : ses tokens comptent dans le coût du tour, et elle alimente le corpus d'évaluation. Un taux de rejet élevé signale un prompt à corriger, pas un comportement normal.
-- **Le narrateur ne reçoit jamais de données mécaniques brutes** (chiffres de dés, seuils) — uniquement des résultats abstraits (réussite/échec + marge), pour garder la mécanique de jeu hors du texte diégétique et éviter toute tentation du modèle de justifier ou contredire un résultat.
-- **Séparation stricte entre modificateurs contextuels (LLM) et modificateurs d'objets (backend).** Toute donnée factuelle et fixe (bonus/malus d'un objet possédé ou équipé, bonus de dégâts d'une arme) doit être calculée par le backend à partir des objets du détenteur, jamais proposée ou chiffrée par le LLM — sinon le même objet pourrait produire un effet mécanique différent d'un tour à l'autre selon l'interprétation du modèle, ce qui casse la cohérence de jeu.
+- **Le narrateur ne reçoit jamais de données mécaniques brutes** (d100, chance, valeur de compétence) — uniquement des résultats abstraits (réussite/échec + degré du BRP), pour garder la mécanique de jeu hors du texte diégétique et éviter toute tentation du modèle de justifier ou contredire un résultat.
+- **Séparation stricte entre modificateurs contextuels (LLM) et modificateurs d'objets (backend).** Toute donnée factuelle et fixe (bonus/malus d'un objet possédé ou équipé, profil d'une arme) doit être calculée par le backend à partir des objets du détenteur, jamais proposée ou chiffrée par le LLM — sinon le même objet pourrait produire un effet mécanique différent d'un tour à l'autre selon l'interprétation du modèle, ce qui casse la cohérence de jeu.
 - **Séparation stricte entre langue du contenu et langue de la structure.** Le contenu narratif (texte libre destiné au joueur) suit la langue de la partie (paramètre `language` du contexte). Toutes les clés JSON et valeurs d'enum de sortie structurée (`intent.type`, `resolution.mode`, identifiants de flags/objets extraits, etc.) restent **toujours en anglais**, quelle que soit la langue de la partie — c'est cette sortie structurée qui alimente directement le code et la base de données.
 
 ---
@@ -867,7 +865,7 @@ Cette séparation permet de :
 
 ```
 step_started    { event, turnId, idempotencyKey, step: "arbitration" | "narration" }
-roll_resolved   { event, turnId, idempotencyKey, skill: { reference, label }, result: "success" | "failure", margin: "comfortable" | ... }
+roll_resolved   { event, turnId, idempotencyKey, skill: { reference, label } | null, characteristic, value, baseChance, difficulty, modifiers, chance, roll, result, degree }
 turn_completed  { event, turnId, idempotencyKey, turn, character }
 turn_failed     { event, turnId, idempotencyKey, failure: { code, message } }
 ```
@@ -884,7 +882,7 @@ d'erreur de la section 5.3.6 du cahier des charges.
 - Branche **avec jet** : `step_started(arbitration)`, `roll_resolved`, `step_started(narration)`, puis `turn_completed`.
 - `turn_completed` n'est émis qu'après la validation de la transaction du tour ; un tour balayé (`turn_expired`) reçoit son `turn_failed` du balayage, et le tour qui finirait après coup n'émet plus rien.
 - Un tour se termine toujours par **exactement un** `turn_completed` ou `turn_failed`.
-- `roll_resolved` ne porte que la compétence jouée, le résultat et la marge qualitative — jamais les dés, le seuil ni la valeur de compétence. Le joueur de JDR veut savoir sur quoi il a lancé et comment ça s'est passé ; les chiffres, eux, n'apportent rien au récit. Le front n'affiche que ce qu'on lui transmet (voir le cahier des charges du front).
+- `roll_resolved` porte **le détail du jet** (tranché à l'ouverture de la Phase 6) : la compétence (libellée) ou la caractéristique (référence de l'enum, libellée par le front) et sa valeur, la difficulté, chaque modificateur avec sa valeur — une circonstance par son label d'effet (`effect`), jamais par les mots de l'arbitrage, un objet par `{ reference, label }` —, la chance finale, le d100, le résultat et le degré. Le joueur de JDR voit son jet comme à la table ; seul le narrateur en est tenu à l'écart. Le front n'affiche que ce qu'on lui transmet (voir le cahier des charges du front). La lecture d'un tour (`turn.roll`) porte la même forme.
 - `step_completed` est abandonné : il n'apportait au front qu'une information déjà portée par l'événement suivant.
 
 **Pas de streaming de la narration en Phase 2.** En Phase 1, l'appel de narration renvoie un **JSON** (narration + effets) : le découper en `narration_chunk` exigerait de parser un JSON partiel, pour un texte qui n'est de toute façon pas validé tant que le JSON complet ne l'est pas. Le streaming redevient naturel en Phase 3, quand la narration (D) devient du texte libre séparé de l'extraction (E).
@@ -925,7 +923,7 @@ La bascule n'est simple que si **rien de ce qui garantit l'intégrité d'un tour
 - **3 minutes de budget par tour**, comptées depuis sa prise en charge par le worker. Avant chaque appel LLM, le code du tour passe au gateway un `AbortSignal` limité à `min(timeout d'un appel, temps restant)` — le gateway combine déjà son timeout avec le signal de l'appelant.
 - **Budget épuisé = échec `llm_timeout`**, code que le front sait déjà afficher. Une nouvelle tentative ne dispose que du temps restant.
 - **Le balayage reste à 5 minutes** : 3 minutes de budget au plus, 2 minutes de marge pour l'attente en file. Le balayage ne rattrape plus un tour vivant, par construction.
-- **Limite connue** : le balayage compte depuis `created_at`, attente en file comprise. Négligeable avec un seul testeur ; avec plusieurs joueurs sous `concurrency: 1`, il faudra un `started_at` et deux seuils (tour jamais démarré, tour démarré) — à reprendre avec le passage à plusieurs instances (Phase 9).
+- **Limite connue** : le balayage compte depuis `created_at`, attente en file comprise. Négligeable avec un seul testeur ; avec plusieurs joueurs sous `concurrency: 1`, il faudra un `started_at` et deux seuils (tour jamais démarré, tour démarré) — à reprendre avec le passage à plusieurs instances (Phase 10).
 
 **Schéma `pgboss`.** pg-boss crée ses tables dans son propre schéma, hors des migrations Lucid. La génération de `database/schema.ts`, `db:truncate` et `db:wipe` ne regardent que `public` : ce schéma leur est invisible. La suite de tests n'utilise jamais pg-boss (pilote mémoire, `QUEUE_DRIVER=memory`).
 
@@ -950,8 +948,8 @@ Tour de jeu
 │   OUT : intent + validity + resolution + alert
 │
 ├─ Étape 2 (backend) : calcul du jet si requis → event: roll_resolved
-│   IN  : skill + modifiers + difficulty
-│   OUT : résultat déterministe (success/failure + margin)
+│   IN  : compétence ou caractéristique + modificateurs + difficulté
+│   OUT : résultat déterministe (d100, chance, success/failure + degré)
 │
 ├─ Étape 3 (LLM, D — narration) → event: narration_chunk (streaming)
 │   IN  : lore filtré (ambiance) + state scène + resolution + résumé + buffer + language

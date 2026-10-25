@@ -10,8 +10,15 @@ const WORLD: WorldDetail = {
   narrativeTone: 'France, 1625.',
   rules: ['No magic.'],
   ambiance: ['Mud and torchlight.'],
-  attributes: [{ reference: 'physical', labels: { en: 'Physical' } }],
-  skills: [{ reference: 'swordsmanship', labels: { en: 'Swordsmanship' }, attribute: 'physical' }],
+  skills: [
+    { reference: 'swordsmanship', labels: { en: 'Swordsmanship' }, category: 'combat', baseChance: 15 },
+    {
+      reference: 'dodge',
+      labels: { en: 'Dodge' },
+      category: 'physical',
+      baseChance: { characteristic: 'DEX', multiplier: 2 },
+    },
+  ],
   resources: [{ reference: 'purse', labels: { en: 'Purse' } }],
   glossary: [],
   updatedAt: null,
@@ -30,7 +37,19 @@ describe('world draft', () => {
     const draft = worldDraftOf(WORLD)
 
     expect(draft.skills[0]!.locked).toBe(true)
-    expect(draft.attributes[0]!.locked).toBe(true)
+  })
+
+  test('holds a base chance as typed, and sends it as a number or a characteristic', () => {
+    const draft = worldDraftOf(WORLD)
+
+    expect(draft.skills.map(({ baseCharacteristic, baseValue }) => [baseCharacteristic, baseValue]))
+      .toEqual([
+        ['', '15'],
+        ['DEX', '2'],
+      ])
+
+    const fixed = { ...draft.skills[1]!, baseCharacteristic: '' as const, baseValue: '25' }
+    expect(worldPayloadOf({ ...draft, skills: [fixed] }).skills[0]!.baseChance).toBe(25)
   })
 
   test('drops blank phrases and trims the rest', () => {

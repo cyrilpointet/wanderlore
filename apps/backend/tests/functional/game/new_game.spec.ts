@@ -113,8 +113,9 @@ test.group('New game | starting', (group) => {
       ['deliver_the_letter']
     )
     assert.equal(game.character.name, PREGENERATED.name)
-    assert.equal(game.character.hitPoints, PREGENERATED.hitPointsMax)
-    assert.equal(game.character.hitPointsMax, PREGENERATED.hitPointsMax)
+    /** Derived from the sheet: CON 14 and SIZ 12 make 13. */
+    assert.equal(game.character.hitPoints, 13)
+    assert.equal(game.character.hitPointsMax, 13)
     assert.isNull(game.pendingTurn)
 
     const items = await InventoryItem.query()

@@ -29,22 +29,45 @@
     "rulesHint": "What is possible in this world, in English. Read by arbitration only.",
     "ambiance": "Ambiance",
     "ambianceHint": "Sensory material for the narrator, in English.",
-    "attributes": "Attributes",
     "skills": "Skills",
-    "skillsHint": "Each skill hangs off an attribute. Keep the list short and flat.",
-    "attribute": "Attribute",
+    "skillsHint": "In percent, as in BRP. Each has a category and the chance an untrained character has in it: a fixed chance, or a characteristic times a multiplier (Dodge is DEX × 2).",
     "resources": "Resources",
     "glossary": "Glossary",
-    "glossaryHint": "Proper names that are no person nor place of the game — factions, figures off stage — and their translations."
+    "glossaryHint": "Proper names that are no person nor place of the game — factions, figures off stage — and their translations.",
+    "category": "Category",
+    "baseFrom": "Base chance",
+    "baseFixed": "Fixed",
+    "baseChance": "Chance (%)",
+    "baseMultiplier": "Multiplier"
   },
   "actionTypes": {
-    "intro": "Arbitration picks a category for each action, and the skill tied to it is rolled.",
+    "intro": "Arbitration picks a category for each action; the skill or the characteristic tied to it is rolled.",
     "empty": "No category yet: no action could be rolled.",
     "add": "Add a category",
     "reference": "Category",
-    "skill": "Skill rolled",
     "description": "What it covers",
-    "descriptionHint": "One sentence in English, read by arbitration."
+    "descriptionHint": "One sentence in English, read by arbitration.",
+    "resolvedBy": "Rolled on",
+    "skills": "Skills",
+    "characteristics": "Characteristics",
+    "characteristicRoll": "{{characteristic}} × 5"
   },
-  "fixErrors": "Some fields need fixing: see below each of them."
+  "fixErrors": "Some fields need fixing: see below each of them.",
+  "categories": {
+    "combat": "Combat",
+    "communication": "Communication",
+    "manipulation": "Manipulation",
+    "mental": "Mental",
+    "perception": "Perception",
+    "physical": "Physical"
+  },
+  "characteristics": {
+    "STR": "Strength",
+    "CON": "Constitution",
+    "SIZ": "Size",
+    "INT": "Intelligence",
+    "POW": "Power",
+    "DEX": "Dexterity",
+    "CHA": "Charisma"
+  }
 }

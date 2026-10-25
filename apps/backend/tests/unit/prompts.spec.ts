@@ -132,7 +132,7 @@ function arbitrationContext(overrides: Partial<ArbitrationContext> = {}): Arbitr
 function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationRequest {
   return {
     ...turnContext(),
-    outcome: { mode: 'roll_required', result: 'success', margin: 'comfortable', reason: null },
+    outcome: { mode: 'roll_required', result: 'success', degree: 'special', reason: null },
     intent_summary: 'Persuading the guard with a letter of recommendation',
     aside: false,
     ...overrides,
@@ -150,10 +150,16 @@ test.group('Arbitration | system contract', () => {
 
   test('forbids producing any numeric rule value', ({ assert }) => {
     /**
-     * The backend owns every number. A model that volunteers a threshold or a
+     * The backend owns every number. A model that volunteers a chance or a
      * modifier is proposing mechanics, which is exactly what it may not do.
      */
-    assert.include(ARBITRATION_SYSTEM_PROMPT, 'no threshold')
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'no chance')
+  })
+
+  test('reads the three difficulties of BRP off the situation', ({ assert }) => {
+    for (const difficulty of ['easy', 'average', 'difficult']) {
+      assert.include(ARBITRATION_SYSTEM_PROMPT, `${difficulty} `)
+    }
   })
 
   test('rules without narrating', ({ assert }) => {
@@ -212,12 +218,11 @@ test.group('Arbitration | output schema', () => {
     ])
   })
 
-  test('constrains difficulty to the standard scale', ({ assert }) => {
+  test('constrains difficulty to the scale of BRP', ({ assert }) => {
     assert.deepEqual(ARBITRATION_SCHEMA.properties.resolution.properties.difficulty.enum, [
       'easy',
-      'medium',
-      'hard',
-      'very_hard',
+      'average',
+      'difficult',
     ])
   })
 })
@@ -371,12 +376,31 @@ test.group('Narration | free text', () => {
   })
 })
 
+test.group('Narration | degrees', () => {
+  test('reads each of the five degrees of BRP', ({ assert }) => {
+    for (const degree of ['critical:', 'special:', 'success:', 'failure:', 'fumble:']) {
+      assert.include(NARRATION_SYSTEM_PROMPT, degree)
+    }
+  })
+
+  test('settles an open attack: light wound on a failure, bad one on a fumble', ({ assert }) => {
+    assert.include(
+      NARRATION_SYSTEM_PROMPT,
+      'lightly on a failure or an automatic one, badly on a fumble'
+    )
+  })
+
+  test('never names a mechanic, the degree included', ({ assert }) => {
+    assert.include(NARRATION_SYSTEM_PROMPT, 'no dice, no chances, no skills, no degrees')
+  })
+})
+
 test.group('Narration | context sent', () => {
-  test('sends the verdict and the qualitative margin only', ({ assert }) => {
+  test('sends the verdict and the qualitative degree only', ({ assert }) => {
     const message = buildNarrationMessage(narrationRequest())
 
     assert.include(message, '"result": "success"')
-    assert.include(message, '"margin": "comfortable"')
+    assert.include(message, '"degree": "special"')
   })
 
   test('never sends dice, thresholds or skill values', ({ assert }) => {
@@ -438,14 +462,14 @@ test.group('Narration | context sent', () => {
     )
   })
 
-  test('stages a settled outcome with no margin, and why a failure fails', ({ assert }) => {
+  test('stages a settled outcome with no degree, and why a failure fails', ({ assert }) => {
     const { resolution_to_narrate: outcome } = payloadOf(
       buildNarrationMessage(
         narrationRequest({
           outcome: {
             mode: 'narrative_automatic_failure',
             result: 'failure',
-            margin: null,
+            degree: null,
             reason: 'Nothing crosses to London overnight.',
           },
         })
@@ -456,7 +480,7 @@ test.group('Narration | context sent', () => {
       action: 'Persuading the guard with a letter of recommendation',
       mode: 'narrative_automatic_failure',
       result: 'failure',
-      margin: null,
+      degree: null,
       reason: 'Nothing crosses to London overnight.',
       aside: false,
     })

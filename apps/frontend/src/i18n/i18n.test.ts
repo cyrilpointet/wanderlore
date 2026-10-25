@@ -3,10 +3,14 @@ import { describe, expect, test } from 'vitest'
 import i18n from './index'
 import { errorMessage } from './errors'
 import {
+  CHARACTERISTICS,
+  CONTEXTUAL_EFFECTS,
+  DEGREES,
+  DIFFICULTIES,
   GAME_STATUSES,
   ITEM_CHANGES,
-  MARGINS,
   RESULTS,
+  SKILL_CATEGORIES,
   SCENARIO_STATUSES,
   STEPS,
   TURN_STATUSES,
@@ -18,7 +22,11 @@ describe('i18n', () => {
     ['turnStatus', TURN_STATUSES],
     ['step', STEPS],
     ['result', RESULTS],
-    ['margin', MARGINS],
+    ['degree', DEGREES],
+    ['difficulty', DIFFICULTIES],
+    ['contextualEffect', CONTEXTUAL_EFFECTS],
+    ['characteristic', CHARACTERISTICS],
+    ['skillCategory', SKILL_CATEGORIES],
     ['itemChange', ITEM_CHANGES],
     ['scenarioStatus', SCENARIO_STATUSES],
   ])('labels every %s value', (group, values) => {

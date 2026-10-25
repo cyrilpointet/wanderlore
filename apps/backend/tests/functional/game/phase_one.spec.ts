@@ -38,7 +38,7 @@ import DemoSessionSeeder from '#database/seeders/05_demo_session_seeder'
 const ARBITRATION_WITH_ROLL = {
   intent: { type: 'social_dialogue', target: null, summary: 'Presenting the letter' },
   validity: { factual: true, plausibility: 'plausible', justification: 'The letter is carried.' },
-  resolution: { mode: 'roll_required', action_type: 'social_etiquette', difficulty: 'medium' },
+  resolution: { mode: 'roll_required', action_type: 'social_etiquette', difficulty: 'average' },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
@@ -114,7 +114,6 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
      */
     const references: [ContentKind, string][] = [
       ['chapter', session.currentChapter!],
-      ...Object.keys(character.attributes).map((ref): [ContentKind, string] => ['attribute', ref]),
       ...Object.keys(character.skills).map((ref): [ContentKind, string] => ['skill', ref]),
       ...Object.keys(character.resources).map((ref): [ContentKind, string] => ['resource', ref]),
       ...session.worldState.activeQuests.map((quest): [ContentKind, string] => [
