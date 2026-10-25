@@ -10,6 +10,7 @@ import {
   GAME_STATUSES,
   ITEM_CHANGES,
   RESULTS,
+  SKILL_CATEGORIES,
   SCENARIO_STATUSES,
   STEPS,
   TURN_STATUSES,
@@ -25,6 +26,7 @@ describe('i18n', () => {
     ['difficulty', DIFFICULTIES],
     ['contextualEffect', CONTEXTUAL_EFFECTS],
     ['characteristic', CHARACTERISTICS],
+    ['skillCategory', SKILL_CATEGORIES],
     ['itemChange', ITEM_CHANGES],
     ['scenarioStatus', SCENARIO_STATUSES],
   ])('labels every %s value', (group, values) => {

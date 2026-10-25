@@ -35,8 +35,16 @@ function character(inventory: InventoryItem[]): Character {
     name: "d'Artagnan",
     hitPoints: 10,
     hitPointsMax: 10,
-    attributes: [{ reference: 'social', label: 'Social', value: 3 }],
-    skills: [{ reference: 'persuasion', label: 'Persuasion', value: 3, attribute: 'social' }],
+    characteristics: [
+      { reference: 'STR', value: 13 },
+      { reference: 'CON', value: 14 },
+      { reference: 'SIZ', value: 12 },
+      { reference: 'INT', value: 13 },
+      { reference: 'POW', value: 12 },
+      { reference: 'DEX', value: 16 },
+      { reference: 'CHA', value: 14 },
+    ],
+    skills: [{ reference: 'persuasion', label: 'Persuasion', value: 45, category: 'communication' }],
     resources: [],
     inventory,
   }
@@ -251,5 +259,17 @@ describe('A completed turn', () => {
     /** No badge in the event: the place stays as it was. */
     expect(after.location).toEqual(before.location)
     expect(after.pendingTurn).toBeNull()
+  })
+})
+
+describe('CharacterSheet | the BRP sheet', () => {
+  test('shows the seven characteristics, then the skills in percent by category', () => {
+    const text = textOf(renderToStaticMarkup(<CharacterSheet game={game([])} />))
+
+    for (const shown of ['Characteristics', 'Strength13', 'Dexterity16', 'Charisma14']) {
+      expect(text.replace(/\s+/g, '')).toContain(shown)
+    }
+    expect(text).toContain('Communication')
+    expect(text.replace(/\s+/g, '')).toContain('Persuasion45%')
   })
 })

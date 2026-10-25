@@ -56,5 +56,13 @@
   "scenarioStatus": {
     "draft": "Draft",
     "published": "Published"
+  },
+  "skillCategory": {
+    "combat": "Combat",
+    "communication": "Communication",
+    "manipulation": "Manipulation",
+    "mental": "Mental",
+    "perception": "Perception",
+    "physical": "Physical"
   }
 }

@@ -10,6 +10,7 @@ import type {
   ItemChange,
   Result,
   ScenarioStatus,
+  SkillCategory,
   TurnStatus,
 } from '@/api/enums'
 import type { ContentLabel } from '@/api/types'
@@ -41,9 +42,10 @@ export type Character = {
   name: string
   hitPoints: number
   hitPointsMax: number
-  attributes: LabelledValue[]
-  /** Each skill names the reference of its attribute. */
-  skills: (LabelledValue & { attribute: string })[]
+  /** The seven of BRP, always in the same order; the front labels them. */
+  characteristics: { reference: Characteristic; value: number }[]
+  /** The skills the character trained, in percent, each with its BRP category. */
+  skills: (LabelledValue & { category: SkillCategory })[]
   resources: LabelledValue[]
   /** What the character holds. What others hold is never sent. */
   inventory: InventoryItem[]

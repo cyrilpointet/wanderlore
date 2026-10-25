@@ -20,6 +20,15 @@ export const CONTEXTUAL_EFFECTS = [
 ] as const
 /** The seven characteristics of BRP, the same in every world. */
 export const CHARACTERISTICS = ['STR', 'CON', 'SIZ', 'INT', 'POW', 'DEX', 'CHA'] as const
+/** The six skill categories of BRP: how the sheet groups a world's skills. */
+export const SKILL_CATEGORIES = [
+  'combat',
+  'communication',
+  'manipulation',
+  'mental',
+  'perception',
+  'physical',
+] as const
 
 /** What happened to one of the character's items during a turn. */
 export const ITEM_CHANGES = ['gained', 'lost', 'used_up', 'equipped', 'unequipped'] as const
@@ -36,4 +45,5 @@ export type Degree = (typeof DEGREES)[number]
 export type Difficulty = (typeof DIFFICULTIES)[number]
 export type ContextualEffect = (typeof CONTEXTUAL_EFFECTS)[number]
 export type Characteristic = (typeof CHARACTERISTICS)[number]
+export type SkillCategory = (typeof SKILL_CATEGORIES)[number]
 export type ItemChange = (typeof ITEM_CHANGES)[number]

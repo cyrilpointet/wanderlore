@@ -29,7 +29,9 @@
   },
   "sheet": {
     "hitPoints": "Hit points",
-    "attributesAndSkills": "Attributes & skills",
+    "characteristics": "Characteristics",
+    "skills": "Skills",
+    "percent": "{{value, number}}%",
     "resources": "Resources",
     "location": "Location",
     "quest": "Quest",
