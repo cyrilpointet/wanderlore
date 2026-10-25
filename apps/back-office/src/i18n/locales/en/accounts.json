@@ -35,7 +35,7 @@
     "fullName": "Full name",
     "email": "Email",
     "password": "Initial password",
-    "passwordHint": "8 to 32 characters. The account keeps it until it can change it (Phase 9).",
+    "passwordHint": "8 to 32 characters. The account keeps it until it can change it (Phase 10).",
     "role": "Role"
   }
 }

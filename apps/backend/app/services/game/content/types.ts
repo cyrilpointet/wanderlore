@@ -66,7 +66,7 @@ export type CombatProfile = {
   /**
    * The ordinary weapon they fight with: an item definition carrying a damage
    * bonus, not an item they hold — it cannot be taken from them. A special
-   * weapon is held, as an item, and outranks it once fights are wired (Phase 8).
+   * weapon is held, as an item, and outranks it once fights are wired (Phase 9).
    */
   weapon: string | null
 }
@@ -161,7 +161,7 @@ export type StartingItem = {
 
 /**
  * The character a scenario is played with, copied into every game started
- * from it. Guided creation comes in Phase 8.
+ * from it. Guided creation comes in Phase 9.
  */
 export type PregeneratedCharacter = {
   name: string

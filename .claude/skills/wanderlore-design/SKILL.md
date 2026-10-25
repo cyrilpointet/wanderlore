@@ -126,10 +126,10 @@ jamais de valeur numérique de règle — uniquement des labels qualitatifs.
 | 4 | `inventory_items` et modificateurs d'objets | — |
 | 5 | Multi-univers (`worlds`, `scenarios`), package `back-office` | `game_master` |
 | 5bis | Gestion des comptes | `superadmin` |
-| 6 | `lore_fragments`, filtrage par tags | — |
-| 7 | `narrative_summaries`, mémoire long terme | — |
-| 8 | Combat étendu, cycle de vie complet de la partie | — |
-| 9 | Production-ready : observabilité, versionning de prompts, modération, beta test | — |
+| 7 | `lore_fragments`, filtrage par tags | — |
+| 8 | `narrative_summaries`, mémoire long terme | — |
+| 9 | Combat étendu, cycle de vie complet de la partie | — |
+| 10 | Production-ready : observabilité, versionning de prompts, modération, beta test | — |
 
 Les simplifications d'une phase sont **volontaires** — ne pas implémenter le pipeline
 complet en Phase 1, ni les modificateurs avant la Phase 4. Chaque phase a un critère de

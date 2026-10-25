@@ -186,7 +186,7 @@ restent en vigueur (détail : roadmap Phase 4, architecture §6bis, base de donn
   `minor_penalty` -1, `major_penalty` -2), convertis par le backend, 3 au plus ;
   **modificateurs d'objets** du seul détenteur, une fois par définition ;
 - **dégâts = dégâts du coup (marge ÷ 2 arrondie au supérieur, au moins 1) + bonus de
-  l'arme** ; formule posée en Phase 4, branchée dans le tour en Phase 8 ; l'arme ordinaire d'un
+  l'arme** ; formule posée en Phase 4, branchée dans le tour en Phase 9 ; l'arme ordinaire d'un
   PNJ est une référence de son profil de combat ;
 - durabilité et charges différées, consommables par la quantité.
 
@@ -226,10 +226,11 @@ en vigueur (détail : roadmap Phase 5bis, « Décisions de cadrage ») :
 - ni suspension de soi-même (`cannot_suspend_self`) ni du dernier superadmin actif
   (`last_superadmin`) ;
 - pas de changement de rôle, de modification d'email ni de suppression ; l'inscription libre
-  attend la Phase 9.
+  attend la Phase 10.
 
-**Phase actuelle : Phase 6 (lore étendu et RAG)**, à cadrer et découper. Voir la roadmap,
-Phase 6.
+**Phase actuelle : Phase 6 (bascule sur le système BRP)**, à cadrer et découper : le
+Basic Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous
+les univers. Voir la roadmap, Phase 6. Le lore étendu et le RAG passent en Phase 7.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
@@ -322,7 +323,7 @@ serverless pour le backend).
   (`#services/game/content_labels`) et sort en `{ reference, label }`, construit sur l'univers
   de la partie concernée — par requête, ou par tour pour les événements SSE qui le portent —
   et dans une langue (celle du tour pour les événements, l'anglais ailleurs jusqu'au choix
-  de langue de la Phase 9), avec repli sur l'anglais. Une référence sans libellé lève
+  de langue de la Phase 10), avec repli sur l'anglais. Une référence sans libellé lève
   `MissingLabelError` : jamais de référence brute ni « embellie » en repli.
 - **Seule la narration reçoit des noms traduits** (`names`, `items_in_scene`), dans la seule
   langue du tour, et le glossaire réduit à ses entrées traduites dans cette langue. Arbitrage

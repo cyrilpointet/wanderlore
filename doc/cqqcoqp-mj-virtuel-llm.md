@@ -44,7 +44,7 @@ Pas de deadline formelle — projet mené sur le temps libre du porteur, sans co
 
 **Risque identifié** : un projet sans échéance peut dériver indéfiniment. Un rythme indicatif (ex. un jalon de roadmap par mois, ou un volume d'heures hebdomadaire) est recommandé comme repère, sans devenir une contrainte qui nuirait au plaisir de développement (objectif premier du projet, voir Pourquoi).
 
-**Séquencement** : phasé en 11 étapes (Phase 0 à 9, plus 5bis) selon la roadmap dédiée, chaque phase restant jouable de bout en bout avant de passer à la suivante.
+**Séquencement** : phasé en 12 étapes (Phase 0 à 10, plus 5bis) selon la roadmap dédiée, chaque phase restant jouable de bout en bout avant de passer à la suivante.
 
 ---
 
@@ -57,7 +57,7 @@ Axe le plus abouti du projet à date. Voir les documents de référence dédiés
 - **Système de règles** : formule générique `2d6 + compétence + modificateurs`, séparation modificateurs contextuels (LLM) / modificateurs d'objets (backend).
 - **Roadmap** : développement incrémental par fonctionnalités minimales, intégrant la gestion de comptes (joueur / maître du jeu / superadmin).
 
-**Gestion des erreurs** : pas de retry automatique dans un premier temps, message différencié par type d'erreur, système de log différé en Phase 9.
+**Gestion des erreurs** : pas de retry automatique dans un premier temps, message différencié par type d'erreur, système de log différé en Phase 10.
 
 **Environnement technique** : dev et tests locaux sous Docker (PostgreSQL ; Redis provisionné pour la bascule vers BullMQ), repo en monorepo AdonisJS (`--kit=api`, Turborepo) avec packages `backend`/`frontend` dès la Phase 0, `back-office` ajouté en Phase 5.
 
@@ -74,7 +74,7 @@ Axe le plus abouti du projet à date. Voir les documents de référence dédiés
 
 **Démarche vers un modèle de revenu — en deux temps, avant toute décision** :
 1. **Mesurer** — dès la Phase 3 (pipeline complet + tracking de consommation posé en Phase 1), chiffrer le coût réel moyen par tour et par partie.
-2. **Valider l'appétence** — lors du beta test fermé (Phase 9), interroger les testeurs sur leur intention de payer pour l'expérience vécue.
+2. **Valider l'appétence** — lors du beta test fermé (Phase 10), interroger les testeurs sur leur intention de payer pour l'expérience vécue.
 
 **Pistes de modèle économique identifiées** (non tranchées, à évaluer une fois les deux mesures ci-dessus disponibles) :
 

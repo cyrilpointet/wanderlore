@@ -3,7 +3,7 @@ import { BaseSchema } from '@adonisjs/lucid/schema'
 /**
  * A scenario: the story a game is started from, in one world. It carries
  * the pregenerated character and the state a new game starts in, so starting
- * a game is a copy (character creation comes in Phase 8).
+ * a game is a copy (character creation comes in Phase 9).
  *
  * A scenario is a `draft` until it is published, and only a published one is
  * offered to players.
