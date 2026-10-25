@@ -1032,3 +1032,81 @@ test.group('TurnService | the world a turn reads', (group) => {
     assert.deepInclude(second.rollResult!.base, { skill: 'athletics' })
   })
 })
+
+test.group('TurnService | BRP rolls', (group) => {
+  useTransaction(group)
+
+  /** Sneaking, on a stealth this sheet never trained. */
+  const SNEAK = {
+    ...NEEDS_ROLL,
+    intent: { type: 'stealth', target: null, summary: 'Slipping past the guard' },
+    resolution: { mode: 'roll_required', action_type: 'sneaking', difficulty: 'average' },
+  }
+
+  test('a skill never trained is rolled at its base chance', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+
+    const turn = await buildService([SNEAK, ...NARRATED], [8]).play({
+      sessionId,
+      userId,
+      playerInput: 'I slip past him.',
+    })
+
+    /** Stealth starts at 10 in this world: an 8 is a success, a 2 would be special. */
+    assert.deepEqual(turn.rollResult!.base, { kind: 'skill', skill: 'stealth', value: 10 })
+    assert.equal(turn.rollResult!.chance, 10)
+    assert.equal(turn.rollResult!.degree, 'success')
+  })
+
+  test('a category resolved by a characteristic rolls five times its score', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    await db
+      .from('resolution_rules')
+      .where('action_type', 'social_persuasion')
+      .update({ associated_skill: null, associated_characteristic: 'CHA' })
+
+    const turn = await buildService([NEEDS_ROLL, ...NARRATED], [30]).play({
+      sessionId,
+      userId,
+      playerInput: 'I smile at the guard.',
+    })
+
+    /** CHA 14: a Charm roll at 70, which no item helps. */
+    assert.deepEqual(turn.rollResult!.base, {
+      kind: 'characteristic',
+      characteristic: 'CHA',
+      value: 14,
+    })
+    assert.equal(turn.rollResult!.baseChance, 70)
+    assert.deepEqual(turn.rollResult!.appliedModifiers, [])
+    assert.equal(turn.rollResult!.result, 'success')
+  })
+
+  test('a difficulty off the BRP scale is refused, twice, and the turn fails', async ({
+    assert,
+  }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const hard = { ...NEEDS_ROLL, resolution: { ...NEEDS_ROLL.resolution, difficulty: 'hard' } }
+
+    const error = await buildService([hard, hard])
+      .play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
+      .then(() => null)
+      .catch((caught) => caught)
+
+    assert.instanceOf(error, TurnValidationError)
+  })
+
+  test('the narrator learns the degree, never the d100 or the chance', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { provider, play } = buildService([NEEDS_ROLL, ...NARRATED], [2])
+
+    await play({ sessionId, userId, playerInput: 'I ask him to let me pass.' })
+
+    /** A 2 against 60: within a twentieth of it, a critical. */
+    const narration = provider.requests[1].userMessage
+    assert.include(narration, '"degree": "critical"')
+    for (const leak of ['"roll"', '"chance"', 'baseChance', '"base"']) {
+      assert.notInclude(narration, leak)
+    }
+  })
+})
