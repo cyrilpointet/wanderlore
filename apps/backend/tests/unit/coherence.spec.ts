@@ -3,6 +3,7 @@ import { test } from '@japa/runner'
 import { checkScenario } from '#services/game/content/coherence'
 import type { ScenarioContent, WorldContent } from '#services/game/content/types'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
+import { SEEDED_WORLDS } from '#database/seeders/01_content_seeder'
 
 const { scenarios, ...WORLD } = THREE_MUSKETEERS_CONTENT
 const SCENARIO = scenarios[0]
@@ -23,9 +24,13 @@ function issuesAfter(change: (world: WorldLevel, scenario: ScenarioContent) => v
 }
 
 test.group('Coherence | the seeded content', () => {
-  test('holds together', ({ assert }) => {
-    assert.deepEqual(checkScenario(WORLD, SCENARIO), [])
-  })
+  for (const { scenarios: seeded, ...world } of SEEDED_WORLDS) {
+    for (const scenario of seeded) {
+      test(`${world.reference} / ${scenario.reference} holds together`, ({ assert }) => {
+        assert.deepEqual(checkScenario(world, scenario), [])
+      })
+    }
+  }
 })
 
 test.group('Coherence | references', () => {

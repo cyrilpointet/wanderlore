@@ -40,8 +40,9 @@ test.group('Back-office | access', (group) => {
     const response = await client.get(WORLDS).loginAs(await userWith('game_master'))
 
     response.assertStatus(200)
-    const [world] = (response.body() as any).data
-    assert.equal(world.reference, 'three_musketeers')
+    const world = (response.body() as any).data.find(
+      ({ reference }: { reference: string }) => reference === 'three_musketeers'
+    )
     assert.deepEqual(world.labels, { en: 'The Three Musketeers' })
     assert.equal(world.scenarioCount, 1)
   })

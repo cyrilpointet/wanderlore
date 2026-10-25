@@ -2,6 +2,7 @@ import { BaseSeeder } from '@adonisjs/lucid/seeders'
 
 import { storeWorldContent } from '#services/game/content/store'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
+import { LOVECRAFT_MYTHOS_CONTENT } from '#database/content/lovecraft_mythos'
 
 /**
  * The worlds written in code, with their scenarios, catalogues and categories
@@ -13,7 +14,7 @@ import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
  * these worlds belongs to the code — edits made to them elsewhere are
  * overwritten by the next seed.
  */
-export const SEEDED_WORLDS = [THREE_MUSKETEERS_CONTENT]
+export const SEEDED_WORLDS = [THREE_MUSKETEERS_CONTENT, LOVECRAFT_MYTHOS_CONTENT]
 
 export default class extends BaseSeeder {
   async run() {

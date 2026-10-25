@@ -1,0 +1,1227 @@
+import type { WorldContent } from '#services/game/content/types'
+
+/**
+ * H. P. Lovecraft's Mythos, as the content seeder writes it to the database.
+ *
+ * Like the first world, it leans on fiction the model already knows: no lore
+ * corpus of its own. Lovecraft died in 1937, and his work has been in the
+ * public domain in Europe since 2008.
+ *
+ * The world carries what both scenarios share — the 1920s, the rules of
+ * cosmic horror, the skills, the generic archetypes and the creatures of the
+ * Mythos. Each scenario brings its own cast, places and items. Tone, rules and
+ * ambiance are all the model reads of the world, so they cover the sea and
+ * New England alike.
+ *
+ * Everything is in English except the French labels: only the narration is
+ * ever produced in the player's language.
+ */
+export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
+  reference: 'lovecraft_mythos',
+  labels: { en: 'The Lovecraft Mythos', fr: 'Le Mythe de Lovecraft' },
+  narrativeTone:
+    '1920s cosmic horror: slow-building dread, knowledge that costs, and a universe vast, ancient and indifferent to mankind.',
+  rules: [
+    'The supernatural is real but rare, alien and never benevolent. It answers to no hero and offers no wonder without a price.',
+    'There is no magic at the call of the characters: a rite or a formula comes from a forbidden text, takes time and preparation, and always costs the one who uses it.',
+    'The creatures of the Mythos far outmatch ordinary people. Bullets wound them but rarely stop them; flight, hiding and wits save more lives than fighting.',
+    'Facing the unnatural shakes the mind as a blow shakes the body: a dreadful sight or revelation can cost hit points, and nerve fails before it.',
+    'Where the Outer Gods are invoked, reality comes apart little by little: distances shift, time slips, rooms and faces are not what they were. The closer a rite comes to completion, the worse it grows.',
+    'This is the 1920s: telegraph and wireless, steamships, a few motor cars, revolvers and shotguns. Prohibition is in force in the United States.',
+    'The authorities and the learned dismiss tales of the uncanny. Proof is hard to keep, and harder still to make anyone believe.',
+    'Travel takes days and help is far away: the isolated stay isolated.',
+  ],
+  ambiance: [
+    'Fog off the sea, old stone furred with lichen, the smell of brine, mildew and something rotten beneath.',
+    'Cyclopean masonry: monoliths too vast for human hands, at angles that seem at once convex and concave.',
+    'Sounds just below hearing — a far piping, a chant, a wet slither — that stop the moment anyone listens.',
+    'Decaying New England: gambrel roofs, shuttered windows, hollow-eyed farmhouses and villagers who say less than they know.',
+    'The ocean is vast, cold and older than anything that walks; it keeps what it takes.',
+    'Near a place where the Outer Gods have been called, the world wears thin: clocks disagree, a corridor runs longer than the house, a familiar face is wrong for an instant.',
+  ],
+  attributes: [
+    { reference: 'physical', labels: { en: 'Physical', fr: 'Physique' } },
+    { reference: 'mental', labels: { en: 'Mental', fr: 'Mental' } },
+    { reference: 'social', labels: { en: 'Social', fr: 'Social' } },
+  ],
+  /**
+   * Flat and short, as in the first world. `composure` stands where a sanity
+   * score would: the nerve to face the unnatural is rolled, and what it costs
+   * comes off hit points.
+   */
+  skills: [
+    {
+      reference: 'brawling',
+      labels: { en: 'Brawling', fr: 'Corps à corps' },
+      attribute: 'physical',
+    },
+    { reference: 'firearms', labels: { en: 'Firearms', fr: 'Armes à feu' }, attribute: 'physical' },
+    {
+      reference: 'athletics',
+      labels: { en: 'Athletics', fr: 'Athlétisme' },
+      attribute: 'physical',
+    },
+    { reference: 'stealth', labels: { en: 'Stealth', fr: 'Discrétion' }, attribute: 'physical' },
+    {
+      reference: 'observation',
+      labels: { en: 'Observation', fr: 'Observation' },
+      attribute: 'mental',
+    },
+    {
+      reference: 'scholarship',
+      labels: { en: 'Scholarship', fr: 'Érudition' },
+      attribute: 'mental',
+    },
+    { reference: 'occultism', labels: { en: 'Occultism', fr: 'Occultisme' }, attribute: 'mental' },
+    { reference: 'composure', labels: { en: 'Composure', fr: 'Sang-froid' }, attribute: 'mental' },
+    { reference: 'survival', labels: { en: 'Survival', fr: 'Survie' }, attribute: 'mental' },
+    {
+      reference: 'persuasion',
+      labels: { en: 'Persuasion', fr: 'Persuasion' },
+      attribute: 'social',
+    },
+    {
+      reference: 'intimidation',
+      labels: { en: 'Intimidation', fr: 'Intimidation' },
+      attribute: 'social',
+    },
+    { reference: 'deception', labels: { en: 'Deception', fr: 'Tromperie' }, attribute: 'social' },
+  ],
+  resources: [{ reference: 'money', labels: { en: 'Dollars', fr: 'Dollars' } }],
+  /** The gods, places and books people speak of, none of them met in play. */
+  glossary: [
+    { reference: 'cthulhu', labels: { en: 'Cthulhu', fr: 'Cthulhu' } },
+    { reference: 'rlyeh', labels: { en: "R'lyeh", fr: "R'lyeh" } },
+    { reference: 'dagon', labels: { en: 'Dagon', fr: 'Dagon' } },
+    { reference: 'mother_hydra', labels: { en: 'Mother Hydra', fr: 'Mère Hydra' } },
+    { reference: 'azathoth', labels: { en: 'Azathoth', fr: 'Azathoth' } },
+    { reference: 'yog_sothoth', labels: { en: 'Yog-Sothoth', fr: 'Yog-Sothoth' } },
+    { reference: 'nyarlathotep', labels: { en: 'Nyarlathotep', fr: 'Nyarlathotep' } },
+    { reference: 'outer_gods', labels: { en: 'the Outer Gods', fr: 'les Dieux Extérieurs' } },
+    {
+      reference: 'miskatonic_university',
+      labels: { en: 'Miskatonic University', fr: "l'université Miskatonic" },
+    },
+    { reference: 'innsmouth', labels: { en: 'Innsmouth', fr: 'Innsmouth' } },
+    { reference: 'abdul_alhazred', labels: { en: 'Abdul Alhazred', fr: 'Abdul Alhazred' } },
+  ],
+  /** One category per use of each skill, as in the first world. */
+  actionTypes: [
+    {
+      actionType: 'melee_combat',
+      description:
+        'Fighting at close quarters: fists, a knife, a club, a rifle butt or whatever is at hand.',
+      associatedSkill: 'brawling',
+    },
+    {
+      actionType: 'ranged_combat',
+      description: 'Shooting or throwing at a target: revolver, shotgun, rifle, thrown stone.',
+      associatedSkill: 'firearms',
+    },
+    {
+      actionType: 'physical_feat',
+      description: 'Climbing, jumping, running, swimming, or forcing a door by strength.',
+      associatedSkill: 'athletics',
+    },
+    {
+      actionType: 'sneaking',
+      description: 'Moving unseen or unheard, hiding, shadowing someone, or lifting something.',
+      associatedSkill: 'stealth',
+    },
+    {
+      actionType: 'perception',
+      description:
+        'Noticing, searching, spotting a detail, a hidden door or a lie, reading a scene.',
+      associatedSkill: 'observation',
+    },
+    {
+      actionType: 'knowledge',
+      description:
+        'Recalling or working out what ordinary learning teaches: history, languages, science, medicine, a library search.',
+      associatedSkill: 'scholarship',
+    },
+    {
+      actionType: 'occult_lore',
+      description:
+        'Reading a forbidden text, recognising a sigil or a rite, performing a ritual or an alchemical operation.',
+      associatedSkill: 'occultism',
+    },
+    {
+      actionType: 'resisting_horror',
+      description:
+        'Keeping nerve and mind before the unnatural: resisting terror, a compulsion, a vision or a wrongness of the world.',
+      associatedSkill: 'composure',
+    },
+    {
+      actionType: 'survival_craft',
+      description:
+        'Finding a way through wild land or open sea, reading weather and tides, handling a boat, living off a hostile place.',
+      associatedSkill: 'survival',
+    },
+    {
+      actionType: 'social_persuasion',
+      description: 'Winning someone over by argument, charm or an appeal to their interest.',
+      associatedSkill: 'persuasion',
+    },
+    {
+      actionType: 'social_intimidation',
+      description: "Getting one's way through threats, menace or sheer force of presence.",
+      associatedSkill: 'intimidation',
+    },
+    {
+      actionType: 'social_deception',
+      description: "Lying, bluffing, or disguising oneself or one's intentions.",
+      associatedSkill: 'deception',
+    },
+  ],
+  /**
+   * The generic archetypes the player runs into anywhere, then the creatures
+   * and worshippers of the Mythos both scenarios may meet. A creature fights
+   * with its own claws: no weapon item, its skills and hit points carry the
+   * threat.
+   */
+  npcs: [
+    {
+      reference: 'townsfolk',
+      labels: { en: 'Local', fr: 'Habitant' },
+      description: 'Anyone of the common people: a farmer, a shopkeeper, a fisherman, a child.',
+      kind: 'archetype',
+      generic: true,
+      defaultDisposition: 'neutral',
+      combat: { skills: { athletics: 1, observation: 1 }, hitPointsMax: 7, weapon: null },
+    },
+    {
+      reference: 'sailor',
+      labels: { en: 'Sailor', fr: 'Marin' },
+      description: "A seaman, a deckhand, a stoker or a ship's officer.",
+      kind: 'archetype',
+      generic: true,
+      defaultDisposition: 'neutral',
+      combat: {
+        skills: { brawling: 2, athletics: 2, survival: 2 },
+        hitPointsMax: 10,
+        weapon: 'knife',
+      },
+    },
+    {
+      reference: 'professional',
+      labels: { en: 'Professional', fr: 'Notable' },
+      description: 'A doctor, a lawyer, a professor, a clergyman, a clerk or a journalist.',
+      kind: 'archetype',
+      generic: true,
+      defaultDisposition: 'neutral',
+      combat: { skills: { scholarship: 3, persuasion: 2 }, hitPointsMax: 7, weapon: null },
+    },
+    {
+      reference: 'lawman',
+      labels: { en: 'Lawman', fr: 'Homme de loi' },
+      description: 'A policeman, a county sheriff or his deputy, a harbour constable.',
+      kind: 'archetype',
+      generic: true,
+      defaultDisposition: 'neutral',
+      combat: {
+        skills: { firearms: 2, brawling: 2, intimidation: 2 },
+        hitPointsMax: 10,
+        weapon: 'revolver',
+      },
+    },
+    {
+      reference: 'thug',
+      labels: { en: 'Thug', fr: 'Voyou' },
+      description: 'A bootlegger, a dockside tough or a hired gun who lives outside the law.',
+      kind: 'archetype',
+      generic: true,
+      defaultDisposition: 'unfriendly',
+      combat: {
+        skills: { brawling: 3, intimidation: 2, stealth: 1 },
+        hitPointsMax: 10,
+        weapon: 'knife',
+      },
+    },
+    {
+      reference: 'cultist',
+      labels: { en: 'Cultist', fr: 'Cultiste' },
+      description:
+        'A worshipper of the Old Ones or the Outer Gods, ordinary by day, fanatical by night.',
+      kind: 'archetype',
+      generic: false,
+      defaultDisposition: 'hostile',
+      combat: {
+        skills: { brawling: 2, occultism: 2, deception: 2, stealth: 2 },
+        hitPointsMax: 9,
+        weapon: 'knife',
+      },
+    },
+    {
+      reference: 'deep_one',
+      labels: { en: 'Deep One', fr: 'Profond' },
+      description:
+        'A creature of the sea, man-shaped and fish-like: grey-green scales, webbed claws, gills, bulging eyes that never close, and a croaking voice. Ageless, and devoted to Dagon and Cthulhu.',
+      kind: 'archetype',
+      generic: false,
+      defaultDisposition: 'hostile',
+      combat: {
+        skills: { brawling: 4, athletics: 4, stealth: 3, intimidation: 4 },
+        hitPointsMax: 16,
+        weapon: null,
+      },
+    },
+    {
+      reference: 'deep_one_hybrid',
+      labels: { en: 'Hybrid', fr: 'Hybride' },
+      description:
+        'A human with the blood of the deep: narrow head, unblinking eyes, rough scaly skin at the neck, a shuffling gait. Changing, year by year, into a Deep One.',
+      kind: 'archetype',
+      generic: false,
+      defaultDisposition: 'unfriendly',
+      combat: {
+        skills: { brawling: 3, athletics: 3, deception: 2, stealth: 2 },
+        hitPointsMax: 12,
+        weapon: null,
+      },
+    },
+  ],
+  /** Archetypes only: each scenario sets its own named places. */
+  locations: [
+    {
+      reference: 'town',
+      labels: { en: 'Town', fr: 'Bourg' },
+      description: 'A town or village: a main street, a general store, a church, a few houses.',
+      kind: 'archetype',
+      parent: null,
+    },
+    {
+      reference: 'road',
+      labels: { en: 'Road', fr: 'Route' },
+      description: 'A road, a dirt track or a path between two places.',
+      kind: 'archetype',
+      parent: null,
+    },
+    {
+      reference: 'wilderness',
+      labels: { en: 'Wilderness', fr: 'Terres sauvages' },
+      description: 'Untamed land: woods, hills, marsh, scrub or barren rock.',
+      kind: 'archetype',
+      parent: null,
+    },
+    {
+      reference: 'shore',
+      labels: { en: 'Shore', fr: 'Rivage' },
+      description: 'A beach, a cove, a stretch of rocky coast or a reef.',
+      kind: 'archetype',
+      parent: null,
+    },
+    {
+      reference: 'ship',
+      labels: { en: 'Ship', fr: 'Navire' },
+      description: 'A ship or a boat, its decks and its holds.',
+      kind: 'archetype',
+      parent: null,
+    },
+    {
+      reference: 'house',
+      labels: { en: 'House', fr: 'Maison' },
+      description: "A private house, from a fisherman's shack to a mansion.",
+      kind: 'archetype',
+      parent: null,
+    },
+    {
+      reference: 'church',
+      labels: { en: 'Church', fr: 'Église' },
+      description: 'A church, a chapel, a meeting house or a graveyard.',
+      kind: 'archetype',
+      parent: null,
+    },
+    {
+      reference: 'cave',
+      labels: { en: 'Cave', fr: 'Caverne' },
+      description: 'A cave, a tunnel, a well or any passage under the earth.',
+      kind: 'archetype',
+      parent: null,
+    },
+    {
+      reference: 'ruin',
+      labels: { en: 'Ruin', fr: 'Ruine' },
+      description: 'A ruined building or ancient stonework, crumbling and overgrown.',
+      kind: 'archetype',
+      parent: null,
+    },
+  ],
+  /**
+   * The arms and gear of the 1920s, then generic archetypes for anything else
+   * the player picks up. Values stay small, as in the first world.
+   */
+  items: [
+    {
+      reference: 'revolver',
+      labels: { en: 'Revolver', fr: 'Revolver' },
+      description: 'A six-shot revolver, a .38 or a .45.',
+      kind: 'archetype',
+      generic: false,
+      stackable: false,
+      equippable: true,
+      modifiers: [
+        { target: 'damage', value: 3, condition: 'equipped', description: 'Revolver bullet' },
+      ],
+      initialHolder: null,
+    },
+    {
+      reference: 'shotgun',
+      labels: { en: 'Shotgun', fr: 'Fusil de chasse' },
+      description: 'A double-barrelled shotgun, two shots before reloading.',
+      kind: 'archetype',
+      generic: false,
+      stackable: false,
+      equippable: true,
+      modifiers: [
+        {
+          target: 'damage',
+          value: 4,
+          condition: 'equipped',
+          description: 'Buckshot at close range',
+        },
+        {
+          target: 'skill',
+          skill: 'stealth',
+          value: -1,
+          condition: 'equipped',
+          description: 'A long gun is hard to hide',
+        },
+      ],
+      initialHolder: null,
+    },
+    {
+      reference: 'rifle',
+      labels: { en: 'Rifle', fr: 'Carabine' },
+      description: 'A bolt-action or lever-action rifle, accurate at long range.',
+      kind: 'archetype',
+      generic: false,
+      stackable: false,
+      equippable: true,
+      modifiers: [
+        { target: 'damage', value: 3, condition: 'equipped', description: 'Rifle bullet' },
+        {
+          target: 'skill',
+          skill: 'firearms',
+          value: 1,
+          condition: 'equipped',
+          description: 'A steady, aimed long gun',
+        },
+      ],
+      initialHolder: null,
+    },
+    {
+      reference: 'knife',
+      labels: { en: 'Knife', fr: 'Couteau' },
+      description: 'A clasp knife, a rigging knife, a hunting knife or a straight razor.',
+      kind: 'archetype',
+      generic: false,
+      stackable: false,
+      equippable: true,
+      modifiers: [
+        { target: 'damage', value: 1, condition: 'equipped', description: 'Short blade' },
+      ],
+      initialHolder: null,
+    },
+    {
+      reference: 'improvised_weapon',
+      labels: { en: 'Improvised weapon', fr: 'Arme improvisée' },
+      description: 'Anything picked up to hit with: a boathook, a crowbar, a poker, an oar.',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: true,
+      modifiers: [
+        {
+          target: 'damage',
+          value: 1,
+          condition: 'equipped',
+          description: 'Something heavy to hit with',
+        },
+      ],
+      initialHolder: null,
+    },
+    {
+      reference: 'rope',
+      labels: { en: 'Rope', fr: 'Corde' },
+      description: 'A coil of rope or line.',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: false,
+      modifiers: [
+        {
+          target: 'skill',
+          skill: 'athletics',
+          value: 1,
+          condition: 'owned',
+          description: 'A rope to climb or haul with',
+        },
+      ],
+      initialHolder: null,
+    },
+    {
+      reference: 'tool',
+      labels: { en: 'Tool', fr: 'Outil' },
+      description: 'A key, a lantern, an electric torch, a crowbar or any other implement.',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: false,
+      modifiers: [],
+      initialHolder: null,
+    },
+    {
+      reference: 'document',
+      labels: { en: 'Document', fr: 'Document' },
+      description: 'A letter, a newspaper, a map, a book or any paper of no occult weight.',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: false,
+      modifiers: [],
+      initialHolder: null,
+    },
+    {
+      reference: 'trinket',
+      labels: { en: 'Trinket', fr: 'Babiole' },
+      description: 'A small object of value or interest: a ring, a coin, a carved figurine.',
+      kind: 'archetype',
+      generic: true,
+      stackable: false,
+      equippable: false,
+      modifiers: [],
+      initialHolder: null,
+    },
+    {
+      reference: 'food',
+      labels: { en: 'Food', fr: 'Vivres' },
+      description: 'A ration of food or a bottle of something to drink.',
+      kind: 'archetype',
+      generic: true,
+      stackable: true,
+      equippable: false,
+      modifiers: [],
+      initialHolder: null,
+    },
+    {
+      reference: 'ammunition',
+      labels: { en: 'Ammunition', fr: 'Munitions' },
+      description: 'Cartridges or shells for a firearm, one shot each.',
+      kind: 'archetype',
+      generic: true,
+      stackable: true,
+      equippable: false,
+      modifiers: [],
+      initialHolder: null,
+    },
+  ],
+  scenarios: [
+    {
+      reference: 'the_wreck_of_the_sovereign',
+      labels: { en: 'The Wreck of the Sovereign', fr: "L'Épave du Sovereign" },
+      synopsis:
+        "1926, the South Pacific. A seaquake has thrown up an island of black basalt where the charts show only open ocean, and on its slopes, crusted with weed and shells, lies the steamer Sovereign — lost with all hands a year ago, lifted from the sea floor with the rock. The trading schooner Perseverance has dropped anchor beyond the reef, and her captain sends a boat ashore for the Sovereign's strongbox. You pull an oar in that boat. Past the wreck, monoliths of carved stone rise from the steam, and the things that built them are not all dead.",
+      status: 'published',
+      chapters: [
+        { reference: 'landfall', labels: { en: 'Landfall', fr: "L'Accostage" } },
+        { reference: 'the_monoliths', labels: { en: 'The Monoliths', fr: 'Les Monolithes' } },
+        {
+          reference: 'what_sleeps_below',
+          labels: { en: 'What Sleeps Below', fr: 'Ce qui dort en dessous' },
+        },
+      ],
+      quests: [
+        {
+          reference: 'salvage_the_strongbox',
+          labels: { en: 'Salvage the strongbox', fr: 'Récupérer le coffre-fort' },
+        },
+        {
+          reference: 'the_fate_of_the_sovereign',
+          labels: { en: 'The fate of the Sovereign', fr: 'Le sort du Sovereign' },
+        },
+        {
+          reference: 'escape_the_island',
+          labels: { en: 'Escape the island', fr: "Quitter l'île" },
+        },
+      ],
+      pregeneratedCharacter: {
+        name: 'Jack Callahan',
+        attributes: { physical: 3, mental: 2, social: 2 },
+        skills: {
+          athletics: 3,
+          survival: 3,
+          brawling: 2,
+          observation: 1,
+          firearms: 1,
+          composure: 1,
+          intimidation: 1,
+        },
+        hitPointsMax: 10,
+        resources: { money: 6 },
+        /** What an able seaman takes ashore: his knife, a line, a lantern, a day's food. */
+        items: [
+          {
+            definition: 'knife',
+            descriptor: "a sailor's rigging knife, its blade worn thin",
+            quantity: 1,
+            equipped: true,
+          },
+          {
+            definition: 'rope',
+            descriptor: 'a coil of tarred hemp line',
+            quantity: 1,
+            equipped: false,
+          },
+          { definition: 'tool', descriptor: 'a storm lantern', quantity: 1, equipped: false },
+          {
+            definition: 'food',
+            descriptor: "ship's biscuit and salt pork",
+            quantity: 2,
+            equipped: false,
+          },
+        ],
+      },
+      /** The story opens as the boat grounds on the island's beach. */
+      initialState: {
+        location: 'black_sand_beach',
+        chapter: 'landfall',
+        quests: [
+          {
+            reference: 'salvage_the_strongbox',
+            step: 1,
+            summary:
+              "Find the Sovereign's strongbox in the wreck and bring it back to the boat for Captain Marsh.",
+          },
+        ],
+      },
+      glossary: [{ reference: 'ponape', labels: { en: 'Ponape', fr: 'Ponape' } }],
+      /**
+       * The landing party, the captain who sent it, and what waits ashore:
+       * the Sovereign's master, changed, and the priest of the drowned temple.
+       */
+      npcs: [
+        {
+          reference: 'captain_elias_marsh',
+          labels: { en: 'Captain Marsh', fr: 'Capitaine Marsh' },
+          description:
+            'Master of the Perseverance, a Marsh of Innsmouth: gruff, secretive, and steering for this island on purpose. He stays aboard.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'neutral',
+          combat: {
+            skills: { firearms: 3, survival: 4, intimidation: 3, deception: 3, occultism: 2 },
+            hitPointsMax: 12,
+            weapon: 'revolver',
+          },
+        },
+        {
+          reference: 'bosun_mcrae',
+          labels: { en: 'Bosun McRae', fr: 'Le bosco McRae' },
+          description:
+            'Bosun of the Perseverance and leader of the landing party: a hard, practical Scot who believes in nothing he cannot punch.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'friendly',
+          combat: {
+            skills: { brawling: 4, athletics: 3, survival: 3, intimidation: 3 },
+            hitPointsMax: 14,
+            weapon: 'knife',
+          },
+        },
+        {
+          reference: 'tomas_reyes',
+          labels: { en: 'Tomás Reyes', fr: 'Tomás Reyes' },
+          description:
+            'A young Filipino deckhand of the landing party, quick and superstitious, who knows island tales of the people from the sea.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'friendly',
+          combat: {
+            skills: { athletics: 3, observation: 3, stealth: 2, survival: 2 },
+            hitPointsMax: 9,
+            weapon: 'knife',
+          },
+        },
+        {
+          reference: 'professor_whitcombe',
+          labels: { en: 'Professor Whitcombe', fr: 'Le professeur Whitcombe' },
+          description:
+            'A Miskatonic University geologist who paid his passage to study the new island and came ashore with the boat: eager, short-sighted, out of his depth.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'neutral',
+          combat: {
+            skills: { scholarship: 4, occultism: 2, observation: 2 },
+            hitPointsMax: 7,
+            weapon: null,
+          },
+        },
+        {
+          reference: 'captain_voss',
+          labels: { en: 'Captain Voss', fr: 'Capitaine Voss' },
+          description:
+            'Master of the Sovereign, thought drowned a year ago — alive in the wreck, and changed: gills at his throat, eyes that never blink, his mind given to the deep.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'unfriendly',
+          combat: {
+            skills: { brawling: 4, stealth: 3, deception: 3, occultism: 3 },
+            hitPointsMax: 13,
+            weapon: null,
+          },
+        },
+        {
+          reference: 'the_drowned_priest',
+          labels: { en: 'The Drowned Priest', fr: 'Le Prêtre noyé' },
+          description:
+            'An ancient Deep One, vast and draped in weed and pale gold, who leads the rites in the drowned temple and calls to what sleeps beneath the island.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'hostile',
+          combat: {
+            skills: { brawling: 5, occultism: 5, intimidation: 5, athletics: 3 },
+            hitPointsMax: 22,
+            weapon: null,
+          },
+        },
+      ],
+      /** The ocean, the schooner, and the island from its beach to its drowned heart. */
+      locations: [
+        {
+          reference: 'south_pacific',
+          labels: { en: 'The South Pacific', fr: 'Le Pacifique Sud' },
+          description: 'Thousands of miles of empty ocean, far from any shipping lane.',
+          kind: 'unique',
+          parent: null,
+        },
+        {
+          reference: 'the_perseverance',
+          labels: { en: 'The Perseverance', fr: 'La Perseverance' },
+          description:
+            'A battered three-masted trading schooner anchored beyond the reef, a long row from the beach.',
+          kind: 'unique',
+          parent: 'south_pacific',
+        },
+        {
+          reference: 'risen_island',
+          labels: { en: 'The risen island', fr: "L'île surgie" },
+          description:
+            'An island of black basalt and steaming mud, risen from the seabed weeks ago and absent from every chart. Dead fish rot everywhere, and the ground still trembles.',
+          kind: 'unique',
+          parent: 'south_pacific',
+        },
+        {
+          reference: 'black_sand_beach',
+          labels: { en: 'The black sand beach', fr: 'La plage de sable noir' },
+          description:
+            'A beach of black volcanic sand strewn with dead fish and weed, where the landing party grounds its boat. Odd tracks lead inland.',
+          kind: 'unique',
+          parent: 'risen_island',
+        },
+        {
+          reference: 'sovereign_wreck',
+          labels: { en: 'The wreck of the Sovereign', fr: "L'épave du Sovereign" },
+          description:
+            'The steamer Sovereign, stranded high on the slope, her hull crusted with shells and weed, her holds still dripping. Her crew is nowhere — or not quite.',
+          kind: 'unique',
+          parent: 'risen_island',
+        },
+        {
+          reference: 'cyclopean_ruins',
+          labels: { en: 'The monoliths', fr: 'Les monolithes' },
+          description:
+            "Ruins of monolithic stone at the island's heart, blocks too vast for human hands, carved with sea-things and set at angles the eye cannot hold.",
+          kind: 'unique',
+          parent: 'risen_island',
+        },
+        {
+          reference: 'drowned_temple',
+          labels: { en: 'The drowned temple', fr: 'Le temple englouti' },
+          description:
+            'A temple sunk into the ruins, its lower halls still flooded with black water, where the Deep Ones gather around a great sealed door.',
+          kind: 'unique',
+          parent: 'cyclopean_ruins',
+        },
+      ],
+      items: [
+        {
+          reference: 'sovereign_strongbox',
+          labels: { en: "The Sovereign's strongbox", fr: 'Le coffre-fort du Sovereign' },
+          description:
+            "The Sovereign's iron strongbox, holding the company's gold and papers — heavy enough to need both arms.",
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [
+            {
+              target: 'skill',
+              skill: 'athletics',
+              value: -1,
+              condition: 'owned',
+              description: 'Lugging a heavy iron box',
+            },
+          ],
+          initialHolder: { holder: 'location', reference: 'sovereign_wreck' },
+        },
+        {
+          reference: 'sovereign_logbook',
+          labels: { en: "Captain Voss's logbook", fr: 'Le journal de bord du capitaine Voss' },
+          description:
+            "The Sovereign's log, swollen with seawater; its last entries record how the ship went down, and the words the drowned crew learned below.",
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [
+            {
+              target: 'skill',
+              skill: 'occultism',
+              value: 1,
+              condition: 'owned',
+              description: 'The rites and names the drowned crew wrote down',
+            },
+          ],
+          initialHolder: { holder: 'location', reference: 'sovereign_wreck' },
+        },
+        {
+          reference: 'elder_sign_stone',
+          labels: { en: 'The star-stone', fr: 'La pierre étoilée' },
+          description:
+            'A grey, five-pointed stone carved with the Elder Sign, which the things of the deep cannot abide.',
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [
+            {
+              target: 'skill',
+              skill: 'composure',
+              value: 2,
+              condition: 'owned',
+              description: 'The Elder Sign steadies the mind against what comes from the deep',
+            },
+          ],
+          initialHolder: { holder: 'location', reference: 'cyclopean_ruins' },
+        },
+        {
+          reference: 'deep_one_tiara',
+          labels: { en: 'The pale gold tiara', fr: "Le diadème d'or pâle" },
+          description:
+            'A tall tiara of pale, strange gold worked with sea-creatures in no human style, worn by the priest of the drowned temple.',
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [
+            {
+              target: 'skill',
+              skill: 'composure',
+              value: -1,
+              condition: 'owned',
+              description: 'Its alien patterns gnaw at the mind of whoever keeps it',
+            },
+          ],
+          initialHolder: { holder: 'npc', reference: 'the_drowned_priest' },
+        },
+      ],
+    },
+    {
+      reference: 'the_ward_inheritance',
+      labels: { en: 'The Ward Inheritance', fr: "L'Héritage de la Famille Ward" },
+      synopsis:
+        'New England, 1927. A letter from an Arkham attorney informs you that you are the last of the Wards, and heir to Ward House, a shuttered mansion on a lonely hill above the village of Cold Spring, left to you by a great-uncle, Silas Ward, who vanished last winter. Beneath its cellars lies a laboratory where generations of Wards practised a forbidden alchemy, raising the dead from their essential salts — and where Silas began the rite that calls Azathoth, the blind idiot god at the centre of all things. The rite is not finished. Each night, the house comes a little further loose from the world.',
+      status: 'published',
+      /** The chapters follow the house coming loose from the world. */
+      chapters: [
+        { reference: 'the_inheritance', labels: { en: 'The Inheritance', fr: "L'Héritage" } },
+        {
+          reference: 'beneath_the_house',
+          labels: { en: 'Beneath the House', fr: 'Sous la maison' },
+        },
+        { reference: 'the_unravelling', labels: { en: 'The Unravelling', fr: 'Le Délitement' } },
+        {
+          reference: 'the_calling',
+          labels: { en: 'The Calling of Azathoth', fr: "L'Appel d'Azathoth" },
+        },
+      ],
+      quests: [
+        {
+          reference: 'take_possession',
+          labels: { en: 'Take possession of Ward House', fr: 'Prendre possession du manoir Ward' },
+        },
+        {
+          reference: 'the_fate_of_silas',
+          labels: { en: 'The fate of Silas Ward', fr: 'Le sort de Silas Ward' },
+        },
+        { reference: 'stop_the_rite', labels: { en: 'Stop the rite', fr: 'Arrêter le rituel' } },
+      ],
+      pregeneratedCharacter: {
+        name: 'Edmund Ward',
+        attributes: { physical: 2, mental: 3, social: 2 },
+        skills: {
+          scholarship: 3,
+          observation: 2,
+          persuasion: 2,
+          occultism: 1,
+          composure: 1,
+          athletics: 1,
+          firearms: 1,
+        },
+        hitPointsMax: 8,
+        resources: { money: 40 },
+        /** What the heir brings from Boston: the attorney's letter, the keys he sent, a torch. */
+        items: [
+          {
+            definition: 'document',
+            descriptor: "Mr Crane's letter announcing the inheritance",
+            quantity: 1,
+            equipped: false,
+          },
+          {
+            definition: 'tool',
+            descriptor: 'the iron ring of house keys Mr Crane sent',
+            quantity: 1,
+            equipped: false,
+          },
+          { definition: 'tool', descriptor: 'an electric torch', quantity: 1, equipped: false },
+        ],
+      },
+      /** The story opens on the heir's arrival at the house. */
+      initialState: {
+        location: 'ward_house',
+        chapter: 'the_inheritance',
+        quests: [
+          {
+            reference: 'take_possession',
+            step: 1,
+            summary: 'Settle into Ward House and take stock of what your great-uncle left behind.',
+          },
+          {
+            reference: 'the_fate_of_silas',
+            step: 1,
+            summary:
+              'Find out what became of your great-uncle Silas Ward, who vanished last winter.',
+          },
+        ],
+      },
+      glossary: [],
+      /**
+       * The living who help or hinder the heir, the dead the Wards raised or
+       * would raise, and what seeps in through the rite.
+       */
+      npcs: [
+        {
+          reference: 'ephraim_crane',
+          labels: { en: 'Mr Crane', fr: 'Maître Crane' },
+          description:
+            "The Ward family's elderly attorney in Arkham: dry, punctilious, and knowing more about the Wards than he will say.",
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'neutral',
+          combat: {
+            skills: { persuasion: 3, scholarship: 3, observation: 3, deception: 2 },
+            hitPointsMax: 7,
+            weapon: null,
+          },
+        },
+        {
+          reference: 'martha_pike',
+          labels: { en: 'Martha Pike', fr: 'Martha Pike' },
+          description:
+            'The elderly housekeeper from Cold Spring who kept Ward House: kindly, frightened, she will not go below the ground floor and leaves before dusk.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'friendly',
+          combat: {
+            skills: { observation: 3, stealth: 2, composure: 2 },
+            hitPointsMax: 7,
+            weapon: null,
+          },
+        },
+        {
+          reference: 'henry_armitage',
+          labels: { en: 'Dr Armitage', fr: 'Le docteur Armitage' },
+          description:
+            'Dr Henry Armitage, the elderly librarian of Miskatonic University, learned in forbidden books and afraid of what they hold.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'neutral',
+          combat: {
+            skills: { scholarship: 5, occultism: 4, composure: 3 },
+            hitPointsMax: 7,
+            weapon: null,
+          },
+        },
+        {
+          reference: 'nathaniel_crowe',
+          labels: { en: 'Nathaniel Crowe', fr: 'Nathaniel Crowe' },
+          description:
+            'A soft-spoken Boston antiquarian who wants the Ward papers at any price — in truth a priest of the Outer Gods, waiting for the rite to be finished.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'neutral',
+          combat: {
+            skills: { occultism: 4, deception: 4, persuasion: 3, firearms: 2 },
+            hitPointsMax: 10,
+            weapon: 'revolver',
+          },
+        },
+        {
+          reference: 'josiah_ward',
+          labels: { en: 'Josiah Ward', fr: 'Josiah Ward' },
+          description:
+            'The alchemist of the family, dead since 1771, whose essential salts wait in the laboratory; once raised, a courtly, archaic gentleman who wants the rite completed.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'neutral',
+          combat: {
+            skills: { occultism: 5, deception: 4, scholarship: 4, intimidation: 3 },
+            hitPointsMax: 10,
+            weapon: null,
+          },
+        },
+        {
+          reference: 'silas_ward',
+          labels: { en: 'Silas Ward', fr: 'Silas Ward' },
+          description:
+            "The heir's great-uncle, vanished last winter — in truth alive in the sealed vault, wasted and half unmade by what his rite let in.",
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'unfriendly',
+          combat: {
+            skills: { occultism: 4, stealth: 3, brawling: 2 },
+            hitPointsMax: 8,
+            weapon: null,
+          },
+        },
+        {
+          reference: 'imperfect_revenant',
+          labels: { en: 'Revenant', fr: 'Revenant' },
+          description:
+            'A creature raised from impure or incomplete salts: malformed, mewling and in pain, kept in the pits beneath the laboratory.',
+          kind: 'archetype',
+          generic: false,
+          defaultDisposition: 'hostile',
+          combat: { skills: { brawling: 3, athletics: 2 }, hitPointsMax: 10, weapon: null },
+        },
+        {
+          reference: 'piping_servitor',
+          labels: { en: 'Piping servitor', fr: 'Serviteur flûtiste' },
+          description:
+            'A shapeless, flute-piping thing of the court of Azathoth that seeps through wherever the rite has thinned the world; to look at it is to lose the thread of things.',
+          kind: 'archetype',
+          generic: false,
+          defaultDisposition: 'hostile',
+          combat: {
+            skills: { brawling: 4, stealth: 3, intimidation: 5 },
+            hitPointsMax: 18,
+            weapon: null,
+          },
+        },
+      ],
+      /** The house, from its grounds to the vault beneath the laboratory, and the towns nearby. */
+      locations: [
+        {
+          reference: 'new_england',
+          labels: { en: 'New England', fr: 'Nouvelle-Angleterre' },
+          description:
+            'Rural Massachusetts: old stone walls, abandoned farms, dark woods and hills that keep their secrets.',
+          kind: 'unique',
+          parent: null,
+        },
+        {
+          reference: 'arkham',
+          labels: { en: 'Arkham', fr: 'Arkham' },
+          description:
+            'An old college town on the Miskatonic river, home of the university and its library of rare and forbidden books.',
+          kind: 'unique',
+          parent: 'new_england',
+        },
+        {
+          reference: 'cold_spring',
+          labels: { en: 'Cold Spring', fr: 'Cold Spring' },
+          description:
+            'A dwindling village at the foot of Ward hill: a general store, a white church, and villagers who avoid speaking of the Wards.',
+          kind: 'unique',
+          parent: 'new_england',
+        },
+        {
+          reference: 'ward_house',
+          labels: { en: 'Ward House', fr: 'Le manoir Ward' },
+          description:
+            'The Ward mansion, a gambrel-roofed Georgian pile on a lonely hill, shuttered for a year: dust sheets, stopped clocks, a library of old books, and a cellar door that sticks.',
+          kind: 'unique',
+          parent: 'new_england',
+        },
+        {
+          reference: 'ward_family_cemetery',
+          labels: { en: 'The Ward family plot', fr: 'Le cimetière des Ward' },
+          description:
+            'The family burial ground behind the house, under old elms; some of its graves have been opened, and not from above.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'ward_laboratory',
+          labels: { en: 'The laboratory', fr: 'Le laboratoire' },
+          description:
+            'A vaulted laboratory dug beneath the cellars: furnaces, alembics, shelves of jars of grey salts, covered pits in the floor. Here the world is thin — corners do not meet, and the walls seem to breathe.',
+          kind: 'unique',
+          parent: 'ward_house',
+        },
+        {
+          reference: 'sealed_vault',
+          labels: { en: 'The sealed vault', fr: 'Le caveau scellé' },
+          description:
+            'A deeper chamber behind an iron door, where Silas drew the circle of the rite of Azathoth. A far, thin piping never stops, and the dark beyond the circle has no walls.',
+          kind: 'unique',
+          parent: 'ward_laboratory',
+        },
+      ],
+      /**
+       * The books and keys of the mystery, the salts of the alchemy, and the
+       * instruments of the rite and of its undoing.
+       */
+      items: [
+        {
+          reference: 'silas_journal',
+          labels: { en: "Silas Ward's journal", fr: 'Le journal de Silas Ward' },
+          description:
+            "Silas Ward's journal, hidden in his study, recording his experiments with the salts, the rite he began, and his growing terror.",
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [
+            {
+              target: 'skill',
+              skill: 'occultism',
+              value: 1,
+              condition: 'owned',
+              description: "Silas's notes on the salts and on the rite",
+            },
+          ],
+          initialHolder: { holder: 'location', reference: 'ward_house' },
+        },
+        {
+          reference: 'iron_vault_key',
+          labels: { en: 'The iron key', fr: 'La clé de fer' },
+          description:
+            "A heavy iron key, hidden in Silas's study, that opens the iron door at the back of the laboratory.",
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [],
+          initialHolder: { holder: 'location', reference: 'ward_house' },
+        },
+        {
+          reference: 'necronomicon',
+          labels: { en: 'The Necronomicon', fr: 'Le Necronomicon' },
+          description:
+            "John Dee's English translation of the Necronomicon of Abdul Alhazred, its margins crowded with Josiah Ward's notes on the salts and on the rite of Azathoth.",
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [
+            {
+              target: 'skill',
+              skill: 'occultism',
+              value: 2,
+              condition: 'owned',
+              description: 'The rites and formulae it holds',
+            },
+            {
+              target: 'skill',
+              skill: 'composure',
+              value: -1,
+              condition: 'owned',
+              description: "Reading it erodes the reader's hold on the world",
+            },
+          ],
+          initialHolder: { holder: 'location', reference: 'ward_laboratory' },
+        },
+        {
+          reference: 'josiah_salts',
+          labels: { en: 'The salts of Josiah Ward', fr: 'Les sels de Josiah Ward' },
+          description:
+            'A lead urn of fine grey-blue powder: the essential salts of Josiah Ward, which the ascending formula raises into the living man.',
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [],
+          initialHolder: { holder: 'location', reference: 'ward_laboratory' },
+        },
+        {
+          reference: 'obsidian_athame',
+          labels: { en: 'The obsidian knife', fr: "Le couteau d'obsidienne" },
+          description:
+            'A black glass knife engraved with the seal of Azathoth, the instrument that opens and closes the circle of the rite.',
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: true,
+          modifiers: [
+            { target: 'damage', value: 1, condition: 'equipped', description: 'Glass-sharp edge' },
+            {
+              target: 'skill',
+              skill: 'occultism',
+              value: 1,
+              condition: 'equipped',
+              description: "The rite's own instrument, in hand",
+            },
+          ],
+          initialHolder: { holder: 'location', reference: 'sealed_vault' },
+        },
+        {
+          reference: 'descending_formula',
+          labels: { en: 'The descending formula', fr: 'La formule descendante' },
+          description:
+            "A slip of paper in Armitage's hand bearing the descending formula — the words that return what the salts raised to dust.",
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [
+            {
+              target: 'skill',
+              skill: 'occultism',
+              value: 1,
+              condition: 'owned',
+              description: 'The words that unmake what alchemy raised',
+            },
+          ],
+          initialHolder: { holder: 'npc', reference: 'henry_armitage' },
+        },
+        {
+          reference: 'jar_of_salts',
+          labels: { en: 'Jar of salts', fr: 'Bocal de sels' },
+          description:
+            'A stoppered jar of grey essential salts, labelled in an old hand with a name and a date: someone, waiting to be raised.',
+          kind: 'archetype',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [],
+          initialHolder: null,
+        },
+        {
+          reference: 'alchemical_reagent',
+          labels: { en: 'Alchemical reagent', fr: 'Réactif alchimique' },
+          description:
+            'A dose of an alchemical preparation: quicksilver, vitriol, sulphur, powdered bone.',
+          kind: 'archetype',
+          generic: true,
+          stackable: true,
+          equippable: false,
+          modifiers: [],
+          initialHolder: null,
+        },
+      ],
+    },
+  ],
+}

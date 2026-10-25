@@ -82,7 +82,10 @@ test.group('Publication', (group) => {
 
     response.assertStatus(200)
     const catalogue = await client.get('/api/v1/scenarios').loginAs(await userWith('player'))
-    assert.deepEqual(bodyOf(catalogue).data, [])
+    assert.notInclude(
+      bodyOf(catalogue).data.map(({ id }: { id: string }) => id),
+      scenarioId
+    )
   })
 
   test('a published scenario broken since is not played from', async ({ client, assert }) => {

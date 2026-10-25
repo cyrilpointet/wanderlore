@@ -49,7 +49,10 @@ test.group('New game | catalogue', (group) => {
     const response = await client.get('/api/v1/scenarios').loginAs(await userWith())
 
     response.assertStatus(200)
-    assert.deepEqual(dataOf(response), [
+    const musketeers = dataOf(response).filter(
+      ({ world }: { world: { reference: string } }) => world.reference === 'three_musketeers'
+    )
+    assert.deepEqual(musketeers, [
       {
         id: scenarioId,
         title: 'A Gascon in Paris',
