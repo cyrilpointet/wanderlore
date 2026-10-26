@@ -70,7 +70,11 @@ Transforme le texte libre du joueur en décision structurée :
 - Plausibilité dans l'univers (cohérence avec le lore)
 - Mode de résolution : succès automatique / échec automatique narratif / jet requis
 - Modificateurs **contextuels** uniquement (situationnels, propres au tour) — jamais les bonus/malus d'objets, qui sont calculés par le backend (voir ci-dessous)
+- Durée du tour, en label d'une échelle fermée, convertie par le backend (Phase 7, voir section 6quinquies) ; et, dans un réseau de lieux, la destination d'un déplacement, choisie parmi les lieux atteignables, dont le backend chiffre le trajet (section 6quater)
 - Détection de tentative de prompt injection ou de sortie de cadre
+
+**Avancée de l'horloge — Backend, déterministe**
+Juste après l'arbitrage, avant la narration : le backend convertit la durée proposée, y ajoute le trajet vers la destination annoncée, et en déduit l'heure à laquelle le tour se termine — que la narration doit connaître pour la raconter. Un aparté ne prend aucun temps. L'horloge s'écrit avec le reste de l'état, dans la transaction du tour (section 6quinquies).
 
 **Calcul du jet — Backend, déterministe**
 d100 sous la chance, selon le BRP (système de règles, section 2) : compétence — ou caractéristique × 5 — multipliée par la difficulté, puis modificateurs contextuels (proposés par le LLM en labels qualitatifs, convertis par le backend, 3 au plus) et modificateurs d'objets (calculés par le backend à partir de l'inventaire du personnage, jamais proposés par le LLM). Le résultat est l'un des cinq degrés du BRP. Jamais délégué au LLM : c'est le seul point du pipeline qui garantit que les stats du joueur ne sont jamais soumises à l'interprétation du modèle.
@@ -112,9 +116,9 @@ Pertinent seulement pour des lores massifs (corpus de type encyclopédie) où le
 
 | Étape | Lore | State | Mémoire narrative |
 |---|---|---|---|
-| A+B+C | Règles ciblées par les tags déclenchés par l'input | Scène courante : PNJ présents, lieu, objets en scène (personnage, PNJ présents, lieu) | Résumé + buffer court (2 derniers tours) |
-| D | Fragments d'ambiance/description liés au lieu (pas les règles) | Scène complète + résultat de résolution | Résumé + buffer récent (2–4 tours), pour la continuité de ton |
-| E | Aucun | Handles présents, objets en scène, schéma des champs modifiables (pas les valeurs actuelles) | Aucun (le texte narré suffit) |
+| A+B+C | Règles ciblées par les tags déclenchés par l'input | Scène courante : PNJ présents, lieu et sa description, sorties du lieu avec leur état, lieux atteignables, période de la journée, objets en scène (personnage, PNJ présents, lieu) | Résumé + buffer court (2 derniers tours) |
+| D | Fragments d'ambiance/description liés au lieu (pas les règles) | Scène complète + résultat de résolution, description et sorties du lieu (cachées comprises, marquées), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) | Résumé + buffer récent (2–4 tours), pour la continuité de ton |
+| E | Aucun | Handles présents, objets en scène, destinations permises, sorties cachées et verrouillées du lieu, schéma des champs modifiables (pas les valeurs actuelles) — jamais la description du lieu ni le temps | Aucun (le texte narré suffit) |
 | Job résumé (async) | Aucun | Aucun | Résumé précédent + tours bruts à compresser |
 
 **Point clé** : le lore n'est jamais injecté en bloc. Il est filtré différemment selon l'usage — règles pour l'arbitrage (A+B+C), ambiance pour la narration (D) — même s'il provient de la même table source.
@@ -503,8 +507,11 @@ une instruction.
   "narrated_text": "Le garde examine le sceau sur la lettre, son visage se détend légèrement. « Le maître Tallec... » murmure-t-il. Il s'écarte d'un pas et vous fait signe d'avancer. Derrière lui, un sergent à la moustache grise observe la scène sans rien dire. « Ne traînez pas en chemin. »",
   "npcs_present": ["royal_guard_2"],
   "npc_definitions": ["royal_guard", "commoner", "soldier", "noble"],
-  "unique_locations": ["paris", "noble_zone", "louvre", "france"],
+  "movement_destinations": [{ "reference": "noble_zone", "label": "The noble quarter" }, { "reference": "louvre", "label": "The Louvre" }],
   "location_archetypes": ["tavern", "alley", "town", "road"],
+  "parent_locations": ["paris", "noble_zone", "louvre", "france"],
+  "hidden_exits": [],
+  "locked_exits": [],
   "items_in_scene": {
     "character": ["recommendation_letter"],
     "npcs": { "royal_guard_2": [] },
@@ -756,8 +763,9 @@ Les lieux suivent le même modèle, dès la Phase 3 : voir section 6quater.
 
 ## 6quater. Lieux : définitions et instances
 
-Tranché avant la Phase 3, et implémenté dès la Phase 3 avec les PNJ. Les lieux suivent le
-modèle des PNJ (section 6ter), avec trois adaptations qui leur sont propres.
+Tranché avant la Phase 3, et implémenté dès la Phase 3 avec les PNJ ; complété en Phase 7
+par le grain du catalogue, les réseaux de lieux et la localisation des PNJ. Les lieux suivent
+le modèle des PNJ (section 6ter), avec quatre adaptations qui leur sont propres.
 
 ### Le modèle commun
 
@@ -783,30 +791,142 @@ modèle des PNJ (section 6ter), avec trois adaptations qui leur sont propres.
    filtrage du lore par tags (Phase 8) et pour son affichage. Un voyage vers un lieu
    improvisé prend pour parent le lieu unique le plus englobant pertinent : le catalogue porte
    donc quelques lieux de grande échelle (`france`, `england`) qui servent de racines.
-2. **Le grain reste la règle.** Passer de la salle commune à l'écurie n'est pas un
-   déplacement. Une instance ne se crée que lorsque la scène change réellement de lieu — sans
-   quoi chaque ruelle deviendrait un lieu.
-3. **Les lieux s'affichent au front** (pastille de lieu). Le libellé transmis est le **nom
-   propre** s'il existe (« Orléans »), sinon le **libellé de l'archétype suivi de celui du
-   parent** (« Tavern · Meung-sur-Loire »). Le descripteur, en anglais, reste réservé au
-   narrateur. Le front reçoit toujours `{ reference, label }`, `reference` étant le handle.
+2. **Le grain est celui du catalogue** (Phase 7). Rejoindre un autre lieu de la liste fermée
+   est un déplacement, si proche soit-il : du hall à la bibliothèque du manoir Ward, c'en est
+   un, parce que le scénario a fait de chaque pièce un lieu. Se déplacer à l'intérieur d'un
+   lieu n'en est pas un : une auberge décrite comme un seul lieu reste un seul lieu. C'est
+   l'auteur du scénario qui choisit le grain en détaillant ou non un lieu en sous-lieux ; un
+   lieu improvisé garde le grain de la scène — sans quoi chaque ruelle deviendrait un lieu.
+3. **Les lieux s'affichent au front** (pastille de lieu). Le libellé transmis est, pour un
+   lieu unique, son nom — suivi de celui de son parent pour une pièce d'un réseau (« La
+   cuisine · Le manoir Ward »), « La cuisine » seule ne disant pas où ; pour un lieu improvisé,
+   son **nom propre** s'il existe (« Orléans »), sinon le **libellé de l'archétype suivi de
+   celui du parent** (« Tavern · Meung-sur-Loire »). Le descripteur, en anglais, reste réservé
+   aux prompts. Le front reçoit toujours `{ reference, label }`, `reference` étant le handle.
+4. **Le lieu courant se décrit aux prompts** (Phase 7) : la `description` d'un lieu unique, ou
+   le descripteur d'une instance d'archétype et la description de son parent. L'arbitrage la
+   reçoit (ce que le lieu permet : se cacher sous les housses, escalader les rayonnages), la
+   narration aussi, l'extraction jamais. Quelques dizaines de jetons, jamais le catalogue.
+
+### Réseaux de lieux et sorties (Phase 7)
+
+Un lieu unique peut déclarer ses **sorties** (`location_definitions.exits`) : chacune mène à un
+autre lieu unique, se décrit en une ligne d'anglais (`passage`, et `backPassage` vue de l'autre
+côté si le texte diffère), peut être **cachée** (du seul côté déclaré : vue de l'autre côté, la
+porte est en vue), **verrouillée** par un objet (`requires`, des deux côtés), **à sens unique**,
+et porter une **durée** de l'échelle fixe (`moment`, `minutes`, `hour`, `hours`). Un passage se
+déclare **une fois, d'un seul côté**, et vaut dans les deux sens ; au plus un passage joint deux
+lieux, si bien que la paire déclarée le nomme quel que soit le sens où on le franchit.
+
+Trois sortes de lieux uniques en découlent :
+
+| sorte | définition | depuis lui, on va vers |
+|---|---|---|
+| **lieu libre** | aucune sortie (Paris, Cold Spring) | les lieux libres, les entrées, un lieu improvisé |
+| **lieu en réseau** | au moins une sortie, déclarée chez lui ou chez un voisin | ses lieux atteignables seulement |
+| **entrée** | lieu en réseau marqué `entrance` | les deux |
+
+On ne déclare jamais de sortie vers un lieu libre (il deviendrait en réseau, par symétrie) : le
+raccord passe par les entrées, et un voyage libre se chiffre par le label de l'arbitrage. On
+n'improvise pas dans un réseau (« la salle de bains » du manoir ne déplace personne). Un lieu
+qui **contient** un réseau sans en faire partie (`ward_house`) n'est pas une destination —
+« être dans le manoir » sans être dans une pièce n'a pas de sens — et reste parent.
+
+**Lieux atteignables, calculés par le backend** à chaque tour, sans le LLM : un lieu l'est s'il
+existe un chemin de passages **praticables** (dans le bon sens, découvert ou non caché de ce
+côté, déverrouillé ou ouvert par un objet que le personnage détient) dont toutes les étapes
+intermédiaires sont **déjà visitées** ; seule la dernière peut être nouvelle. On revient en un
+tour dans une pièce connue, on découvre un territoire nouveau pièce par pièce. Un lieu où se
+tient un PNJ absent `hostile` n'est jamais une étape intermédiaire : on peut y entrer, pas le
+traverser. Chaque lieu atteignable l'est par son **chemin le plus court en temps**.
+
+**Dans le tour :**
+
+- l'arbitrage reçoit les sorties du lieu avec leur état (cachée non trouvée, verrouillée et
+  l'objet qui l'ouvre, sens unique) et la liste fermée `reachable_locations` ; pour un
+  déplacement, il remplit `intent.destination` (hors liste : nouvelle tentative ; hors réseau :
+  ignorée, elle ne chiffre rien) ;
+- le backend chiffre la durée du tour : le chemin vers la destination, puis le label de ce qui
+  se fait à l'arrivée ;
+- la narration reçoit le lieu, ses sorties par le nom des lieux où elles mènent — les cachées
+  non trouvées comprises, marquées, avec la consigne de ne les révéler que si le personnage
+  cherche et que l'histoire lui en donne la raison (sur le modèle des objets en scène) — et le
+  chemin, passage par passage ; un aparté ne reçoit que les sorties connues ;
+- l'extraction reste juge du déplacement réel. Sa liste fermée est celle des destinations
+  permises depuis le lieu où le tour a commencé, **en comptant ouvertes toutes ses sorties
+  cachées ou verrouillées** ; elle propose `passages_discovered` et `passages_unlocked` (par le
+  lieu où mène la sortie, listes fermées), et la validation n'accepte un déplacement à travers
+  une sortie fermée que si la même narration la trouve ou l'ouvre — « je trouve la porte
+  derrière les casiers et je descends » se joue en un tour ;
+- à l'application, les passages trouvés ou ouverts passent **avant** le déplacement, qui peut
+  les emprunter ; un passage verrouillé franchi avec l'objet requis est **déverrouillé pour de
+  bon** par le backend. On ne referme pas une porte.
+
+Ce qu'une partie a appris de ses passages vit dans `passage_states` (une ligne par passage dont
+l'état a changé, partagée par ses deux sens), écrit par le service des passages seul.
+`checkScenario` refuse une sortie vers soi ou vers un lieu inconnu, deux passages entre les
+mêmes lieux, un objet requis ou une durée inconnus, une entrée sans sortie, un réseau sans
+entrée qui ne contient pas le lieu de départ, et un départ dans un lieu qui ne fait que
+contenir un réseau.
 
 ### Déplacement
 
 L'extraction propose un déplacement vers :
 
-- un **lieu unique** du catalogue, par sa référence — le backend crée l'instance à la première
-  visite, la réutilise ensuite ;
-- ou un **nouveau lieu d'archétype** : `{ definition, parent, descriptor, name }`, où
-  `definition` vient de la liste fermée des archétypes et `parent` de celle des lieux uniques.
+- un **lieu unique** de la liste des destinations permises, par sa référence — le backend crée
+  l'instance à la première visite, la réutilise ensuite ;
+- ou, hors réseau seulement, un **nouveau lieu d'archétype** :
+  `{ definition, parent, descriptor, name }`, où `definition` vient de la liste fermée des
+  archétypes et `parent` de celle des lieux uniques.
 
-Revenir dans un lieu improvisé déjà visité (la même auberge) n'est pas pris en charge en
-Phase 3, pour la même raison que le rappel des PNJ absents : cela relève de la mémoire long
-terme (Phase 9). Un retour crée une nouvelle instance.
+Revenir dans un lieu improvisé déjà visité (la même auberge) n'est pas pris en charge, pour la
+même raison que le rappel des PNJ partis on ne sait où : cela relève de la mémoire long terme
+(Phase 9). Un retour crée une nouvelle instance.
 
-**Lien avec les PNJ.** La présence d'un PNJ est celle de la scène : quand le joueur change de
-lieu, les PNJ présents passent `absent`, sauf ceux que l'extraction désigne comme le suivant
-(`npcs_following`, liste fermée des handles présents).
+**Localisation des PNJ** (Phase 7, `npc_instances.location_instance_id`). La présence d'un PNJ
+est celle de la scène ; son lieu est celui où il se trouve quand la scène n'est plus avec lui :
+
+- **laissé derrière** : quand le joueur change de lieu, les PNJ présents qui ne le suivent pas
+  (`npcs_following`) passent `absent` et gardent le lieu de la scène ; ceux qui suivent prennent
+  le nouveau lieu ;
+- **parti de lui-même** (`npcs_left`) : `absent`, lieu inconnu — on ne le retrouve pas d'office ;
+  un unique peut toujours revenir par `npcs_entered` ;
+- **retrouvé** : à l'arrivée dans un lieu, le backend rend présents les PNJ absents qui s'y
+  trouvent, les morts restant morts. Quand l'arbitrage a nommé la destination, la narration du
+  tour d'arrivée les reçoit (`npcs_at_destination`) ; en voyage libre, ils n'apparaissent qu'au
+  tour suivant.
+
+Les emplois du temps des PNJ (le vampire au tombeau le jour) attendent la Phase 10.
+
+---
+
+## 6quinquies. Temps de jeu (Phase 7)
+
+Une **horloge de jeu** tenue par le backend : un compteur en secondes depuis minuit du premier
+jour de la partie (`world_states.game_time`), sans rapport avec l'heure réelle ni avec le port
+`Clock`. Le scénario fixe l'heure d'ouverture (obligatoire) et, s'il en a une, la date
+grégorienne ; une partie les copie à son lancement, comme l'état initial. L'heure, la
+**période** (sept, à bornes fixes : `dawn` 5 h, `morning` 7 h, `midday` 12 h, `afternoon` 14 h,
+`dusk` 18 h, `evening` 20 h, `night` 22 h), le numéro de jour et la date en dérivent ; rien de
+cela n'est stocké. Tout est fixe dans le code, comme le moteur de règles (`game_time.ts`).
+
+**La durée d'un tour** est un label proposé par l'arbitrage, que le backend convertit :
+`moment` (1 min), `minutes` (10 min), `hour`, `hours` (4 h), `days` avec un nombre de 1 à 7,
+`until` une période (jusqu'à son prochain début, strictement dans le futur). La même en réussite
+ou en échec ; un aparté ne prend aucun temps ; dans un réseau, le trajet vers la destination
+s'y ajoute (section 6quater). Le round du BRP, les soins et les échéances attendent la Phase 10.
+
+**Ce que voit chaque étape :**
+
+| étape | temps reçu |
+|---|---|
+| arbitrage | la période courante, une circonstance comme une autre (l'obscurité, une boutique fermée) |
+| narration | les périodes de début et de fin, l'heure de fin **arrondie au quart d'heure**, le numéro de jour, la date et le jour de la semaine si l'histoire a une date ; consigne : ne jamais contredire le temps écoulé, ne donner l'heure que si le personnage a de quoi la connaître (montre, horloge, cloches) |
+| extraction | rien |
+| joueur | la **période seule** (onglet « Situation ») : ni heure, ni date, ni jour, qui ne quittent jamais le backend |
+
+L'invariant 5 n'est pas en cause : l'heure n'est pas une donnée mécanique du jet. `turn_log`
+garde l'horloge avant et après le tour, et la durée proposée.
 
 ---
 
@@ -866,7 +986,7 @@ Cette séparation permet de :
 ```
 step_started    { event, turnId, idempotencyKey, step: "arbitration" | "narration" }
 roll_resolved   { event, turnId, idempotencyKey, skill: { reference, label } | null, characteristic, value, baseChance, difficulty, modifiers, chance, roll, result, degree }
-turn_completed  { event, turnId, idempotencyKey, turn, character }
+turn_completed  { event, turnId, idempotencyKey, turn, character, location, period }
 turn_failed     { event, turnId, idempotencyKey, failure: { code, message } }
 ```
 
@@ -895,7 +1015,7 @@ narration_chunk { event, turnId, idempotencyKey, text }
 
 - `text` est un fragment **à ajouter** au texte déjà reçu, pas le texte cumulé.
 - Séquence d'un tour : `step_started(arbitration)`, `roll_resolved` s'il y a un jet, `step_started(narration)`, des `narration_chunk`, puis `turn_completed` ou `turn_failed`. L'appel fusionné de la branche sans jet disparaît avec la séparation des étapes : les deux branches streament leur narration.
-- **Pas de `step_started(extraction)`** (tranché en KAN-40). La narration est déjà à l'écran quand l'extraction commence, et elle reste provisoire jusqu'à `turn_completed` : un message d'attente de plus n'apprendrait rien au joueur. `turn_completed` porte, en plus du tour et de la fiche, le **lieu courant libellé** (`{ reference, label }`), pour la pastille de lieu.
+- **Pas de `step_started(extraction)`** (tranché en KAN-40). La narration est déjà à l'écran quand l'extraction commence, et elle reste provisoire jusqu'à `turn_completed` : un message d'attente de plus n'apprendrait rien au joueur. `turn_completed` porte, en plus du tour et de la fiche, le **lieu courant libellé** (`{ reference, label }`), pour la pastille de lieu. Depuis la Phase 7, il porte aussi la **période de la journée** où le tour s'achève (`period`, enum fermé libellé par le front), comme la vue d'une partie (`GET /sessions/:id`) ; l'heure, la date et le numéro de jour ne quittent jamais le backend : le récit seul les donne, à un personnage qui a de quoi les connaître.
 - **Aparté au MJ** (tranché pendant la validation de la Phase 3) : une remarque ou une question adressée au MJ plutôt qu'une action du personnage (« je croyais que l'auberge était à Meung ») est classée par l'arbitrage en `intent.type: out_of_character`, toujours en succès automatique. Le narrateur y répond brièvement sans faire avancer l'histoire, et le **backend saute l'extraction** : rien ne change dans le state, et ce n'est pas au modèle de le décider. Le tour coûte deux appels au lieu de trois.
 - **La narration diffusée reste provisoire jusqu'à `turn_completed`.** L'extraction (E) et la validation viennent après elle et peuvent échouer. Sur `turn_failed`, le front **retire la narration provisoire** et affiche l'encadré d'échec : le tour n'a pas eu lieu (pas de numéro, pas d'effets), sa narration non plus.
 - Sur `turn_completed`, la narration du tour reçu **remplace** le texte cumulé : c'est la version persistée qui fait foi.
@@ -944,19 +1064,21 @@ Tour de jeu
 ├─ Étape 0 (backend, dans le job) : récupération state + lore taggué + mémoire
 │
 ├─ Étape 1 (LLM, A+B+C) → event: step_completed (arbitration)
-│   IN  : lore filtré (règles) + state scène + perso + résumé + buffer court (2 tours) + input joueur + language
-│   OUT : intent + validity + resolution + alert
+│   IN  : lore filtré (règles) + state scène (lieu décrit, sorties, lieux atteignables, période) + perso + résumé + buffer court (2 tours) + input joueur + language
+│   OUT : intent (+ destination dans un réseau) + validity + resolution + duration + alert
+│
+├─ Backend : avancée de l'horloge (durée convertie + trajet vers la destination, aparté = 0)
 │
 ├─ Étape 2 (backend) : calcul du jet si requis → event: roll_resolved
 │   IN  : compétence ou caractéristique + modificateurs + difficulté
 │   OUT : résultat déterministe (d100, chance, success/failure + degré)
 │
 ├─ Étape 3 (LLM, D — narration) → event: narration_chunk (streaming)
-│   IN  : lore filtré (ambiance) + state scène + resolution + résumé + buffer + language
+│   IN  : lore filtré (ambiance) + state scène (lieu, sorties, chemin, PNJ à la destination) + temps du tour + resolution + résumé + buffer + language
 │   OUT : narration (texte, dans la langue demandée) + ambiance_flags (en anglais)
 │
 ├─ Étape 4 (LLM, E — extraction)
-│   IN  : narrated_text + allowed_effects_schema
+│   IN  : narrated_text + allowed_effects_schema (destinations permises, sorties cachées et verrouillées)
 │   OUT : delta d'état structuré (clés et valeurs en anglais)
 │
 ├─ Étape 5 (backend) : validation + application du delta + écriture turn_log → event: turn_completed

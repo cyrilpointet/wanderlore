@@ -78,6 +78,8 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
 | `quests` | jsonb | `[{ reference, labels }]` |
 | `pregenerated_character` | jsonb, nullable | le personnage copié dans chaque partie : `name`, `characteristics` (les sept du BRP), `skills` (en pourcentage, les seules compétences entraînées), `resources` (valeurs par référence), `items` (`definition`, `descriptor`, `quantity`, `equipped`). Pas de points de vie : ils se dérivent de CON et TAI au lancement de la partie |
 | `initial_state` | jsonb, nullable | là où une partie commence : `location` (lieu unique), `chapter`, `quests` (`reference`, `step`, `summary`) |
+| `start_time` | time, non nul, 08:00 par défaut | heure d'ouverture de l'histoire, à la minute (Phase 7) |
+| `start_date` | date, nullable | date grégorienne d'ouverture, si l'histoire en a une (Phase 7) |
 | `glossary` | jsonb | complète le glossaire de l'univers |
 | `created_by` | FK → users, nullable | auteur |
 | `created_at` / `updated_at` | timestamptz | — |
@@ -89,8 +91,9 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
   publication vérifie que le scénario tient debout (`checkScenario`, références, archétypes
   génériques, personnage, état initial, nom anglais partout) et renvoie la liste complète des
   incohérences ; la vérification est refaite au lancement de chaque partie.
-- **Lancer une partie** copie le prétiré et l'état initial dans une partie neuve, dans une
-  transaction. La création guidée de personnage attend la Phase 10.
+- **Lancer une partie** copie le prétiré, l'état initial et le départ de l'horloge (heure et
+  date) dans une partie neuve, dans une transaction : modifier ensuite le scénario ne décale
+  pas une partie en cours. La création guidée de personnage attend la Phase 10.
 - Différés : `branch_points`, conditions de progression des chapitres.
 
 **`glossary`** fige la traduction des noms propres, pour éviter qu'un même nom soit rendu
@@ -121,14 +124,14 @@ Colonnes propres à chaque catalogue :
 | Table | Colonnes |
 |---|---|
 | `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null) |
-| `location_definitions` | `parent` (lieu unique englobant ; null pour un archétype, qui reçoit son parent par instance) |
+| `location_definitions` | `parent` (lieu unique englobant ; null pour un archétype, qui reçoit son parent par instance) ; depuis la Phase 7, `exits` (jsonb, `[]` par défaut : `to`, `passage`, `backPassage`, `hidden`, `requires`, `oneWay`, `duration` — voir architecture, section 6quater) et `entrance` (booléen) |
 | `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `weapon` (jsonb, nullable depuis la Phase 6 : `skill`, `damage` en dés comme `1D6+1`, `damageModifier` `full` / `half` / `none`, `special`), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement) |
 
 - Unicité de la référence parmi les définitions de l'univers, et parmi celles de chaque
   scénario (index uniques partiels) : une définition de scénario peut reprendre la référence
   d'une définition de l'univers — c'est ainsi qu'elle la surcharge.
 - CHECK : un unique n'est ni générique ni empilable ; un archétype n'a ni parent ni détenteur
-  initial. L'API le refuse en amont, sur le champ fautif (`kind_mismatch`).
+  initial, ni sortie, ni entrée. L'API le refuse en amont, sur le champ fautif (`kind_mismatch`).
 - **Une définition qu'emploie une instance d'une partie ne se supprime pas** (`content_in_use`) ;
   libellés, description et mécanique restent modifiables et valent dès le tour suivant.
 
@@ -314,6 +317,8 @@ de dégâts : ses dés sont dans son profil d'arme (`weapon`).
 | `narrative_flags` | jsonb | événements/booléens déclenchés (ex: `"noble_zone_access_granted": true`) |
 | ~~`visited_locations`~~ | — | **remplacé en Phase 3** par `current_location_id` et la table `location_instances`, qui forme la liste des lieux visités |
 | `current_location_id` | FK → location_instances | lieu courant de la partie (Phase 3) |
+| `game_time` | int, non nul | horloge de jeu : secondes depuis minuit du premier jour (Phase 7). Heure, période, jour et date en dérivent, jamais stockés |
+| `start_date` | date, nullable | date d'ouverture copiée du scénario au lancement (Phase 7) |
 | ~~`world_objects`~~ | — | **retiré en Phase 4** : les objets du monde sont les lignes d'`inventory_items` détenues par un lieu ou un PNJ |
 | `updated_at` | timestamp | — |
 
@@ -375,9 +380,31 @@ est une instance d'archétype générique. Voir architecture, section 6ter.
 la définition à l'instanciation ; null sur une instance antérieure, lu comme « indemne ». Les
 objets qu'un PNJ détient sont des lignes d'`inventory_items`.
 
-**Colonnes prévues plus tard** : `revealed_information` (jsonb, ce que ce PNJ a révélé au
-joueur), quand un tour le lira ; `last_location`, si la mémoire long terme (Phase 9) rappelle
-les PNJ connus d'un lieu.
+**Ajouté en Phase 7** : `location_instance_id` (FK → location_instances, nullable, `on delete
+set null`) — le lieu où se trouve le PNJ quand la scène n'est plus avec lui : celui où il a été
+laissé, null s'il est parti de lui-même. À l'arrivée du joueur dans un lieu, les PNJ absents qui
+s'y trouvent repassent `present`. La migration place les PNJ présents dans le lieu courant de
+leur partie ; les absents restent sans lieu.
+
+**Colonne prévue plus tard** : `revealed_information` (jsonb, ce que ce PNJ a révélé au
+joueur), quand un tour le lira.
+
+### `passage_states`
+
+Ce qu'une partie a appris de ses passages (Phase 7) : une ligne par passage dont l'état a
+changé, partagée par ses deux sens. Écrite par le seul service des passages. Voir architecture,
+section 6quater.
+
+| Colonne | Type | Contenu |
+|---|---|---|
+| `id` | uuid | identifiant |
+| `session_id` | FK → sessions (cascade) | partie parente |
+| `from_reference` / `to_reference` | varchar | le passage tel que déclaré : le lieu qui le déclare et celui où il mène. Au plus un passage joint deux lieux, la paire le nomme |
+| `discovered_at` | timestamptz, nullable | passage caché trouvé |
+| `unlocked_at` | timestamptz, nullable | passage verrouillé ouvert, pour de bon |
+| `created_at` / `updated_at` | timestamptz | — |
+
+- Unicité sur `(session_id, from_reference, to_reference)`.
 
 ---
 
@@ -405,6 +432,8 @@ Log complet de chaque tour, table à plus forte volumétrie du système. Indispe
 | `alerts` | jsonb | prompt injection suspectée, hors cadre, etc. |
 | `llm_usage` | jsonb | jetons consommés par appel du tour (entrée, sortie, raisonnement), tentatives rejetées comprises ; chaque entrée porte son étape (`arbitration`, `narration`, `extraction`) et son numéro de tentative |
 | `language` | text | langue de la partie pour ce tour |
+| `game_time_before` / `game_time_after` | int, nullable | horloge de jeu de part et d'autre du tour (Phase 7) ; null avant la Phase 7 ou pour un tour mort avant l'arbitrage |
+| `duration` | jsonb, nullable | durée proposée par l'arbitrage : label, avec `count` ou `period` (Phase 7) |
 | `created_at` | timestamp | — |
 
 **Pourquoi tracer `language` à côté de `llm_usage`** : le coût réel d'un tour varie
@@ -499,6 +528,7 @@ worlds ──┬── lore_fragments (Phase 8)
                               ├── npc_instances ──────┼── inventory_items
                               ├── location_instances ─┘   (un détenteur parmi trois)
                               ├── world_states (1:1)
+                              ├── passage_states (Phase 7)
                               ├── turn_log
                               └── narrative_summaries (Phase 9)
 

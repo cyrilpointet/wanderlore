@@ -259,7 +259,11 @@ Contenu Phase 2, tout fourni par le backend avec les libellés :
 - **Ressources** : *Purse 15*.
 - **Situation** : lieu actuel et quête en cours avec son résumé. Retenu en Phase 2 (KAN-15) :
   l'état d'accueil d'une partie neuve exige déjà ces données, et le bloc sert la reprise
-  après interruption.
+  après interruption. Depuis la Phase 7, la **période de la journée** (*Dusk*) sous le lieu —
+  jamais l'heure, la date ni le numéro de jour, et jamais les sorties du lieu : le joueur les
+  apprend par le récit, par les moyens de son personnage (une montre pour l'heure). Une pièce
+  d'un réseau s'affiche suivie du lieu qui la contient (*The kitchen · Ward House*), libellé
+  construit par le backend.
 
 Pas d'inventaire (Phase 4), pas d'action possible depuis la fiche.
 
@@ -384,7 +388,9 @@ origine). Les requêtes mutantes portent l'en-tête CSRF attendu par `@adonisjs/
   `equipped` / `unequipped`, l'objet, la quantité, et le PNJ ou le lieu concerné quand il y en
   a un) ;
 - `turn_completed` : de quoi mettre à jour le journal **et** la fiche sans nouvelle requête —
-  inventaire compris depuis la Phase 4.
+  inventaire compris depuis la Phase 4, lieu courant libellé, et depuis la Phase 7 la
+  **période de la journée** (`period`, enum fermé du système, libellé par le front dans
+  `enums.json`).
 
 **Inventaire (Phase 4).** La fiche porte `character.inventory` : les objets que détient le
 personnage, chacun en `{ handle, item: { reference, label }, quantity, equipped }`. Un objet
@@ -426,6 +432,7 @@ Exemple indicatif de la vue d'une partie :
     ]
   },
   "location": { "reference": "meung_sur_loire", "label": "Meung-sur-Loire" },
+  "period": "morning",
   "activeQuests": [{ "reference": "deliver_the_letter", "label": "Deliver the letter", "summary": "Carry your father's letter to Monsieur de Tréville." }],
   "pendingTurn": null
 }
@@ -578,9 +585,11 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   détail du jet** : compétence ou caractéristique et sa valeur, modificateurs appliqués avec
   leur valeur (une circonstance par son label d'effet, un objet par son nom), chance finale,
   résultat du d100 et degré de réussite. Tout vient du backend, le front ne calcule rien.
-- **Phase 7 — Temps et lieux.** L'heure et la période de jeu (nuit, aube, soir…) s'affichent à
-  côté du lieu, mises en forme par l'i18n à partir de ce que transmet le backend ; les sorties
-  visibles du lieu courant peuvent s'afficher. Le front ne calcule ni durée ni période.
+- **Phase 7 — Temps et lieux.** La période de la journée (aube, matin… nuit) s'affiche sous
+  le lieu, dans l'onglet *Situation*, libellée par l'i18n à partir de l'enum que transmet le
+  backend. Ni l'heure, ni la date, ni les sorties du lieu ne s'affichent (tranché à
+  l'ouverture de la phase) : l'information de jeu passe par le récit. Une carte des lieux
+  visités reste une piste, sans phase. Le front ne calcule ni durée ni période.
 - **Phase 9 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
   probablement nécessaire.
 - **Phase 10 — Cycle de vie et combat.** Création de personnage guidée ; combat en rounds

@@ -249,8 +249,11 @@ univers. Ses choix restent en vigueur (détail : roadmap Phase 6, système de r�
 
 Le livre (« ORC Content Document ») est rangé hors du dépôt, dans `tmp/` (ignoré par git).
 
-**Phase actuelle : Phase 7 (gestion du temps et des lieux)**, cadrée et découpée — epic Jira
-`KAN-89` (tickets `KAN-90` à `KAN-103`). Décisions de cadrage (détail : roadmap Phase 7) :
+**Phase actuelle : Phase 7 (gestion du temps et des lieux)** — epic Jira `KAN-89` (tickets
+`KAN-90` à `KAN-103`). Implémentation, contenu du manoir Ward et documentation livrés
+(`KAN-90` à `KAN-101`) ; restent la bascule de la base de dev (`KAN-102`, avec feu vert) et la
+validation de bout en bout (`KAN-103`). Décisions (détail : roadmap Phase 7, architecture
+§6quater et §6quinquies) :
 - **horloge tenue par le backend** : compteur en secondes depuis minuit du premier jour,
   départ (heure obligatoire, date grégorienne facultative) copié du scénario au lancement ;
   sans rapport avec le port `Clock` ;
@@ -267,7 +270,8 @@ Le livre (« ORC Content Document ») est rangé hors du dépôt, dans `tmp/` (i
   les lieux visités et leurs voisins ; l'arbitrage désigne la destination, le backend chiffre
   le chemin, l'extraction juge du déplacement réel ; pas d'improvisation dans un réseau ;
 - **objet requis** détenu = passage ouvert, déverrouillé en le franchissant ; découverte et
-  crochetage proposés par l'extraction, en liste fermée ;
+  crochetage proposés par l'extraction, en liste fermée ; un passage trouvé ou ouvert peut être
+  franchi dans le même tour (les passages s'appliquent avant le déplacement) ;
 - **localisation des PNJ** (`location_instance_id`) : laissé dans un lieu, retrouvé au retour ;
   un PNJ hostile bloque le passage au travers de sa pièce.
 
@@ -333,6 +337,15 @@ serverless pour le backend).
   un `container.swap()` ferait de la substitution un état global à restaurer après chaque
   test. Un test construit sa propre instance avec un double. Voir `app/services/llm.ts` et
   `app/services/dice.ts`.
+- **Le temps de jeu n'est pas le port `Clock`.** L'horloge de jeu (`world_states.game_time`,
+  secondes depuis minuit du premier jour) se lit et se convertit par `#services/game/game_time`,
+  pur : échelle des durées, périodes, jour, date. Le port `Clock` ne sert qu'au temps réel
+  (budget du tour). Le front ne reçoit que la période, jamais l'heure ni la date.
+- **Tout changement de passage passe par le service des passages** (`#services/game/passages`) :
+  découverte et déverrouillage, jamais d'écriture directe dans `passage_states`. La topologie
+  (sens de lecture d'un passage, réseaux, lieux qui en contiennent un) y est pure, et le
+  parcours (lieux atteignables, chemins, destinations permises) vit dans `#services/game/travel`,
+  pur lui aussi : arbitrage, extraction et application le lisent, jamais le LLM.
 - **Tout changement d'objet passe par le service d'inventaire** (`#services/game/inventory`) :
   création, transfert, destruction, équipement, placement initial. Jamais d'écriture directe
   dans `inventory_items` : les règles d'unicité, d'empilement et de détenteur y vivent.
@@ -433,6 +446,9 @@ serverless pour le backend).
 - **Échec en cascade connu** : environ un passage complet sur trois, des dizaines de tests
   tombent sur « unable to release database lock » (verrou consultatif de Lucid pris et relâché
   sur deux connexions différentes du pool). Relancer avant d'enquêter.
+- **Un réseau de lieux de test** : la maison de `#tests/helpers/places` (`HOUSE_WORLD`, et
+  `seedHouse()` de `#tests/helpers/content` pour l'écrire en base sur le scénario des
+  Mousquetaires) — passages caché, verrouillé, à sens unique, deux entrées.
 - **Les tests importent `#services/llm/gateway`**, jamais `#services/llm`, qui construirait
   un vrai client Gemini. `FakeLlmProvider` (`#tests/helpers/fake_llm_provider`) sert de
   double : il **doit** honorer `AbortSignal`, sinon les tests de timeout pendent.

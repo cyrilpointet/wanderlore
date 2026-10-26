@@ -419,12 +419,14 @@ Tranchées à l'ouverture de la phase (2026-10-26, epic `KAN-89`) :
 
   On ne déclare pas de sortie vers un lieu libre. Pas d'improvisation dans un réseau. Un lieu qui contient un réseau (`ward_house`) n'est plus une destination ; il reste parent.
 - **Lieux atteignables, calculés par le backend** : il existe un chemin de passages praticables (bon sens, découvert ou non caché, ouvert) dont toutes les étapes intermédiaires sont déjà visitées ; seule la dernière peut être nouvelle. On revient en un tour dans une pièce connue, on découvre un territoire nouveau pièce par pièce. Un lieu où se tient un PNJ absent `hostile` n'est jamais une étape intermédiaire.
-- **Destination désignée par l'arbitrage**, dans un réseau : `intent.destination`, pris dans la liste fermée `reachable_locations`. La durée du tour vaut **le chemin le plus court en temps plus le label** de ce qui se fait à l'arrivée ; la narration reçoit le chemin, en noms traduits. L'extraction reste juge du déplacement réel, dans la liste fermée réduite aux destinations permises par le lieu courant.
+- **Destination désignée par l'arbitrage**, dans un réseau : `intent.destination`, pris dans la liste fermée `reachable_locations` (hors réseau, une destination ne chiffre rien et est ignorée plutôt que refusée). La durée du tour vaut **le chemin le plus court en temps plus le label** de ce qui se fait à l'arrivée ; la narration reçoit le chemin, en noms traduits. L'extraction reste juge du déplacement réel, dans la liste fermée des destinations permises par le lieu courant.
+- **Passage trouvé et franchi dans le même tour** (précisé à l'implémentation) : la liste fermée de l'extraction compte ouvertes les sorties cachées et verrouillées du lieu, et la validation n'accepte un déplacement à travers l'une d'elles que si la même narration la trouve ou l'ouvre. À l'application, les passages passent avant le déplacement, qui peut les emprunter.
 - **Sorties dans les prompts** : l'arbitrage et la narration reçoivent toutes les sorties du lieu courant avec leur état ; la narration reçoit les passages cachés non découverts marqués comme tels, avec la consigne de ne les révéler que si le personnage cherche et que l'histoire lui en donne la raison (sur le modèle de `items_in_scene`). Un aparté reçoit les sorties visibles.
 - **Objet requis** : le détenir suffit (un exemplaire de la définition, dans l'inventaire du personnage), et **franchir le passage avec lui le déverrouille pour de bon**, sans le LLM. Forcer ou crocheter est une action comme une autre, suivie de `passages_unlocked`. On ne referme pas une porte dans cette phase.
 - **Découverte** proposée par l'extraction (`passages_discovered`), dans la liste fermée des passages cachés non découverts du lieu courant. Le backend ne vérifie pas qu'un jet a réussi.
 - **Localisation des PNJ** (`npc_instances.location_instance_id`) : laissé derrière, un PNJ reste dans le lieu de la scène ; suivant, il prend le nouveau lieu ; parti de lui-même, son lieu devient inconnu. À l'arrivée du joueur, le backend rend présents les PNJ absents du lieu ; dans un réseau, la narration du tour d'arrivée les reçoit (`npcs_at_destination`).
 - **Front** : pas de sorties à l'écran (une carte des lieux visités reste une piste). Un lieu en réseau s'affiche suivi du libellé de son parent (« La cuisine · Le manoir Ward ») ; un lieu libre garde son seul nom.
+- **Manoir Ward** : deux entrées, le parc (par l'allée) et la cuisine (porte de service) ; le laboratoire derrière une porte cachée dans la cave, le caveau scellé derrière la porte de fer qu'ouvre la clé de fer.
 - **Contenu et outils** : colonnes `exits` et `entrance` sur `location_definitions` ; vérifications de `checkScenario` (cible existante, pas de sortie vers soi, un seul passage entre deux lieux, objet requis existant, une entrée a des sorties, un réseau sans entrée contient le lieu de départ, le départ n'est pas un lieu qui contient un réseau) ; saisie en JSON brut validé dans le back-office ; réseau du manoir Ward dans le seeder, avec deux entrées (principale et porte arrière).
 
 ### Hors périmètre
@@ -631,7 +633,7 @@ Ces points sont pénibles à rattraper après coup :
 | 4 | Séparation des deux familles de modificateurs, conditions `owned`/`equipped`, traçabilité de l'origine, refus d'un identifiant d'objet hors liste ou hors scène, transferts entre détenteurs, formule de dégâts |
 | 5 | Contrôle d'accès par rôle, route par route — rend continu l'audit prévu en Phase 11 |
 | 6 | Moteur BRP : bornes 01–05 et 96–00, seuils des degrés, difficulté multiplicative, ordre des modificateurs, jets de caractéristique, formule de dégâts sur dés simulés ; le narrateur ne reçoit jamais le détail du jet |
-| 7 | Horloge de jeu : conversion des labels de durée, bornes, attente jusqu'à une période, période dérivée de l'heure ; sorties : destinations atteignables, passages cachés et verrouillés, refus d'une destination hors liste, durée d'un chemin |
+| 7 | Horloge de jeu : conversion des labels de durée, bornes, attente jusqu'à une période, période dérivée de l'heure, jour et date ; sorties : destinations atteignables, passages cachés et verrouillés, refus d'une destination hors liste, durée d'un chemin, passage trouvé et franchi dans le même tour, porte ouverte par sa clé ; PNJ laissé, suivant, parti, retrouvé ; cohérence d'un réseau (`checkScenario`) ; le joueur ne reçoit que la période |
 | 8 | Qualité de récupération du lore : sur un jeu annoté, les bons fragments remontent-ils, et avec quel bruit |
 | 9 | Le résumé ne perd pas les faits critiques (eval, pas test) |
 | 11 | Evals automatisés, détection de dérive de prompt, taux d'échec de schéma |
@@ -646,6 +648,10 @@ déjà le jeu de données d'évaluation. Les evals sont prévus en Phase 11, mai
 constitue dès la Phase 1, en sélectionnant au fil de l'eau les tours intéressants — cas limites,
 échecs, comportements aberrants. Sans cette accumulation, la Phase 11 commencerait par plusieurs
 jours de collecte.
+
+Cas à verser au corpus dès la Phase 7, que les tests ne peuvent pas trancher : le narrateur
+qui donne l'heure sans que le personnage ait de quoi la connaître, qui révèle un passage caché
+sans fouille ni raison, ou qui invente un itinéraire au lieu de suivre le chemin transmis.
 
 Même logique pour le coût : faire tourner ce corpus donne le nombre de jetons par tour, qui est
 la mesure de l'étape 1 de la démarche de monétisation. Ce n'est pas un test qui passe ou échoue,

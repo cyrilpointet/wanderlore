@@ -19,7 +19,7 @@ Un seul mécanisme de résolution pour tout type d'action, quel que soit l'unive
 
 Le BRP s'y prête naturellement : il ne confie au maître du jeu que trois jugements — faut-il un jet, quelle difficulté, quelles circonstances. Ce sont exactement les sorties de l'étape d'arbitrage. Tout le reste est du calcul, donc du backend.
 
-**Ce qui est fixe (code, jamais en base)** : la formule de résolution, l'échelle de difficulté, les degrés de réussite, le barème des modificateurs contextuels, les sept caractéristiques et les formules qui en dérivent, la formule de dégâts.
+**Ce qui est fixe (code, jamais en base)** : la formule de résolution, l'échelle de difficulté, les degrés de réussite, le barème des modificateurs contextuels, les sept caractéristiques et les formules qui en dérivent, la formule de dégâts ; depuis la Phase 7, l'échelle des durées et les bornes des périodes de la journée (section 8bis).
 
 **Ce qui est variable (donnée, stockée en base, paramétrable par univers)** : la liste des compétences, leur catégorie et leur chance de base, les catégories d'action et ce qui les résout (compétence ou caractéristique), les objets et leurs modificateurs, les profils de combat des PNJ.
 
@@ -261,6 +261,18 @@ Cette approche évite de coder un moteur de combat distinct : le combat n'est qu
 
 ---
 
+## 8bis. Temps de jeu (Phase 7)
+
+Le temps qui passe en jeu suit la même séparation que les jets : le LLM qualifie, le backend chiffre (architecture, section 6quinquies).
+
+- **Durée d'une action** : un label proposé par l'arbitrage, converti par le backend — `moment` (1 min), `minutes` (10 min), `hour` (1 h), `hours` (4 h), `days` avec un nombre de 1 à 7, `until` une période de la journée (jusqu'à son prochain début). Elle mesure le temps passé à *tenter* l'action : la même en réussite et en échec, sans modulation par le degré. Un aparté au MJ ne prend aucun temps.
+- **Trajet dans un réseau de lieux** : la somme des durées des passages du chemin le plus rapide, calculée par le backend, à laquelle s'ajoute le label de ce qui se fait à l'arrivée.
+- **Périodes** : sept, à bornes fixes et sans saison — `dawn` 5 h–7 h, `morning` 7 h–12 h, `midday` 12 h–14 h, `afternoon` 14 h–18 h, `dusk` 18 h–20 h, `evening` 20 h–22 h, `night` 22 h–5 h. L'arbitrage peut tirer de la période une circonstance (l'obscurité), comme de toute autre.
+- **Calendrier** grégorien seul ; sans date de départ, l'horloge compte les jours.
+- **Durées du BRP** au-delà : le round (12 s) sera imposé par le backend à la boucle de combat, et les soins (premiers soins en un round, guérison naturelle de 1D3 PV par semaine) se caleront sur l'horloge — Phase 10.
+
+---
+
 ## 9. Ce que ce système apporte au pipeline global
 
 - **Le LLM d'arbitrage n'a besoin de connaître ni chiffres ni formules** : il propose uniquement un `action_type` (parmi la liste fermée de l'univers courant), une `difficulty` qualitative et au plus trois circonstances qualifiées. La compétence ou la caractéristique jouée s'en déduit côté backend, via `resolution_rules`. Toute la résolution numérique reste dans le moteur déterministe du backend.
@@ -279,6 +291,7 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
 - Le LLM ne doit jamais proposer plus de 3 modificateurs **contextuels** pour une même action, chacun qualifié par un label (`minor_bonus`, `major_bonus`, `minor_penalty`, `major_penalty`) et jamais par un chiffre (section 5.1).
 - Le LLM ne doit **jamais** chiffrer ou proposer de modificateur lié à un objet possédé ou équipé par le joueur — ces valeurs sont calculées séparément par le backend à partir de l'inventaire (voir section 5.2). Le rôle du LLM se limite à juger la plausibilité factuelle de l'usage de l'objet, jamais son effet mécanique.
 - Le LLM ne manipule que des labels qualitatifs (`easy` / `average` / `difficult`, références anglaises) — jamais de valeurs numériques de règles, qui restent entièrement du ressort du backend.
+- La durée du tour est un label de l'échelle fixe (section 8bis), jamais une heure ni un nombre de minutes ; seul le nombre de jours de `days` est un entier, borné de 1 à 7. Avec une destination dans un réseau de lieux, la durée ne couvre que ce qui se fait à l'arrivée : le trajet est chiffré par le backend.
 - Les objets sont désignés par leur **référence stable anglaise**, transmise au modèle dans le contexte avec les seuls objets en scène — ceux du personnage, des PNJ présents et du lieu. Un objet tenu par un PNJ ou rangé dans le lieu peut être pris, demandé ou volé : c'est une action comme une autre, résolue normalement. Le joueur peut parfaitement écrire « je montre ma lettre » dans sa langue : le rapprochement inter-langue entre son texte libre et la référence anglaise est fait nativement par le modèle, sans traitement préalable.
 - **Le joueur n'est jamais bridé dans ses choix.** Une action imprudente, déshonorante, illégale ou vouée à mal finir n'est ni refusée ni requalifiée en échec : elle est résolue normalement (jet si l'issue est incertaine, succès automatique sinon), et ses conséquences sont mises en scène. La plausibilité ne juge que la possibilité matérielle dans l'univers, jamais la sagesse ou la morale de l'action. Une règle d'univers qui interdit quelque chose (l'édit contre les duels) décrit la réaction du monde, pas une limite imposée au joueur. Un échec automatique signifie que le personnage tente et échoue — jamais qu'il renonce.
 - **Le monde réagit, sans trancher contre le joueur.** Chaque personnage touché par une action y réagit dans la même narration (réplique, menace, hostilité, fuite). Une réaction peut ouvrir une menace — un PNJ attaque — mais ne la résout jamais de sa propre initiative : savoir si l'attaque porte revient à l'action suivante du joueur, et donc à un jet calculé par le backend. Aucune perte de points de vie n'est infligée par la seule initiative d'un PNJ. C'est la forme tour par tour des jets alternés joueur/PNJ (section 8), en attendant la boucle de combat de la Phase 10.

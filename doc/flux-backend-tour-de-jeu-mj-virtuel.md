@@ -171,10 +171,10 @@ flowchart LR
 
 | Étape | Lore | State | Mémoire | Catalogues |
 |---|---|---|---|---|
-| A+B+C | Règles ciblées par les tags | Scène : lieu courant, PNJ présents, objets en scène par détenteur — personnage, PNJ présents, lieu (références et libellés anglais, **sans valeurs mécaniques ni valeurs de compétence**) | Résumé anglais + buffer court (2 derniers tours, langue du joueur) | `action_types` avec descriptions |
+| A+B+C | Règles ciblées par les tags | Scène : lieu courant et sa description, sorties du lieu avec leur état, lieux atteignables, période de la journée, PNJ présents, objets en scène par détenteur — personnage, PNJ présents, lieu (références et libellés anglais, **sans valeurs mécaniques ni valeurs de compétence**) | Résumé anglais + buffer court (2 derniers tours, langue du joueur) | `action_types` avec descriptions |
 | Calcul du jet | — | Compétence du personnage, objets du personnage avec effets mécaniques | — | `resolution_rules`, définitions d'objets |
-| D | Ambiance liée au lieu | Scène complète, objets en scène par détenteur (libellé dans la langue de la partie, descripteur) | Résumé + buffer récent (2–4 tours, langue du joueur) | Noms d'affichage dans la langue de la partie, glossaire |
-| E | Aucun | Handles présents, objets en scène par détenteur, schéma des effets autorisés (pas les valeurs actuelles) | Aucune | Listes fermées de définitions (PNJ, lieux, objets, flags) |
+| D | Ambiance liée au lieu | Scène complète, description et sorties du lieu, chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date), objets en scène par détenteur (libellé dans la langue de la partie, descripteur) | Résumé + buffer récent (2–4 tours, langue du joueur) | Noms d'affichage dans la langue de la partie, glossaire |
+| E | Aucun | Handles présents, objets en scène par détenteur, sorties cachées et verrouillées du lieu, schéma des effets autorisés (pas les valeurs actuelles) | Aucune | Listes fermées de définitions (PNJ, objets, flags) et destinations permises depuis le lieu |
 
 Toutes les sélections sont déterministes : aucune n'est déléguée au LLM.
 
@@ -206,15 +206,16 @@ flowchart TD
 flowchart TD
     A([Contexte A+B+C]) -.-> SSE[/step_started arbitration/]
     A --> B{{A+B+C — sortie JSON<br/>§5.1}}
-    B --> C["intent, validity,<br/>resolution { mode, action_type,<br/>difficulty, contextual_modifiers },<br/>alert"]
+    B --> C["intent { …, destination },<br/>validity, resolution { mode,<br/>action_type, difficulty,<br/>contextual_modifiers },<br/>duration, alert"]
     C --> D[(turn_log : arbitration_output,<br/>alerts, llm_usage)]
     D --> E{resolution.mode}
     E -->|automatic_success| N[Issue fixée : succès<br/>pas de jet]
     E -->|narrative_automatic_failure| M[Issue fixée : échec<br/>pas de jet]
     E -->|roll_required| R[Étape 2 — Calcul du jet<br/>§6]
-    N --> D2[Étape 3 — Narration]
-    M --> D2
-    R --> D2
+    N --> H[Avancée de l'horloge<br/>durée convertie + trajet<br/>vers la destination]
+    M --> H
+    R --> H
+    H --> D2[Étape 3 — Narration]
 ```
 
 - **L'arbitrage ne narre jamais** et ne produit aucun chiffre de règle [archi §6].
@@ -222,8 +223,13 @@ flowchart TD
   `resolution_rules` [BDD].
 - **Au plus 3 modificateurs contextuels**, jamais un modificateur d'objet [règles §5]. Le LLM
   propose un label qualitatif (`minor_bonus`, `major_bonus`, `minor_penalty`, `major_penalty`),
-  converti par le backend (+1, +2, -1, -2) — tranché en Phase 4. Un modificateur dont la source
-  est un objet en scène est rejeté.
+  converti par le backend (±10, ±20 depuis la Phase 6). Un modificateur dont la source est un
+  objet en scène est rejeté.
+- **La durée du tour** est un label de l'échelle fixe (`moment` … `days` avec un nombre, `until`
+  une période), converti par le backend ; un aparté ne prend aucun temps. Dans un réseau de
+  lieux, **`intent.destination`** vient de la liste fermée des lieux atteignables : le backend
+  y ajoute le trajet le plus rapide, et la narration reçoit l'heure où le tour s'achève et le
+  chemin [archi §6quater, §6quinquies].
 - **`alert.prompt_injection_suspected`** est enregistré dans `turn_log.alerts`. L'action
   suspecte est traitée comme invalide, mais **la sécurité ne repose pas sur cette détection** :
   le confinement est assuré par la validation backend, qui ne fait jamais confiance au modèle
@@ -290,12 +296,17 @@ flowchart TD
 ```mermaid
 flowchart TD
     A([Texte narré + listes fermées]) --> B{{E — sortie JSON<br/>§5.1}}
-    B --> C["Delta proposé :<br/>movement, npcs_entered, npcs_left,<br/>npcs_following, npc_names,<br/>npc_relations, scenario_flags,<br/>hit_points_delta, items_created,<br/>items_transferred, items_destroyed,<br/>items_equipped, items_unequipped"]
+    B --> C["Delta proposé :<br/>movement, npcs_entered, npcs_left,<br/>npcs_following, npc_names,<br/>npc_relations, scenario_flags,<br/>hit_points_delta, items_created,<br/>items_transferred, items_destroyed,<br/>items_equipped, items_unequipped,<br/>passages_discovered, passages_unlocked"]
     C --> D([Delta validé<br/>vers l'application])
 ```
 
 La nouvelle tentative de l'extraction **ne relance jamais la narration** : elle travaille sur
 le texte déjà produit.
+
+Le déplacement se choisit parmi les destinations permises depuis le lieu où le tour a commencé
+(dans un réseau : ses lieux atteignables, sorties cachées et verrouillées comptées ouvertes ;
+pas d'improvisation) ; un déplacement à travers une sortie encore fermée n'est accepté que si
+la même narration la trouve ou l'ouvre [archi §6quater].
 
 ### 7.3 Validation finale et application — la transaction du tour
 
@@ -305,23 +316,25 @@ flowchart TD
     B --> C[(Verrouiller la ligne du tour<br/>et relire son statut)]
     C --> D{status = pending ?}
     D -->|non : expiré entre-temps| D1[Abandonner le résultat<br/>aucun événement]
-    D -->|oui| M[Déplacement<br/>lieu unique : instance à la<br/>première visite, sinon réutilisée<br/>archétype : nouvelle instance<br/>current_location_id]
-    M --> N[Changement de lieu :<br/>PNJ présents → absent<br/>sauf npcs_following]
+    D -->|oui| PA[Passages trouvés ou ouverts<br/>du lieu de départ<br/>passage_states]
+    PA --> M[Déplacement<br/>lieu unique : instance à la<br/>première visite, sinon réutilisée<br/>archétype : nouvelle instance<br/>current_location_id<br/>porte franchie avec sa clé : ouverte]
+    M --> N[Changement de lieu :<br/>PNJ présents → absent, gardent le lieu<br/>sauf npcs_following, qui suivent<br/>PNJ laissés à destination → present]
     N --> O[Sorties de PNJ → absent]
     O --> P[Entrées de PNJ<br/>unique : repassé present<br/>unique mort : refusé<br/>archétype : nouvelle instance]
     P --> Q[Noms appris, dispositions]
     Q --> R[Objets : placement initial,<br/>créations, transferts entre<br/>détenteurs, destructions, équipement<br/>unique jamais dupliqué<br/>stackable : quantité]
-    R --> S[Flags, points de vie]
+    R --> S[Flags, points de vie, horloge]
     S --> T[Attribuer le numéro de tour<br/>unicité session_id + turn_number]
     T --> U[(turn_log : applied_effects,<br/>status = completed)]
     U --> V[Commit]
-    V -.-> W[/turn_completed<br/>tour relu + fiche + lieu libellés/]
+    V -.-> W[/turn_completed<br/>tour relu + fiche + lieu libellés<br/>+ période de la journée/]
     V --> Z{Fin de partie ?<br/>mort, victoire<br/>à trancher en Phase 10}
     Z --> J([Seuil de résumé ? — §9])
 ```
 
-- **Ordre d'application déterministe** : déplacement, puis sorties, puis entrées, pour qu'un
-  PNJ qui entre dans le nouveau lieu ne soit pas aussitôt marqué absent [KAN-39].
+- **Ordre d'application déterministe** : passages, déplacement, puis sorties, puis entrées —
+  le déplacement peut emprunter un passage trouvé ou ouvert dans le même tour, et un PNJ qui
+  entre dans le nouveau lieu n'est pas aussitôt marqué absent [KAN-39, Phase 7].
 - **`turn_completed` n'est émis qu'après le commit** ; il porte le tour sous la forme de la
   route de lecture, avec toutes les références transformées en `{ reference, label }` dans la
   langue de la partie [archi §8bis, CLAUDE.md].
