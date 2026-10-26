@@ -230,10 +230,9 @@ en vigueur (détail : roadmap Phase 5bis, « Décisions de cadrage ») :
 - pas de changement de rôle, de modification d'email ni de suppression ; l'inscription libre
   attend la Phase 11.
 
-**Phase actuelle : Phase 6 (bascule sur le système BRP)**, cadrée et découpée — epic Jira
-`KAN-78` (tickets `KAN-79` à `KAN-88`). Le Basic
+**Phase 6 (bascule sur le système BRP) terminée** — epic Jira `KAN-78`. Le Basic
 Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les
-univers. Décisions de cadrage (détail : roadmap Phase 6, système de règles) :
+univers. Ses choix restent en vigueur (détail : roadmap Phase 6, système de règles) :
 - **d100 sous la chance** : base (compétence, ou caractéristique × 5) × difficulté (`easy`
   × 2, `average`, `difficult` ÷ 2), puis modificateurs contextuels (±10, ±20, 3 au plus) et
   d'objets ; 01–05 réussit, 96–00 échoue toujours ;
@@ -248,10 +247,31 @@ univers. Décisions de cadrage (détail : roadmap Phase 6, système de règles) 
   dégâts du BRP posés, branchés en Phase 10 ; aucune règle optionnelle avant la Phase 10bis ;
 - bascule sans reprise de données ; texte du livre jamais recopié, notice ORC dans le produit.
 
-Phase suivante : **Phase 7 (gestion du temps et des lieux)**, insérée avant le lore étendu,
-qui passe en Phase 8 ; pas encore cadrée (pistes et questions ouvertes : roadmap, Phase 7).
-Le livre (« ORC Content Document ») est rangé
-hors du dépôt, dans `tmp/` (ignoré par git).
+Le livre (« ORC Content Document ») est rangé hors du dépôt, dans `tmp/` (ignoré par git).
+
+**Phase actuelle : Phase 7 (gestion du temps et des lieux)**, cadrée et découpée — epic Jira
+`KAN-89` (tickets `KAN-90` à `KAN-103`). Décisions de cadrage (détail : roadmap Phase 7) :
+- **horloge tenue par le backend** : compteur en secondes depuis minuit du premier jour,
+  départ (heure obligatoire, date grégorienne facultative) copié du scénario au lancement ;
+  sans rapport avec le port `Clock` ;
+- **durée en label proposée par l'arbitrage** (`moment`, `minutes`, `hour`, `hours`, `days` +
+  `count` 1–7, `until` + `period`), convertie par le backend ; même durée en échec ; l'aparté ne
+  prend aucun temps ; round et soins du BRP attendent la Phase 10 ;
+- **sept périodes à bornes fixes** (`night`…`evening`), sans saison ; l'arbitrage reçoit la
+  période, la narration les périodes, l'heure au quart d'heure, la date et le numéro de jour
+  (heure précise seulement si le personnage a de quoi la connaître), l'extraction rien ;
+- **le joueur ne voit que la période** — ni heure, ni date, ni sorties à l'écran ;
+- **le grain est celui du catalogue** ; **sorties** déclarées une fois, d'un seul côté
+  (`exits` : passage, caché, objet requis, sens unique, durée), état dans `passage_states` ;
+- **lieux libres, en réseau, entrées** : dans un réseau, on ne passe que par les sorties, vers
+  les lieux visités et leurs voisins ; l'arbitrage désigne la destination, le backend chiffre
+  le chemin, l'extraction juge du déplacement réel ; pas d'improvisation dans un réseau ;
+- **objet requis** détenu = passage ouvert, déverrouillé en le franchissant ; découverte et
+  crochetage proposés par l'extraction, en liste fermée ;
+- **localisation des PNJ** (`location_instance_id`) : laissé dans un lieu, retrouvé au retour ;
+  un PNJ hostile bloque le passage au travers de sa pièce.
+
+Phase suivante : **Phase 8 (lore étendu et RAG)**.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de

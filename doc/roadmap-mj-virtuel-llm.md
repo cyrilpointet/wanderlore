@@ -354,61 +354,101 @@ Tranchées à l'ouverture de la phase (2026-10-25, epic `KAN-78`), d'après une 
 
 ## Phase 7 — Gestion du temps et des lieux
 
-**Objectif** : tenir le temps qui passe en jeu et la topologie des lieux, pour que la partie reste cohérente dans la durée (cycle jour/nuit, trajets, échéances) comme dans l'espace (un manoir, un donjon, un labyrinthe se parcourent pièce par pièce). Insérée avant le lore étendu et la mémoire long terme : le résumé narratif gagne à être daté en temps de jeu, et la boucle de combat de la Phase 10 compte ses tours en rounds.
+**Objectif** : tenir le temps qui passe en jeu et la topologie des lieux, pour que la partie reste cohérente dans la durée (cycle jour/nuit, trajets) comme dans l'espace (un manoir, un donjon, un labyrinthe se parcourent pièce par pièce). Insérée avant le lore étendu et la mémoire long terme : le résumé narratif gagne à être daté en temps de jeu, et la boucle de combat de la Phase 10 compte ses tours en rounds.
 
-**Pas encore cadrée.** Les pistes ci-dessous viennent des premières discussions (2026-10-25 et 26) ; elles sont à confirmer à l'ouverture de la phase, avec les questions de la dernière section.
+### Décisions de cadrage — temps de jeu
 
-### Contenu envisagé — temps de jeu
+Tranchées à l'ouverture de la phase (2026-10-26, epic `KAN-89`) :
 
-- **Horloge de jeu tenue par le backend** : un compteur en secondes dans l'état de la partie, sans rapport avec l'heure réelle (le port `Clock` n'est pas concerné). L'heure de départ est fixée par le scénario et copiée au lancement, comme l'état initial.
-- **Durée d'une action en label**, proposée par l'arbitrage (A+B+C) sur une échelle fermée et convertie par le backend, sur le modèle des modificateurs contextuels : de l'instant à plusieurs jours, avec un nombre borné pour les longs trajets, et une attente jusqu'à une période (« j'attends la nuit ») dont le backend calcule la durée. L'arbitrage plutôt que l'extraction : la narration doit connaître l'heure d'arrivée pour la raconter.
-- **Durées fixes, imposées par le backend** : un aparté au MJ ne prend aucun temps ; un tour de combat vaut un round du BRP (12 secondes), sans réintroduire les rangs de `DEX` ni les actions multiples, écartés en Phase 6.
-- **Période de la journée dérivée de l'heure** (nuit, aube, matin, midi, après-midi, crépuscule, soir), jamais stockée. L'arbitrage la reçoit (une circonstance « obscurité », une boutique fermée) ; la narration reçoit les périodes de départ et d'arrivée, sans valeur chiffrée, et ne contredit pas le temps écoulé ; l'extraction ne reçoit rien.
-- **Affichage** : le backend transmet l'heure et la période déjà calculées (`turn_completed`, vue d'une partie) ; le front les met en forme.
-- **`turn_log`** enregistre le temps avant et après le tour, et le label proposé.
+- **Horloge tenue par le backend** : un compteur en secondes depuis minuit du premier jour, dans l'état de la partie, sans rapport avec l'heure réelle (le port `Clock` n'est pas concerné). L'heure, la période, le numéro de jour et la date en dérivent.
+- **Départ fixé par le scénario** : une **heure obligatoire** (`HH:MM`, pré-remplie à 08:00 dans le back-office) et une **date facultative**, copiées au lancement comme l'état initial. Modifier le scénario ne décale pas une partie en cours.
+- **Durée d'une action en label**, proposée par l'arbitrage (A+B+C) et convertie par le backend, sur le modèle des modificateurs contextuels. L'arbitrage plutôt que l'extraction : la narration doit connaître l'heure d'arrivée pour la raconter. La durée couvre tout ce que fait le tour.
 
-### Contenu envisagé — lieux
+  | label | valeur | exemples |
+  |---|---|---|
+  | `moment` | 1 min | une réplique, jeter un œil, ouvrir une porte |
+  | `minutes` | 10 min | fouiller une pièce, une conversation |
+  | `hour` | 1 h | éplucher une bibliothèque, un repas, traverser une ville |
+  | `hours` | 4 h | une demi-journée de route ou de travail |
+  | `days` + `count` (1–7) | count × 24 h | un voyage, une convalescence |
+  | `until` + `period` | calculée | « j'attends la nuit » : jusqu'au prochain début de la période, strictement dans le futur |
 
-- **Description du lieu courant transmise aux prompts** (narration, peut-être arbitrage) : quelques dizaines de jetons par tour, jamais le catalogue entier.
-- **Sorties entre lieux** (`exits`), facultatives, sur une définition de lieu unique : cible, passage décrit en une ligne pour le modèle, et en option passage caché, objet requis, sens unique. Symétriques par défaut. Un lieu sans sorties garde le voyage libre d'aujourd'hui.
-- **Destinations atteignables calculées par le backend** à chaque tour : parcours des sorties visibles et ouvertes, limité aux lieux visités et à leurs voisins. On revient en un tour dans une pièce connue (« je retourne à l'entrée »), on découvre un territoire nouveau pièce par pièce. L'arbitrage reçoit les sorties du lieu courant ; la narration les sorties visibles avec leur passage, jamais un passage caché non découvert ; la liste fermée des lieux de l'extraction se réduit aux destinations atteignables, avec leur libellé anglais.
-- **Découverte et déverrouillage** proposés par l'extraction, dans la liste fermée des sorties du lieu courant, et retenus dans l'état de la partie.
-- **Durée d'un chemin** : une sortie peut porter un label de durée ; un trajet dans un réseau de lieux dure alors la somme de son chemin, calculée par le backend plutôt qu'estimée par l'arbitrage.
-- **Localisation des PNJ** : un PNJ absent reste rattaché au dernier lieu où il se trouvait, et y est retrouvé au retour du joueur.
-- **Contenu et outils** : colonne `exits` sur `location_definitions`, vérifications de `checkScenario` (cible existante et unique, pas de sortie vers soi, objet requis existant), saisie en JSON brut validé dans le back-office, sorties du manoir Ward dans le seeder.
+  Les valeurs vivent dans le code ; le prompt ne montre que des descriptions qualitatives. Au-delà d'une semaine, un trajet se joue en plusieurs tours. Une durée hors bornes est une sortie rejetée (nouvelle tentative unique).
+- **Même durée en réussite et en échec**, sans modulation par le degré : la durée mesure le temps passé à *tenter*. Un échec qui coûte du temps se traduit par une nouvelle action au tour suivant.
+- **Durées fixes imposées par le backend** : l'aparté au MJ ne prend aucun temps. **Aucune autre durée du BRP dans cette phase** — le round (12 s), les soins (guérison naturelle 1D3 PV par semaine) et la récupération attendent la Phase 10 ; d'ici là, un coup d'épée vaut `moment`.
+- **Sept périodes à bornes fixes**, codées en dur, identiques pour tous les univers et sans saison : `night` 22 h–5 h, `dawn` 5 h–7 h, `morning` 7 h–12 h, `midday` 12 h–14 h, `afternoon` 14 h–18 h, `dusk` 18 h–20 h, `evening` 20 h–22 h. Dérivées de l'heure, jamais stockées ; enum fermé du système. `until` vise le début de la période.
+- **Calendrier grégorien seul**, sans clé par univers (un calendrier propre attend la Phase 10 au plus tôt). Sans date de départ, l'horloge reste un compteur de jours.
+- **Ce que voit chaque étape** :
+  - l'arbitrage : la période courante, dont il tire au besoin une circonstance (obscurité, boutique fermée) ;
+  - la narration : les périodes de départ et d'arrivée, l'heure d'arrivée **arrondie au quart d'heure**, la date si elle existe et le **numéro de jour** (les LLM calculent mal les écarts de dates). Consigne : ne jamais contredire le temps écoulé, et ne donner l'heure précise que si le personnage a de quoi la connaître (une montre qu'il détient, une horloge en marche, des cloches) et cherche à la savoir ; sinon, parler de lumière et de période. L'invariant 5 n'est pas en cause : il porte sur les données mécaniques du jet ;
+  - l'extraction : rien.
+- **Le joueur ne voit que la période**, dans l'onglet « Situation » : ni heure, ni date, ni numéro de jour, qui ne quittent jamais le backend. Une heure précise s'obtient dans le récit, par les moyens du personnage.
+- **`turn_log`** enregistre l'horloge avant et après le tour, et la durée proposée.
+- **Parties en cours à la migration** : la migration leur copie le départ de leur scénario. Pas de `game:reset` obligatoire.
+
+### Décisions de cadrage — lieux
+
+- **Description du lieu courant** transmise à l'arbitrage (ce que la pièce permet) et à la narration, jamais à l'extraction, en anglais : la `description` d'un lieu unique, ou le `descriptor` d'une instance d'archétype et la description de son parent. Quelques dizaines de jetons par appel, jamais le catalogue entier.
+- **Le grain est celui du catalogue** : rejoindre un autre lieu de la liste fermée est un déplacement, si proche soit-il ; se déplacer à l'intérieur d'un lieu n'en est pas un. C'est l'auteur du scénario qui choisit le grain en détaillant un lieu en sous-lieux. Un lieu improvisé garde le grain de la scène.
+- **Sorties (`exits`) sur une définition de lieu unique**, déclarées **une fois, d'un seul côté**, et valant dans les deux sens :
+
+  ```ts
+  type LocationExit = {
+    to: string                       // reference of a unique place
+    passage: string                  // one line of English, seen from here
+    backPassage: string | null       // seen from the other side; null = same text
+    hidden: boolean                  // hidden from this side only
+    requires: string | null          // reference of the item that opens it
+    oneWay: boolean
+    duration: TravelDuration | null  // a label of the time scale, `moment` if null
+  }
+  ```
+
+  Au plus un passage entre deux lieux. `requires` vaut des deux côtés ; `hidden` du seul côté déclaré (un passage caché des deux côtés ne s'exprime pas).
+- **État des passages dans une table `passage_states`** (partie, passage tel que déclaré, `discovered_at`, `unlocked_at`), une ligne par passage dont l'état a changé, partagée par ses deux sens, écrite par un service dédié.
+- **Lieux libres, lieux en réseau, entrées** :
+  - un **lieu libre** n'a aucune sortie : on y voyage comme avant la phase ;
+  - un **lieu en réseau** a au moins une sortie : on n'y entre et on n'en sort que par les sorties ;
+  - une **entrée** (`entrance: true`) est un lieu en réseau qui communique avec le monde libre. Un réseau peut en avoir plusieurs.
+
+  | depuis | vers |
+  |---|---|
+  | un lieu libre | les lieux libres, les entrées, un lieu improvisé |
+  | un lieu en réseau | ses lieux atteignables seulement |
+  | une entrée | les deux |
+
+  On ne déclare pas de sortie vers un lieu libre. Pas d'improvisation dans un réseau. Un lieu qui contient un réseau (`ward_house`) n'est plus une destination ; il reste parent.
+- **Lieux atteignables, calculés par le backend** : il existe un chemin de passages praticables (bon sens, découvert ou non caché, ouvert) dont toutes les étapes intermédiaires sont déjà visitées ; seule la dernière peut être nouvelle. On revient en un tour dans une pièce connue, on découvre un territoire nouveau pièce par pièce. Un lieu où se tient un PNJ absent `hostile` n'est jamais une étape intermédiaire.
+- **Destination désignée par l'arbitrage**, dans un réseau : `intent.destination`, pris dans la liste fermée `reachable_locations`. La durée du tour vaut **le chemin le plus court en temps plus le label** de ce qui se fait à l'arrivée ; la narration reçoit le chemin, en noms traduits. L'extraction reste juge du déplacement réel, dans la liste fermée réduite aux destinations permises par le lieu courant.
+- **Sorties dans les prompts** : l'arbitrage et la narration reçoivent toutes les sorties du lieu courant avec leur état ; la narration reçoit les passages cachés non découverts marqués comme tels, avec la consigne de ne les révéler que si le personnage cherche et que l'histoire lui en donne la raison (sur le modèle de `items_in_scene`). Un aparté reçoit les sorties visibles.
+- **Objet requis** : le détenir suffit (un exemplaire de la définition, dans l'inventaire du personnage), et **franchir le passage avec lui le déverrouille pour de bon**, sans le LLM. Forcer ou crocheter est une action comme une autre, suivie de `passages_unlocked`. On ne referme pas une porte dans cette phase.
+- **Découverte** proposée par l'extraction (`passages_discovered`), dans la liste fermée des passages cachés non découverts du lieu courant. Le backend ne vérifie pas qu'un jet a réussi.
+- **Localisation des PNJ** (`npc_instances.location_instance_id`) : laissé derrière, un PNJ reste dans le lieu de la scène ; suivant, il prend le nouveau lieu ; parti de lui-même, son lieu devient inconnu. À l'arrivée du joueur, le backend rend présents les PNJ absents du lieu ; dans un réseau, la narration du tour d'arrivée les reçoit (`npcs_at_destination`).
+- **Front** : pas de sorties à l'écran (une carte des lieux visités reste une piste). Un lieu en réseau s'affiche suivi du libellé de son parent (« La cuisine · Le manoir Ward ») ; un lieu libre garde son seul nom.
+- **Contenu et outils** : colonnes `exits` et `entrance` sur `location_definitions` ; vérifications de `checkScenario` (cible existante, pas de sortie vers soi, un seul passage entre deux lieux, objet requis existant, une entrée a des sorties, un réseau sans entrée contient le lieu de départ, le départ n'est pas un lieu qui contient un réseau) ; saisie en JSON brut validé dans le back-office ; réseau du manoir Ward dans le seeder, avec deux entrées (principale et porte arrière).
 
 ### Hors périmètre
 
-- Emplois du temps des PNJ, horaires d'ouverture des lieux, météo, calendrier propre à un univers : après la Phase 10 au plus tôt.
+- Échéances de scénario, événements déclenchés par le temps et emplois du temps des PNJ : Phase 10 (voir ses notes).
+- Horaires d'ouverture des lieux, météo, calendrier propre à un univers : après la Phase 10 au plus tôt.
 - Retour dans un lieu improvisé : reste à la mémoire long terme (Phase 9).
 - Effets du temps sur le personnage (récupération des points de vie, vivres) : avec le combat et le cycle de vie de la Phase 10.
 
-### Questions à trancher à l'ouverture
+### Contenu
 
-Temps de jeu :
-- L'échelle des durées : labels, valeur de chacun, borne du nombre de jours par tour.
-- La durée d'une action ratée : la même que réussie, ou modulée par le degré.
-- Les périodes : liste et bornes horaires, fixes ou variables selon la saison.
-- Le calendrier : grégorien seul, ou une clé de calendrier par univers dès cette phase.
-- La précision montrée au joueur : heure et période, ou minutes.
-- L'heure de départ : obligatoire pour chaque scénario, ou une valeur par défaut.
-- Les durées du BRP à reprendre comme valeurs fixes au-delà du round (soins, récupération), à vérifier dans le livre.
-- Les échéances de scénario et les événements déclenchés par le temps : dans cette phase ou plus tard, et sous quelle forme.
-- Les parties en cours à la migration : heure de départ du scénario, ou `game:reset`.
-
-Lieux :
-- La description du lieu courant : narration seule, ou arbitrage aussi.
-- Le grain : l'architecture (section 6quater) pose que passer d'une pièce à l'autre n'est pas un déplacement, ce que contredit le manoir Ward découpé pièce par pièce. Règle à reformuler (le grain est celui du catalogue).
-- La forme exacte des sorties, et celle de leur état dans la partie (découvertes, déverrouillées).
-- La portée du parcours : lieux visités et voisins, ou voisins seulement.
-- L'objet requis : le détenir suffit-il, ou le passage reste-t-il ouvert une fois franchi ; forcer une porte = un jet, puis un déverrouillage proposé par l'extraction.
-- Le raccord entre un réseau de lieux et le voyage libre : la pièce qui donne sur un lieu libre est-elle la seule entrée du réseau.
-- La localisation des PNJ : dans cette phase ou à part ; un PNJ hostile sur le chemin bloque-t-il un retour direct.
-- Le front : afficher les sorties visibles, ou seulement l'heure.
+- **Moteur du temps** : échelle des durées, périodes, calcul de `until`, numéro de jour et date, en fonctions pures.
+- **Horloge en base** : départ sur `scenarios`, compteur sur `world_states`, copie au lancement, reprise des parties en cours, temps du tour dans `turn_log`.
+- **Le temps dans le tour** : durée dans l'arbitrage, avancée de l'horloge avant la narration, prompts, `period` dans `turn_completed` et la vue d'une partie.
+- **Sorties** : modèle de contenu, `checkScenario`, `passage_states` et son service.
+- **Parcours** : classement des lieux, lieux atteignables, chemin le plus court en temps, destinations permises.
+- **Les lieux dans le tour** : description et sorties dans les prompts, destination et chemin, listes fermées de l'extraction, découverte et déverrouillage, libellé des pièces.
+- **Localisation des PNJ**.
+- **Back-office** : départ du scénario, sorties et entrée d'un lieu. **Front joueur** : la période dans l'onglet « Situation ».
+- **Contenu** : départs des trois scénarios, réseau du manoir Ward. **Documentation**.
 
 ### Critère de sortie de phase
 
-- Chaque tour fait avancer une horloge de jeu tenue par le backend ; le joueur voit l'heure et la période, et l'arbitrage comme la narration en tiennent compte.
+- Chaque tour fait avancer une horloge de jeu tenue par le backend ; le joueur voit la période, et l'arbitrage comme la narration en tiennent compte.
 - Dans un scénario découpé pièce par pièce (le manoir Ward), le joueur ne passe que par les sorties : un passage caché se découvre, une porte verrouillée exige son objet, le retour dans une pièce visitée se fait en un tour, et un PNJ laissé dans une pièce y est retrouvé.
 
 ---
@@ -456,6 +496,8 @@ Lieux :
 - Combat modélisé comme séquence de jets alternés joueur/PNJ, conformément au modèle générique déjà défini dans le système de règles — cette phase implémente concrètement la boucle round par round, le modèle mécanique sous-jacent existant déjà depuis la Phase 3/4.
 - Branchement de la formule de dégâts du BRP posée en Phase 6 (dés de l'arme + modificateur de dégâts − armure) : l'arbitrage désigne attaquant et cible, le backend calcule les dégâts et les applique, et l'extraction cesse de chiffrer les blessures. Une arme détenue par un PNJ l'emporte sur l'arme ordinaire de son profil, et c'est l'arme qui désigne la compétence d'attaque.
 - Reste du combat du BRP (système de règles, sections 8 et 11) : matrice attaque / défense avec parade et esquive, jets opposés et table de résistance, armure, blessures grave et mortelle, effets spéciaux, table réduite de maladresses ; choix des points de vie totaux pour le personnage.
+- Temps du combat et du personnage, sur l'horloge de la Phase 7 : un tour de combat vaut un round du BRP (12 secondes), durée imposée par le backend et non proposée par l'arbitrage, sans rangs de `DEX` ni actions multiples ; soins (premiers soins en un round, guérison naturelle de 1D3 PV par semaine) et récupération calés sur le temps écoulé.
+- Échéances et événements déclenchés par le temps, à cadrer : une condition (jour, période, peut-être un flag) et un effet appliqué par le backend en delta validé, saisis comme contenu de scénario et vérifiés par `checkScenario`. Ils couvrent aussi les **emplois du temps des PNJ** (gardes moins nombreux la nuit, vampire au tombeau le jour et au château la nuit), qui déplacent ou retirent des instances via leur lieu (`location_instance_id`, Phase 7).
 - Progression du personnage : tests d'expérience et jets d'amélioration du BRP, en fin de scénario.
 - Cycle de vie complet de la partie :
   - création de personnage guidée (au-delà d'un simple formulaire technique),
@@ -649,6 +691,7 @@ finit toujours par être ignoré.
 
 - Modalités précises de l'inscription self-service (Phase 11) : validation d'email, gestion des mots de passe oubliés, éventuelle authentification via fournisseur tiers.
 - Décision sur la nécessité future d'un cumul de rôles (un MJ qui voudrait aussi jouer).
+- Carte des lieux visités dans le front joueur, si le besoin se confirme après la Phase 7 (qui n'affiche pas les sorties).
 - Choix définitif entre pgvector intégré et vector store externe si la Phase 8 est activée (dépend du volume de lore réellement atteint).
 - Réintroduction éventuelle d'un retry automatique limité (Phase 11), une fois le comportement réel des erreurs observé en usage — restreint aux erreurs transitoires (timeout, 5xx). Les sorties rejetées ont leur nouvelle tentative unique depuis la Phase 3 ; un taux de rejet élevé reste le signe d'un prompt à corriger plutôt qu'à retenter.
 - Support multi-langue : l'architecture est actée et répercutée dans les phases ci-dessus (paramètre `language` et colonne `turn_log.language` en Phase 1, séparation référence/affichage en Phase 4, catalogue et glossaire en Phase 5, résumé anglais en Phase 9). L'i18n du front est posée dès la Phase 2, avec l'anglais seul. **Restent ouverts** : la liste des langues cibles, et la phase à laquelle une seconde langue est effectivement activée — probablement pas avant que la Phase 5 rende le contenu paramétrable.
