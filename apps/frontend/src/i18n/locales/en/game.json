@@ -34,6 +34,7 @@
     "percent": "{{value, number}}%",
     "resources": "Resources",
     "location": "Location",
+    "period": "Time of day",
     "quest": "Quest",
     "noLocation": "Unknown",
     "tabs": {

@@ -36,6 +36,21 @@ export const ITEM_CHANGES = ['gained', 'lost', 'used_up', 'equipped', 'unequippe
 /** Only a game master sees drafts, to try them out before publishing. */
 export const SCENARIO_STATUSES = ['draft', 'published'] as const
 
+/**
+ * The seven periods of the day, from dawn. What the player is told of the
+ * time: never the hour, which only the story gives, to a character with a
+ * way to know it.
+ */
+export const PERIODS = [
+  'dawn',
+  'morning',
+  'midday',
+  'afternoon',
+  'dusk',
+  'evening',
+  'night',
+] as const
+
 export type GameStatus = (typeof GAME_STATUSES)[number]
 export type ScenarioStatus = (typeof SCENARIO_STATUSES)[number]
 export type TurnStatus = (typeof TURN_STATUSES)[number]
@@ -47,3 +62,4 @@ export type ContextualEffect = (typeof CONTEXTUAL_EFFECTS)[number]
 export type Characteristic = (typeof CHARACTERISTICS)[number]
 export type SkillCategory = (typeof SKILL_CATEGORIES)[number]
 export type ItemChange = (typeof ITEM_CHANGES)[number]
+export type Period = (typeof PERIODS)[number]

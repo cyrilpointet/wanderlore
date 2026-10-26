@@ -9,6 +9,7 @@ import {
   DIFFICULTIES,
   GAME_STATUSES,
   ITEM_CHANGES,
+  PERIODS,
   RESULTS,
   SKILL_CATEGORIES,
   SCENARIO_STATUSES,
@@ -29,6 +30,7 @@ describe('i18n', () => {
     ['skillCategory', SKILL_CATEGORIES],
     ['itemChange', ITEM_CHANGES],
     ['scenarioStatus', SCENARIO_STATUSES],
+    ['period', PERIODS],
   ])('labels every %s value', (group, values) => {
     for (const value of values) {
       expect(i18n.exists(`${group}.${value}`, { ns: 'enums' }), `${group}.${value}`).toBe(true)

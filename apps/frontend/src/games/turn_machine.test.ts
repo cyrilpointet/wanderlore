@@ -99,6 +99,7 @@ describe('turn machine — a turn played to the end', () => {
           turn: turn({ status: 'completed' }),
           character: CHARACTER,
           location: null,
+          period: 'evening',
         })
       )
     )
@@ -372,6 +373,7 @@ describe('turn machine — narration as it is written', () => {
           turn: turn({ status: 'completed' }),
           character: CHARACTER,
           location: null,
+          period: 'evening',
         })
       )
     )

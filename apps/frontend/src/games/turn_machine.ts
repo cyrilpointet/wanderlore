@@ -1,4 +1,4 @@
-import type { Step } from '@/api/enums'
+import type { Period, Step } from '@/api/enums'
 import type { ContentLabel } from '@/api/types'
 import type { Character, Roll, Turn } from './queries'
 
@@ -72,6 +72,8 @@ export type TurnMessage = { turnId: string; idempotencyKey: string | null } & (
       turn: Turn
       character: Character
       location: ContentLabel | null
+      /** The period of the day the turn ended in. */
+      period: Period
     }
   | { event: 'turn_failed'; failure: Failure }
 )

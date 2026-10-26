@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { transmit } from '@/api/transmit'
+import type { Period } from '@/api/enums'
 import type { ContentLabel } from '@/api/types'
 import { gameQuery, gamesQuery, turnsQuery, type Character, type Game, type Turn } from './queries'
 import { channelOf, readTurn, submitTurn } from './turn_api'
@@ -57,14 +58,14 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
    * event carried them.
    */
   const record = useCallback(
-    (turn: Turn, character?: Character, location?: ContentLabel | null) => {
+    (turn: Turn, character?: Character, location?: ContentLabel | null, period?: Period) => {
       queryClient.setQueryData(turnsQuery(gameId).queryKey, (turns) =>
         !turns || turns.some((known) => known.id === turn.id) ? turns : [...turns, turn]
       )
 
       if (character) {
         queryClient.setQueryData(gameQuery(gameId).queryKey, (current) =>
-          current ? withCompletedTurn(current, character, location) : current
+          current ? withCompletedTurn(current, character, location, period) : current
         )
       } else {
         // Read back rather than received: the sheet is not in the turn, so ask for it.
@@ -102,7 +103,7 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
     (message: TurnMessage) => {
       if (!concerns(latest.current, message)) return
       if (message.event === 'turn_completed') {
-        record(message.turn, message.character, message.location)
+        record(message.turn, message.character, message.location, message.period)
       }
       act({ type: 'message', message })
     },

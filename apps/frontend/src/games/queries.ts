@@ -8,6 +8,7 @@ import type {
   Difficulty,
   GameStatus,
   ItemChange,
+  Period,
   Result,
   ScenarioStatus,
   SkillCategory,
@@ -66,6 +67,8 @@ export type InventoryItem = {
 export type Game = GameHeader & {
   character: Character
   location: ContentLabel | null
+  /** The period of the day, never the hour. */
+  period: Period
   activeQuests: (ContentLabel & { summary: string | null })[]
   pendingTurn: { id: string } | null
 }

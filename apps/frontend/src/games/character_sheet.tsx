@@ -1,5 +1,5 @@
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { MapPin } from 'lucide-react'
+import { MapPin, SunMoon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { HitPointGauge } from './hit_point_gauge'
@@ -211,9 +211,14 @@ function CharacterTab({ character }: { character: Character }) {
   )
 }
 
-/** Where the story stands: the place and the quests under way. */
+/**
+ * Where the story stands: the place, the period of the day and the quests
+ * under way. Never the hour nor the date: the story gives them, to a
+ * character with a way to know them.
+ */
 function SituationTab({ game }: { game: Game }) {
   const { t } = useTranslation('game')
+  const { t: enums } = useTranslation('enums')
 
   return (
     <div className="flex flex-col gap-5">
@@ -222,6 +227,13 @@ function SituationTab({ game }: { game: Game }) {
         <p className="mt-1 flex items-center gap-2 text-body text-text">
           <MapPin aria-hidden className="size-4 shrink-0 text-muted" />
           {game.location?.label ?? t('sheet.noLocation')}
+        </p>
+      </div>
+      <div>
+        <h3 className="text-label text-subtle">{t('sheet.period')}</h3>
+        <p className="mt-1 flex items-center gap-2 text-body text-text">
+          <SunMoon aria-hidden className="size-4 shrink-0 text-muted" />
+          {enums(`period.${game.period}`)}
         </p>
       </div>
       {game.activeQuests.map((quest) => (

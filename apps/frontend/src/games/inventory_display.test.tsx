@@ -59,6 +59,7 @@ function game(inventory: InventoryItem[]): Game {
     chapter: null,
     character: character(inventory),
     location: { reference: 'paris', label: 'Paris' },
+    period: 'afternoon',
     activeQuests: [],
     pendingTurn: null,
   }
@@ -101,6 +102,18 @@ describe('Character sheet | inventory tab', () => {
     expect(situation).toContain('Paris')
     expect(situation).toContain('Deliver the letter')
     expect(situation).not.toContain('Persuasion')
+  })
+
+  test('tells the period of the day where the story stands, and nothing finer', () => {
+    const situation = textOf(
+      renderToStaticMarkup(
+        <CharacterSheet game={{ ...game([]), period: 'dusk' }} initialTab="situation" />
+      )
+    )
+
+    expect(situation).toContain('Time of day')
+    expect(situation).toContain('Dusk')
+    expect(situation).not.toMatch(/\d{1,2}:\d{2}/)
   })
 
   test('says so when the character carries nothing', () => {
@@ -258,7 +271,15 @@ describe('A completed turn', () => {
     expect(after.character.inventory).toEqual([RAPIER, SHOT])
     /** No badge in the event: the place stays as it was. */
     expect(after.location).toEqual(before.location)
+    expect(after.period).toBe('afternoon')
     expect(after.pendingTurn).toBeNull()
+  })
+
+  test('takes the period of the day the turn ended in', () => {
+    const after = withCompletedTurn(game([]), character([]), null, 'night')
+
+    expect(after.period).toBe('night')
+    expect(after.location).toBeNull()
   })
 })
 
