@@ -7,6 +7,7 @@
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 import type { Characteristics, ItemHolderReference, DefinitionKind, Labels, ItemModifier, WeaponProfile, CombatProfile, NpcDisposition, Characteristic, LabelledEntry, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
+import type { Duration } from '#services/game/game_time'
 
 export class AuthAccessTokenSchema extends BaseModel {
   static $columns = ['abilities', 'createdAt', 'expiresAt', 'hash', 'id', 'lastUsedAt', 'name', 'tokenableId', 'type', 'updatedAt'] as const
@@ -250,7 +251,7 @@ export class ResolutionRuleSchema extends BaseModel {
 }
 
 export class ScenarioSchema extends BaseModel {
-  static $columns = ['chapters', 'createdAt', 'createdBy', 'glossary', 'id', 'initialState', 'labels', 'pregeneratedCharacter', 'quests', 'reference', 'status', 'synopsis', 'updatedAt', 'worldId'] as const
+  static $columns = ['chapters', 'createdAt', 'createdBy', 'glossary', 'id', 'initialState', 'labels', 'pregeneratedCharacter', 'quests', 'reference', 'startDate', 'startTime', 'status', 'synopsis', 'updatedAt', 'worldId'] as const
   $columns = ScenarioSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare chapters: LabelledEntry[]
@@ -272,6 +273,14 @@ export class ScenarioSchema extends BaseModel {
   declare quests: LabelledEntry[]
   @column()
   declare reference: string
+  @column({ consume: (value)=>value instanceof Date ? [
+                        value.getFullYear(),
+                        value.getMonth() + 1,
+                        value.getDate()
+                    ].map((part, index)=>String(part).padStart(index === 0 ? 4 : 2, '0')).join('-') : value })
+  declare startDate: string | null
+  @column({ consume: (value)=>typeof value === 'string' ? value.slice(0, 5) : value })
+  declare startTime: string
   @column()
   declare status: ScenarioStatus
   @column()
@@ -304,7 +313,7 @@ export class SessionSchema extends BaseModel {
 }
 
 export class TurnLogSchema extends BaseModel {
-  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'extractionOutput', 'failure', 'id', 'idempotencyKey', 'language', 'llmUsage', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
+  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'duration', 'extractionOutput', 'failure', 'gameTimeAfter', 'gameTimeBefore', 'id', 'idempotencyKey', 'language', 'llmUsage', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
   $columns = TurnLogSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare alerts: Record<string, unknown>[] | null
@@ -315,9 +324,15 @@ export class TurnLogSchema extends BaseModel {
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
+  declare duration: Duration | null
+  @column()
   declare extractionOutput: Record<string, unknown> | null
   @column()
   declare failure: Record<string, unknown> | null
+  @column()
+  declare gameTimeAfter: number | null
+  @column()
+  declare gameTimeBefore: number | null
   @column({ isPrimary: true })
   declare id: string
   @column()
@@ -364,7 +379,7 @@ export class UserSchema extends BaseModel {
 }
 
 export class WorldStateSchema extends BaseModel {
-  static $columns = ['activeQuests', 'createdAt', 'currentLocationId', 'id', 'narrativeFlags', 'sessionId', 'updatedAt'] as const
+  static $columns = ['activeQuests', 'createdAt', 'currentLocationId', 'gameTime', 'id', 'narrativeFlags', 'sessionId', 'startDate', 'updatedAt'] as const
   $columns = WorldStateSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare activeQuests: Record<string, unknown>[]
@@ -372,12 +387,20 @@ export class WorldStateSchema extends BaseModel {
   declare createdAt: DateTime
   @column()
   declare currentLocationId: string | null
+  @column()
+  declare gameTime: number
   @column({ isPrimary: true })
   declare id: string
   @column()
   declare narrativeFlags: Record<string, unknown>
   @column()
   declare sessionId: string
+  @column({ consume: (value)=>value instanceof Date ? [
+                        value.getFullYear(),
+                        value.getMonth() + 1,
+                        value.getDate()
+                    ].map((part, index)=>String(part).padStart(index === 0 ? 4 : 2, '0')).join('-') : value })
+  declare startDate: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }

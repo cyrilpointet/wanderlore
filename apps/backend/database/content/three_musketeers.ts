@@ -965,6 +965,9 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           },
         ],
       },
+      /** Dumas: « le premier lundi du mois d'avril 1625 », as d'Artagnan rides into Meung. */
+      startTime: '10:00',
+      startDate: '1625-04-07',
       glossary: [],
       npcs: [],
       locations: [],

@@ -258,6 +258,13 @@ export type ScenarioContent = Catalogues & {
   /** Null until the game master writes them: a draft may lack both. */
   pregeneratedCharacter: PregeneratedCharacter | null
   initialState: InitialState | null
+  /**
+   * When the story opens: a time of day, `HH:MM`, always — and a Gregorian
+   * date, `YYYY-MM-DD`, when the story has one. Copied into every game started
+   * from the scenario, like the initial state.
+   */
+  startTime: string
+  startDate: string | null
   glossary: GlossaryEntry[]
 }
 

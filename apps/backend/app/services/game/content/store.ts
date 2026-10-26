@@ -80,6 +80,8 @@ export async function storeWorldContent(
         quests: scenario.quests,
         pregeneratedCharacter: scenario.pregeneratedCharacter,
         initialState: scenario.initialState,
+        startTime: scenario.startTime,
+        startDate: scenario.startDate,
         glossary: scenario.glossary,
       },
       { client: trx }
@@ -205,6 +207,8 @@ export async function scenarioContentOf(
     quests: scenario.quests,
     pregeneratedCharacter: scenario.pregeneratedCharacter,
     initialState: scenario.initialState,
+    startTime: scenario.startTime,
+    startDate: scenario.startDate,
     glossary: scenario.glossary,
     ...(await readCatalogues(scenario.worldId, scenario.id, client)),
   }

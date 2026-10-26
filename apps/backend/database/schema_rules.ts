@@ -56,6 +56,31 @@ function content(type: string, options: { array?: boolean } = {}) {
 const labels = content('Labels')
 const kind = content('DefinitionKind')
 
+/**
+ * A calendar date, kept as the `YYYY-MM-DD` it was written as. `pg` reads a
+ * `date` into a JavaScript `Date` at local midnight, which the local parts
+ * turn back into that same day whatever the time zone.
+ *
+ * Self-contained on purpose: the generator copies the function's source into
+ * `database/schema.ts`, where nothing around it would be in scope.
+ */
+const calendarDate = {
+  tsType: 'string',
+  decorators: [
+    {
+      name: '@column',
+      args: {
+        consume: (value: unknown) =>
+          value instanceof Date
+            ? [value.getFullYear(), value.getMonth() + 1, value.getDate()]
+                .map((part, index) => String(part).padStart(index === 0 ? 4 : 2, '0'))
+                .join('-')
+            : value,
+      },
+    },
+  ],
+}
+
 export default {
   tables: {
     users: {
@@ -87,6 +112,19 @@ export default {
         pregenerated_character: content('PregeneratedCharacter'),
         initial_state: content('InitialState'),
         glossary: content('GlossaryEntry[]', { array: true }),
+        /** `HH:MM`: a `time` reads back with its seconds, which a scenario never has. */
+        start_time: {
+          tsType: 'string',
+          decorators: [
+            {
+              name: '@column',
+              args: {
+                consume: (value: unknown) => (typeof value === 'string' ? value.slice(0, 5) : value),
+              },
+            },
+          ],
+        },
+        start_date: calendarDate,
       },
     },
 
@@ -168,6 +206,7 @@ export default {
          * the type.
          */
         narrative_flags: jsonObject,
+        start_date: calendarDate,
       },
     },
 
@@ -185,6 +224,11 @@ export default {
         llm_usage: jsonObjectList,
         extraction_output: jsonObject,
         rejected_attempts: jsonObjectList,
+        duration: {
+          tsType: 'Duration',
+          decorators: column,
+          imports: [{ source: '#services/game/game_time', typeImports: ['Duration'] }],
+        },
       },
     },
   },

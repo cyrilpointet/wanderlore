@@ -12,6 +12,7 @@ import { hitPointsFor } from '#services/rules/derived'
 import { loadContent } from './content/load.js'
 import { resolveWorld } from './content/resolve.js'
 import { type CoherenceIssue, checkScenario } from './content/coherence.js'
+import { secondsOfTime } from './game_time.js'
 import { UnknownLocationError, visitUniqueLocation } from './locations.js'
 import { ItemRefusedError, UnknownItemError, createItem, equipItem } from './inventory.js'
 
@@ -60,9 +61,9 @@ export async function playableScenarios(user: User): Promise<Scenario[]> {
 }
 
 /**
- * Starts a game from a scenario: a copy of its pregenerated character and of
- * the state it starts in, written in one transaction so a game is never half
- * created.
+ * Starts a game from a scenario: a copy of its pregenerated character, of the
+ * state it starts in and of when its story opens, written in one transaction
+ * so a game is never half created.
  *
  * A scenario the user may not see reads as one that does not exist.
  */
@@ -128,6 +129,9 @@ export async function startGame(user: User, scenarioId: string): Promise<Session
           currentLocationId: start.id,
           activeQuests: initialState.quests,
           narrativeFlags: {},
+          /** The clock opens at the scenario's time on its first day, and runs from there. */
+          gameTime: secondsOfTime(scenario.startTime),
+          startDate: scenario.startDate,
         },
         { client: trx }
       )

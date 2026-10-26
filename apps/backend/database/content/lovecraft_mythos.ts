@@ -658,6 +658,9 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           },
         ],
       },
+      /** At first light, the boat still in the surf. */
+      startTime: '07:00',
+      startDate: '1926-03-11',
       glossary: [{ reference: 'ponape', labels: { en: 'Ponape', fr: 'Ponape' } }],
       /**
        * The landing party, the captain who sent it, and what waits ashore:
@@ -973,6 +976,9 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           },
         ],
       },
+      /** An autumn afternoon: night falls on the house a few turns in. */
+      startTime: '16:00',
+      startDate: '1927-10-28',
       glossary: [],
       /**
        * The living who help or hinder the heir, the dead the Wards raised or

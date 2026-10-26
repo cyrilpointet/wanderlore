@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 
 import User from '#models/user'
+import WorldState from '#models/world_state'
 import InventoryItem from '#models/inventory_item'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 import { seedMusketeers } from '#tests/helpers/content'
@@ -132,6 +133,47 @@ test.group('New game | starting', (group) => {
         ['rapier', 'equipped', 1],
       ]
     )
+  })
+
+  test('opens the clock at the time and on the date the story starts', async ({
+    client,
+    assert,
+  }) => {
+    const { scenarioId } = await seedMusketeers()
+
+    const response = await client
+      .post('/api/v1/sessions')
+      .json({ scenarioId })
+      .loginAs(await userWith())
+      .withCsrfToken()
+
+    const game = await WorldState.findByOrFail('sessionId', dataOf(response).id)
+
+    /** 10:00 on the first day, the first Monday of April 1625. */
+    assert.equal(game.gameTime, 10 * 3600)
+    assert.equal(game.startDate, '1625-04-07')
+  })
+
+  test('a story with no date keeps none, and editing the scenario leaves a game alone', async ({
+    client,
+    assert,
+  }) => {
+    const { worldId } = await seedMusketeers()
+    const draft = await draftOf(worldId, true)
+    const master = await userWith('game_master')
+
+    /** A draft written with the defaults of the table: 08:00, no date. */
+    const response = await client
+      .post('/api/v1/sessions')
+      .json({ scenarioId: draft })
+      .loginAs(master)
+      .withCsrfToken()
+
+    await db.from('scenarios').where('id', draft).update({ start_time: '21:30' })
+
+    const game = await WorldState.findByOrFail('sessionId', dataOf(response).id)
+    assert.equal(game.gameTime, 8 * 3600)
+    assert.isNull(game.startDate)
   })
 
   test('two games of the same scenario are two separate copies', async ({ client, assert }) => {
