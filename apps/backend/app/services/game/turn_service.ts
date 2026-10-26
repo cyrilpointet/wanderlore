@@ -32,6 +32,8 @@ import {
 import { actionTypesOf, resolutionFor, rollBaseFor } from './resolution_rules.js'
 import { ContentLabels } from './content_labels.js'
 import { periodAt, secondsOf } from './game_time.js'
+import { passageStates } from './passages.js'
+import { type Route, type SceneExit, type TravelState, exitsOf, routesFrom } from './travel.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
 import { loadWorld } from './content/load.js'
@@ -371,6 +373,7 @@ export class TurnService {
         stackable: item.kind === 'archetype' && item.stackable,
         equippable: item.equippable,
       })),
+      reachableLocations: scene.routes.map(({ to }) => to),
       hasLocation: scene.worldState.currentLocationId !== null,
       hitPointsMax: scene.character.hitPointsMax,
     }
@@ -384,7 +387,8 @@ export class TurnService {
     )
     const outcome = await this.#settle(turn, scene, decision, trace)
     const aside = decision.intent.type === OUT_OF_CHARACTER
-    const time = timeOf(scene.worldState.gameTime, decision, aside)
+    const route = aside ? null : routeTo(scene, decision.intent.destination)
+    const time = timeOf(scene.worldState.gameTime, decision, aside, route)
     trace.time = time
     const narration = await this.#narrate(
       turn,
@@ -393,6 +397,7 @@ export class TurnService {
         /** A verdict and a qualitative degree. Never the dice or the chance. */
         outcome,
         game_time_after: time.after,
+        route,
         intent_summary: decision.intent.summary,
         aside,
       }),
@@ -578,6 +583,23 @@ export class TurnService {
       throw new Error(`Session ${sessionId} has no character to play.`)
     }
 
+    const items = await itemsInScene(sessionId, {
+      characterId: character.id,
+      locationInstanceId: session.worldState.currentLocationId,
+    })
+    const place = session.worldState.currentLocation ?? null
+    const here = uniqueReferenceOf(world, place)
+    const travel: TravelState = {
+      visited: new Set(
+        session.locations
+          .map(({ definitionReference }) => definitionReference)
+          .filter((reference) => uniqueReferenceOf(world, { definitionReference: reference }))
+      ),
+      passages: await passageStates(sessionId),
+      held: new Set(items.character.map(({ definition }) => definition)),
+      guarded: new Set(),
+    }
+
     /**
      * Completed turns only: a failed turn is not part of the story, and handing
      * the model an action that never happened would have it narrate around it.
@@ -601,11 +623,11 @@ export class TurnService {
       worldState: session.worldState,
       npcs: await presentNpcs(sessionId),
       npcDefinitions: await presentNpcDefinitions(sessionId),
-      items: await itemsInScene(sessionId, {
-        characterId: character.id,
-        locationInstanceId: session.worldState.currentLocationId,
-      }),
+      items,
       creatableItems: await creatableItems(world, sessionId),
+      ...describePlace(world, place),
+      exits: here === null ? [] : exitsOf(world.locations, here, travel),
+      routes: here === null ? [] : [...routesFrom(world.locations, here, travel).values()],
       /** Oldest first, so the model reads the exchange in the order it happened. */
       recentTurns: turns.reverse(),
       lastTurnNumber: Number(last?.$extras.max ?? 0),
@@ -697,6 +719,12 @@ type LoadedScene = {
   npcDefinitions: Record<string, string>
   items: ItemsInScene
   creatableItems: string[]
+  placeDescription: string | null
+  surroundings: string | null
+  /** The ways out of where the scene stands: none outside a network. */
+  exits: SceneExit[]
+  /** The places those ways reach, each by its quickest way. */
+  routes: Route[]
   /**
    * As many as the narrator reads, the longer of the two buffers; arbitration
    * keeps only the last of them.
@@ -727,6 +755,10 @@ function buildContext(
       items: scene.items,
       game_time: scene.worldState.gameTime,
       start_date: scene.worldState.startDate,
+      place_description: scene.placeDescription,
+      surroundings: scene.surroundings,
+      exits: scene.exits,
+      routes: scene.routes,
     },
     recent_buffer: toRecentBuffer(scene.recentTurns),
     player_input: playerInput,
@@ -748,13 +780,70 @@ function itemReferencesOf(items: ItemsInScene): string[] {
 
 /**
  * Where the clock stands once the turn is over: the duration arbitration
- * proposed, converted by the backend. An aside takes no time, whatever the
- * model proposed.
+ * proposed, converted by the backend, after the walk to the destination it
+ * named, timed by the backend on the quickest way. An aside takes no time,
+ * whatever the model proposed.
  */
-function timeOf(before: number, decision: ArbitrationOutput, aside: boolean): TracedTime {
-  const seconds = aside ? 0 : secondsOf(decision.duration, before)
+function timeOf(
+  before: number,
+  decision: ArbitrationOutput,
+  aside: boolean,
+  route: Route | null
+): TracedTime {
+  const walk = route?.seconds ?? 0
+  const seconds = aside ? 0 : walk + secondsOf(decision.duration, before + walk)
 
   return { before, after: before + seconds, duration: decision.duration }
+}
+
+/** The quickest way to the destination arbitration named, validated against the same routes. */
+function routeTo(scene: LoadedScene, destination: string | null): Route | null {
+  return destination === null
+    ? null
+    : (scene.routes.find(({ to }) => to === destination) ?? null)
+}
+
+/** The reference of a named place the game stands in; null for an improvised one. */
+function uniqueReferenceOf(
+  world: WorldDefinition,
+  place: { definitionReference: string } | null
+): string | null {
+  if (place === null) {
+    return null
+  }
+
+  const definition = world.locations.find(
+    ({ reference }) => reference === place.definitionReference
+  )
+
+  return definition?.kind === 'unique' ? definition.reference : null
+}
+
+/**
+ * What the place is like, in English: a named place's description, or an
+ * improvised one's descriptor with the description of what it stands in.
+ * A few dozen tokens, never the catalogue.
+ */
+function describePlace(
+  world: WorldDefinition,
+  place: LocationInstance | null
+): { placeDescription: string | null; surroundings: string | null } {
+  if (place === null) {
+    return { placeDescription: null, surroundings: null }
+  }
+
+  const definitionOf = (reference: string | null) =>
+    world.locations.find((location) => location.reference === reference)
+  const definition = definitionOf(place.definitionReference)
+
+  if (definition?.kind === 'unique') {
+    return { placeDescription: definition.description, surroundings: null }
+  }
+
+  return {
+    placeDescription: place.descriptor ?? null,
+    surroundings: definitionOf(place.parentReference)?.description ?? null,
+  }
 }
 
 function toRecentBuffer(turns: TurnLog[]): RecentTurn[] {

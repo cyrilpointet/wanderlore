@@ -33,6 +33,8 @@ Hard rules:
 - The characters present are listed in the scene with their disposition: keep them in character. Never introduce characters, places, objects or events that contradict the world material and scene state provided.
 - names gives, in the language of the narration, the name of the place and of each person present, and the fixed translation of other proper names (glossary). Use these names exactly, every time.
 - items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason.
+- place says what the place is like, and what an improvised one stands in. exits lists its ways out, each with where it leads and how it looks from here. One marked hidden has not been found: never mention it, unless the character searches and the outcome gives them reason to find it. One marked locked stays shut unless the story opens it.
+- When route is given, the character goes to its last place by these passages, in this order: follow them, and invent no other way.
 - time tells when the action began and when it ends: the period of the day at each end, the day of the game, the date and the day of the week when the story has one, and the hour it ends at, to the quarter. Never contradict the time that passes: the light changes, night falls, a day goes by.
 - Never write the hour in your text unless the character has a way to know it — a watch they hold, a clock that still runs in the place, church bells — and wants to know it. Otherwise speak of the light and of the time of day. Never state the date without a reason either.
 - The character may take, give, hide, drop, use up or draw an item in your story. Never decide what that changes in the game: a separate step reads it from your text.
@@ -72,6 +74,13 @@ export function buildNarrationMessage(request: NarrationRequest): string {
      * never a modifier, a quantity or whether an item is drawn: the numbers
      * would end up in the text.
      */
+    /** In English: the narrator writes it in the language of the game. */
+    place: {
+      description: request.scene.place_description,
+      surroundings: request.scene.surroundings,
+    },
+    exits: exitsForNarration(request, labels),
+    route: routeForNarration(request, labels),
     /**
      * When the turn began and ends, worked out by the backend: periods, the
      * day, the date when the story has one, and the hour rounded to the
@@ -101,6 +110,34 @@ export function buildNarrationMessage(request: NarrationRequest): string {
   }
 
   return `${FRAMING}\n\n${JSON.stringify(payload, null, 2)}\n\nWrite the narration for this outcome.`
+}
+
+/**
+ * Where the ways out lead, by the name the player knows the places by. A way
+ * not found yet stays out of an aside: the narrator answers from what the
+ * story established, and it established nothing about that one.
+ */
+function exitsForNarration(request: NarrationRequest, labels: ContentLabels) {
+  return request.scene.exits
+    .filter((exit) => !(request.aside && exit.hidden))
+    .map((exit) => ({
+      to: labels.of('location', exit.to).label,
+      passage: exit.passage,
+      hidden: exit.hidden,
+      locked: exit.locked,
+    }))
+}
+
+/** The way to the destination, passage by passage: an aside goes nowhere. */
+function routeForNarration(request: NarrationRequest, labels: ContentLabels) {
+  if (request.aside || request.route === null) {
+    return null
+  }
+
+  return request.route.steps.map((step) => ({
+    through: step.passage,
+    to: labels.of('location', step.to).label,
+  }))
 }
 
 function timeForNarration(request: NarrationRequest) {

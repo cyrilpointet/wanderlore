@@ -47,6 +47,8 @@ export type Way = {
   requires: string | null
   /** How long going through takes; a moment when the content says nothing. */
   duration: FixedDuration
+  /** No way back through it. */
+  oneWay: boolean
   /** The passage it goes through, as declared. */
   declared: PassageKey
 }
@@ -105,6 +107,7 @@ export function waysOutOf(places: PlaceDeclaration[], from: string): Way[] {
           hidden: exit.hidden,
           requires: exit.requires,
           duration,
+          oneWay: exit.oneWay,
           declared,
         },
       ]
@@ -118,6 +121,7 @@ export function waysOutOf(places: PlaceDeclaration[], from: string): Way[] {
           hidden: false,
           requires: exit.requires,
           duration,
+          oneWay: false,
           declared,
         },
       ]

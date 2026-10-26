@@ -172,3 +172,35 @@ export function destinationsFrom(
 
   return { places: [...new Set([...reachable, ...open])], improvise: true }
 }
+
+/** A way out of the place the scene stands in, as the turn's steps are told of it. */
+export type SceneExit = {
+  /** Reference of the unique place it leads to. */
+  to: string
+  /** One line of English, as seen from here. */
+  passage: string
+  /** Hidden from here and not found yet: the character does not know it is there. */
+  hidden: boolean
+  /** Shut until the item it requires, or force, or skill opens it. */
+  locked: boolean
+  /** The item that opens it, if it is locked. */
+  requires: string | null
+  oneWay: boolean
+}
+
+/** The ways out of a place, with what the game knows of each. */
+export function exitsOf(places: PlaceDeclaration[], from: string, state: TravelState): SceneExit[] {
+  return waysOutOf(places, from).map((way) => {
+    const key = keyOf(way.declared)
+    const locked = way.requires !== null && !state.passages.unlocked.has(key)
+
+    return {
+      to: way.to,
+      passage: way.passage,
+      hidden: way.hidden && !state.passages.discovered.has(key),
+      locked,
+      requires: locked ? way.requires : null,
+      oneWay: way.oneWay,
+    }
+  })
+}

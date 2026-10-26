@@ -18,6 +18,7 @@ import {
 const META = {
   actionTypes: [],
   npcHandles: [],
+  reachableLocations: [],
   locations: ['louvre', 'paris'],
   locationArchetypes: ['tavern'],
   npcDefinitions: ['commoner'],

@@ -55,6 +55,12 @@ Items:
 - An item is never a contextual modifier, and you never weigh what an item is worth: the backend counts the items the character holds. Holding an item only decides whether the action is possible.
 - Do not narrate the outcome and do not describe its consequences: a separate step stages it once the outcome is settled.
 
+Places:
+- scene_state.description says what the place is like, and scene_state.surroundings what an improvised place stands in. Judge what the place allows from them.
+- scene_state.exits lists the ways out of the place. One marked hidden has not been found: the character does not know it is there, but searching the place may find it — a roll when it is well hidden. One marked locked stays shut unless the character holds the item it requires, or forces or picks it — a roll.
+- When the character goes to one of reachable_locations, set intent.destination to it. Leave it null for any other action, and for a place that is not listed.
+- The walk between places is timed by the game, not by you: with a destination, the duration only covers what the character does on arrival — moment when they only go there.
+
 Time:
 - duration is how long everything the character does this turn takes, on this scale only: moment (a word, a glance, opening a door), minutes (searching a room, a conversation), hour (going through a library, a meal, crossing a town), hours (half a day on the road or at work), days (a journey, a convalescence), until (waiting for a time of day: "I wait for nightfall", "I sleep until dawn").
 - duration.count is the number of days, from 1 to ${MAX_DAYS}, for days only. duration.period is the time of day waited for, for until only: dawn, morning, midday, afternoon, dusk, evening or night. Both are null otherwise. A longer journey is played over several turns.
@@ -89,8 +95,9 @@ export const ARBITRATION_SCHEMA = {
         type: { type: 'string' },
         target: { type: ['string', 'null'] },
         summary: { type: 'string' },
+        destination: { type: ['string', 'null'] },
       },
-      required: ['type', 'target', 'summary'],
+      required: ['type', 'target', 'summary', 'destination'],
     },
     validity: {
       type: 'object',
@@ -174,12 +181,28 @@ export function buildArbitrationMessage(context: ArbitrationContext): string {
     },
     scene_state: {
       location: context.scene.location,
+      /** What the place allows: a few dozen tokens, never the catalogue. */
+      description: context.scene.place_description,
+      surroundings: context.scene.surroundings,
+      /** Hidden and locked ones included, with their state: a search or a lock is the arbiter's to judge. */
+      exits: context.scene.exits.map((exit) => ({
+        to: exit.to,
+        passage: exit.passage,
+        hidden: exit.hidden,
+        locked: exit.locked,
+        requires: exit.requires,
+        one_way: exit.oneWay,
+      })),
       /** The time of day as a period, never the hour: a circumstance like any other. */
       period: periodAt(context.scene.game_time),
       /** intent.target must be one of these handles. */
       npcs_present: context.scene.npcs_present,
       narrative_flags: context.scene.narrative_flags,
     },
+    /** The closed list intent.destination comes from, by reference and English label. */
+    reachable_locations: context.scene.routes.map(({ to }) =>
+      new ContentLabels(context.world).of('location', to)
+    ),
     /**
      * By holder, by reference and English label: enough to judge whether the
      * character has what the action needs. No modifier, quantity, state or

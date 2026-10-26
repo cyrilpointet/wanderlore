@@ -5,6 +5,7 @@ import type { ActionType } from '#services/game/resolution_rules'
 import type { PresentNpc } from '#services/game/npcs'
 import type { ItemsInScene } from '#services/game/inventory'
 import type { Duration } from '#services/game/game_time'
+import type { Route, SceneExit } from '#services/game/travel'
 
 /**
  * Shapes exchanged with the model.
@@ -140,6 +141,11 @@ export type ArbitrationOutput = {
     type: string
     target: string | null
     summary: string
+    /**
+     * Where a movement goes, from the closed list of places the exits reach:
+     * the backend times the way there. Null for anything else.
+     */
+    destination: string | null
   }
   validity: {
     factual: boolean
@@ -193,6 +199,14 @@ export type SceneState = {
    * handed its own view of it, never the modifiers.
    */
   items: ItemsInScene
+  /** What the place is like, in English: a named place's description, an improvised one's descriptor. */
+  place_description: string | null
+  /** What an improvised place stands in: the description of its parent. */
+  surroundings: string | null
+  /** The ways out of the place, with what the game knows of each: none outside a network. */
+  exits: SceneExit[]
+  /** The places the exits reach, each by its quickest way: none outside a network. */
+  routes: Route[]
   /** The game clock as the turn began: seconds since midnight of the first day. */
   game_time: number
   /** The date the game started on, if its story has one. */
@@ -240,6 +254,8 @@ export type NarrationRequest = TurnContext & {
   outcome: OutcomeToNarrate
   /** The game clock once the turn is over: the narration tells where it ends. */
   game_time_after: number
+  /** The way to the destination arbitration named, passage by passage; null when it named none. */
+  route: Route | null
   intent_summary: string
   /** The player spoke to the game master rather than acting: answer, do not move the story. */
   aside: boolean

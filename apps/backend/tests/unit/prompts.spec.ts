@@ -8,6 +8,8 @@ import {
   uniqueLocationReferences,
 } from '#services/game/world'
 import { THREE_MUSKETEERS, THREE_MUSKETEERS_IN_FRENCH } from '#tests/helpers/worlds'
+import { HOUSE_WORLD } from '#tests/helpers/places'
+import { exitsOf, routesFrom } from '#services/game/travel'
 import type {
   ArbitrationContext,
   NarrationRequest,
@@ -120,6 +122,10 @@ function turnContext(overrides: Partial<TurnContext> = {}): TurnContext {
       /** Four in the afternoon, on the first day, a Monday. */
       game_time: 16 * 3600,
       start_date: '1625-04-07',
+      place_description: 'The courtyard of the hôtel, crowded with musketeers.',
+      surroundings: null,
+      exits: [],
+      routes: [],
     },
     recent_buffer: [{ role: 'narration', text: 'A guard bars your way.' }],
     player_input: 'I show him my letter and ask to pass.',
@@ -138,6 +144,7 @@ function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationR
     outcome: { mode: 'roll_required', result: 'success', degree: 'special', reason: null },
     /** The wait ran past midnight: 01:10 on the second day. */
     game_time_after: 24 * 3600 + 3600 + 10 * 60,
+    route: null,
     intent_summary: 'Persuading the guard with a letter of recommendation',
     aside: false,
     ...overrides,
@@ -803,9 +810,7 @@ test.group('Prompts | the time of the game', () => {
     assert.isNull(payload.time.weekday)
   })
 
-  test('the narrator gives the hour only when the character has a way to know it', ({
-    assert,
-  }) => {
+  test('the narrator gives the hour only when the character has a way to know it', ({ assert }) => {
     assert.include(NARRATION_SYSTEM_PROMPT, 'Never contradict the time that passes')
     assert.include(NARRATION_SYSTEM_PROMPT, 'unless the character has a way to know it')
     assert.include(NARRATION_SYSTEM_PROMPT, 'a watch they hold')
@@ -821,5 +826,140 @@ test.group('Prompts | the time of the game', () => {
     assert.notInclude(message, 'period')
     assert.notInclude(message, 'game_time')
     assert.notInclude(message, '1625-04')
+  })
+})
+
+test.group('Prompts | places and their exits', () => {
+  /** In the hall of the house of the specs, the yard behind, the rest to find. */
+  function inTheHall(): TurnContext {
+    const context = turnContext({ world: HOUSE_WORLD })
+    const state = {
+      visited: new Set(['house_yard', 'house_hall']),
+      passages: { discovered: new Set<string>(), unlocked: new Set<string>() },
+      held: new Set<string>(),
+      guarded: new Set<string>(),
+    }
+
+    return {
+      ...context,
+      scene: {
+        ...context.scene,
+        location: 'house_hall',
+        place_description: 'A tall hall with a staircase.',
+        exits: exitsOf(HOUSE_WORLD.locations, 'house_hall', state),
+        routes: [...routesFrom(HOUSE_WORLD.locations, 'house_hall', state).values()],
+      },
+    }
+  }
+
+  test('arbitration is handed the place, all its exits and where they lead', ({ assert }) => {
+    const payload = payloadOf(
+      buildArbitrationMessage({ ...inTheHall(), action_types: ACTION_TYPES })
+    )
+
+    assert.equal(payload.scene_state.description, 'A tall hall with a staircase.')
+    assert.deepInclude(payload.scene_state.exits, {
+      to: 'house_study',
+      passage: 'a locked oak door',
+      hidden: false,
+      locked: true,
+      requires: 'iron_key',
+      one_way: false,
+    })
+    assert.sameMembers(
+      payload.reachable_locations.map(({ reference }: { reference: string }) => reference),
+      ['house_yard', 'house_kitchen', 'house_corridor', 'house_cellar']
+    )
+  })
+
+  test('arbitration names the destination, and leaves the walk to the game', ({ assert }) => {
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'intent.destination')
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'The walk between places is timed by the game')
+    assert.include(ARBITRATION_SCHEMA.properties.intent.required, 'destination')
+  })
+
+  test('outside a network, no exit and no destination to pick', ({ assert }) => {
+    const payload = payloadOf(buildArbitrationMessage(arbitrationContext()))
+
+    assert.deepEqual(payload.scene_state.exits, [])
+    assert.deepEqual(payload.reachable_locations, [])
+  })
+
+  test('the narrator is handed the place, and the exits by their names', ({ assert }) => {
+    const study = turnContext({ world: HOUSE_WORLD })
+    const state = {
+      visited: new Set(['house_study']),
+      passages: { discovered: new Set<string>(), unlocked: new Set<string>() },
+      held: new Set<string>(),
+      guarded: new Set<string>(),
+    }
+    const payload = payloadOf(
+      buildNarrationMessage({
+        ...narrationRequest(),
+        world: HOUSE_WORLD,
+        scene: {
+          ...study.scene,
+          place_description: 'A cluttered study.',
+          exits: exitsOf(HOUSE_WORLD.locations, 'house_study', state),
+        },
+      })
+    )
+
+    assert.deepEqual(payload.place, { description: 'A cluttered study.', surroundings: null })
+    /** The hidden one too: a search that succeeds has to find something. */
+    assert.deepInclude(payload.exits, {
+      to: 'The cellar',
+      passage: 'a bookcase that swings open',
+      hidden: true,
+      locked: false,
+    })
+    assert.include(NARRATION_SYSTEM_PROMPT, 'never mention it, unless the character searches')
+  })
+
+  test('an aside is told only the exits the character knows of', ({ assert }) => {
+    const state = {
+      visited: new Set(['house_study']),
+      passages: { discovered: new Set<string>(), unlocked: new Set<string>() },
+      held: new Set<string>(),
+      guarded: new Set<string>(),
+    }
+    const request = narrationRequest()
+    const payload = payloadOf(
+      buildNarrationMessage({
+        ...request,
+        world: HOUSE_WORLD,
+        aside: true,
+        scene: { ...request.scene, exits: exitsOf(HOUSE_WORLD.locations, 'house_study', state) },
+      })
+    )
+
+    assert.deepEqual(
+      payload.exits.map(({ to }: { to: string }) => to),
+      ['The hall']
+    )
+  })
+
+  test('the narrator follows the route, passage by passage', ({ assert }) => {
+    const hall = inTheHall()
+    const route = hall.scene.routes.find(({ to }) => to === 'house_corridor')!
+    const payload = payloadOf(
+      buildNarrationMessage({ ...narrationRequest(), world: HOUSE_WORLD, scene: hall.scene, route })
+    )
+
+    assert.deepEqual(payload.route, [
+      { through: 'the main staircase, going up', to: 'The corridor' },
+    ])
+    assert.include(NARRATION_SYSTEM_PROMPT, 'invent no other way')
+  })
+
+  test('extraction is handed neither the place nor its exits', ({ assert }) => {
+    const message = buildExtractionMessage({
+      ...inTheHall(),
+      narration: 'You cross the hall.',
+      creatable_items: [],
+    })
+
+    assert.notInclude(message, 'A tall hall with a staircase.')
+    assert.notInclude(message, 'a locked oak door')
   })
 })

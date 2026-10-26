@@ -11,6 +11,7 @@ import {
 const META: ValidationMeta = {
   actionTypes: ['melee_combat', 'social_persuasion'],
   npcHandles: ['royal_guard_1', 'treville'],
+  reachableLocations: [],
   locations: ['paris', 'louvre', 'france'],
   locationArchetypes: ['tavern', 'town'],
   npcDefinitions: ['treville', 'royal_guard', 'commoner'],
@@ -870,5 +871,49 @@ test.group('Turn validator | duration', () => {
 
     assert.isDefined(duration)
     assert.deepEqual(fields(error), ['duration'])
+  })
+})
+
+test.group('Turn validator | destination', () => {
+  const IN_A_NETWORK: ValidationMeta = {
+    ...META,
+    reachableLocations: ['house_yard', 'house_kitchen'],
+  }
+
+  const going = (destination: string | null, type = 'movement') =>
+    settled({ intent: { type, target: null, summary: 'Going', destination } })
+
+  test('a place the exits reach', async ({ assert }) => {
+    const output = await validateArbitration(going('house_kitchen'), IN_A_NETWORK)
+
+    assert.equal(output.intent.destination, 'house_kitchen')
+  })
+
+  test('rejects a place the exits do not reach, naming those they do', async ({ assert }) => {
+    const error = await reject(() => validateArbitration(going('house_attic'), IN_A_NETWORK))
+
+    assert.deepEqual(fields(error), ['intent.destination'])
+    assert.deepEqual(error.reasons[0].allowed, ['house_yard', 'house_kitchen'])
+  })
+
+  test('outside a network, a destination times nothing and is dropped', async ({ assert }) => {
+    const output = await validateArbitration(going('paris'), META)
+
+    assert.isNull(output.intent.destination)
+  })
+
+  test('an aside goes nowhere', async ({ assert }) => {
+    const output = await validateArbitration(
+      going('house_kitchen', 'out_of_character'),
+      IN_A_NETWORK
+    )
+
+    assert.isNull(output.intent.destination)
+  })
+
+  test('none sent is none', async ({ assert }) => {
+    const output = await validateArbitration(settled(), IN_A_NETWORK)
+
+    assert.isNull(output.intent.destination)
   })
 })

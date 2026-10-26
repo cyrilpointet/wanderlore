@@ -59,6 +59,8 @@ export type ValidationMeta = {
   actionTypes: string[]
   /** Closed list: the handles of the people present, the only possible targets. */
   npcHandles: string[]
+  /** Closed list: the places the exits of a network reach, where a movement may be timed to. */
+  reachableLocations: string[]
   /** Closed list: the named places the world defines, and so can label. */
   locations: string[]
   /** Closed list: the kinds of place an improvised one may be. */
@@ -129,6 +131,8 @@ const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
     /** Someone present, by handle — never a name the backend could not resolve. */
     target: vine.enum((field) => (field.meta as ValidationMeta).npcHandles).nullable(),
     summary: vine.string().maxLength(500),
+    /** Checked against the places the exits reach, below. Optional on the wire: no movement. */
+    destination: vine.string().trim().nullable().optional(),
   }),
   validity: vine.object({
     factual: vine.boolean(),
@@ -246,10 +250,12 @@ export async function validateArbitration(
   const output = await run<RawArbitration>('arbitration', arbitrationValidator, payload, meta)
   const modifiers = output.resolution.contextual_modifiers ?? []
 
+  const destination = destinationOf(output, meta)
   const reasons = [
     ...coherenceReasons(output),
     ...modifierReasons(modifiers, meta),
     ...durationReasons(output.duration),
+    ...destination.reasons,
   ]
 
   if (reasons.length > 0) {
@@ -258,6 +264,7 @@ export async function validateArbitration(
 
   return {
     ...output,
+    intent: { ...output.intent, destination: destination.value },
     duration: toDuration(output.duration),
     resolution: {
       ...output.resolution,
@@ -270,7 +277,46 @@ export async function validateArbitration(
   }
 }
 
-type RawArbitration = Omit<ArbitrationOutput, 'resolution' | 'duration'> & {
+/**
+ * A destination outside a network times nothing, so it is dropped rather than
+ * refused, and so is an aside's; within one, it comes from the places the
+ * exits reach, or the turn would be timed on a way that does not exist.
+ */
+function destinationOf(
+  output: RawArbitration,
+  meta: ValidationMeta
+): { value: string | null; reasons: RejectionReason[] } {
+  const destination = output.intent.destination ?? null
+
+  if (
+    destination === null ||
+    meta.reachableLocations.length === 0 ||
+    output.intent.type === OUT_OF_CHARACTER
+  ) {
+    return { value: null, reasons: [] }
+  }
+
+  if (!meta.reachableLocations.includes(destination)) {
+    return {
+      value: null,
+      reasons: [
+        {
+          ...reason(
+            'intent.destination',
+            'enum',
+            `"${destination}" cannot be reached from here by the exits.`
+          ),
+          allowed: meta.reachableLocations,
+        },
+      ],
+    }
+  }
+
+  return { value: destination, reasons: [] }
+}
+
+type RawArbitration = Omit<ArbitrationOutput, 'resolution' | 'duration' | 'intent'> & {
+  intent: Omit<ArbitrationOutput['intent'], 'destination'> & { destination?: string | null }
   resolution: Omit<ArbitrationOutput['resolution'], 'contextual_modifiers'> & {
     contextual_modifiers?: ArbitrationOutput['resolution']['contextual_modifiers']
   }

@@ -1171,7 +1171,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           reference: 'ward_house',
           labels: { en: 'Ward House', fr: 'Le manoir Ward' },
           description:
-            'The Ward estate on its lonely hill: a gambrel-roofed Georgian mansion shuttered for a year, its grounds, outbuildings and family plot. Every room is a place of its own.',
+            'The Ward estate on its lonely hill: a gambrel-roofed Georgian mansion shuttered for a year, its grounds, outbuildings and family plot.',
           kind: 'unique',
           parent: 'new_england',
           exits: [],
