@@ -30,6 +30,7 @@ const SETTLED = {
   intent: { type: 'observation', target: null, summary: 'Looking around' },
   validity: { factual: true, plausibility: 'plausible', justification: 'Nothing prevents it.' },
   resolution: { mode: 'automatic_success', action_type: null, difficulty: null },
+  duration: { label: 'moment', count: null, period: null },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 

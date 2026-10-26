@@ -3,6 +3,7 @@ import { BaseTransformer } from '@adonisjs/core/transformers'
 import type Session from '#models/session'
 import type { ContentLabels } from '#services/game/content_labels'
 import CharacterTransformer from '#transformers/character_transformer'
+import { periodAt } from '#services/game/game_time'
 
 /**
  * The labels of the world a game is played in. A function of the game, since a
@@ -35,6 +36,8 @@ export default class SessionTransformer extends BaseTransformer<Session> {
       character: CharacterTransformer.transform(this.#character(), this.#labels),
       /** The handle and its label, whether the place is unique or improvised. */
       location: location ? this.#labels.location(location) : null,
+      /** The period of the day, worked out here: the hour, the date and the day stay in the story. */
+      period: periodAt(worldState.gameTime),
       activeQuests: worldState.activeQuests.map((quest) => ({
         ...this.#labels.of('quest', quest.reference as string),
         summary: typeof quest.summary === 'string' ? quest.summary : null,

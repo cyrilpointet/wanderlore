@@ -39,6 +39,7 @@ const ARBITRATION_WITH_ROLL = {
   intent: { type: 'social_dialogue', target: null, summary: 'Presenting the letter' },
   validity: { factual: true, plausibility: 'plausible', justification: 'The letter is carried.' },
   resolution: { mode: 'roll_required', action_type: 'social_etiquette', difficulty: 'average' },
+  duration: { label: 'moment', count: null, period: null },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 

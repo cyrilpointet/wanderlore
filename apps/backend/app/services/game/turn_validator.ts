@@ -2,6 +2,14 @@ import vine from '@vinejs/vine'
 
 import { CONTEXTUAL_EFFECTS, DIFFICULTIES } from '#services/rules/types'
 import { MAX_CONTEXTUAL_MODIFIERS } from '#services/rules/engine'
+import {
+  DURATION_LABELS,
+  MAX_DAYS,
+  PERIODS,
+  type Duration,
+  type DurationLabel,
+  type Period,
+} from '#services/game/game_time'
 
 import { NPC_DISPOSITIONS } from './world.js'
 import { OUT_OF_CHARACTER } from './prompts/arbitration.js'
@@ -149,6 +157,16 @@ const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
       .maxLength(MAX_CONTEXTUAL_MODIFIERS)
       .optional(),
   }),
+  /**
+   * A label of the scale, never a time: a number of days within a week, or a
+   * period of the day to wait for. Whether each goes with its label is
+   * checked below.
+   */
+  duration: vine.object({
+    label: vine.enum(DURATION_LABELS),
+    count: vine.number().withoutDecimals().min(1).max(MAX_DAYS).nullable(),
+    period: vine.enum(PERIODS).nullable(),
+  }),
   alert: vine.object({
     prompt_injection_suspected: vine.boolean(),
     out_of_scope: vine.boolean(),
@@ -228,7 +246,11 @@ export async function validateArbitration(
   const output = await run<RawArbitration>('arbitration', arbitrationValidator, payload, meta)
   const modifiers = output.resolution.contextual_modifiers ?? []
 
-  const reasons = [...coherenceReasons(output), ...modifierReasons(modifiers, meta)]
+  const reasons = [
+    ...coherenceReasons(output),
+    ...modifierReasons(modifiers, meta),
+    ...durationReasons(output.duration),
+  ]
 
   if (reasons.length > 0) {
     throw new TurnValidationError('arbitration', reasons)
@@ -236,6 +258,7 @@ export async function validateArbitration(
 
   return {
     ...output,
+    duration: toDuration(output.duration),
     resolution: {
       ...output.resolution,
       /**
@@ -247,9 +270,45 @@ export async function validateArbitration(
   }
 }
 
-type RawArbitration = Omit<ArbitrationOutput, 'resolution'> & {
+type RawArbitration = Omit<ArbitrationOutput, 'resolution' | 'duration'> & {
   resolution: Omit<ArbitrationOutput['resolution'], 'contextual_modifiers'> & {
     contextual_modifiers?: ArbitrationOutput['resolution']['contextual_modifiers']
+  }
+  duration: FlatDuration
+}
+
+/** The duration as it travels: every field present, count and period mostly null. */
+type FlatDuration = {
+  label: DurationLabel
+  count: number | null
+  period: Period | null
+}
+
+/**
+ * Days need their count, a wait needs its period. A count or a period sent
+ * with a label that has none is dropped rather than refused: it changes
+ * nothing, and refusing it would only cost a second call.
+ */
+function durationReasons(duration: FlatDuration): RejectionReason[] {
+  if (duration.label === 'days' && duration.count === null) {
+    return [reason('duration.count', 'required', `Days need their count, from 1 to ${MAX_DAYS}.`)]
+  }
+
+  if (duration.label === 'until' && duration.period === null) {
+    return [reason('duration.period', 'required', 'A wait needs the period of the day it ends at.')]
+  }
+
+  return []
+}
+
+function toDuration(duration: FlatDuration): Duration {
+  switch (duration.label) {
+    case 'days':
+      return { label: 'days', count: duration.count! }
+    case 'until':
+      return { label: 'until', period: duration.period! }
+    default:
+      return { label: duration.label }
   }
 }
 

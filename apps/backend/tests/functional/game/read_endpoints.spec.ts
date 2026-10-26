@@ -56,6 +56,9 @@ async function arrangeGame(userId: string, lastActivityAt = DateTime.now()) {
       { reference: 'deliver_the_letter', step: 1, summary: 'Carry the letter to Tréville.' },
     ],
     narrativeFlags: { letter_read: true },
+    /** Half past seven in the evening, on the third day. */
+    gameTime: 2 * 86400 + 19 * 3600 + 30 * 60,
+    startDate: '1625-04-07',
   })
 
   return session
@@ -265,6 +268,20 @@ test.group('GET /sessions/:id', (group) => {
       },
     ])
     assert.isNull(game.pendingTurn)
+  })
+
+  test('tells the period of the day, never the hour nor the date', async ({ client, assert }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(player.id)
+
+    const response = await client.get(`/api/v1/sessions/${session.id}`).loginAs(player)
+    const game = dataOf(response)
+    const wire = JSON.stringify(response.body())
+
+    assert.equal(game.period, 'dusk')
+    for (const leak of ['gameTime', 'startDate', '19:30', '1625']) {
+      assert.notInclude(wire, leak)
+    }
   })
 
   test('names an improvised place by its proper name', async ({ client, assert }) => {

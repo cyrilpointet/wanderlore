@@ -2,6 +2,7 @@ import TurnLog from '#models/turn_log'
 import { describeTurnFailure } from '#exceptions/turn_failure'
 import type { LlmCallMetadata } from '#services/llm/types'
 import type { RollResolution } from '#services/rules/types'
+import type { Duration } from '#services/game/game_time'
 
 import type { ArbitrationOutput } from './prompts/types.js'
 import type { RejectionReason } from './turn_validator.js'
@@ -35,9 +36,21 @@ export type TracedRoll = RollResolution & {
   actionType: string
 }
 
+/**
+ * The game clock on both sides of the turn, and the duration arbitration
+ * proposed — set once arbitration has ruled, so the narration can tell when
+ * the turn ends.
+ */
+export type TracedTime = {
+  before: number
+  after: number
+  duration: Duration
+}
+
 export type TurnTrace = {
   arbitration: ArbitrationOutput | null
   roll: TracedRoll | null
+  time: TracedTime | null
   narration: string | null
   extraction: Record<string, unknown> | null
   rejectedAttempts: RejectedAttempt[]
@@ -64,6 +77,7 @@ export function emptyTrace(): TurnTrace {
   return {
     arbitration: null,
     roll: null,
+    time: null,
     narration: null,
     extraction: null,
     rejectedAttempts: [],
@@ -85,6 +99,9 @@ export function traceColumns(trace: TurnTrace) {
   return {
     arbitrationOutput: trace.arbitration as Record<string, unknown> | null,
     rollResult: trace.roll as Record<string, unknown> | null,
+    gameTimeBefore: trace.time?.before ?? null,
+    gameTimeAfter: trace.time?.after ?? null,
+    duration: trace.time?.duration ?? null,
     narratedText: trace.narration,
     extractionOutput: trace.extraction,
     rejectedAttempts:

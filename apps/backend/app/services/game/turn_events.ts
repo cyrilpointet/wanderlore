@@ -3,6 +3,7 @@ import type TurnLog from '#models/turn_log'
 import type { RollResolution } from '#services/rules/types'
 import type { ContentLabels, PlacedLocation } from '#services/game/content_labels'
 import type { HeldItem } from '#services/game/inventory'
+import type { Period } from '#services/game/game_time'
 import CharacterTransformer from '#transformers/character_transformer'
 import TurnTransformer, { presentRoll } from '#transformers/turn_transformer'
 
@@ -45,6 +46,8 @@ export type TurnEvent =
       /** What the character holds once the turn is applied. */
       inventory: HeldItem[]
       location: PlacedLocation | null
+      /** The period of the day the turn ended in: never the hour, which stays in the story. */
+      period: Period
       labels: ContentLabels
     }
   | { type: 'turn_failed'; failure: { code: string; message: string } }
@@ -100,6 +103,7 @@ export function toMessage(ref: TurnRef, event: TurnEvent) {
           event.inventory
         ).toObject(),
         location: event.location === null ? null : event.labels.location(event.location),
+        period: event.period,
       }
 
     case 'turn_failed':

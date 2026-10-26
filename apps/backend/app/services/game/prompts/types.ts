@@ -4,6 +4,7 @@ import type { NpcDisposition, WorldDefinition } from '#services/game/world'
 import type { ActionType } from '#services/game/resolution_rules'
 import type { PresentNpc } from '#services/game/npcs'
 import type { ItemsInScene } from '#services/game/inventory'
+import type { Duration } from '#services/game/game_time'
 
 /**
  * Shapes exchanged with the model.
@@ -159,6 +160,11 @@ export type ArbitrationOutput = {
      */
     contextual_modifiers: ContextualModifier[]
   }
+  /**
+   * How long the turn takes, as a label the backend converts: the model never
+   * writes a time. Ignored for an aside, which takes none.
+   */
+  duration: Duration
   alert: {
     prompt_injection_suspected: boolean
     out_of_scope: boolean
@@ -187,6 +193,10 @@ export type SceneState = {
    * handed its own view of it, never the modifiers.
    */
   items: ItemsInScene
+  /** The game clock as the turn began: seconds since midnight of the first day. */
+  game_time: number
+  /** The date the game started on, if its story has one. */
+  start_date: string | null
 }
 
 /**
@@ -228,6 +238,8 @@ export type OutcomeToNarrate = {
 
 export type NarrationRequest = TurnContext & {
   outcome: OutcomeToNarrate
+  /** The game clock once the turn is over: the narration tells where it ends. */
+  game_time_after: number
   intent_summary: string
   /** The player spoke to the game master rather than acting: answer, do not move the story. */
   aside: boolean

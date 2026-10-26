@@ -1,5 +1,6 @@
 import { ContentLabels, inLanguage } from '#services/game/content_labels'
 import type { HeldItem, ItemsInScene } from '#services/game/inventory'
+import { dateOf, dayOf, periodAt, quarterHourOf, weekdayOf } from '#services/game/game_time'
 
 import type { NarrationRequest } from './types.js'
 import { lastTurns } from './arbitration.js'
@@ -32,6 +33,8 @@ Hard rules:
 - The characters present are listed in the scene with their disposition: keep them in character. Never introduce characters, places, objects or events that contradict the world material and scene state provided.
 - names gives, in the language of the narration, the name of the place and of each person present, and the fixed translation of other proper names (glossary). Use these names exactly, every time.
 - items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason.
+- time tells when the action began and when it ends: the period of the day at each end, the day of the game, the date and the day of the week when the story has one, and the hour it ends at, to the quarter. Never contradict the time that passes: the light changes, night falls, a day goes by.
+- Never write the hour in your text unless the character has a way to know it — a watch they hold, a clock that still runs in the place, church bells — and wants to know it. Otherwise speak of the light and of the time of day. Never state the date without a reason either.
 - The character may take, give, hide, drop, use up or draw an item in your story. Never decide what that changes in the game: a separate step reads it from your text.
 - Never mention game mechanics — no dice, no chances, no skills, no degrees, no numbers. Everything stays diegetic.
 - Never rule on what changes in the game state, and never list effects: a separate step reads them from your text. Only tell the story.
@@ -69,6 +72,12 @@ export function buildNarrationMessage(request: NarrationRequest): string {
      * never a modifier, a quantity or whether an item is drawn: the numbers
      * would end up in the text.
      */
+    /**
+     * When the turn began and ends, worked out by the backend: periods, the
+     * day, the date when the story has one, and the hour rounded to the
+     * quarter — never a precision the scale of durations does not have.
+     */
+    time: timeForNarration(request),
     names: namesForNarration(request, labels),
     items_in_scene: itemsForNarration(labels, request.scene.items),
     resolution_to_narrate: {
@@ -92,6 +101,20 @@ export function buildNarrationMessage(request: NarrationRequest): string {
   }
 
   return `${FRAMING}\n\n${JSON.stringify(payload, null, 2)}\n\nWrite the narration for this outcome.`
+}
+
+function timeForNarration(request: NarrationRequest) {
+  const { game_time: before, start_date: startDate } = request.scene
+  const after = request.game_time_after
+
+  return {
+    began: periodAt(before),
+    ends: periodAt(after),
+    ends_at: quarterHourOf(after),
+    day: dayOf(after),
+    date: dateOf(after, startDate),
+    weekday: weekdayOf(after, startDate),
+  }
 }
 
 type NarrationItem = { name: string; description: string | null }

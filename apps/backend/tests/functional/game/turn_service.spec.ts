@@ -43,6 +43,7 @@ const SETTLED = {
   intent: { type: 'observation', target: null, summary: 'Looking around the courtyard' },
   validity: { factual: true, plausibility: 'plausible', justification: 'Nothing prevents it.' },
   resolution: { mode: 'automatic_success', action_type: null, difficulty: null },
+  duration: { label: 'moment', count: null, period: null },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
@@ -63,6 +64,7 @@ const NEEDS_ROLL = {
   intent: { type: 'social_dialogue', target: null, summary: 'Talking past the guard' },
   validity: { factual: true, plausibility: 'plausible', justification: 'The guard can be swayed.' },
   resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'average' },
+  duration: { label: 'moment', count: null, period: null },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
 
@@ -1117,6 +1119,120 @@ test.group('TurnService | BRP rolls', (group) => {
     assert.include(narration, '"degree": "critical"')
     for (const leak of ['"roll"', '"chance"', 'baseChance', '"base"']) {
       assert.notInclude(narration, leak)
+    }
+  })
+})
+
+test.group('TurnService | the game clock', (group) => {
+  useTransaction(group)
+
+  /** A ruling that lasts `duration`, the rest of it settled. */
+  const lasting = (duration: Record<string, unknown>) => ({
+    ...SETTLED,
+    duration: { count: null, period: null, ...duration },
+  })
+
+  const turnLasting = (duration: Record<string, unknown>) => [
+    lasting(duration),
+    streamed(SETTLED_TEXT),
+    SETTLED_EFFECTS,
+  ]
+
+  /** Four in the afternoon on the first day, a Monday of 1625. */
+  async function arrangeAfternoon() {
+    const scene = await arrangeScene()
+    await scene.worldState.merge({ gameTime: 16 * 3600, startDate: '1625-04-07' }).save()
+
+    return scene
+  }
+
+  test('a turn moves the clock on by its duration, and logs it', async ({ assert }) => {
+    const { sessionId, userId, worldState } = await arrangeAfternoon()
+    const { play } = buildService(turnLasting({ label: 'minutes' }))
+
+    const turn = await play({ sessionId, userId, playerInput: 'I search the courtyard.' })
+
+    await worldState.refresh()
+    assert.equal(worldState.gameTime, 16 * 3600 + 600)
+    assert.equal(turn.gameTimeBefore, 16 * 3600)
+    assert.equal(turn.gameTimeAfter, 16 * 3600 + 600)
+    assert.deepEqual(turn.duration, { label: 'minutes' })
+  })
+
+  test('waiting for the night lasts until it falls', async ({ assert }) => {
+    const { sessionId, userId, worldState } = await arrangeAfternoon()
+    const { play } = buildService(turnLasting({ label: 'until', period: 'night' }))
+
+    await play({ sessionId, userId, playerInput: 'I wait for nightfall.' })
+
+    await worldState.refresh()
+    assert.equal(worldState.gameTime, 22 * 3600)
+  })
+
+  test('a journey of days, past midnight', async ({ assert }) => {
+    const { sessionId, userId, worldState } = await arrangeAfternoon()
+    const { play } = buildService(turnLasting({ label: 'days', count: 3 }))
+
+    await play({ sessionId, userId, playerInput: 'I ride to Paris.' })
+
+    await worldState.refresh()
+    assert.equal(worldState.gameTime, 3 * 86400 + 16 * 3600)
+  })
+
+  test('the narrator is told when the turn ends', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeAfternoon()
+    const { provider, play } = buildService(turnLasting({ label: 'until', period: 'dawn' }))
+
+    await play({ sessionId, userId, playerInput: 'I sleep until dawn.' })
+
+    const narration = provider.requests.find(({ step }) => step === 'narration')!
+    assert.include(narration.userMessage, '"began": "afternoon"')
+    assert.include(narration.userMessage, '"ends": "dawn"')
+    assert.include(narration.userMessage, '"ends_at": "05:00"')
+    assert.include(narration.userMessage, '"date": "1625-04-08"')
+  })
+
+  test('an aside takes no time, whatever the model proposed', async ({ assert }) => {
+    const { sessionId, userId, worldState } = await arrangeAfternoon()
+    const aside = {
+      ...lasting({ label: 'hours' }),
+      intent: { type: 'out_of_character', target: null, summary: 'Asking what time it is' },
+    }
+    const { play } = buildService([aside, streamed('Mid-afternoon, by the light.')])
+
+    const turn = await play({ sessionId, userId, playerInput: 'What time is it?' })
+
+    await worldState.refresh()
+    assert.equal(worldState.gameTime, 16 * 3600)
+    assert.equal(turn.gameTimeAfter, turn.gameTimeBefore)
+  })
+
+  test('a duration off the scale is asked for again, then fails the turn', async ({ assert }) => {
+    const { sessionId, userId, worldState } = await arrangeAfternoon()
+    const tooLong = lasting({ label: 'days', count: 30 })
+    const { play } = buildService([tooLong, tooLong])
+
+    await assert.rejects(() => play({ sessionId, userId, playerInput: 'I sail to the Indies.' }))
+
+    const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
+    assert.equal(turn.status, 'failed')
+    assert.lengthOf(turn.rejectedAttempts!, 2)
+    await worldState.refresh()
+    assert.equal(worldState.gameTime, 16 * 3600)
+  })
+
+  test('the player is told the period the turn ended in, never the hour', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeAfternoon()
+    const { events, play } = buildService(turnLasting({ label: 'until', period: 'dusk' }))
+
+    await play({ sessionId, userId, playerInput: 'I wait for the evening.' })
+
+    const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!
+    const message = toMessage(completed.ref, completed.event) as Record<string, unknown>
+
+    assert.equal(message.period, 'dusk')
+    for (const leak of ['gameTime', 'game_time', '18:00', '1625']) {
+      assert.notInclude(JSON.stringify(message), leak)
     }
   })
 })

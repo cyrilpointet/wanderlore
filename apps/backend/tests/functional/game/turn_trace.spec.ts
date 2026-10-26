@@ -20,6 +20,7 @@ const ARBITRATION = {
   intent: { type: 'social_dialogue', target: 'guard', summary: 'Talking past the guard' },
   validity: { factual: true, plausibility: 'plausible', justification: 'The guard can be swayed.' },
   resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'average' },
+  duration: { label: 'moment', count: null, period: null },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 } as unknown as ArbitrationOutput
 

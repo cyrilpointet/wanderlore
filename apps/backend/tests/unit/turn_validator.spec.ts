@@ -64,6 +64,7 @@ function arbitration(overrides: Record<string, unknown> = {}) {
     },
     validity: { factual: true, plausibility: 'plausible', justification: 'The letter is real.' },
     resolution: { mode: 'roll_required', action_type: 'social_persuasion', difficulty: 'average' },
+    duration: { label: 'moment', count: null, period: null },
     alert: { prompt_injection_suspected: false, out_of_scope: false },
     ...overrides,
   }
@@ -787,5 +788,87 @@ test.group('Turn validator | items', () => {
     )
 
     assert.include(fields(error), 'items_transferred.0.to')
+  })
+})
+
+test.group('Turn validator | duration', () => {
+  test('a label of the scale, as the backend reads it', async ({ assert }) => {
+    const output = await validateArbitration(
+      arbitration({ duration: { label: 'minutes', count: null, period: null } }),
+      META
+    )
+
+    assert.deepEqual(output.duration, { label: 'minutes' })
+  })
+
+  test('days with their count, a wait with its period', async ({ assert }) => {
+    const days = await validateArbitration(
+      arbitration({ duration: { label: 'days', count: 3, period: null } }),
+      META
+    )
+    const wait = await validateArbitration(
+      arbitration({ duration: { label: 'until', count: null, period: 'night' } }),
+      META
+    )
+
+    assert.deepEqual(days.duration, { label: 'days', count: 3 })
+    assert.deepEqual(wait.duration, { label: 'until', period: 'night' })
+  })
+
+  test('a count or a period sent with a label that has none is dropped', async ({ assert }) => {
+    const output = await validateArbitration(
+      arbitration({ duration: { label: 'hour', count: 2, period: 'dusk' } }),
+      META
+    )
+
+    assert.deepEqual(output.duration, { label: 'hour' })
+  })
+
+  test('rejects a label off the scale', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({ duration: { label: 'fortnight', count: null, period: null } }),
+        META
+      )
+    )
+
+    assert.deepEqual(fields(error), ['duration.label'])
+  })
+
+  test('rejects more than a week in a turn, or no day at all', async ({ assert }) => {
+    for (const count of [8, 0]) {
+      const error = await reject(() =>
+        validateArbitration(arbitration({ duration: { label: 'days', count, period: null } }), META)
+      )
+
+      assert.deepEqual(fields(error), ['duration.count'])
+    }
+  })
+
+  test('rejects days without a count and a wait without a period', async ({ assert }) => {
+    const days = await reject(() =>
+      validateArbitration(
+        arbitration({ duration: { label: 'days', count: null, period: null } }),
+        META
+      )
+    )
+    const wait = await reject(() =>
+      validateArbitration(
+        arbitration({ duration: { label: 'until', count: null, period: 'teatime' } }),
+        META
+      )
+    )
+
+    assert.deepEqual(fields(days), ['duration.count'])
+    assert.deepEqual(fields(wait), ['duration.period'])
+  })
+
+  test('rejects a ruling with no duration', async ({ assert }) => {
+    const { duration, ...ruling } = arbitration()
+
+    const error = await reject(() => validateArbitration(ruling, META))
+
+    assert.isDefined(duration)
+    assert.deepEqual(fields(error), ['duration'])
   })
 })

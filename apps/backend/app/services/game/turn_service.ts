@@ -31,6 +31,7 @@ import {
 } from './inventory.js'
 import { actionTypesOf, resolutionFor, rollBaseFor } from './resolution_rules.js'
 import { ContentLabels } from './content_labels.js'
+import { periodAt, secondsOf } from './game_time.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
 import { loadWorld } from './content/load.js'
@@ -67,6 +68,7 @@ import type {
 import { type ValidationMeta, validateArbitration, validateExtraction } from './turn_validator.js'
 import {
   type StoredFailure,
+  type TracedTime,
   type TurnTrace,
   emptyTrace,
   markFailed,
@@ -312,6 +314,7 @@ export class TurnService {
       character: scene.character,
       inventory: await characterItems(scene.character.id),
       location: await this.#whereItStands(scene.worldState),
+      period: periodAt(scene.worldState.gameTime),
       labels: new ContentLabels(scene.world, turn.language),
     })
 
@@ -381,12 +384,15 @@ export class TurnService {
     )
     const outcome = await this.#settle(turn, scene, decision, trace)
     const aside = decision.intent.type === OUT_OF_CHARACTER
+    const time = timeOf(scene.worldState.gameTime, decision, aside)
+    trace.time = time
     const narration = await this.#narrate(
       turn,
       buildNarrationMessage({
         ...context,
         /** A verdict and a qualitative degree. Never the dice or the chance. */
         outcome,
+        game_time_after: time.after,
         intent_summary: decision.intent.summary,
         aside,
       }),
@@ -637,6 +643,11 @@ export class TurnService {
           throw new StaleTurnError(turn.id)
         }
 
+        /** The clock moves with the rest of the state, or not at all. */
+        if (trace.time !== null) {
+          scene.worldState.gameTime = trace.time.after
+        }
+
         const applied = await applyDelta(
           {
             world: scene.world,
@@ -714,6 +725,8 @@ function buildContext(
       place: scene.worldState.currentLocation ?? null,
       npc_definitions: scene.npcDefinitions,
       items: scene.items,
+      game_time: scene.worldState.gameTime,
+      start_date: scene.worldState.startDate,
     },
     recent_buffer: toRecentBuffer(scene.recentTurns),
     player_input: playerInput,
@@ -731,6 +744,17 @@ function itemReferencesOf(items: ItemsInScene): string[] {
       held.flatMap(({ definition, handle }) => (handle ? [definition, handle] : [definition]))
     ),
   ]
+}
+
+/**
+ * Where the clock stands once the turn is over: the duration arbitration
+ * proposed, converted by the backend. An aside takes no time, whatever the
+ * model proposed.
+ */
+function timeOf(before: number, decision: ArbitrationOutput, aside: boolean): TracedTime {
+  const seconds = aside ? 0 : secondsOf(decision.duration, before)
+
+  return { before, after: before + seconds, duration: decision.duration }
 }
 
 function toRecentBuffer(turns: TurnLog[]): RecentTurn[] {

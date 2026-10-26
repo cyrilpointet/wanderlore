@@ -117,6 +117,9 @@ function turnContext(overrides: Partial<TurnContext> = {}): TurnContext {
       },
       npc_definitions: { royal_guard_1: 'royal_guard' },
       items: ITEMS,
+      /** Four in the afternoon, on the first day, a Monday. */
+      game_time: 16 * 3600,
+      start_date: '1625-04-07',
     },
     recent_buffer: [{ role: 'narration', text: 'A guard bars your way.' }],
     player_input: 'I show him my letter and ask to pass.',
@@ -133,6 +136,8 @@ function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationR
   return {
     ...turnContext(),
     outcome: { mode: 'roll_required', result: 'success', degree: 'special', reason: null },
+    /** The wait ran past midnight: 01:10 on the second day. */
+    game_time_after: 24 * 3600 + 3600 + 10 * 60,
     intent_summary: 'Persuading the guard with a letter of recommendation',
     aside: false,
     ...overrides,
@@ -188,7 +193,13 @@ test.group('Arbitration | system contract', () => {
 
 test.group('Arbitration | output schema', () => {
   test('carries a decision and nothing to stage', ({ assert }) => {
-    assert.deepEqual(ARBITRATION_SCHEMA.required, ['intent', 'validity', 'resolution', 'alert'])
+    assert.deepEqual(ARBITRATION_SCHEMA.required, [
+      'intent',
+      'validity',
+      'resolution',
+      'duration',
+      'alert',
+    ])
     assert.notProperty(ARBITRATION_SCHEMA.properties, 'narration')
     assert.notProperty(ARBITRATION_SCHEMA.properties, 'effects')
   })
@@ -745,5 +756,70 @@ test.group('Prompts | the language of the game', () => {
       }
     }
     assert.include(arbitration, 'Rapier')
+  })
+})
+
+test.group('Prompts | the time of the game', () => {
+  test('arbitration picks a duration from the scale, and never writes a time', ({ assert }) => {
+    for (const label of ['moment', 'minutes', 'hour', 'hours', 'days', 'until']) {
+      assert.include(ARBITRATION_SYSTEM_PROMPT, label)
+    }
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'the backend keeps the clock')
+    assert.include(ARBITRATION_SCHEMA.required, 'duration')
+    assert.deepEqual(ARBITRATION_SCHEMA.properties.duration.required, ['label', 'count', 'period'])
+  })
+
+  test('arbitration is handed the period of the day, never the hour', ({ assert }) => {
+    const message = buildArbitrationMessage(arbitrationContext())
+    const payload = payloadOf(message)
+
+    assert.equal(payload.scene_state.period, 'afternoon')
+    assert.notInclude(message, 'game_time')
+    assert.notInclude(message, '16:00')
+    assert.notInclude(message, '1625-04')
+  })
+
+  test('the narrator is handed when the turn began and when it ends', ({ assert }) => {
+    const payload = payloadOf(buildNarrationMessage(narrationRequest()))
+
+    assert.deepEqual(payload.time, {
+      began: 'afternoon',
+      ends: 'night',
+      ends_at: '01:15',
+      day: 2,
+      date: '1625-04-08',
+      weekday: 'tuesday',
+    })
+  })
+
+  test('without a date, the narrator is handed the day of the game alone', ({ assert }) => {
+    const request = narrationRequest()
+    const payload = payloadOf(
+      buildNarrationMessage({ ...request, scene: { ...request.scene, start_date: null } })
+    )
+
+    assert.equal(payload.time.day, 2)
+    assert.isNull(payload.time.date)
+    assert.isNull(payload.time.weekday)
+  })
+
+  test('the narrator gives the hour only when the character has a way to know it', ({
+    assert,
+  }) => {
+    assert.include(NARRATION_SYSTEM_PROMPT, 'Never contradict the time that passes')
+    assert.include(NARRATION_SYSTEM_PROMPT, 'unless the character has a way to know it')
+    assert.include(NARRATION_SYSTEM_PROMPT, 'a watch they hold')
+  })
+
+  test('extraction is handed nothing of the time', ({ assert }) => {
+    const message = buildExtractionMessage({
+      ...turnContext(),
+      narration: 'Night falls on the courtyard.',
+      creatable_items: [],
+    })
+
+    assert.notInclude(message, 'period')
+    assert.notInclude(message, 'game_time')
+    assert.notInclude(message, '1625-04')
   })
 })
