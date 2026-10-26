@@ -1130,11 +1130,11 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
        * The towns nearby, then the house room by room: an investigation is
        * played at the grain of a room, so going from the library to the
        * study is a movement, and what lies in each room stays there. The
-       * house itself only contains them. The pits and the vault hang off the
-       * laboratory, the only way in.
-       *
-       * The model reads a place by its reference alone: each room's says
-       * which room of the house it is.
+       * house itself only contains them: its rooms are a network, gone
+       * through by their exits, entered from the free places by the drive
+       * (the grounds) or the back door (the kitchen). The laboratory lies
+       * behind a door hidden in the cellar; the vault behind an iron door
+       * the iron key opens; the pits under the laboratory floor.
        */
       locations: [
         {
@@ -1184,8 +1184,36 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The overgrown grounds around the house: a weed-choked drive, a dry fountain, dead hedges, and old elms leaning toward the windows.',
           kind: 'unique',
           parent: 'ward_house',
-          exits: [],
-          entrance: false,
+          exits: [
+            {
+              to: 'ward_house_entrance_hall',
+              passage: 'the front door under its fanlight, up three worn steps',
+              backPassage: 'the front door, out onto the drive',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'ward_house_carriage_house',
+              passage: 'the carriage house doors, by the drive',
+              backPassage: 'the carriage house doors, out onto the drive',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'ward_family_cemetery',
+              passage: 'a path round the house to the family plot behind it',
+              backPassage: 'the path round the house to the drive',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: true,
         },
         {
           reference: 'ward_house_carriage_house',
@@ -1214,7 +1242,44 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A tall panelled hall with a staircase rising into shadow, a long-case clock stopped at seventeen minutes past three, and family portraits — one of them turned to the wall.',
           kind: 'unique',
           parent: 'ward_house',
-          exits: [],
+          exits: [
+            {
+              to: 'ward_house_parlour',
+              passage: 'the double doors of the front parlour',
+              backPassage: 'the double doors back to the hall',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'ward_house_dining_room',
+              passage: 'the door to the dining room',
+              backPassage: 'the door back to the hall',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'ward_house_library',
+              passage: 'the library door, beside the stairs',
+              backPassage: 'the door back to the hall',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'ward_house_upstairs_corridor',
+              passage: 'the staircase rising into shadow',
+              backPassage: 'the staircase down to the hall',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
           entrance: false,
         },
         {
@@ -1234,7 +1299,17 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A long dining room with the table still laid for two, as if for a guest, its dishes furred with dust.',
           kind: 'unique',
           parent: 'ward_house',
-          exits: [],
+          exits: [
+            {
+              to: 'ward_house_kitchen',
+              passage: 'a swing door to the kitchen',
+              backPassage: 'the swing door to the dining room',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
           entrance: false,
         },
         {
@@ -1244,7 +1319,17 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'Floor-to-ceiling shelves of old books, family papers and county histories, a reading table, and gaps on the shelves where volumes were taken down.',
           kind: 'unique',
           parent: 'ward_house',
-          exits: [],
+          exits: [
+            {
+              to: 'ward_house_study',
+              passage: "a narrow door at the back of the library, into Silas's study",
+              backPassage: 'the narrow door back to the library',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
           entrance: false,
         },
         {
@@ -1264,8 +1349,36 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             "The kitchen at the back of the house, Martha Pike's domain: a range, a pantry, the servants' stair, and the cellar door that sticks.",
           kind: 'unique',
           parent: 'ward_house',
-          exits: [],
-          entrance: false,
+          exits: [
+            {
+              to: 'ward_family_cemetery',
+              passage: 'the back door, onto the path to the family plot',
+              backPassage: 'the back door of the kitchen',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'ward_house_upstairs_corridor',
+              passage: "the servants' stair, narrow and steep",
+              backPassage: "the servants' stair down to the kitchen",
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'ward_house_cellar',
+              passage: 'the cellar door that sticks, and steep wooden stairs down',
+              backPassage: 'the steep stairs up to the kitchen',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: true,
         },
         {
           reference: 'ward_house_upstairs_corridor',
@@ -1274,7 +1387,35 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The first-floor corridor that serves the bedrooms, lined with closed doors; on some nights it runs longer than the house.',
           kind: 'unique',
           parent: 'ward_house',
-          exits: [],
+          exits: [
+            {
+              to: 'ward_house_silas_bedroom',
+              passage: "the door of Silas's bedroom",
+              backPassage: 'the door back to the corridor',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'ward_house_guest_bedroom',
+              passage: 'the door of the guest bedroom',
+              backPassage: 'the door back to the corridor',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'ward_house_attic',
+              passage: 'a hatch in the ceiling and a folding ladder',
+              backPassage: 'the hatch down to the corridor',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
           entrance: false,
         },
         {
@@ -1311,10 +1452,20 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           reference: 'ward_house_cellar',
           labels: { en: 'The cellar', fr: 'La cave' },
           description:
-            'The cellar under the kitchen: wine racks, a coal bin, rotting barrels — and behind the racks, a narrow door on stairs going further down.',
+            'The cellar under the kitchen: wine racks, a coal bin, rotting barrels, and a cold draught that seems to come from behind the racks.',
           kind: 'unique',
           parent: 'ward_house',
-          exits: [],
+          exits: [
+            {
+              to: 'ward_laboratory',
+              passage: 'behind the wine racks, a narrow door on stairs going further down',
+              backPassage: "the narrow stairs up to a door behind the cellar's wine racks",
+              hidden: true,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
           entrance: false,
         },
         {
@@ -1324,7 +1475,26 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A vaulted laboratory dug beneath the cellar: furnaces, alembics, shelves of jars of grey salts, iron lids set in the floor. Here the world is thin — corners do not meet, and the walls seem to breathe.',
           kind: 'unique',
           parent: 'ward_house',
-          exits: [],
+          exits: [
+            {
+              to: 'ward_laboratory_pits',
+              passage: 'an iron lid in the floor, and a rusted ladder down into the dark',
+              backPassage: 'the rusted ladder up to the laboratory',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'sealed_vault',
+              passage: 'an iron door at the back of the laboratory',
+              backPassage: 'the iron door back to the laboratory',
+              hidden: false,
+              requires: 'iron_vault_key',
+              oneWay: false,
+              duration: null,
+            },
+          ],
           entrance: false,
         },
         {
