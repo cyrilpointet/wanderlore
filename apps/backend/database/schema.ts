@@ -207,7 +207,7 @@ export class NpcDefinitionSchema extends BaseModel {
 }
 
 export class NpcInstanceSchema extends BaseModel {
-  static $columns = ['createdAt', 'definitionReference', 'descriptor', 'disposition', 'handle', 'hitPoints', 'id', 'name', 'sessionId', 'status', 'updatedAt'] as const
+  static $columns = ['createdAt', 'definitionReference', 'descriptor', 'disposition', 'handle', 'hitPoints', 'id', 'locationInstanceId', 'name', 'sessionId', 'status', 'updatedAt'] as const
   $columns = NpcInstanceSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -223,6 +223,8 @@ export class NpcInstanceSchema extends BaseModel {
   declare hitPoints: number | null
   @column({ isPrimary: true })
   declare id: string
+  @column()
+  declare locationInstanceId: string | null
   @column()
   declare name: string | null
   @column()

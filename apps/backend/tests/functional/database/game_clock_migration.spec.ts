@@ -54,7 +54,9 @@ test.group('Migrations | game clock', (group) => {
     users.push(userId)
     const sessionId = await createSession(userId)
     const now = new Date()
-    await db.table('world_states').insert({ session_id: sessionId, created_at: now, updated_at: now })
+    await db
+      .table('world_states')
+      .insert({ session_id: sessionId, created_at: now, updated_at: now })
 
     await migrate({ direction: 'up' })
 

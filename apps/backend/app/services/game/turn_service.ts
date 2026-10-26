@@ -20,7 +20,13 @@ import {
   isTurnNumberConflict,
 } from './errors.js'
 import { applyDelta } from './apply_delta.js'
-import { type PresentNpc, presentNpcDefinitions, presentNpcs } from './npcs.js'
+import {
+  type PresentNpc,
+  guardedPlaces,
+  npcsWaitingIn,
+  presentNpcDefinitions,
+  presentNpcs,
+} from './npcs.js'
 import {
   type ItemsInScene,
   characterItems,
@@ -405,6 +411,8 @@ export class TurnService {
     const route = aside ? null : routeTo(scene, decision.intent.destination)
     const time = timeOf(scene.worldState.gameTime, decision, aside, route)
     trace.time = time
+    /** Whoever was left where the character goes is there to meet them. */
+    const waiting = route === null ? [] : await npcsWaitingIn(scene.session.id, route.to)
     const narration = await this.#narrate(
       turn,
       buildNarrationMessage({
@@ -413,6 +421,7 @@ export class TurnService {
         outcome,
         game_time_after: time.after,
         route,
+        npcs_at_destination: waiting,
         intent_summary: decision.intent.summary,
         aside,
       }),
@@ -621,7 +630,7 @@ export class TurnService {
       ),
       passages: await passageStates(sessionId),
       held: new Set(items.character.map(({ definition }) => definition)),
-      guarded: new Set(),
+      guarded: await guardedPlaces(sessionId),
     }
 
     /**

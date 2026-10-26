@@ -989,7 +989,9 @@ test.group('Turn validator | exits and the ways they open', () => {
   })
 
   test('none sent is none', async ({ assert }) => {
-    const { passages_discovered: _found, passages_unlocked: _opened, ...answer } = extraction()
+    const answer: Record<string, unknown> = extraction()
+    delete answer.passages_discovered
+    delete answer.passages_unlocked
 
     const output = await validateExtraction(answer, IN_THE_STUDY)
 

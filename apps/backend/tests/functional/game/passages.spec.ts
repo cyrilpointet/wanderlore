@@ -76,7 +76,8 @@ test.group('Passages | what a game learns', (group) => {
 
     await discoverPassage(HOUSE_PLACES, mine, HIDDEN)
 
-    assert.equal((await passageStates(theirs)).discovered.size, 0)
+    const { discovered } = await passageStates(theirs)
+    assert.equal(discovered.size, 0)
   })
 
   test('they go with their game', async ({ assert }) => {

@@ -145,6 +145,7 @@ function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationR
     /** The wait ran past midnight: 01:10 on the second day. */
     game_time_after: 24 * 3600 + 3600 + 10 * 60,
     route: null,
+    npcs_at_destination: [],
     intent_summary: 'Persuading the guard with a letter of recommendation',
     aside: false,
     ...overrides,
@@ -1004,5 +1005,53 @@ test.group('Prompts | places and their exits', () => {
   test('the grain is the catalogue’s: one room to the next is a movement', ({ assert }) => {
     assert.include(EXTRACTION_SYSTEM_PROMPT, 'however close: from one room to the next is one')
     assert.notInclude(EXTRACTION_SYSTEM_PROMPT, 'stable')
+  })
+})
+
+test.group('Prompts | people left behind', () => {
+  test('the narrator is told who waits where the character arrives', ({ assert }) => {
+    const payload = payloadOf(
+      buildNarrationMessage(
+        narrationRequest({
+          world: THREE_MUSKETEERS_IN_FRENCH,
+          language: 'fr',
+          npcs_at_destination: [
+            {
+              handle: 'treville',
+              name: null,
+              descriptor: null,
+              disposition: 'friendly',
+              definition: 'treville',
+            },
+          ],
+        })
+      )
+    )
+
+    assert.deepEqual(payload.npcs_at_destination, [
+      { handle: 'treville', name: 'M. de Tréville', descriptor: null, disposition: 'friendly' },
+    ])
+    assert.include(NARRATION_SYSTEM_PROMPT, 'npcs_at_destination')
+  })
+
+  test('nobody waits for an aside', ({ assert }) => {
+    const payload = payloadOf(
+      buildNarrationMessage(
+        narrationRequest({
+          aside: true,
+          npcs_at_destination: [
+            {
+              handle: 'treville',
+              name: null,
+              descriptor: null,
+              disposition: 'friendly',
+              definition: 'treville',
+            },
+          ],
+        })
+      )
+    )
+
+    assert.deepEqual(payload.npcs_at_destination, [])
   })
 })

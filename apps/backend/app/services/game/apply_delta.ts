@@ -376,16 +376,33 @@ async function move(
 
   target.worldState.currentLocationId = destination.id
 
+  /** Left where the scene was, to be found there again. */
   await NpcInstance.query({ client: trx })
     .where('sessionId', target.sessionId)
     .where('status', 'present')
     .whereNotIn('handle', following)
-    .update({ status: 'absent' })
+    .update({ status: 'absent', locationInstanceId: current?.id ?? null })
+
+  await NpcInstance.query({ client: trx })
+    .where('sessionId', target.sessionId)
+    .where('status', 'present')
+    .whereIn('handle', following)
+    .update({ locationInstanceId: destination.id })
+
+  /** Whoever was left here is here still. The dead stay dead. */
+  await NpcInstance.query({ client: trx })
+    .where('sessionId', target.sessionId)
+    .where('status', 'absent')
+    .where('locationInstanceId', destination.id)
+    .update({ status: 'present' })
 
   return placed(destination)
 }
 
-/** Someone who leaves is absent, never deleted: they may be met again. */
+/**
+ * Someone who leaves is absent, never deleted: they may be met again — but
+ * not found where they went, which nobody knows.
+ */
 async function leave(
   sessionId: string,
   handles: string[],
@@ -398,7 +415,7 @@ async function leave(
   await NpcInstance.query({ client: trx })
     .where('sessionId', sessionId)
     .whereIn('handle', handles)
-    .update({ status: 'absent' })
+    .update({ status: 'absent', locationInstanceId: null })
 
   return handles
 }
@@ -417,7 +434,13 @@ async function enter(
 
   for (const entry of entries) {
     try {
-      const npc = await enterScene(target.world, target.sessionId, entry, trx)
+      const npc = await enterScene(
+        target.world,
+        target.sessionId,
+        entry,
+        trx,
+        target.worldState.currentLocationId
+      )
       handles.push(npc.handle)
     } catch (error) {
       if (!(error instanceof DeadNpcError)) {

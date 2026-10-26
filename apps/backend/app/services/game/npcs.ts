@@ -72,12 +72,16 @@ export class DeadNpcError extends Error {
  * with the items they hold from the start. Turns of a game are played one at a
  * time, so counting is enough to number; the unique `(session_id, handle)` is
  * the last line of defence.
+ *
+ * Whoever comes in is where the scene is, `place`: left there when the
+ * character moves on, and found there again.
  */
 export async function enterScene(
   world: WorldDefinition,
   sessionId: string,
   entry: NpcEntry,
-  client?: QueryClientContract
+  client?: QueryClientContract,
+  place: string | null = null
 ): Promise<NpcInstance> {
   const definition = world.npcs.find((npc) => npc.reference === entry.definition)
 
@@ -98,6 +102,7 @@ export async function enterScene(
 
       /** Read through the same client, so saved within the same transaction. */
       known.status = 'present'
+      known.locationInstanceId = place
       await known.save()
 
       return known
@@ -119,6 +124,7 @@ export async function enterScene(
       disposition: definition.defaultDisposition,
       status: 'present',
       hitPoints: definition.combat.hitPointsMax,
+      locationInstanceId: place,
     },
     { client }
   )
@@ -186,4 +192,48 @@ async function countOf(
     .firstOrFail()
 
   return Number(row.$extras.total)
+}
+
+/**
+ * Who waits in a place, left there earlier and alive: whom the character
+ * finds on arriving. Named the way the scene names people present, with their
+ * definition for a name they never gave.
+ */
+export async function npcsWaitingIn(
+  sessionId: string,
+  placeHandle: string,
+  client?: QueryClientContract
+): Promise<(PresentNpc & { definition: string })[]> {
+  const npcs = await NpcInstance.query({ client })
+    .where('sessionId', sessionId)
+    .where('status', 'absent')
+    .whereHas('location', (location) => location.where('handle', placeHandle))
+    .orderBy('createdAt', 'asc')
+    .orderBy('handle', 'asc')
+
+  return npcs.map(({ handle, name, descriptor, disposition, definitionReference }) => ({
+    handle,
+    name,
+    descriptor,
+    disposition,
+    definition: definitionReference,
+  }))
+}
+
+/**
+ * The places someone hostile was left in, by the reference of their
+ * definition: a way does not go on through them.
+ */
+export async function guardedPlaces(
+  sessionId: string,
+  client?: QueryClientContract
+): Promise<Set<string>> {
+  const npcs = await NpcInstance.query({ client })
+    .where('sessionId', sessionId)
+    .where('status', 'absent')
+    .where('disposition', 'hostile')
+    .whereNotNull('locationInstanceId')
+    .preload('location')
+
+  return new Set(npcs.map(({ location }) => location.definitionReference))
 }

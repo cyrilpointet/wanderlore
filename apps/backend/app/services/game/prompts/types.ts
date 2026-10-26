@@ -268,6 +268,8 @@ export type NarrationRequest = TurnContext & {
   game_time_after: number
   /** The way to the destination arbitration named, passage by passage; null when it named none. */
   route: Route | null
+  /** Who was left at the destination and is there still, with their definition for naming them. */
+  npcs_at_destination: (PresentNpc & { definition: string })[]
   intent_summary: string
   /** The player spoke to the game master rather than acting: answer, do not move the story. */
   aside: boolean

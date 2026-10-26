@@ -119,7 +119,8 @@ export default {
             {
               name: '@column',
               args: {
-                consume: (value: unknown) => (typeof value === 'string' ? value.slice(0, 5) : value),
+                consume: (value: unknown) =>
+                  typeof value === 'string' ? value.slice(0, 5) : value,
               },
             },
           ],

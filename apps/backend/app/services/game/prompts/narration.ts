@@ -35,6 +35,7 @@ Hard rules:
 - items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason.
 - place says what the place is like, and what an improvised one stands in. exits lists its ways out, each with where it leads and how it looks from here. One marked hidden has not been found: never mention it, unless the character searches and the outcome gives them reason to find it. One marked locked stays shut unless the story opens it.
 - When route is given, the character goes to its last place by these passages, in this order: follow them, and invent no other way.
+- npcs_at_destination lists who the character finds where they arrive: people left there earlier, there still, in the disposition given.
 - time tells when the action began and when it ends: the period of the day at each end, the day of the game, the date and the day of the week when the story has one, and the hour it ends at, to the quarter. Never contradict the time that passes: the light changes, night falls, a day goes by.
 - Never write the hour in your text unless the character has a way to know it — a watch they hold, a clock that still runs in the place, church bells — and wants to know it. Otherwise speak of the light and of the time of day. Never state the date without a reason either.
 - The character may take, give, hide, drop, use up or draw an item in your story. Never decide what that changes in the game: a separate step reads it from your text.
@@ -81,6 +82,16 @@ export function buildNarrationMessage(request: NarrationRequest): string {
     },
     exits: exitsForNarration(request, labels),
     route: routeForNarration(request, labels),
+    npcs_at_destination: request.aside
+      ? []
+      : request.npcs_at_destination.map(
+          ({ handle, name, descriptor, disposition, definition }) => ({
+            handle,
+            name: name ?? labels.of('npc', definition).label,
+            descriptor,
+            disposition,
+          })
+        ),
     /**
      * When the turn began and ends, worked out by the backend: periods, the
      * day, the date when the story has one, and the hour rounded to the

@@ -2,6 +2,8 @@ import { test } from '@japa/runner'
 
 import Character from '#models/character'
 import TurnLog from '#models/turn_log'
+import NpcInstance from '#models/npc_instance'
+import LocationInstance from '#models/location_instance'
 import WorldState from '#models/world_state'
 import { DiceService } from '#services/dice'
 import { LlmGateway } from '#services/llm/gateway'
@@ -9,6 +11,7 @@ import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
 import { visitUniqueLocation } from '#services/game/locations'
 import { createItem } from '#services/game/inventory'
+import { enterScene } from '#services/game/npcs'
 import { passageStates } from '#services/game/passages'
 import { toMessage } from '#services/game/turn_events'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
@@ -175,7 +178,8 @@ test.group('Networks | arbitration and narration', (group) => {
       turn.rejectedAttempts!.map(({ step }) => step),
       ['arbitration']
     )
-    assert.equal((await TurnLog.findOrFail(turn.id)).gameTimeAfter, 16 * 3600 + 600 + 60)
+    const logged = await TurnLog.findOrFail(turn.id)
+    assert.equal(logged.gameTimeAfter, 16 * 3600 + 600 + 60)
   })
 })
 
@@ -220,7 +224,8 @@ test.group('Networks | extraction and the ways it opens', (group) => {
 
     assert.equal(turn.status, 'completed')
     assert.equal(await standingIn(sessionId), 'house_cellar')
-    assert.deepEqual([...(await passageStates(sessionId)).discovered], ['house_study>house_cellar'])
+    const { discovered } = await passageStates(sessionId)
+    assert.deepEqual([...discovered], ['house_study>house_cellar'])
     assert.deepEqual((turn.appliedEffects as any).passages.discovered, [
       { from: 'house_study', to: 'house_cellar' },
     ])
@@ -254,7 +259,8 @@ test.group('Networks | extraction and the ways it opens', (group) => {
     const turn = await play({ sessionId, userId, playerInput: 'I unlock the study.' })
 
     assert.equal(await standingIn(sessionId), 'house_study')
-    assert.deepEqual([...(await passageStates(sessionId)).unlocked], ['house_hall>house_study'])
+    const { unlocked } = await passageStates(sessionId)
+    assert.deepEqual([...unlocked], ['house_hall>house_study'])
     assert.deepEqual((turn.appliedEffects as any).passages.unlocked, [
       { from: 'house_hall', to: 'house_study' },
     ])
@@ -270,7 +276,8 @@ test.group('Networks | extraction and the ways it opens', (group) => {
 
     await play({ sessionId, userId, playerInput: 'I force the study door.' })
 
-    assert.deepEqual([...(await passageStates(sessionId)).unlocked], ['house_hall>house_study'])
+    const { unlocked } = await passageStates(sessionId)
+    assert.deepEqual([...unlocked], ['house_hall>house_study'])
     assert.equal(await standingIn(sessionId), 'house_hall')
   })
 
@@ -290,5 +297,116 @@ test.group('Networks | extraction and the ways it opens', (group) => {
       reference: 'house_kitchen',
       label: 'The kitchen · The house',
     })
+  })
+})
+
+test.group('Networks | people where they were left', (group) => {
+  useTransaction(group)
+
+  async function placeOf(sessionId: string, handle: string) {
+    const npc = await NpcInstance.query()
+      .where('sessionId', sessionId)
+      .where('handle', handle)
+      .preload('location')
+      .firstOrFail()
+
+    return { status: npc.status, place: npc.location?.handle ?? null }
+  }
+
+  /** Someone met in a room of the house, present or left there. */
+  async function meet(
+    sessionId: string,
+    definition: string,
+    room: string,
+    rest: Partial<{ status: 'present' | 'absent' | 'dead'; disposition: 'hostile' }> = {}
+  ) {
+    const place = await LocationInstance.query()
+      .where('sessionId', sessionId)
+      .where('handle', room)
+      .firstOrFail()
+    const npc = await enterScene(
+      HOUSE_WORLD,
+      sessionId,
+      { definition, descriptor: null },
+      undefined,
+      place.id
+    )
+
+    await npc.merge(rest).save()
+
+    return npc.handle
+  }
+
+  test('left behind, followed, gone off', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall()
+    const treville = await meet(sessionId, 'treville', 'house_hall')
+    const guard = await meet(sessionId, 'cardinal_guard', 'house_hall')
+    const athos = await meet(sessionId, 'athos', 'house_hall')
+    const { play } = buildService([
+      going('house_kitchen'),
+      streamed('The guard follows you into the kitchen; Athos takes his leave.'),
+      extracted({ movement: 'house_kitchen', npcs_following: [guard], npcs_left: [athos] }),
+    ])
+
+    await play({ sessionId, userId, playerInput: 'I go to the kitchen.' })
+
+    assert.deepEqual(await placeOf(sessionId, treville), { status: 'absent', place: 'house_hall' })
+    assert.deepEqual(await placeOf(sessionId, guard), { status: 'present', place: 'house_kitchen' })
+    /** Gone off on his own: nobody knows where. */
+    assert.deepEqual(await placeOf(sessionId, athos), { status: 'absent', place: null })
+  })
+
+  test('found again where they were left, and met by the narration', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall(['house_yard', 'house_hall', 'house_kitchen'])
+    const treville = await meet(sessionId, 'treville', 'house_hall', { status: 'absent' })
+    const { provider, play } = buildService([
+      going('house_hall'),
+      streamed('Tréville is still in the hall.'),
+      extracted({ movement: 'house_hall' }),
+    ])
+
+    await play({ sessionId, userId, playerInput: 'I go back to the hall.' })
+
+    assert.deepEqual(await placeOf(sessionId, treville), { status: 'present', place: 'house_hall' })
+    const narration = provider.requests.find(({ step }) => step === 'narration')!
+    assert.include(
+      narration.userMessage,
+      '"npcs_at_destination": [\n    {\n      "handle": "treville"'
+    )
+  })
+
+  test('the dead stay dead', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall(['house_yard', 'house_hall', 'house_kitchen'])
+    const jussac = await meet(sessionId, 'jussac', 'house_hall', { status: 'dead' })
+    const { play } = buildService([
+      going('house_hall'),
+      streamed('Jussac lies where he fell.'),
+      extracted({ movement: 'house_hall' }),
+    ])
+
+    await play({ sessionId, userId, playerInput: 'I go back to the hall.' })
+
+    assert.deepEqual(await placeOf(sessionId, jussac), { status: 'dead', place: 'house_hall' })
+  })
+
+  test('someone hostile bars the way through their room, not into it', async ({ assert }) => {
+    const every = ['house_yard', 'house_corridor', 'house_cellar', 'house_hall', 'house_kitchen']
+    const { userId, sessionId } = await arrangeHall(every)
+    await meet(sessionId, 'cardinal_guard', 'house_hall', {
+      status: 'absent',
+      disposition: 'hostile',
+    })
+    const { provider, play } = buildService([
+      going('house_hall'),
+      streamed('The guard is waiting for you.'),
+      extracted({ movement: 'house_hall' }),
+    ])
+
+    await play({ sessionId, userId, playerInput: 'I go to the hall.' })
+
+    const arbitration = provider.requests.find(({ step }) => step === 'arbitration')!
+    assert.include(arbitration.userMessage, '"reference": "house_hall"')
+    /** Up the stairs from the kitchen is through the hall: no longer a way. */
+    assert.notInclude(arbitration.userMessage, '"reference": "house_corridor"')
   })
 })
