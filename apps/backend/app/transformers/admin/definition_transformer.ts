@@ -11,7 +11,7 @@ const SHARED = ['id', 'worldId', 'scenarioId', 'reference', 'labels', 'descripti
 
 const OWN: Record<string, string[]> = {
   npc_definitions: ['generic', 'defaultDisposition', 'combat'],
-  location_definitions: ['parent'],
+  location_definitions: ['parent', 'exits', 'entrance'],
   item_definitions: ['generic', 'stackable', 'equippable', 'modifiers', 'initialHolder'],
 }
 

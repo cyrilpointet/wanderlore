@@ -119,16 +119,20 @@ export default class DefinitionsController {
 
 /**
  * What only one kind of definition may have: a unique is neither generic nor
- * stackable, an archetype has no parent nor initial holder. Refused on the
- * field at fault rather than left to the database constraints.
+ * stackable, an archetype has no parent, initial holder, exit nor entrance.
+ * Refused on the field at fault rather than left to the database constraints.
  */
 function refuseKindMismatch(definition: Record<string, unknown>) {
   const unique = definition.kind === 'unique'
   const mismatch = unique
     ? (['generic', 'stackable'] as const).find((field) => definition[field] === true)
-    : (['parent', 'initialHolder'] as const).find(
-        (field) => definition[field] !== null && definition[field] !== undefined
-      )
+    : (['parent', 'initialHolder', 'exits', 'entrance'] as const).find((field) => {
+        const value = definition[field]
+
+        return Array.isArray(value)
+          ? value.length > 0
+          : value !== null && value !== undefined && value !== false
+      })
 
   if (mismatch) {
     throw new Refusal(
@@ -136,10 +140,17 @@ function refuseKindMismatch(definition: Record<string, unknown>) {
       'kind_mismatch',
       unique
         ? `A unique definition cannot be ${mismatch}.`
-        : `An archetype has no ${mismatch === 'parent' ? 'parent' : 'initial holder'}.`,
+        : `An archetype has no ${ARCHETYPE_LACKS[mismatch as keyof typeof ARCHETYPE_LACKS]}.`,
       { field: mismatch }
     )
   }
+}
+
+const ARCHETYPE_LACKS = {
+  parent: 'parent',
+  initialHolder: 'initial holder',
+  exits: 'exit',
+  entrance: 'entrance',
 }
 
 /** The level a definition belongs to, from the route: the world's, or a scenario's. */

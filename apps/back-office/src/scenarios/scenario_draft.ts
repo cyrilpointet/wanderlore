@@ -23,6 +23,10 @@ export type ScenarioDraft = {
   startLocation: string
   startChapter: string
   startQuests: QuestDraft[]
+  /** `HH:MM`, always: a story opens at some time of day. */
+  startTime: string
+  /** `YYYY-MM-DD`; empty for a story with no date. */
+  startDate: string
 }
 
 /** What a new character looks like, to start from rather than from a blank page. */
@@ -55,6 +59,8 @@ export function scenarioDraftOf(scenario: Scenario): ScenarioDraft {
       step: String(quest.step),
       summary: quest.summary,
     })),
+    startTime: scenario.startTime,
+    startDate: scenario.startDate ?? '',
   }
 }
 
@@ -98,6 +104,8 @@ export function scenarioUpdateOf(draft: ScenarioDraft): ScenarioUpdate {
                 summary: quest.summary.trim(),
               })),
             },
+      startTime: draft.startTime,
+      startDate: draft.startDate === '' ? null : draft.startDate,
     },
   }
 }

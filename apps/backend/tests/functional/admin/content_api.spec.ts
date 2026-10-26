@@ -533,3 +533,125 @@ test.group('Content API | kinds', (group) => {
     assert.equal(bodyOf(response).error.details.field, 'generic')
   })
 })
+
+test.group('Content API | time and places', (group) => {
+  useTransaction(group)
+
+  async function scenarioOf(client: ApiClient, user: User) {
+    const worldId = await createWorld()
+    const { data } = bodyOf(
+      await as(client, user).post(`/worlds/${worldId}/scenarios`, {
+        reference: 'the_speckled_band',
+        labels: { en: 'The Speckled Band' },
+      })
+    )
+
+    return { worldId, scenario: data }
+  }
+
+  test('a scenario opens at 08:00 on no date, until told otherwise', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const { scenario } = await scenarioOf(client, user)
+
+    assert.equal(scenario.startTime, '08:00')
+    assert.isNull(scenario.startDate)
+
+    const response = await as(client, user).patch(`/scenarios/${scenario.id}`, {
+      startTime: '21:30',
+      startDate: '1888-04-02',
+    })
+
+    response.assertStatus(200)
+    assert.equal(bodyOf(response).data.startTime, '21:30')
+    assert.equal(bodyOf(response).data.startDate, '1888-04-02')
+  })
+
+  test('refuses a time that is no time of day and a date off the calendar', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+    const { scenario } = await scenarioOf(client, user)
+
+    const response = await as(client, user).patch(`/scenarios/${scenario.id}`, {
+      startTime: '25:00',
+      startDate: '1888-02-30',
+    })
+
+    response.assertStatus(422)
+    assert.sameMembers(
+      bodyOf(response).errors.map((error: { field: string }) => error.field),
+      ['startTime', 'startDate']
+    )
+  })
+
+  test('a named place with its exits and as an entrance', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/locations`, {
+      reference: 'baker_street_hall',
+      labels: { en: 'The hall' },
+      description: 'The hall of 221B.',
+      kind: 'unique',
+      parent: null,
+      entrance: true,
+      exits: [
+        {
+          to: 'baker_street_sitting_room',
+          passage: 'seventeen steps up',
+          backPassage: 'the stairs down',
+          hidden: false,
+          requires: null,
+          oneWay: false,
+          duration: 'moment',
+        },
+      ],
+    })
+
+    response.assertStatus(201)
+    assert.isTrue(bodyOf(response).data.entrance)
+    assert.equal(bodyOf(response).data.exits[0].passage, 'seventeen steps up')
+  })
+
+  test('checks the exits written by hand, field by field', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/locations`, {
+      reference: 'baker_street_hall',
+      labels: { en: 'The hall' },
+      description: 'The hall of 221B.',
+      kind: 'unique',
+      parent: null,
+      exits: [{ to: 'Sitting Room', passage: '', hidden: 'no', oneWay: false, duration: 'days' }],
+    })
+
+    response.assertStatus(422)
+    assert.includeMembers(
+      bodyOf(response).errors.map((error: { field: string }) => error.field),
+      ['exits.0.to', 'exits.0.passage', 'exits.0.hidden', 'exits.0.duration']
+    )
+  })
+
+  test('an archetype has no exit and is no entrance', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+    const archetype = {
+      reference: 'tavern',
+      labels: { en: 'Tavern' },
+      description: 'A place to drink.',
+      kind: 'archetype',
+      parent: null,
+    }
+
+    const entrance = await as(client, user).post(`/worlds/${worldId}/locations`, {
+      ...archetype,
+      entrance: true,
+    })
+
+    entrance.assertStatus(422)
+    assert.equal(bodyOf(entrance).error.code, 'kind_mismatch')
+    assert.equal(bodyOf(entrance).error.details.field, 'entrance')
+  })
+})

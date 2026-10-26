@@ -50,6 +50,8 @@ export function DefinitionForm({
     defaultDisposition: set('defaultDisposition'),
     combat: set('combat'),
     parent: set('parent'),
+    exits: set('exits'),
+    entrance: set('entrance'),
     stackable: set('stackable'),
     equippable: set('equippable'),
     modifiers: set('modifiers'),
@@ -64,6 +66,7 @@ export function DefinitionForm({
   const modifiersError = errorUnder(errors, 'modifiers')
   const weaponError = errorUnder(errors, 'weapon')
   const holderError = errorUnder(errors, 'initialHolder')
+  const exitsError = errorUnder(errors, 'exits')
 
   return (
     <div className="flex flex-col gap-4">
@@ -180,6 +183,28 @@ export function DefinitionForm({
         </Field>
       )}
 
+      {catalogue === 'locations' && unique && (
+        <>
+          <Field id={id('exits')} label={t('exits')} hint={t('exitsHint')} error={exitsError}>
+            <textarea
+              id={id('exits')}
+              value={draft.exits}
+              spellCheck={false}
+              placeholder={EXITS_EXAMPLE}
+              onChange={(event) => on.exits(event.target.value)}
+              className={CODE_AREA}
+            />
+          </Field>
+          <Checkbox
+            id={id('entrance')}
+            label={t('entrance')}
+            checked={draft.entrance}
+            onChange={on.entrance}
+            error={errors.entrance}
+          />
+        </>
+      )}
+
       {catalogue === 'items' && (
         <>
           {!unique && (
@@ -258,6 +283,23 @@ export function DefinitionForm({
     </div>
   )
 }
+
+/** What an exit looks like: a door from the hall of a house. Data, not interface text. */
+const EXITS_EXAMPLE = JSON.stringify(
+  [
+    {
+      to: 'house_study',
+      passage: 'a locked oak door',
+      backPassage: null,
+      hidden: false,
+      requires: 'iron_key',
+      oneWay: false,
+      duration: 'moment',
+    },
+  ],
+  null,
+  2
+)
 
 /** What a weapon profile looks like: a rapier, as the book gives it. Data, not interface text. */
 const WEAPON_EXAMPLE = JSON.stringify(

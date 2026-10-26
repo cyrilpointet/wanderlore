@@ -112,3 +112,48 @@ describe('definition draft', () => {
     })
   })
 })
+
+describe('definition draft of a place', () => {
+  const HALL: LocationDefinition = {
+    ...SHARED,
+    reference: 'house_hall',
+    kind: 'unique',
+    parent: 'house',
+    entrance: true,
+    exits: [
+      {
+        to: 'house_study',
+        passage: 'a locked oak door',
+        backPassage: null,
+        hidden: false,
+        requires: 'iron_key',
+        oneWay: false,
+        duration: null,
+      },
+    ],
+  }
+
+  test('sends its exits as written, and whether it is an entrance', () => {
+    expect(
+      definitionPayloadOf('locations', definitionDraftOf(HALL), { creating: false }).payload
+    ).toMatchObject({ parent: 'house', exits: HALL.exits, entrance: true })
+  })
+
+  test('an archetype has no exit and is no entrance', () => {
+    const draft = { ...definitionDraftOf(HALL), kind: 'archetype' as const }
+
+    expect(definitionPayloadOf('locations', draft, { creating: false }).payload).toMatchObject({
+      parent: null,
+      exits: [],
+      entrance: false,
+    })
+  })
+
+  test('names exits that are not valid JSON, and sends nothing', () => {
+    const draft = { ...definitionDraftOf(HALL), exits: '[{ to: ' }
+
+    expect(definitionPayloadOf('locations', draft, { creating: false })).toEqual({
+      errors: { exits: 'This is not valid JSON.' },
+    })
+  })
+})

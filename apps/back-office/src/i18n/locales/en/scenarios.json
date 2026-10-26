@@ -36,6 +36,10 @@
     "characterTemplate": "Start from a template",
     "start": "Where the story starts",
     "startHint": "Picked from the named places of the world and the scenario, and from this scenario's chapters and quests.",
+    "startTime": "Time of day",
+    "startTimeHint": "When the story opens, on its first day. The players only ever see the period of the day.",
+    "startDate": "Date",
+    "startDateHint": "In the Gregorian calendar, if the story has one. Leave it empty for a story with no date: the game then counts its days.",
     "startLocation": "Starting place",
     "noStart": "Not chosen yet",
     "startChapter": "Starting chapter",
@@ -78,6 +82,12 @@
     "missing_initial_state": "The story has no starting place yet.",
     "not_equippable": "“{{reference}}” cannot be worn or wielded.",
     "not_stackable": "“{{reference}}” is not stackable: one copy only.",
-    "item_held_elsewhere": "“{{reference}}” is unique and already held by someone else when the game starts."
+    "item_held_elsewhere": "“{{reference}}” is unique and already held by someone else when the game starts.",
+    "exit_to_itself": "A place cannot lead to itself.",
+    "duplicate_passage": "Two passages join the same places: declare it once, on one side.",
+    "invalid_duration": "“{{reference}}” is no duration of a passage: moment, minutes, hour or hours.",
+    "entrance_without_exits": "“{{reference}}” is an entrance, but has no exit: it is part of no network.",
+    "unreachable_network": "Nothing leads into the network of “{{reference}}”: mark one of its places as an entrance, or start the story in it.",
+    "start_contains_network": "“{{reference}}” only contains a network: start the story in one of its places."
   }
 }

@@ -33,7 +33,15 @@ export type NpcDefinition = DefinitionBase & {
   combat: unknown
 }
 
-export type LocationDefinition = DefinitionBase & { parent: string | null }
+/**
+ * A place. A named one may declare its exits — written as JSON, checked by
+ * the backend field by field — and be an entrance of its network.
+ */
+export type LocationDefinition = DefinitionBase & {
+  parent: string | null
+  exits?: unknown
+  entrance?: boolean
+}
 
 export type ItemHolder = { holder: 'npc' | 'location'; reference: string }
 

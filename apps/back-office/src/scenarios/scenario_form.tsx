@@ -43,6 +43,8 @@ export function ScenarioForm({
     startLocation: set('startLocation'),
     startChapter: set('startChapter'),
     startQuests: set('startQuests'),
+    startTime: set('startTime'),
+    startDate: set('startDate'),
   }
   const labelsError = errorUnder(errors, 'labels')
   const characterError = errorUnder(errors, 'pregeneratedCharacter')
@@ -141,6 +143,37 @@ export function ScenarioForm({
       </Section>
 
       <Section title={t('form.start')} hint={t('form.startHint')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            id="scenario-start-time"
+            label={t('form.startTime')}
+            hint={t('form.startTimeHint')}
+            error={errors.startTime}
+          >
+            <input
+              id="scenario-start-time"
+              type="time"
+              required
+              value={draft.startTime}
+              onChange={(event) => on.startTime(event.target.value)}
+              className={INPUT}
+            />
+          </Field>
+          <Field
+            id="scenario-start-date"
+            label={t('form.startDate')}
+            hint={t('form.startDateHint')}
+            error={errors.startDate}
+          >
+            <input
+              id="scenario-start-date"
+              type="date"
+              value={draft.startDate}
+              onChange={(event) => on.startDate(event.target.value)}
+              className={INPUT}
+            />
+          </Field>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             id="scenario-start-location"

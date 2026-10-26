@@ -27,6 +27,9 @@ export type DefinitionDraft = {
   defaultDisposition: Disposition
   combat: string
   parent: string
+  /** JSON text: the exits of a named place. */
+  exits: string
+  entrance: boolean
   stackable: boolean
   equippable: boolean
   modifiers: string
@@ -48,6 +51,8 @@ export function emptyDefinitionDraft(): DefinitionDraft {
     defaultDisposition: 'neutral',
     combat: json(NEW_COMBAT),
     parent: '',
+    exits: '[]',
+    entrance: false,
     stackable: false,
     equippable: false,
     modifiers: '[]',
@@ -71,6 +76,8 @@ export function definitionDraftOf(definition: Definition): DefinitionDraft {
     defaultDisposition: npc.defaultDisposition ?? 'neutral',
     combat: npc.combat === undefined ? json(NEW_COMBAT) : json(npc.combat),
     parent: location.parent ?? '',
+    exits: location.exits === undefined ? '[]' : json(location.exits),
+    entrance: location.entrance ?? false,
     stackable: item.stackable ?? false,
     equippable: item.equippable ?? false,
     modifiers: item.modifiers === undefined ? '[]' : json(item.modifiers),
@@ -97,7 +104,7 @@ export function definitionPayloadOf(
   options: { creating: boolean }
 ): DefinitionPayload {
   const errors: FieldErrors = {}
-  const parse = (field: 'combat' | 'modifiers' | 'weapon') => {
+  const parse = (field: 'combat' | 'modifiers' | 'weapon' | 'exits') => {
     try {
       return JSON.parse(draft[field]) as unknown
     } catch {
@@ -121,7 +128,11 @@ export function definitionPayloadOf(
       combat: parse('combat'),
     })
   } else if (catalogue === 'locations') {
-    Object.assign(payload, { parent: unique && draft.parent !== '' ? draft.parent : null })
+    Object.assign(payload, {
+      parent: unique && draft.parent !== '' ? draft.parent : null,
+      exits: unique ? parse('exits') : [],
+      entrance: unique && draft.entrance,
+    })
   } else {
     Object.assign(payload, {
       generic: !unique && draft.generic,

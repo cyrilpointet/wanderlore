@@ -27,6 +27,9 @@ export type Scenario = {
   quests: Entry[]
   pregeneratedCharacter: unknown
   initialState: InitialState | null
+  /** When the story opens: `HH:MM`, and a `YYYY-MM-DD` date when it has one. */
+  startTime: string
+  startDate: string | null
   glossary: Entry[]
   updatedAt: string | null
 }

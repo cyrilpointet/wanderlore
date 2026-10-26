@@ -11,6 +11,7 @@ import {
   SPECIAL_EFFECTS,
 } from '#services/game/content/types'
 import { isDiceExpression } from '#services/rules/dice_expression'
+import { FIXED_DURATIONS } from '#services/game/game_time'
 
 /**
  * The game content the back-office writes. Everything a turn later reads is
@@ -149,6 +150,41 @@ const pregeneratedCharacter = () =>
     ),
   })
 
+/** A time of day, as a scenario opens on it: `HH:MM`. */
+const timeOfDay = () =>
+  vine
+    .string()
+    .trim()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+
+/** A day of the Gregorian calendar, `YYYY-MM-DD`, that exists: no 30th of February. */
+const isCalendarDate = vine.createRule(
+  (value: unknown, _options: undefined, field: FieldContext) => {
+    if (typeof value !== 'string') {
+      return
+    }
+
+    const [year, month, day] = value.split('-').map(Number)
+    const date = new Date(0)
+    date.setUTCFullYear(year, month - 1, day)
+
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day
+    ) {
+      field.report('The {{ field }} field must be a day of the calendar', 'calendar_date', field)
+    }
+  }
+)
+
+const calendarDate = () =>
+  vine
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .use(isCalendarDate())
+
 const initialState = () =>
   vine.object({
     location: reference(),
@@ -168,6 +204,8 @@ const scenarioFields = {
   quests: vine.array(entry()).distinct('reference'),
   pregeneratedCharacter: pregeneratedCharacter().nullable(),
   initialState: initialState().nullable(),
+  startTime: timeOfDay(),
+  startDate: calendarDate().nullable(),
   glossary: vine.array(entry()).distinct('reference'),
 }
 
@@ -180,6 +218,8 @@ export const createScenarioValidator = vine.create({
   quests: scenarioFields.quests.optional(),
   pregeneratedCharacter: scenarioFields.pregeneratedCharacter.optional(),
   initialState: scenarioFields.initialState.optional(),
+  startTime: scenarioFields.startTime.optional(),
+  startDate: scenarioFields.startDate.optional(),
   glossary: scenarioFields.glossary.optional(),
 })
 
@@ -190,6 +230,8 @@ export const updateScenarioValidator = vine.create({
   quests: scenarioFields.quests.optional(),
   pregeneratedCharacter: scenarioFields.pregeneratedCharacter.optional(),
   initialState: scenarioFields.initialState.optional(),
+  startTime: scenarioFields.startTime.optional(),
+  startDate: scenarioFields.startDate.optional(),
   glossary: scenarioFields.glossary.optional(),
 })
 
@@ -218,6 +260,20 @@ const weapon = () =>
     special: vine.enum(SPECIAL_EFFECTS).nullable(),
   })
 
+/** A way out of a unique place: where it leads, how it reads, what shuts it. */
+const exit = () =>
+  vine.object({
+    to: reference(),
+    passage: sentence(300),
+    backPassage: sentence(300).nullable(),
+    hidden: vine.boolean(),
+    requires: reference().nullable(),
+    oneWay: vine.boolean(),
+    duration: vine
+      .enum(Object.keys(FIXED_DURATIONS) as (keyof typeof FIXED_DURATIONS)[])
+      .nullable(),
+  })
+
 const initialHolder = () =>
   vine.object({
     holder: vine.enum(['npc', 'location'] as const),
@@ -238,6 +294,8 @@ const catalogueFields = {
   },
   locations: {
     parent: reference().nullable(),
+    exits: vine.array(exit()),
+    entrance: vine.boolean(),
   },
   items: {
     generic: vine.boolean(),
@@ -260,10 +318,13 @@ export const definitionValidators = {
     update: vine.create(optional({ ...definitionBase, ...catalogueFields.npcs })),
   },
   locations: {
+    /** Exits and entrance may be left out: a place travelled to freely has neither. */
     create: vine.create({
       reference: reference(),
       ...definitionBase,
       ...catalogueFields.locations,
+      exits: catalogueFields.locations.exits.optional(),
+      entrance: catalogueFields.locations.entrance.optional(),
     }),
     update: vine.create(optional({ ...definitionBase, ...catalogueFields.locations })),
   },

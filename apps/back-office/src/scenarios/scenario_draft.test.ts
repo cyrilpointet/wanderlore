@@ -22,6 +22,8 @@ const SCENARIO: Scenario = {
     chapter: 'the_road_to_paris',
     quests: [{ reference: 'deliver_the_letter', step: 1, summary: 'Carry the letter.' }],
   },
+  startTime: '10:00',
+  startDate: '1625-04-07',
   glossary: [],
   updatedAt: null,
 }
@@ -37,8 +39,17 @@ describe('scenario draft', () => {
         glossary: [],
         pregeneratedCharacter: SCENARIO.pregeneratedCharacter,
         initialState: SCENARIO.initialState,
+        startTime: '10:00',
+        startDate: '1625-04-07',
       },
     })
+  })
+
+  test('a story with no date sends none', () => {
+    const draft = { ...scenarioDraftOf({ ...SCENARIO, startDate: null }) }
+
+    expect(draft.startDate).toBe('')
+    expect(scenarioUpdateOf(draft).payload).toMatchObject({ startTime: '10:00', startDate: null })
   })
 
   test('no starting place, no initial state; no character text, no character', () => {
