@@ -1,5 +1,6 @@
 import type { Labels, SkillCategory } from './content/types.js'
 import type { ContentEntry, WorldDefinition } from './world.js'
+import { networkPlaces } from './passages.js'
 
 /**
  * A content reference paired with the label the player reads.
@@ -66,6 +67,8 @@ export class ContentLabels {
   readonly #world: WorldDefinition
   readonly #language: string
   readonly #entries: Record<ContentKind, Map<string, IndexedEntry>>
+  /** The places of a network, by reference, and the place each stands in. */
+  readonly #rooms: Map<string, string | null>
 
   constructor(world: WorldDefinition, language = 'en') {
     this.#world = world
@@ -82,6 +85,15 @@ export class ContentLabels {
       chapter: index(world.chapters),
       quest: index(world.quests),
     }
+
+    const inNetwork = networkPlaces(world.locations)
+    this.#rooms = new Map(
+      world.locations.flatMap((location) =>
+        location.kind === 'unique' && inNetwork.has(location.reference)
+          ? [[location.reference, location.parent] as const]
+          : []
+      )
+    )
   }
 
   world(): Labelled {
@@ -110,16 +122,21 @@ export class ContentLabels {
   }
 
   /**
-   * A place of the game, under its handle. A unique place reads as itself; an
-   * improvised one by its proper name, or else as its archetype within its
-   * parent ("Tavern · Meung-sur-Loire"). The descriptor never leaves: it is
-   * English, for the narrator.
+   * A place of the game, under its handle. A unique place reads as itself — a
+   * room of a network within the place it stands in ("The kitchen · Ward
+   * House"), since "The kitchen" alone says nothing of where; an improvised
+   * one by its proper name, or else as its archetype within its parent
+   * ("Tavern · Meung-sur-Loire"). The descriptor never leaves: it is English,
+   * for the narrator.
    */
   location(place: PlacedLocation): Labelled {
     if (this.#entries.location.has(place.definitionReference)) {
+      const { label } = this.#find('location', place.definitionReference)
+      const within = this.#rooms.get(place.definitionReference)
+
       return {
         reference: place.handle,
-        label: this.#find('location', place.definitionReference).label,
+        label: within ? `${label} · ${this.#find('location', within).label}` : label,
       }
     }
 

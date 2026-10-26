@@ -6,6 +6,7 @@ import type { PresentNpc } from '#services/game/npcs'
 import type { ItemsInScene } from '#services/game/inventory'
 import type { Duration } from '#services/game/game_time'
 import type { Route, SceneExit } from '#services/game/travel'
+import type { PassageKey } from '#services/game/passages'
 
 /**
  * Shapes exchanged with the model.
@@ -78,6 +79,12 @@ export type TurnEffects = {
   /** Handles of the character's copies they draw or wear, or put away. */
   items_equipped: string[]
   items_unequipped: string[]
+  /**
+   * Exits of the place the scene began in, by the place they lead to: hidden
+   * ones the narration shows found, locked ones it shows opened.
+   */
+  passages_discovered: string[]
+  passages_unlocked: string[]
 }
 
 /**
@@ -134,6 +141,11 @@ export type AppliedEffects = {
   npc_relations: { handle: string; disposition: NpcDisposition }[]
   /** Absent from turns played before Phase 4. */
   items: AppliedItems
+  /**
+   * Passages found and opened, as declared: by extraction, or opened on the
+   * way with the item they require. Absent from turns played before Phase 7.
+   */
+  passages?: { discovered: PassageKey[]; unlocked: PassageKey[] }
 }
 
 export type ArbitrationOutput = {
@@ -268,5 +280,17 @@ export type ExtractionRequest = Pick<TurnContext, 'world' | 'scene' | 'character
    * The closed list of definitions an item may come into being from:
    * archetypes, and unique items the game has not met and nobody holds.
    */
-  creatable_items: string[]
+  creatable_items: string[] /**
+   * Where a movement may lead from where the scene began: the places the
+   * exits reach — once those it finds or opens are — or, outside a network,
+   * the places travelled to freely; and whether a place may be improvised,
+   * within which named ones.
+   */
+  movement: MovementOptions
+}
+
+export type MovementOptions = {
+  destinations: string[]
+  archetypes: string[]
+  parents: string[]
 }

@@ -31,8 +31,21 @@ function delta(overrides: Partial<TurnEffects> = {}): TurnEffects {
     items_destroyed: [],
     items_equipped: [],
     items_unequipped: [],
+    passages_discovered: [],
+    passages_unlocked: [],
     ...overrides,
   }
+}
+
+/** A game that knows nothing of its passages, standing in a free place. */
+const NOWHERE_IN_PARTICULAR = {
+  here: 'paris',
+  travel: {
+    visited: new Set(['paris']),
+    passages: { discovered: new Set<string>(), unlocked: new Set<string>() },
+    held: new Set<string>(),
+    guarded: new Set<string>(),
+  },
 }
 
 /** A game standing in Paris. */
@@ -73,6 +86,7 @@ async function apply(scene: { sessionId: string; character: Character }, effects
         sessionId: scene.sessionId,
         character: scene.character,
         worldState,
+        ...NOWHERE_IN_PARTICULAR,
       },
       effects,
       trx
@@ -491,6 +505,7 @@ test.group('Applying a delta | items', (group) => {
             sessionId: scene.sessionId,
             character: scene.character,
             worldState,
+            ...NOWHERE_IN_PARTICULAR,
           },
           delta({
             items_created: [

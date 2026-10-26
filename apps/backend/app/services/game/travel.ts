@@ -204,3 +204,26 @@ export function exitsOf(places: PlaceDeclaration[], from: string, state: TravelS
     }
   })
 }
+
+/**
+ * The state of the game once some exits of `here` are found or opened, named
+ * by the place they lead to: what extraction proposes, before it is applied.
+ */
+export function withExitsOpened(
+  places: PlaceDeclaration[],
+  here: string | null,
+  state: TravelState,
+  opened: { discovered: string[]; unlocked: string[] }
+): TravelState {
+  const ways = here === null ? [] : waysOutOf(places, here)
+  const keysTo = (targets: string[]) =>
+    ways.filter(({ to }) => targets.includes(to)).map(({ declared }) => keyOf(declared))
+
+  return {
+    ...state,
+    passages: {
+      discovered: new Set([...state.passages.discovered, ...keysTo(opened.discovered)]),
+      unlocked: new Set([...state.passages.unlocked, ...keysTo(opened.unlocked)]),
+    },
+  }
+}

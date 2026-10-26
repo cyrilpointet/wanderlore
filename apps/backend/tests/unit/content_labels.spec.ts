@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 
 import { ContentLabels, MissingLabelError } from '#services/game/content_labels'
 import { THREE_MUSKETEERS, THREE_MUSKETEERS_IN_FRENCH } from '#tests/helpers/worlds'
+import { HOUSE_WORLD } from '#tests/helpers/places'
 
 test.group('Content labels', () => {
   const labels = new ContentLabels(THREE_MUSKETEERS)
@@ -154,5 +155,33 @@ test.group('Content labels | languages', () => {
 
   test('a translation never makes up for a missing reference', ({ assert }) => {
     assert.throws(() => french.of('item', 'arquebus'), MissingLabelError)
+  })
+})
+
+test.group('Content labels | rooms of a network', () => {
+  const labels = new ContentLabels(HOUSE_WORLD)
+  const unique = (reference: string) => ({
+    handle: reference,
+    definitionReference: reference,
+    parentReference: null,
+    name: null,
+  })
+
+  test('a room reads within the place it stands in', ({ assert }) => {
+    assert.deepEqual(labels.location(unique('house_kitchen')), {
+      reference: 'house_kitchen',
+      label: 'The kitchen · The house',
+    })
+  })
+
+  test('a place travelled to freely keeps its own name', ({ assert }) => {
+    assert.deepEqual(labels.location(unique('paris')), { reference: 'paris', label: 'Paris' })
+  })
+
+  test('a room by its name alone wherever a name is asked for', ({ assert }) => {
+    assert.deepEqual(labels.of('location', 'house_kitchen'), {
+      reference: 'house_kitchen',
+      label: 'The kitchen',
+    })
   })
 })

@@ -8,6 +8,8 @@ import type LocationInstance from '#models/location_instance'
 
 import { DeadNpcError, enterScene } from './npcs.js'
 import { improviseLocation, visitUniqueLocation } from './locations.js'
+import { type PassageKey, discoverPassage, keyOf, unlockPassage, waysOutOf } from './passages.js'
+import { type TravelState, routesFrom, withExitsOpened } from './travel.js'
 import {
   type Holder,
   createItem,
@@ -34,6 +36,10 @@ export type DeltaTarget = {
   character: Character
   /** With its `currentLocation` preloaded. */
   worldState: WorldState
+  /** The named place the turn began in; null for an improvised one. */
+  here: string | null
+  /** What the game knew of its ways as the turn began. */
+  travel: TravelState
 }
 
 /**
@@ -43,12 +49,15 @@ export type DeltaTarget = {
  * The order is fixed, so an entrance at the new place is never undone by the
  * move that led there:
  *
- * 1. movement — and everyone present who does not follow is left behind;
- * 2. exits;
- * 3. entrances — a unique character met for the first time, like a unique
+ * 1. passages of the place the turn began in, found or opened — before the
+ *    movement, which may go through them;
+ * 2. movement — a locked passage gone through with its item is opened for
+ *    good, and everyone present who does not follow is left behind;
+ * 3. exits;
+ * 4. entrances — a unique character met for the first time, like a unique
  *    place first visited, brings the items they hold from the start;
- * 4. names learnt and dispositions;
- * 5. items: creations, hand-overs, destructions, then what is drawn or put
+ * 5. names learnt and dispositions;
+ * 6. items: creations, hand-overs, destructions, then what is drawn or put
  *    away. "The location" is the place the turn began in, whatever the
  *    movement: it is the only place whose items extraction was shown.
  *
@@ -63,7 +72,9 @@ export async function applyDelta(
 ): Promise<AppliedEffects> {
   const hitPointsDelta = await applyHitPoints(target.character, effects.hit_points_delta, trx)
   const startedIn = target.worldState.currentLocation as LocationInstance | null
+  const passages = await applyPassages(target, effects, trx)
   const movement = await move(target, effects.movement, effects.npcs_following, trx)
+  passages.unlocked.push(...(await openOnTheWay(target, effects, movement, trx)))
 
   const left = await leave(target.sessionId, effects.npcs_left, trx)
   const entered = await enter(target, effects.npcs_entered, trx)
@@ -82,7 +93,74 @@ export async function applyDelta(
     npc_names: effects.npc_names,
     npc_relations: effects.npc_relations,
     items,
+    passages,
   }
+}
+
+/**
+ * The exits of the place the turn began in that extraction read found or
+ * opened, named by where they lead: each is the passage it goes through, as
+ * declared, so both ways share what the game learnt.
+ */
+async function applyPassages(
+  target: DeltaTarget,
+  effects: Pick<TurnEffects, 'passages_discovered' | 'passages_unlocked'>,
+  trx: TransactionClientContract
+): Promise<{ discovered: PassageKey[]; unlocked: PassageKey[] }> {
+  const ways = target.here === null ? [] : waysOutOf(target.world.locations, target.here)
+  const passageTo = (to: string) => {
+    const way = ways.find((entry) => entry.to === to)
+
+    if (way === undefined) {
+      throw new Error(`No exit of "${target.here}" leads to "${to}".`)
+    }
+
+    return way.declared
+  }
+
+  const discovered = effects.passages_discovered.map(passageTo)
+  const unlocked = effects.passages_unlocked.map(passageTo)
+
+  for (const passage of discovered) {
+    await discoverPassage(target.world.locations, target.sessionId, passage, trx)
+  }
+  for (const passage of unlocked) {
+    await unlockPassage(target.world.locations, target.sessionId, passage, trx)
+  }
+
+  return { discovered, unlocked }
+}
+
+/**
+ * A locked passage gone through with the item it requires is opened for
+ * good: the backend decides so from the way taken, without the model. The
+ * way is the quickest one, once this turn's finds and openings are counted.
+ */
+async function openOnTheWay(
+  target: DeltaTarget,
+  opened: Pick<TurnEffects, 'passages_discovered' | 'passages_unlocked'>,
+  movement: PlacedMovement | null,
+  trx: TransactionClientContract
+): Promise<PassageKey[]> {
+  if (target.here === null || movement === null) {
+    return []
+  }
+
+  const places = target.world.locations
+  const state = withExitsOpened(places, target.here, target.travel, {
+    discovered: opened.passages_discovered,
+    unlocked: opened.passages_unlocked,
+  })
+  const route = routesFrom(places, target.here, state).get(movement.handle)
+  const crossed = (route?.steps ?? []).filter(
+    ({ requires, declared }) => requires !== null && !state.passages.unlocked.has(keyOf(declared))
+  )
+
+  for (const { declared } of crossed) {
+    await unlockPassage(places, target.sessionId, declared, trx)
+  }
+
+  return crossed.map(({ declared }) => declared)
 }
 
 /**

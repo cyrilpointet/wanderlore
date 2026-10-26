@@ -33,7 +33,15 @@ import { actionTypesOf, resolutionFor, rollBaseFor } from './resolution_rules.js
 import { ContentLabels } from './content_labels.js'
 import { periodAt, secondsOf } from './game_time.js'
 import { passageStates } from './passages.js'
-import { type Route, type SceneExit, type TravelState, exitsOf, routesFrom } from './travel.js'
+import {
+  type Route,
+  type SceneExit,
+  type TravelState,
+  destinationsFrom,
+  exitsOf,
+  routesFrom,
+  withExitsOpened,
+} from './travel.js'
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
 import { loadWorld } from './content/load.js'
@@ -93,6 +101,8 @@ const NO_CHANGE: TurnEffects = {
   items_destroyed: [],
   items_equipped: [],
   items_unequipped: [],
+  passages_discovered: [],
+  passages_unlocked: [],
 }
 
 /**
@@ -358,11 +368,16 @@ export class TurnService {
     const context = buildContext(scene, turn.playerInput, turn.language)
     /** The world's own list, from the snapshot the turn was picked up with. */
     const actionTypes = actionTypesOf(world)
+    const movement = movementOptionsOf(scene)
     const meta: ValidationMeta = {
       actionTypes: actionTypes.map(({ actionType }) => actionType),
       npcHandles: scene.npcs.map(({ handle }) => handle),
-      locations: uniqueLocationReferences(world),
-      locationArchetypes: locationArchetypeReferences(world),
+      locations: movement.destinations,
+      locationArchetypes: movement.archetypes,
+      parentLocations: movement.parents,
+      hiddenExits: scene.exits.filter(({ hidden }) => hidden).map(({ to }) => to),
+      lockedExits: scene.exits.filter(({ locked }) => locked).map(({ to }) => to),
+      destinationsAfter: movement.after,
       npcDefinitions: npcReferences(world),
       itemsInScene: itemReferencesOf(scene.items),
       sceneItems: sceneItemsOf(scene.items),
@@ -414,7 +429,16 @@ export class TurnService {
     }
 
     return this.#extract(
-      buildExtractionMessage({ ...context, narration, creatable_items: scene.creatableItems }),
+      buildExtractionMessage({
+        ...context,
+        narration,
+        creatable_items: scene.creatableItems,
+        movement: {
+          destinations: movement.destinations,
+          archetypes: movement.archetypes,
+          parents: movement.parents,
+        },
+      }),
       meta,
       step
     )
@@ -625,6 +649,8 @@ export class TurnService {
       npcDefinitions: await presentNpcDefinitions(sessionId),
       items,
       creatableItems: await creatableItems(world, sessionId),
+      here,
+      travel,
       ...describePlace(world, place),
       exits: here === null ? [] : exitsOf(world.locations, here, travel),
       routes: here === null ? [] : [...routesFrom(world.locations, here, travel).values()],
@@ -676,6 +702,8 @@ export class TurnService {
             sessionId: scene.session.id,
             character: scene.character,
             worldState: scene.worldState,
+            here: scene.here,
+            travel: scene.travel,
           },
           effects,
           trx
@@ -719,6 +747,10 @@ type LoadedScene = {
   npcDefinitions: Record<string, string>
   items: ItemsInScene
   creatableItems: string[]
+  /** The named place the scene stands in; null for an improvised one. */
+  here: string | null
+  /** What decides which ways the character can take. */
+  travel: TravelState
   placeDescription: string | null
   surroundings: string | null
   /** The ways out of where the scene stands: none outside a network. */
@@ -796,11 +828,41 @@ function timeOf(
   return { before, after: before + seconds, duration: decision.duration }
 }
 
+/**
+ * Where a movement may lead from where the scene began, for extraction to
+ * pick from: inside a network, the places its exits reach once every hidden
+ * one is found and every locked one opened — validation then checks the
+ * narration did find or open what the way needs; outside one, the places
+ * travelled to freely, and an improvised place. The place itself stays in the
+ * list: going where one stands is no movement, not a mistake.
+ */
+function movementOptionsOf(scene: LoadedScene) {
+  const places = scene.world.locations
+  const after = (opened: { discovered: string[]; unlocked: string[] }) => {
+    const { places: reached } = destinationsFrom(
+      places,
+      scene.here,
+      withExitsOpened(places, scene.here, scene.travel, opened)
+    )
+
+    return scene.here === null ? reached : [...new Set([scene.here, ...reached])]
+  }
+  const { improvise } = destinationsFrom(places, scene.here, scene.travel)
+
+  return {
+    destinations: after({
+      discovered: scene.exits.filter(({ hidden }) => hidden).map(({ to }) => to),
+      unlocked: scene.exits.filter(({ locked }) => locked).map(({ to }) => to),
+    }),
+    archetypes: improvise ? locationArchetypeReferences(scene.world) : [],
+    parents: improvise ? uniqueLocationReferences(scene.world) : [],
+    after,
+  }
+}
+
 /** The quickest way to the destination arbitration named, validated against the same routes. */
 function routeTo(scene: LoadedScene, destination: string | null): Route | null {
-  return destination === null
-    ? null
-    : (scene.routes.find(({ to }) => to === destination) ?? null)
+  return destination === null ? null : (scene.routes.find(({ to }) => to === destination) ?? null)
 }
 
 /** The reference of a named place the game stands in; null for an improvised one. */

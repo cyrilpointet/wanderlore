@@ -151,6 +151,13 @@ function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationR
   }
 }
 
+/** Where a movement may lead from a free place of the Musketeers' world. */
+const FREE_MOVEMENT = {
+  destinations: uniqueLocationReferences(THREE_MUSKETEERS),
+  archetypes: locationArchetypeReferences(THREE_MUSKETEERS),
+  parents: uniqueLocationReferences(THREE_MUSKETEERS),
+}
+
 function payloadOf(message: string): Record<string, any> {
   return JSON.parse(message.slice(message.indexOf('{'), message.lastIndexOf('}') + 1))
 }
@@ -531,6 +538,7 @@ test.group('Extraction | contract', () => {
       ...turnContext(),
       narration: 'Tréville reads the letter and waves you upstairs.',
       creatable_items: ['improvised_weapon', 'rope', 'food'],
+      movement: FREE_MOVEMENT,
     })
   }
 
@@ -546,8 +554,12 @@ test.group('Extraction | contract', () => {
       payload.npc_definitions.map(({ definition }: { definition: string }) => definition),
       npcReferences(THREE_MUSKETEERS)
     )
-    assert.deepEqual(payload.unique_locations, uniqueLocationReferences(THREE_MUSKETEERS))
+    assert.deepEqual(
+      payload.movement_destinations.map(({ reference }: { reference: string }) => reference),
+      uniqueLocationReferences(THREE_MUSKETEERS)
+    )
     assert.deepEqual(payload.location_archetypes, locationArchetypeReferences(THREE_MUSKETEERS))
+    assert.deepEqual(payload.parent_locations, uniqueLocationReferences(THREE_MUSKETEERS))
     /** The only handles the people fields may use. */
     assert.deepEqual(payload.scene_state.npcs_present, turnContext().scene.npcs_present)
   })
@@ -627,6 +639,8 @@ test.group('Extraction | contract', () => {
       'items_destroyed',
       'items_equipped',
       'items_unequipped',
+      'passages_discovered',
+      'passages_unlocked',
     ])
     assert.deepEqual(EXTRACTION_SCHEMA.properties.movement.required, [
       'location',
@@ -755,6 +769,7 @@ test.group('Prompts | the language of the game', () => {
       ...turnContext(inFrench),
       narration: 'Le garde vous laisse passer.',
       creatable_items: ['rope'],
+      movement: FREE_MOVEMENT,
     })
 
     for (const message of [arbitration, extraction]) {
@@ -821,6 +836,7 @@ test.group('Prompts | the time of the game', () => {
       ...turnContext(),
       narration: 'Night falls on the courtyard.',
       creatable_items: [],
+      movement: FREE_MOVEMENT,
     })
 
     assert.notInclude(message, 'period')
@@ -952,14 +968,41 @@ test.group('Prompts | places and their exits', () => {
     assert.include(NARRATION_SYSTEM_PROMPT, 'invent no other way')
   })
 
-  test('extraction is handed neither the place nor its exits', ({ assert }) => {
+  test('extraction is handed no description, only the exits it may find or open', ({ assert }) => {
     const message = buildExtractionMessage({
       ...inTheHall(),
       narration: 'You cross the hall.',
       creatable_items: [],
+      movement: { destinations: ['house_hall', 'house_kitchen'], archetypes: [], parents: [] },
     })
+    const payload = payloadOf(message)
 
     assert.notInclude(message, 'A tall hall with a staircase.')
-    assert.notInclude(message, 'a locked oak door')
+    assert.notInclude(message, 'a swing door')
+    assert.deepEqual(payload.hidden_exits, [])
+    assert.deepEqual(payload.locked_exits, [{ to: 'house_study', passage: 'a locked oak door' }])
+  })
+
+  test('inside a network, extraction picks among the rooms, and improvises none', ({ assert }) => {
+    const payload = payloadOf(
+      buildExtractionMessage({
+        ...inTheHall(),
+        narration: 'You cross the hall.',
+        creatable_items: [],
+        movement: { destinations: ['house_hall', 'house_kitchen'], archetypes: [], parents: [] },
+      })
+    )
+
+    assert.deepEqual(payload.movement_destinations, [
+      { reference: 'house_hall', label: 'The hall' },
+      { reference: 'house_kitchen', label: 'The kitchen' },
+    ])
+    assert.deepEqual(payload.location_archetypes, [])
+    assert.deepEqual(payload.parent_locations, [])
+  })
+
+  test('the grain is the catalogue’s: one room to the next is a movement', ({ assert }) => {
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'however close: from one room to the next is one')
+    assert.notInclude(EXTRACTION_SYSTEM_PROMPT, 'stable')
   })
 })

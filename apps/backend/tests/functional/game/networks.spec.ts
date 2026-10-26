@@ -8,6 +8,9 @@ import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
 import { visitUniqueLocation } from '#services/game/locations'
+import { createItem } from '#services/game/inventory'
+import { passageStates } from '#services/game/passages'
+import { toMessage } from '#services/game/turn_events'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import { HOUSE_WORLD } from '#tests/helpers/places'
 import { GASCON } from '#tests/helpers/worlds'
@@ -50,15 +53,19 @@ function buildService(answers: unknown[]) {
 }
 
 /**
- * D'Artagnan in the hall of the house at four in the afternoon, having come
- * in by the yard: the rest of the house is still to discover.
+ * D'Artagnan at four in the afternoon, standing in the last place of
+ * `visited` — by default the hall, having come in by the yard: the rest of
+ * the house is still to discover.
  */
-async function arrangeHall(visited: string[] = ['house_yard', 'house_hall']) {
+async function arrangeHall(
+  visited: string[] = ['house_yard', 'house_hall'],
+  options: { holdsTheKey?: boolean } = {}
+) {
   const content = await seedHouse()
   const userId = await createUser()
   const sessionId = await createSession(userId, content)
 
-  await Character.create({
+  const character = await Character.create({
     sessionId,
     name: "d'Artagnan",
     skills: { persuasion: 60 },
@@ -69,15 +76,23 @@ async function arrangeHall(visited: string[] = ['house_yard', 'house_hall']) {
     hitPointsMax: 10,
   })
 
-  let hall = null
+  if (options.holdsTheKey) {
+    await createItem(
+      HOUSE_WORLD,
+      sessionId,
+      { definition: 'iron_key', descriptor: null, quantity: 1 },
+      { type: 'character', id: character.id }
+    )
+  }
+
+  let standing = null
   for (const reference of visited) {
-    const instance = await visitUniqueLocation(HOUSE_WORLD, sessionId, reference)
-    hall = reference === 'house_hall' ? instance : hall
+    standing = await visitUniqueLocation(HOUSE_WORLD, sessionId, reference)
   }
 
   const worldState = await WorldState.create({
     sessionId,
-    currentLocationId: hall!.id,
+    currentLocationId: standing!.id,
     activeQuests: [],
     narrativeFlags: {},
     gameTime: 16 * 3600,
@@ -102,10 +117,7 @@ test.group('Networks | arbitration and narration', (group) => {
     await play({ sessionId, userId, playerInput })
 
     const arbitration = provider.requests.find(({ step }) => step === 'arbitration')!
-    assert.include(
-      arbitration.userMessage,
-      'The house hall, for a spec.'
-    )
+    assert.include(arbitration.userMessage, 'The house hall, for a spec.')
     assert.include(arbitration.userMessage, 'a locked oak door')
     assert.include(arbitration.userMessage, '"reachable_locations"')
     assert.include(arbitration.userMessage, '"reference": "house_corridor"')
@@ -130,9 +142,9 @@ test.group('Networks | arbitration and narration', (group) => {
   test('the narrator follows the way, passage by passage', async ({ assert }) => {
     const { userId, sessionId } = await arrangeHall([
       'house_yard',
-      'house_hall',
       'house_kitchen',
       'house_cellar',
+      'house_hall',
     ])
     const { provider, play } = buildService([
       going('house_cellar'),
@@ -164,5 +176,119 @@ test.group('Networks | arbitration and narration', (group) => {
       ['arbitration']
     )
     assert.equal((await TurnLog.findOrFail(turn.id)).gameTimeAfter, 16 * 3600 + 600 + 60)
+  })
+})
+
+test.group('Networks | extraction and the ways it opens', (group) => {
+  useTransaction(group)
+
+  async function standingIn(sessionId: string): Promise<string> {
+    const state = await WorldState.query()
+      .where('sessionId', sessionId)
+      .preload('currentLocation')
+      .firstOrFail()
+
+    return state.currentLocation.handle
+  }
+
+  test('a room two rooms away is no movement: asked again, then refused', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall()
+    const tooFar = extracted({ movement: 'house_attic' })
+    const { play } = buildService([
+      going(null),
+      streamed('You run up to the attic.'),
+      tooFar,
+      tooFar,
+    ])
+
+    await assert.rejects(() => play({ sessionId, userId, playerInput: 'I run to the attic.' }))
+
+    const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
+    assert.equal(turn.status, 'failed')
+    assert.equal(await standingIn(sessionId), 'house_hall')
+  })
+
+  test('a hidden passage found and gone through in one turn', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall(['house_yard', 'house_hall', 'house_study'])
+    const { play } = buildService([
+      going(null, { label: 'minutes' }),
+      streamed('Behind the bookcase, a narrow stair: you go down into the cellar.'),
+      extracted({ movement: 'house_cellar', passages_discovered: ['house_cellar'] }),
+    ])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I search the shelves.' })
+
+    assert.equal(turn.status, 'completed')
+    assert.equal(await standingIn(sessionId), 'house_cellar')
+    assert.deepEqual([...(await passageStates(sessionId)).discovered], ['house_study>house_cellar'])
+    assert.deepEqual((turn.appliedEffects as any).passages.discovered, [
+      { from: 'house_study', to: 'house_cellar' },
+    ])
+  })
+
+  test('going through a hidden passage not found is refused', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall(['house_yard', 'house_hall', 'house_study'])
+    const through = extracted({ movement: 'house_cellar' })
+    const { play } = buildService([
+      going(null),
+      streamed('You slip into the cellar.'),
+      through,
+      through,
+    ])
+
+    await assert.rejects(() => play({ sessionId, userId, playerInput: 'I go to the cellar.' }))
+
+    assert.equal(await standingIn(sessionId), 'house_study')
+  })
+
+  test('a locked door gone through with its key is open for good', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall(['house_yard', 'house_hall'], {
+      holdsTheKey: true,
+    })
+    const { play } = buildService([
+      going('house_study'),
+      streamed('The iron key turns; you step into the study.'),
+      extracted({ movement: 'house_study' }),
+    ])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I unlock the study.' })
+
+    assert.equal(await standingIn(sessionId), 'house_study')
+    assert.deepEqual([...(await passageStates(sessionId)).unlocked], ['house_hall>house_study'])
+    assert.deepEqual((turn.appliedEffects as any).passages.unlocked, [
+      { from: 'house_hall', to: 'house_study' },
+    ])
+  })
+
+  test('a locked door forced open is open for good', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall()
+    const { play } = buildService([
+      going(null),
+      streamed('The lock gives under your shoulder.'),
+      extracted({ passages_unlocked: ['house_study'] }),
+    ])
+
+    await play({ sessionId, userId, playerInput: 'I force the study door.' })
+
+    assert.deepEqual([...(await passageStates(sessionId)).unlocked], ['house_hall>house_study'])
+    assert.equal(await standingIn(sessionId), 'house_hall')
+  })
+
+  test('the badge names the room within the house', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall()
+    const { events, play } = buildService([
+      going('house_kitchen'),
+      streamed('You push through the swing door.'),
+      extracted({ movement: 'house_kitchen' }),
+    ])
+
+    await play({ sessionId, userId, playerInput: 'I go to the kitchen.' })
+
+    const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!
+    const message = toMessage(completed.ref, completed.event) as Record<string, any>
+    assert.deepEqual(message.location, {
+      reference: 'house_kitchen',
+      label: 'The kitchen · The house',
+    })
   })
 })

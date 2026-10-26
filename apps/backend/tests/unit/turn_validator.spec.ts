@@ -12,6 +12,10 @@ const META: ValidationMeta = {
   actionTypes: ['melee_combat', 'social_persuasion'],
   npcHandles: ['royal_guard_1', 'treville'],
   reachableLocations: [],
+  parentLocations: ['paris', 'louvre', 'france'],
+  hiddenExits: [],
+  lockedExits: [],
+  destinationsAfter: () => ['paris', 'louvre', 'france'],
   locations: ['paris', 'louvre', 'france'],
   locationArchetypes: ['tavern', 'town'],
   npcDefinitions: ['treville', 'royal_guard', 'commoner'],
@@ -915,5 +919,81 @@ test.group('Turn validator | destination', () => {
     const output = await validateArbitration(settled(), IN_A_NETWORK)
 
     assert.isNull(output.intent.destination)
+  })
+})
+
+test.group('Turn validator | exits and the ways they open', () => {
+  /** In the study: the cellar lies behind a hidden passage, the hall behind a locked door. */
+  const IN_THE_STUDY: ValidationMeta = {
+    ...META,
+    locations: ['house_study', 'house_cellar', 'house_hall'],
+    locationArchetypes: [],
+    parentLocations: [],
+    hiddenExits: ['house_cellar'],
+    lockedExits: ['house_hall'],
+    destinationsAfter: ({ discovered, unlocked }) => [
+      'house_study',
+      ...(discovered.includes('house_cellar') ? ['house_cellar'] : []),
+      ...(unlocked.includes('house_hall') ? ['house_hall'] : []),
+    ],
+  }
+
+  test('a hidden exit found and gone through in the same narration', async ({ assert }) => {
+    const output = await validateExtraction(
+      extraction({ movement: 'house_cellar', passages_discovered: ['house_cellar'] }),
+      IN_THE_STUDY
+    )
+
+    assert.deepEqual(output.passages_discovered, ['house_cellar'])
+    assert.deepEqual(output.movement, { location: 'house_cellar' })
+  })
+
+  test('rejects a way through an exit still hidden or locked', async ({ assert }) => {
+    const hidden = await reject(() =>
+      validateExtraction(extraction({ movement: 'house_cellar' }), IN_THE_STUDY)
+    )
+    const locked = await reject(() =>
+      validateExtraction(extraction({ movement: 'house_hall' }), IN_THE_STUDY)
+    )
+
+    assert.deepEqual(fields(hidden), ['movement.location'])
+    assert.deepEqual(fields(locked), ['movement.location'])
+  })
+
+  test('only exits of the place, hidden ones found and locked ones opened', async ({ assert }) => {
+    const error = await reject(() =>
+      validateExtraction(
+        extraction({ passages_discovered: ['house_hall'], passages_unlocked: ['house_cellar'] }),
+        IN_THE_STUDY
+      )
+    )
+
+    assert.sameMembers(fields(error), ['passages_discovered.0', 'passages_unlocked.0'])
+  })
+
+  test('no place improvised inside a network', async ({ assert }) => {
+    const error = await reject(() =>
+      validateExtraction(
+        extraction({ movement: { definition: 'tavern', parent: 'paris' } }),
+        IN_THE_STUDY
+      )
+    )
+
+    assert.includeMembers(fields(error), ['movement.definition', 'movement.parent'])
+  })
+
+  test('standing still is no mistake', async ({ assert }) => {
+    const output = await validateExtraction(extraction({ movement: 'house_study' }), IN_THE_STUDY)
+
+    assert.deepEqual(output.movement, { location: 'house_study' })
+  })
+
+  test('none sent is none', async ({ assert }) => {
+    const { passages_discovered: _found, passages_unlocked: _opened, ...answer } = extraction()
+
+    const output = await validateExtraction(answer, IN_THE_STUDY)
+
+    assert.deepEqual(output.passages_discovered, [])
+    assert.deepEqual(output.passages_unlocked, [])
   })
 })

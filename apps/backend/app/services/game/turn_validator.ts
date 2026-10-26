@@ -61,10 +61,25 @@ export type ValidationMeta = {
   npcHandles: string[]
   /** Closed list: the places the exits of a network reach, where a movement may be timed to. */
   reachableLocations: string[]
-  /** Closed list: the named places the world defines, and so can label. */
+  /**
+   * Closed list: the named places a movement may reach from where the scene
+   * began — the exits of a network once those it finds or opens are, or the
+   * places travelled to freely — and the place itself.
+   */
   locations: string[]
-  /** Closed list: the kinds of place an improvised one may be. */
+  /** Closed list: the kinds of place an improvised one may be; none inside a network. */
   locationArchetypes: string[]
+  /** Closed list: the named places an improvised one may sit in. */
+  parentLocations: string[]
+  /** Closed lists: the hidden exits of the place not found yet, and its locked ones, by where they lead. */
+  hiddenExits: string[]
+  lockedExits: string[]
+  /**
+   * The named places a movement may reach once the exits found and opened
+   * this turn are, by where they lead: a way through a hidden or locked exit
+   * the narration did not open is no way.
+   */
+  destinationsAfter: (opened: { discovered: string[]; unlocked: string[] }) => string[]
   /** Closed list: who may enter a scene — a named character or an archetype. */
   npcDefinitions: string[]
   /**
@@ -187,7 +202,7 @@ const extractionValidator = vine.withMetaData<ValidationMeta>().create({
     .object({
       location: vine.enum((field) => limitsOf(field).locations).nullable(),
       definition: vine.enum((field) => limitsOf(field).locationArchetypes).nullable(),
-      parent: vine.enum((field) => limitsOf(field).locations).nullable(),
+      parent: vine.enum((field) => limitsOf(field).parentLocations).nullable(),
       descriptor: shortText(200).nullable(),
       name: shortText(64).nullable(),
     })
@@ -241,6 +256,15 @@ const extractionValidator = vine.withMetaData<ValidationMeta>().create({
     .maxLength(MAX_ITEM_CHANGES_PER_TURN),
   items_equipped: vine.array(vine.string().trim()).maxLength(MAX_ITEM_CHANGES_PER_TURN),
   items_unequipped: vine.array(vine.string().trim()).maxLength(MAX_ITEM_CHANGES_PER_TURN),
+  /** Exits of the place the scene began in, by where they lead. Optional on the wire: none. */
+  passages_discovered: vine
+    .array(vine.enum((field) => limitsOf(field).hiddenExits))
+    .distinct()
+    .optional(),
+  passages_unlocked: vine
+    .array(vine.enum((field) => limitsOf(field).lockedExits))
+    .distinct()
+    .optional(),
 })
 
 export async function validateArbitration(
@@ -384,8 +408,13 @@ export async function validateExtraction(
   const output = await run<RawExtraction>('extraction', extractionValidator, payload, meta)
   const items = readItems(output, meta)
 
+  const passages = {
+    discovered: output.passages_discovered ?? [],
+    unlocked: output.passages_unlocked ?? [],
+  }
   const reasons = [
     ...movementReasons(output.movement),
+    ...wayReasons(output.movement, passages, meta),
     ...effectReasons(output, meta),
     ...items.reasons,
   ]
@@ -397,6 +426,8 @@ export async function validateExtraction(
   return {
     ...output,
     ...items.effects,
+    passages_discovered: passages.discovered,
+    passages_unlocked: passages.unlocked,
     movement: toMovement(output.movement),
     npcs_entered: output.npcs_entered.map((entry) => ({ ...entry, name: entry.name ?? null })),
   }
@@ -416,7 +447,36 @@ type WireHolder = { holder: 'character' | 'npc' | 'location'; handle: string | n
 type ItemFields =
   'items_created' | 'items_transferred' | 'items_destroyed' | 'items_equipped' | 'items_unequipped'
 
-type RawExtraction = Omit<TurnEffects, 'movement' | 'npcs_entered' | ItemFields> & {
+/**
+ * A named place reached by the exits only once the way there is open: the
+ * hidden exit found, the locked one opened, in this narration or before.
+ */
+function wayReasons(
+  movement: FlatMovement | null,
+  passages: { discovered: string[]; unlocked: string[] },
+  meta: ValidationMeta
+): RejectionReason[] {
+  const destination = movement?.location ?? null
+
+  if (destination === null || meta.destinationsAfter(passages).includes(destination)) {
+    return []
+  }
+
+  return [
+    reason(
+      'movement.location',
+      'closed_way',
+      `The way to "${destination}" is hidden or locked: it has to be found or opened first.`
+    ),
+  ]
+}
+
+type RawExtraction = Omit<
+  TurnEffects,
+  'movement' | 'npcs_entered' | 'passages_discovered' | 'passages_unlocked' | ItemFields
+> & {
+  passages_discovered?: string[]
+  passages_unlocked?: string[]
   movement: FlatMovement | null
   npcs_entered: { definition: string; descriptor: string | null; name?: string | null }[]
   items_created: (Omit<TurnEffects['items_created'][number], 'holder'> & {

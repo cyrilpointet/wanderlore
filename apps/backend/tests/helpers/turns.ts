@@ -65,6 +65,8 @@ export function extracted(
     items_destroyed?: { item: string; holder: WireHolder; quantity: number }[]
     items_equipped?: string[]
     items_unequipped?: string[]
+    passages_discovered?: string[]
+    passages_unlocked?: string[]
   } = {}
 ) {
   const { movement = null, ...rest } = answer
@@ -95,6 +97,8 @@ export function extracted(
     items_destroyed: [],
     items_equipped: [],
     items_unequipped: [],
+    passages_discovered: [],
+    passages_unlocked: [],
     ...rest,
   }
 }

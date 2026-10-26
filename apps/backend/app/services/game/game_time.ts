@@ -41,7 +41,15 @@ export const MAX_DAYS = 7
  * dawn. Derived from the time, never stored; the same bounds in every world,
  * with no season (roadmap, Phase 7).
  */
-export const PERIODS = ['dawn', 'morning', 'midday', 'afternoon', 'dusk', 'evening', 'night'] as const
+export const PERIODS = [
+  'dawn',
+  'morning',
+  'midday',
+  'afternoon',
+  'dusk',
+  'evening',
+  'night',
+] as const
 
 export type Period = (typeof PERIODS)[number]
 
@@ -58,9 +66,7 @@ const PERIOD_STARTS: Record<Period, number> = {
 
 /** What a turn lasts, as validated: a label, with how many days or until which period. */
 export type Duration =
-  | { label: FixedDuration }
-  | { label: 'days'; count: number }
-  | { label: 'until'; period: Period }
+  { label: FixedDuration } | { label: 'days'; count: number } | { label: 'until'; period: Period }
 
 /** The days of the week, Sunday first as `Date.getUTCDay()` counts them. */
 const WEEKDAYS = [
