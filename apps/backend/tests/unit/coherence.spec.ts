@@ -1,9 +1,14 @@
 import { test } from '@japa/runner'
 
 import { checkScenario } from '#services/game/content/coherence'
-import type { ScenarioContent, WorldContent } from '#services/game/content/types'
+import type {
+  LocationDefinitionContent,
+  ScenarioContent,
+  WorldContent,
+} from '#services/game/content/types'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 import { SEEDED_WORLDS } from '#database/seeders/01_content_seeder'
+import { HOUSE_PLACES, IRON_KEY, exit } from '#tests/helpers/places'
 
 const { scenarios, ...WORLD } = THREE_MUSKETEERS_CONTENT
 const SCENARIO = scenarios[0]
@@ -272,6 +277,110 @@ test.group('Coherence | names', () => {
         scenario.quests[0].labels = { en: ' ', fr: 'Remettre la lettre' }
       }),
       [['missing_english_label', 'quests.deliver_the_letter', undefined]]
+    )
+  })
+})
+
+test.group('Coherence | exits and networks', () => {
+  /** The seeded scenario with the house of the specs among its places. */
+  function houseIssuesAfter(change: (places: LocationDefinitionContent[]) => void) {
+    return issuesAfter((_world, scenario) => {
+      const places = structuredClone(HOUSE_PLACES)
+      change(places)
+      scenario.locations.push(...places)
+      scenario.items.push(IRON_KEY)
+    })
+  }
+
+  const house = (places: LocationDefinitionContent[], reference: string) =>
+    places.find((place) => place.reference === reference)!
+
+  test('a house gone through room by room holds together', ({ assert }) => {
+    assert.deepEqual(
+      houseIssuesAfter(() => {}),
+      []
+    )
+  })
+
+  test('an exit leads to another named place that exists', ({ assert }) => {
+    assert.deepEqual(
+      houseIssuesAfter((places) => {
+        house(places, 'house_attic').exits.push(
+          exit('house_roof', 'a skylight'),
+          exit('house_attic', 'a mirror'),
+          exit('tavern', 'a painted door')
+        )
+      }),
+      [
+        ['unknown_location', 'locations.house_attic.exits.0.to', 'house_roof'],
+        ['exit_to_itself', 'locations.house_attic.exits.1.to', 'house_attic'],
+        ['unknown_location', 'locations.house_attic.exits.2.to', 'tavern'],
+      ]
+    )
+  })
+
+  test('one passage at most joins two places, whichever side declares it', ({ assert }) => {
+    assert.deepEqual(
+      houseIssuesAfter((places) => {
+        house(places, 'house_kitchen').exits.push(exit('house_hall', 'a serving hatch'))
+      }),
+      [['duplicate_passage', 'locations.house_kitchen.exits.1', 'house_hall']]
+    )
+  })
+
+  test('the item a passage requires exists, and its duration is on the scale', ({ assert }) => {
+    assert.deepEqual(
+      houseIssuesAfter((places) => {
+        const [door] = house(places, 'house_corridor').exits
+        door.requires = 'skeleton_key'
+        door.duration = 'days' as never
+      }),
+      [
+        ['unknown_item', 'locations.house_corridor.exits.0.requires', 'skeleton_key'],
+        ['invalid_duration', 'locations.house_corridor.exits.0.duration', 'days'],
+      ]
+    )
+  })
+
+  test('an entrance is part of a network', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((world) => {
+        world.locations.find(({ reference }) => reference === 'louvre')!.entrance = true
+      }),
+      [['entrance_without_exits', 'locations.louvre.entrance', 'louvre']]
+    )
+  })
+
+  test('a network nothing leads into is refused, unless the story starts in it', ({ assert }) => {
+    const sealed = (places: LocationDefinitionContent[]) => {
+      for (const place of places) {
+        place.entrance = false
+      }
+    }
+
+    assert.deepEqual(houseIssuesAfter(sealed), [
+      ['unreachable_network', 'locations.house_attic', 'house_attic'],
+    ])
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        const places = structuredClone(HOUSE_PLACES)
+        sealed(places)
+        scenario.locations.push(...places)
+        scenario.items.push(IRON_KEY)
+        scenario.initialState!.location = 'house_vault'
+      }),
+      []
+    )
+  })
+
+  test('the story never starts in a place that only contains a network', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        scenario.locations.push(...structuredClone(HOUSE_PLACES))
+        scenario.items.push(IRON_KEY)
+        scenario.initialState!.location = 'house'
+      }),
+      [['start_contains_network', 'initialState.location', 'house']]
     )
   })
 })

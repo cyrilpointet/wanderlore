@@ -22,6 +22,7 @@ import type {
   DamageModifierUse,
   SpecialEffect,
 } from '#services/rules/types'
+import type { FixedDuration } from '#services/game/game_time'
 
 export {
   CHARACTERISTICS,
@@ -173,12 +174,39 @@ export type NpcDefinitionContent = DefinitionContent & {
 }
 
 /**
+ * A way out of a unique place into another (roadmap, Phase 7). Declared once,
+ * on one side, it leads both ways unless it is one-way: the place it leads to
+ * has it too, read from the other side.
+ */
+export type LocationExit = {
+  /** Reference of the unique place it leads to. */
+  to: string
+  /** One line of English for the model: the passage, seen from this side. */
+  passage: string
+  /** The same passage seen from the other side; null when the text reads both ways. */
+  backPassage: string | null
+  /** Hidden from this side only: seen from the other side, it is always in sight. */
+  hidden: boolean
+  /** Reference of the item that opens it, from either side. */
+  requires: string | null
+  oneWay: boolean
+  /** How long going through takes, from the scale of durations; null is a moment. */
+  duration: FixedDuration | null
+}
+
+/**
  * A place of the world. A unique place declares the unique place that
  * contains it, if any; an archetype gets its parent per instance, so has none
  * here. Every archetype serves improvised places.
+ *
+ * A unique place with exits is part of a network, gone through by its exits
+ * only; an `entrance` is where a network opens onto the places travelled to
+ * freely. An archetype has neither.
  */
 export type LocationDefinitionContent = DefinitionContent & {
   parent: string | null
+  exits: LocationExit[]
+  entrance: boolean
 }
 
 /**

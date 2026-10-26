@@ -1,7 +1,14 @@
 import { isDiceExpression } from '#services/rules/dice_expression'
+import { FIXED_DURATIONS } from '#services/game/game_time'
+import { networkContainers, networksOf } from '#services/game/passages'
 
 import { overlay, type WorldLevelContent } from './resolve.js'
-import { CHARACTERISTICS, type LabelledEntry, type ScenarioContent } from './types.js'
+import {
+  CHARACTERISTICS,
+  type LabelledEntry,
+  type LocationDefinitionContent,
+  type ScenarioContent,
+} from './types.js'
 
 /**
  * Whether a world and one of its scenarios hold together well enough to be
@@ -35,6 +42,12 @@ export type CoherenceIssueCode =
   | 'not_equippable'
   | 'not_stackable'
   | 'item_held_elsewhere'
+  | 'exit_to_itself'
+  | 'duplicate_passage'
+  | 'invalid_duration'
+  | 'entrance_without_exits'
+  | 'unreachable_network'
+  | 'start_contains_network'
 
 /**
  * One thing that does not hold. `location` is the path of the faulty field
@@ -137,6 +150,8 @@ export function checkScenario(
     }
   }
 
+  checkExits(locations, { uniqueLocations, items: itemsByReference }, report)
+
   for (const item of items) {
     item.modifiers.forEach((modifier, index) => {
       if (!skills.has(modifier.skill)) {
@@ -175,6 +190,7 @@ export function checkScenario(
 
   checkCharacter(scenario, { skills, resources, itemsByReference }, report)
   checkInitialState(scenario, uniqueLocations, report)
+  checkNetworks(locations, scenario, report)
 
   return issues
 }
@@ -273,6 +289,83 @@ function checkInitialState(
       report('unknown_quest', `initialState.quests.${index}`, quest.reference)
     }
   })
+}
+
+/**
+ * Every exit leads to another unique place, at most one passage joins two
+ * places, and what it requires and how long it lasts are known.
+ */
+function checkExits(
+  locations: LocationDefinitionContent[],
+  known: { uniqueLocations: Set<string>; items: Map<string, unknown> },
+  report: Report
+) {
+  const passages = new Set<string>()
+
+  for (const location of locations) {
+    location.exits.forEach((exit, index) => {
+      const path = `locations.${location.reference}.exits.${index}`
+      const pair = [location.reference, exit.to].sort().join('|')
+
+      if (exit.to === location.reference) {
+        report('exit_to_itself', `${path}.to`, exit.to)
+      } else if (!known.uniqueLocations.has(exit.to)) {
+        report('unknown_location', `${path}.to`, exit.to)
+      } else if (passages.has(pair)) {
+        /** Twice on one side, or once on each: either way the game could not tell them apart. */
+        report('duplicate_passage', path, exit.to)
+      }
+      passages.add(pair)
+
+      if (exit.requires !== null && !known.items.has(exit.requires)) {
+        report('unknown_item', `${path}.requires`, exit.requires)
+      }
+      if (exit.duration !== null && !Object.hasOwn(FIXED_DURATIONS, exit.duration)) {
+        report('invalid_duration', `${path}.duration`, exit.duration)
+      }
+    })
+  }
+}
+
+/**
+ * Networks a game can reach and stand in: an entrance is part of a network,
+ * a network without one is where the story starts (a prison one escapes is a
+ * choice; a network nothing leads to is a mistake), and the story never
+ * starts in a place that only contains a network.
+ */
+function checkNetworks(
+  locations: LocationDefinitionContent[],
+  scenario: ScenarioContent,
+  report: Report
+) {
+  const networks = networksOf(locations)
+  const inNetwork = new Set(networks.flatMap((network) => [...network]))
+  const start = scenario.initialState?.location
+
+  for (const location of locations) {
+    if (location.entrance && !inNetwork.has(location.reference)) {
+      report(
+        'entrance_without_exits',
+        `locations.${location.reference}.entrance`,
+        location.reference
+      )
+    }
+  }
+
+  for (const network of networks) {
+    const entered = locations.some(
+      (location) => location.entrance && network.has(location.reference)
+    )
+
+    if (!entered && (start === undefined || !network.has(start))) {
+      const [first] = [...network].sort()
+      report('unreachable_network', `locations.${first}`, first)
+    }
+  }
+
+  if (start !== undefined && networkContainers(locations).has(start)) {
+    report('start_contains_network', 'initialState.location', start)
+  }
 }
 
 /** A human's characteristics: 3 to 21, INT and SIZ at least 8 (rules, section 3). */

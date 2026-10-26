@@ -333,6 +333,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       description: 'A town or village: a main street, a general store, a church, a few houses.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'road',
@@ -340,6 +342,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       description: 'A road, a dirt track or a path between two places.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'wilderness',
@@ -347,6 +351,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       description: 'Untamed land: woods, hills, marsh, scrub or barren rock.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'shore',
@@ -354,6 +360,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       description: 'A beach, a cove, a stretch of rocky coast or a reef.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'ship',
@@ -361,6 +369,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       description: 'A ship or a boat, its decks and its holds.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'house',
@@ -368,6 +378,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       description: "A private house, from a fisherman's shack to a mansion.",
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'church',
@@ -375,6 +387,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       description: 'A church, a chapel, a meeting house or a graveyard.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'cave',
@@ -382,6 +396,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       description: 'A cave, a tunnel, a well or any passage under the earth.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'ruin',
@@ -389,6 +405,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       description: 'A ruined building or ancient stonework, crumbling and overgrown.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
   ],
   /**
@@ -760,6 +778,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           description: 'Thousands of miles of empty ocean, far from any shipping lane.',
           kind: 'unique',
           parent: null,
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'the_perseverance',
@@ -768,6 +788,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A battered three-masted trading schooner anchored beyond the reef, a long row from the beach.',
           kind: 'unique',
           parent: 'south_pacific',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'risen_island',
@@ -776,6 +798,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'An island of black basalt and steaming mud, risen from the seabed weeks ago and absent from every chart. Dead fish rot everywhere, and the ground still trembles.',
           kind: 'unique',
           parent: 'south_pacific',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'black_sand_beach',
@@ -784,6 +808,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A beach of black volcanic sand strewn with dead fish and weed, where the landing party grounds its boat. Odd tracks lead inland.',
           kind: 'unique',
           parent: 'risen_island',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'sovereign_wreck',
@@ -792,6 +818,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The steamer Sovereign, stranded high on the slope, her hull crusted with shells and weed, her holds still dripping. Her crew is nowhere — or not quite.',
           kind: 'unique',
           parent: 'risen_island',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'cyclopean_ruins',
@@ -800,6 +828,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             "Ruins of monolithic stone at the island's heart, blocks too vast for human hands, carved with sea-things and set at angles the eye cannot hold.",
           kind: 'unique',
           parent: 'risen_island',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'drowned_temple',
@@ -808,6 +838,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A temple sunk into the ruins, its lower halls still flooded with black water, where the Deep Ones gather around a great sealed door.',
           kind: 'unique',
           parent: 'cyclopean_ruins',
+          exits: [],
+          entrance: false,
         },
       ],
       items: [
@@ -1112,6 +1144,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'Rural Massachusetts: old stone walls, abandoned farms, dark woods and hills that keep their secrets.',
           kind: 'unique',
           parent: null,
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'arkham',
@@ -1120,6 +1154,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'An old college town on the Miskatonic river, home of the university and its library of rare and forbidden books.',
           kind: 'unique',
           parent: 'new_england',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'cold_spring',
@@ -1128,6 +1164,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A dwindling village at the foot of Ward hill: a general store, a white church, and villagers who avoid speaking of the Wards.',
           kind: 'unique',
           parent: 'new_england',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house',
@@ -1136,6 +1174,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The Ward estate on its lonely hill: a gambrel-roofed Georgian mansion shuttered for a year, its grounds, outbuildings and family plot. Every room is a place of its own.',
           kind: 'unique',
           parent: 'new_england',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_grounds',
@@ -1144,6 +1184,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The overgrown grounds around the house: a weed-choked drive, a dry fountain, dead hedges, and old elms leaning toward the windows.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_carriage_house',
@@ -1152,6 +1194,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             "The old carriage house by the drive, where Silas's black Packard still stands under a tarpaulin, its tank full: he never drove away.",
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_family_cemetery',
@@ -1160,6 +1204,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The family burial ground behind the house, under old elms; some of its graves have been opened, and not from above.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_entrance_hall',
@@ -1168,6 +1214,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A tall panelled hall with a staircase rising into shadow, a long-case clock stopped at seventeen minutes past three, and family portraits — one of them turned to the wall.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_parlour',
@@ -1176,6 +1224,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The formal front parlour: furniture under dust sheets, a piano gone out of tune, curtains drawn for a year.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_dining_room',
@@ -1184,6 +1234,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A long dining room with the table still laid for two, as if for a guest, its dishes furred with dust.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_library',
@@ -1192,6 +1244,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'Floor-to-ceiling shelves of old books, family papers and county histories, a reading table, and gaps on the shelves where volumes were taken down.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_study',
@@ -1200,6 +1254,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             "Silas Ward's study off the library: a cluttered desk, star charts pinned to the panelling, ash in the grate, and a drawer that locks.",
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_kitchen',
@@ -1208,6 +1264,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             "The kitchen at the back of the house, Martha Pike's domain: a range, a pantry, the servants' stair, and the cellar door that sticks.",
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_upstairs_corridor',
@@ -1216,6 +1274,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The first-floor corridor that serves the bedrooms, lined with closed doors; on some nights it runs longer than the house.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_silas_bedroom',
@@ -1224,6 +1284,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             "Silas Ward's bedroom, left as he left it: an unmade bed, clothes in the wardrobe, a pocket watch stopped on the nightstand.",
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_guest_bedroom',
@@ -1232,6 +1294,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The bedroom Martha Pike made ready for the heir, aired and clean, its window on the family plot.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_attic',
@@ -1240,6 +1304,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The attic under the gambrel roof: trunks and crates of two centuries of Wards, an eighteenth-century portrait under a sheet, and a round window on the hill.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_house_cellar',
@@ -1248,6 +1314,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'The cellar under the kitchen: wine racks, a coal bin, rotting barrels — and behind the racks, a narrow door on stairs going further down.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_laboratory',
@@ -1256,6 +1324,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A vaulted laboratory dug beneath the cellar: furnaces, alembics, shelves of jars of grey salts, iron lids set in the floor. Here the world is thin — corners do not meet, and the walls seem to breathe.',
           kind: 'unique',
           parent: 'ward_house',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'ward_laboratory_pits',
@@ -1264,6 +1334,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'Brick-lined pits beneath the iron lids of the laboratory floor, where the Wards kept what they raised imperfectly. Something down there still moves.',
           kind: 'unique',
           parent: 'ward_laboratory',
+          exits: [],
+          entrance: false,
         },
         {
           reference: 'sealed_vault',
@@ -1272,6 +1344,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             'A deeper chamber behind an iron door, where Silas drew the circle of the rite of Azathoth. A far, thin piping never stops, and the dark beyond the circle has no walls.',
           kind: 'unique',
           parent: 'ward_laboratory',
+          exits: [],
+          entrance: false,
         },
       ],
       /**

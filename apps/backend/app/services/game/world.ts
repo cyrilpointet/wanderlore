@@ -4,6 +4,7 @@ import type {
   Labels,
   ItemHolderReference,
   ItemModifier,
+  LocationExit,
   NpcDisposition,
   SkillCategory,
   WeaponProfile,
@@ -17,6 +18,7 @@ export {
   type ItemCondition,
   type ItemHolderReference,
   type ItemModifier,
+  type LocationExit,
   type NpcDisposition,
   type WeaponProfile,
 } from './content/types.js'
@@ -115,12 +117,16 @@ export type NpcDefinition = DescribedEntry & {
 } & ({ kind: 'unique' } | { kind: 'archetype'; generic: boolean })
 
 /**
- * A place of the world. A unique place declares the place that contains it;
- * an archetype gets its parent per instance, picked from the unique places.
- * Every archetype serves improvised places, so none needs a `generic` flag.
+ * A place of the world. A unique place declares the place that contains it,
+ * and the exits that make it part of a network; an archetype gets its parent
+ * per instance, picked from the unique places. Every archetype serves
+ * improvised places, so none needs a `generic` flag.
  */
 export type LocationDefinition = DescribedEntry &
-  ({ kind: 'unique'; parent: string | null } | { kind: 'archetype' })
+  (
+    | { kind: 'unique'; parent: string | null; exits: LocationExit[]; entrance: boolean }
+    | { kind: 'archetype' }
+  )
 
 /**
  * An item of the world. A `unique` exists at most once per game; an

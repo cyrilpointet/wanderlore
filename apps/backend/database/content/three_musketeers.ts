@@ -469,6 +469,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'The Kingdom of France, from the Gascon hills to the Channel coast.',
       kind: 'unique',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'england',
@@ -476,6 +478,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'The Kingdom of England, across the Channel, at odds with France.',
       kind: 'unique',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'meung_sur_loire',
@@ -483,6 +487,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A small town on the Loire, on the road from Gascony to Paris.',
       kind: 'unique',
       parent: 'france',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'road_to_paris',
@@ -490,6 +496,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'The long highway north through the Loire country to the capital.',
       kind: 'unique',
       parent: 'france',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'paris',
@@ -497,6 +505,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'The capital: crowded, muddy, and ruled by the King and the Cardinal.',
       kind: 'unique',
       parent: 'france',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'rue_des_fossoyeurs',
@@ -504,6 +514,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A quiet street where the mercer Bonacieux lets rooms.',
       kind: 'unique',
       parent: 'paris',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'hotel_de_treville',
@@ -511,6 +523,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: "Tréville's town house, its courtyard and stairs thronged with musketeers.",
       kind: 'unique',
       parent: 'paris',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'carmes_deschaux',
@@ -518,6 +532,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'Waste ground behind a convent, where gentlemen go to duel unseen.',
       kind: 'unique',
       parent: 'paris',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'louvre',
@@ -525,6 +541,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: "The King's palace, guarded, gilded, and full of ears.",
       kind: 'unique',
       parent: 'paris',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'palais_cardinal',
@@ -532,6 +550,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: "Richelieu's palace, where his Guards keep the doors.",
       kind: 'unique',
       parent: 'paris',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'chantilly',
@@ -539,6 +559,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A town on the road north from Paris.',
       kind: 'unique',
       parent: 'france',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'amiens',
@@ -546,6 +568,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A cathedral city of Picardy on the road to the coast.',
       kind: 'unique',
       parent: 'france',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'calais',
@@ -553,6 +577,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'The port where ships cross to England, closely watched.',
       kind: 'unique',
       parent: 'france',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'london',
@@ -560,6 +586,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: "The English capital on the Thames, seat of Buckingham's power.",
       kind: 'unique',
       parent: 'england',
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'town',
@@ -567,6 +595,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A town or village with a church, a market and a few streets.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'road',
@@ -574,6 +604,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A stretch of road or track between two places.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'forest',
@@ -581,6 +613,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'Woodland, a clearing, or a lane through the trees.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'alley',
@@ -588,6 +622,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A narrow, dark lane between houses.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'tavern',
@@ -595,6 +631,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A place to eat and drink, loud and crowded.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'inn',
@@ -602,6 +640,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A place to sleep and stable horses on the road.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'residence',
@@ -609,6 +649,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: "A private house, from a lodging to a nobleman's mansion.",
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'church',
@@ -616,6 +658,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A church, chapel or convent.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
     {
       reference: 'port',
@@ -623,6 +667,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       description: 'A harbour, its quays and its ships.',
       kind: 'archetype',
       parent: null,
+      exits: [],
+      entrance: false,
     },
   ],
   /**

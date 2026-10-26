@@ -254,6 +254,8 @@ export async function readCatalogues(
       description: location.description,
       kind: location.kind,
       parent: location.parent,
+      exits: location.exits,
+      entrance: location.entrance,
     })),
     items: items.map((item): ItemDefinitionContent => ({
       reference: item.reference,

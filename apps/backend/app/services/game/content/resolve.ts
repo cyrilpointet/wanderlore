@@ -85,7 +85,13 @@ function locationOf(location: LocationDefinitionContent): LocationDefinition {
   const shared = { ...entryOf(location), description: location.description }
 
   return location.kind === 'unique'
-    ? { ...shared, kind: 'unique', parent: location.parent }
+    ? {
+        ...shared,
+        kind: 'unique',
+        parent: location.parent,
+        exits: location.exits,
+        entrance: location.entrance,
+      }
     : { ...shared, kind: 'archetype' }
 }
 

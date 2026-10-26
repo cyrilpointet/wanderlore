@@ -138,7 +138,7 @@ export default {
     },
 
     location_definitions: {
-      columns: { labels, kind },
+      columns: { labels, kind, exits: content('LocationExit[]', { array: true }) },
     },
 
     item_definitions: {

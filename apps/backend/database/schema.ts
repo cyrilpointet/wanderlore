@@ -6,7 +6,7 @@
 
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
-import type { Characteristics, ItemHolderReference, DefinitionKind, Labels, ItemModifier, WeaponProfile, CombatProfile, NpcDisposition, Characteristic, LabelledEntry, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
+import type { Characteristics, ItemHolderReference, DefinitionKind, Labels, ItemModifier, WeaponProfile, LocationExit, CombatProfile, NpcDisposition, Characteristic, LabelledEntry, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
 import type { Duration } from '#services/game/game_time'
 
 export class AuthAccessTokenSchema extends BaseModel {
@@ -126,12 +126,16 @@ export class ItemDefinitionSchema extends BaseModel {
 }
 
 export class LocationDefinitionSchema extends BaseModel {
-  static $columns = ['createdAt', 'description', 'id', 'kind', 'labels', 'parent', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
+  static $columns = ['createdAt', 'description', 'entrance', 'exits', 'id', 'kind', 'labels', 'parent', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
   $columns = LocationDefinitionSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
   declare description: string
+  @column()
+  declare entrance: boolean
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare exits: LocationExit[]
   @column({ isPrimary: true })
   declare id: string
   @column()
@@ -225,6 +229,27 @@ export class NpcInstanceSchema extends BaseModel {
   declare sessionId: string
   @column()
   declare status: 'present' | 'absent' | 'dead'
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class PassageStateSchema extends BaseModel {
+  static $columns = ['createdAt', 'discoveredAt', 'fromReference', 'id', 'sessionId', 'toReference', 'unlockedAt', 'updatedAt'] as const
+  $columns = PassageStateSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare discoveredAt: DateTime | null
+  @column()
+  declare fromReference: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare sessionId: string
+  @column()
+  declare toReference: string
+  @column.dateTime()
+  declare unlockedAt: DateTime | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }

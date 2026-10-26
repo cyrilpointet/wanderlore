@@ -18,6 +18,7 @@ const TABLES = [
   'npc_definitions',
   'location_definitions',
   'item_definitions',
+  'passage_states',
 ]
 
 const ENUM_TYPES = [

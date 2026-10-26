@@ -7,6 +7,7 @@ import WorldState from '#models/world_state'
 import LocationInstance from '#models/location_instance'
 import NpcInstance from '#models/npc_instance'
 import InventoryItem from '#models/inventory_item'
+import PassageState from '#models/passage_state'
 import { SessionSchema } from '#database/schema'
 import { belongsTo, hasMany, hasOne } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, HasOne } from '@adonisjs/lucid/types/relations'
@@ -54,4 +55,8 @@ export default class Session extends SessionSchema {
   /** Every item of the game, whoever holds it, gone ones included. */
   @hasMany(() => InventoryItem)
   declare items: HasMany<typeof InventoryItem>
+
+  /** The passages this game found or opened. */
+  @hasMany(() => PassageState)
+  declare passages: HasMany<typeof PassageState>
 }
