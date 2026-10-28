@@ -9,7 +9,7 @@ import { ApiError, onUnauthorized } from './api/client'
 import { closeTransmit } from './api/transmit'
 import { currentUserQuery } from './auth/session'
 import { ErrorPage, NotFoundPage } from './components/system_pages'
-import { watchSystemTheme } from './theme'
+import { watchTheme } from './theme'
 import { routeTree } from './routeTree.gen'
 
 const queryClient = new QueryClient({
@@ -49,7 +49,7 @@ onUnauthorized(() => {
   void router.navigate({ to: '/login', search: { redirect: href } })
 })
 
-watchSystemTheme()
+watchTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
