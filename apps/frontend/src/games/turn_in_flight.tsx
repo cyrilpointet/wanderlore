@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { errorMessage } from '@/i18n/errors'
 import { useAnimates } from '@/preferences'
 import { Narration, PlayerAction, RollChip } from './journal'
+import { RollCard } from './roll_card'
+import { liveRollOf, type RevealState } from './roll_reveal'
 import { emphasisOf } from './turn_errors'
 import type { Failure, TurnState } from './turn_machine'
 import { waitingText } from './waiting'
@@ -12,18 +14,30 @@ import { waitingText } from './waiting'
  * away, then what the game master is doing — or the narration as it is
  * written — then, if it goes wrong, what happened and how to go on, the
  * provisional narration withdrawn. Gone once the turn joins the journal.
+ *
+ * A roll received live is played out on its card, the narration kept back
+ * until the dice are thrown (front spec, section 5.3.7).
  */
 export function TurnInFlight({
   state,
+  reveal,
+  onThrow,
+  onDiceStopped,
+  onFolded,
   onRetry,
   onEdit,
 }: {
   state: Exclude<TurnState, { status: 'idle' }>
+  reveal: RevealState
+  onThrow: () => void
+  onDiceStopped: () => void
+  onFolded: () => void
   onRetry: () => void
   onEdit: () => void
 }) {
   const { t } = useTranslation('game')
   const fadeIn = useAnimates('narration')
+  const liveRoll = liveRollOf(reveal, state.submission.turnId)
 
   return (
     <article className="flex flex-col gap-6">
@@ -34,11 +48,20 @@ export function TurnInFlight({
         )}
       </div>
 
-      {(state.status === 'in_progress' || state.status === 'failed') && state.roll && (
-        <RollChip roll={state.roll} />
+      {liveRoll ? (
+        <RollCard
+          live={liveRoll}
+          onThrow={onThrow}
+          onDiceStopped={onDiceStopped}
+          onFolded={onFolded}
+        />
+      ) : (
+        (state.status === 'in_progress' || state.status === 'failed') &&
+        state.roll && <RollChip roll={state.roll} />
       )}
 
       {state.status === 'in_progress' &&
+        !liveRoll &&
         (state.narration ? (
           <Narration text={state.narration} provisional fadeIn={fadeIn} />
         ) : (

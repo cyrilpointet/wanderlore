@@ -36,8 +36,8 @@ export type RevealState =
   | ({ status: 'rolling'; turnId: string; roll: Roll } & RevealOptions)
   /** The dice stopped on the d100, the degree shown, the card about to fold. */
   | ({ status: 'landed'; turnId: string; roll: Roll } & RevealOptions)
-  /** Over: the roll as a chip, the narration shown. */
-  | { status: 'revealed'; turnId: string }
+  /** Over: the roll as a chip, announced once, the narration shown. */
+  | { status: 'revealed'; turnId: string; roll: Roll }
 
 export type RevealAction =
   | ({ type: 'roll_received'; turnId: string; roll: Roll } & RevealOptions)
@@ -49,7 +49,7 @@ export type RevealAction =
   | { type: 'turn_failed'; turnId: string }
 
 /** A roll still being played out on its card. */
-export type LiveRoll = Extract<RevealState, { roll: Roll }>
+export type LiveRoll = Extract<RevealState, { status: 'staged' | 'rolling' | 'landed' }>
 
 export const initialRevealState: RevealState = { status: 'none' }
 
@@ -60,32 +60,36 @@ export function revealReducer(state: RevealState, action: RevealAction): RevealS
       if (state.status !== 'none' && state.turnId === action.turnId) return state
 
       const { turnId, roll, autoRoll, animated } = action
-      if (autoRoll && !animated) return { status: 'revealed', turnId }
+      if (autoRoll && !animated) return { status: 'revealed', turnId, roll }
       return { status: 'staged', turnId, roll, autoRoll, animated }
     }
 
     case 'throw':
       if (state.status !== 'staged') return state
-      if (!state.animated) return { status: 'revealed', turnId: state.turnId }
+      if (!state.animated) return { status: 'revealed', turnId: state.turnId, roll: state.roll }
       return { ...state, status: 'rolling' }
 
     case 'dice_stopped':
       return state.status === 'rolling' ? { ...state, status: 'landed' } : state
 
     case 'folded':
-      return state.status === 'landed' ? { status: 'revealed', turnId: state.turnId } : state
+      return state.status === 'landed'
+        ? { status: 'revealed', turnId: state.turnId, roll: state.roll }
+        : state
 
     case 'turn_failed':
       if (state.status === 'none' || state.status === 'revealed') return state
       if (state.turnId !== action.turnId) return state
-      return { status: 'revealed', turnId: state.turnId }
+      return { status: 'revealed', turnId: state.turnId, roll: state.roll }
   }
 }
 
 /** The roll of this turn still being played out on its card. */
 export function liveRollOf(state: RevealState, turnId: string | null): LiveRoll | null {
-  if (turnId === null || !('roll' in state) || state.turnId !== turnId) return null
-  return state
+  if (state.status !== 'staged' && state.status !== 'rolling' && state.status !== 'landed') {
+    return null
+  }
+  return state.turnId === turnId ? state : null
 }
 
 /** Whether this turn's narration waits for its dice. */

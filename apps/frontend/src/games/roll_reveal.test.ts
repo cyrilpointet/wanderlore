@@ -62,7 +62,7 @@ describe('roll reveal — thrown by hand', () => {
     expect(locksInput(landed)).toBe(true)
 
     const revealed = run(received(), thrown, stopped, folded)
-    expect(revealed).toEqual({ status: 'revealed', turnId: TURN_ID })
+    expect(revealed).toEqual({ status: 'revealed', turnId: TURN_ID, roll: ROLL })
     expect(holdsNarration(revealed, TURN_ID)).toBe(false)
     expect(locksInput(revealed)).toBe(false)
   })
@@ -70,7 +70,7 @@ describe('roll reveal — thrown by hand', () => {
   test('without the dice animation, the click reveals at once', () => {
     const state = run(received({ autoRoll: false, animated: false }), thrown)
 
-    expect(state).toEqual({ status: 'revealed', turnId: TURN_ID })
+    expect(state).toEqual({ status: 'revealed', turnId: TURN_ID, roll: ROLL })
   })
 
   test('steps out of order change nothing', () => {
@@ -90,13 +90,14 @@ describe('roll reveal — thrown automatically', () => {
     expect(run(received({ autoRoll: true, animated: true }), thrown, stopped, folded)).toEqual({
       status: 'revealed',
       turnId: TURN_ID,
+      roll: ROLL,
     })
   })
 
   test('without the dice animation either, there is nothing to watch', () => {
     const state = run(received({ autoRoll: true, animated: false }))
 
-    expect(state).toEqual({ status: 'revealed', turnId: TURN_ID })
+    expect(state).toEqual({ status: 'revealed', turnId: TURN_ID, roll: ROLL })
     expect(holdsNarration(state, TURN_ID)).toBe(false)
     expect(locksInput(state)).toBe(false)
   })
@@ -115,7 +116,7 @@ describe('roll reveal — around the turn', () => {
     for (const before of [[received()], [received(), thrown], [received(), thrown, stopped]]) {
       const state = run(...before, { type: 'turn_failed', turnId: TURN_ID })
 
-      expect(state).toEqual({ status: 'revealed', turnId: TURN_ID })
+      expect(state).toEqual({ status: 'revealed', turnId: TURN_ID, roll: ROLL })
       expect(locksInput(state)).toBe(false)
     }
   })

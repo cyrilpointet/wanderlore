@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 
 import '@/i18n'
 import { Narration } from './journal'
+import { initialRevealState } from './roll_reveal'
 import { TurnInFlight } from './turn_in_flight'
 
 describe('Narration | fading in', () => {
@@ -25,6 +26,10 @@ describe('Narration | fading in', () => {
           roll: null,
           narration: 'The door creaks.',
         }}
+        reveal={initialRevealState}
+        onThrow={() => {}}
+        onDiceStopped={() => {}}
+        onFolded={() => {}}
         onRetry={() => {}}
         onEdit={() => {}}
       />

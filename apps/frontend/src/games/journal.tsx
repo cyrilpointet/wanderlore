@@ -2,6 +2,7 @@ import { ArrowDown, Dice5, Heart, MapPin, Package } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { useAnimates } from '@/preferences'
 import { paragraphs } from './presentation'
 import type { Game, ItemChangeEffect, Roll, Turn } from './queries'
 import { DEGREE_EMPHASIS, ROLL_TONE, rollLine, rollText } from './roll_text'
@@ -16,6 +17,7 @@ export function Journal({
   turns,
   inFlight,
   progress,
+  revealedTurnId,
 }: {
   game: Game
   turns: Turn[]
@@ -23,8 +25,14 @@ export function Journal({
   inFlight?: ReactNode
   /** Changes whenever the turn in flight moves on, so the journal follows it. */
   progress?: string
+  /**
+   * The turn that joined the journal once its dice were thrown: its
+   * narration appears there, and fades in as any narration does.
+   */
+  revealedTurnId?: string | null
 }) {
   const { t } = useTranslation('game')
+  const fades = useAnimates('narration')
   const { ref, hasNew, scrollToBottom } = useStickToBottom<HTMLDivElement>(
     `${turns.length}:${progress ?? ''}`
   )
@@ -39,7 +47,7 @@ export function Journal({
             <ol aria-label={t('journal.label')} className="flex flex-col gap-12">
               {turns.map((turn) => (
                 <li key={turn.id}>
-                  <TurnEntry turn={turn} />
+                  <TurnEntry turn={turn} fadeIn={fades && turn.id === revealedTurnId} />
                 </li>
               ))}
               {inFlight && <li>{inFlight}</li>}
@@ -62,12 +70,12 @@ export function Journal({
   )
 }
 
-function TurnEntry({ turn }: { turn: Turn }) {
+function TurnEntry({ turn, fadeIn }: { turn: Turn; fadeIn: boolean }) {
   return (
     <article className="flex flex-col gap-6">
       <PlayerAction text={turn.playerInput} />
       {turn.roll && <RollChip roll={turn.roll} />}
-      {turn.narration && <Narration text={turn.narration} />}
+      {turn.narration && <Narration text={turn.narration} fadeIn={fadeIn} />}
       {turn.effects && <Effects effects={turn.effects} />}
     </article>
   )
