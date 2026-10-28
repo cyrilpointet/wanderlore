@@ -151,12 +151,23 @@ export function RollChip({ roll }: { roll: Roll }) {
  * region, so a screen reader is not read the whole text again at every
  * fragment: the waiting message announces the step, and the finished
  * narration is announced once the turn completes.
+ *
+ * `fadeIn` once, as it appears: the animation plays when the element is
+ * mounted, never again as fragments make it grow.
  */
-export function Narration({ text, provisional = false }: { text: string; provisional?: boolean }) {
+export function Narration({
+  text,
+  provisional = false,
+  fadeIn = false,
+}: {
+  text: string
+  provisional?: boolean
+  fadeIn?: boolean
+}) {
   return (
     <div
       aria-busy={provisional || undefined}
-      className="flex flex-col gap-4 font-serif text-narration text-text lg:text-narration-lg"
+      className={`flex flex-col gap-4 font-serif text-narration text-text lg:text-narration-lg ${fadeIn ? 'animate-fade-in' : ''}`}
     >
       {paragraphs(text).map((paragraph, index) => (
         <p key={index}>{paragraph}</p>

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 import { errorMessage } from '@/i18n/errors'
+import { useAnimates } from '@/preferences'
 import { Narration, PlayerAction, RollChip } from './journal'
 import { emphasisOf } from './turn_errors'
 import type { Failure, TurnState } from './turn_machine'
@@ -22,6 +23,7 @@ export function TurnInFlight({
   onEdit: () => void
 }) {
   const { t } = useTranslation('game')
+  const fadeIn = useAnimates('narration')
 
   return (
     <article className="flex flex-col gap-6">
@@ -38,7 +40,7 @@ export function TurnInFlight({
 
       {state.status === 'in_progress' &&
         (state.narration ? (
-          <Narration text={state.narration} provisional />
+          <Narration text={state.narration} provisional fadeIn={fadeIn} />
         ) : (
           <Waiting text={waitingText(state, t)} />
         ))}

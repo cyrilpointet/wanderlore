@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react'
 
+import { animates, preferences, systemReducesMotion } from '@/preferences'
 import { gaugePercent } from './presentation'
 
 /**
  * The bar alone: always brick red, never green (front spec, section 8). It
  * pulses briefly when the value changes at the end of a turn — not when the
- * screen opens.
+ * screen opens — unless the player or the system turned that off.
  */
 export function HitPointGauge({
   current,
@@ -23,7 +24,7 @@ export function HitPointGauge({
     if (shown.current === current) return
     shown.current = current
 
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!animates(preferences.get(), 'hitPoints', systemReducesMotion())) return
     bar.current?.animate([{ opacity: 1 }, { opacity: 0.35 }, { opacity: 1 }], {
       duration: 600,
       iterations: 2,
