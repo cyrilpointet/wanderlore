@@ -1,0 +1,30 @@
+{
+  "open": "Preferences",
+  "title": "Preferences",
+  "close": "Close",
+  "deviceNote": "Kept in this browser only.",
+  "appearance": {
+    "heading": "Appearance",
+    "theme": "Theme",
+    "system": "System",
+    "dark": "Dark",
+    "light": "Light"
+  },
+  "narration": {
+    "heading": "Narration",
+    "voice": "Read the story aloud",
+    "voiceHint": "In your browser's own voice. The speaker button of a game does the same."
+  },
+  "dice": {
+    "heading": "Dice",
+    "autoRoll": "Roll the dice automatically",
+    "autoRollHint": "The dice roll as soon as the game master calls for them, without waiting for you."
+  },
+  "animations": {
+    "heading": "Animations",
+    "dice": "Rolling dice",
+    "narration": "Story fading in",
+    "hitPoints": "Hit point gauge",
+    "reducedBySystem": "Your device asks for less motion: animations stay off."
+  }
+}
