@@ -15,7 +15,8 @@
       "characteristic": "{{name}} {{value, number}} ×5",
       "modifier": "{{label}} {{value, number(signDisplay: always)}}",
       "chance": "→ {{chance, number}}%",
-      "rolled": "rolled {{roll, number}}"
+      "rolled": "rolled {{roll, number}}",
+      "throw": "Roll the dice"
     },
     "newMessage": "New message",
     "welcome": "Your story begins. What do you do?",

@@ -48,6 +48,9 @@ export type RevealAction =
   /** The turn failed after its roll: nothing to wait for, the failure takes over. */
   | { type: 'turn_failed'; turnId: string }
 
+/** A roll still being played out on its card. */
+export type LiveRoll = Extract<RevealState, { roll: Roll }>
+
 export const initialRevealState: RevealState = { status: 'none' }
 
 export function revealReducer(state: RevealState, action: RevealAction): RevealState {
@@ -80,10 +83,7 @@ export function revealReducer(state: RevealState, action: RevealAction): RevealS
 }
 
 /** The roll of this turn still being played out on its card. */
-export function liveRollOf(
-  state: RevealState,
-  turnId: string | null
-): Extract<RevealState, { roll: Roll }> | null {
+export function liveRollOf(state: RevealState, turnId: string | null): LiveRoll | null {
   if (turnId === null || !('roll' in state) || state.turnId !== turnId) return null
   return state
 }

@@ -135,7 +135,7 @@ export function PreferencesPanel({
 
       <Group heading={t('animations.heading')}>
         {reducedBySystem && (
-          <p className="pt-3 text-label text-muted">{t('animations.reducedBySystem')}</p>
+          <p className="py-3 text-label text-muted">{t('animations.reducedBySystem')}</p>
         )}
         {ANIMATIONS.map((animation) => (
           <Switch

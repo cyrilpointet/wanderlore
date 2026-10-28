@@ -91,11 +91,37 @@
   --container-reading: 42.5rem;
 
   /* Brief, and each one can be turned off in the preferences (front spec, sections 5.5 and 8). */
-  --animate-fade-in: fade-in 450ms ease-out;
+  --animate-fade-in: fade-in 450ms ease-out both;
+  /* The live roll (front spec, section 5.3.7): each die's duration is set where it is drawn. */
+  --animate-dice-spin: dice-spin 1s cubic-bezier(0.15, 0.6, 0.25, 1) both;
+  --animate-slide-in: slide-in 1.2s cubic-bezier(0.15, 0.6, 0.25, 1) both;
+  --animate-shake: shake 400ms ease-in-out;
 
   @keyframes fade-in {
     from {
       opacity: 0;
+    }
+  }
+
+  /* From the first face to wherever the element itself is set to stop. */
+  @keyframes dice-spin {
+    from {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-in {
+    from {
+      left: 0;
+    }
+  }
+
+  @keyframes shake {
+    25% {
+      transform: translateX(-3px);
+    }
+    75% {
+      transform: translateX(3px);
     }
   }
 }
