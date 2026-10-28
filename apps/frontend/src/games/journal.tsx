@@ -1,7 +1,8 @@
-import { ArrowDown, Dice5, Heart, MapPin, Package } from 'lucide-react'
+import { ArrowDown, Heart, MapPin, Package } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { D10Icon } from '@/components/d10_icon'
 import { useAnimates } from '@/preferences'
 import { paragraphs } from './presentation'
 import type { Game, ItemChangeEffect, Roll, Turn } from './queries'
@@ -107,7 +108,7 @@ export function RollChip({ roll }: { roll: Roll }) {
       <span
         className={`inline-flex flex-wrap items-center justify-center gap-x-2 rounded-sm border px-3 py-1 text-label ${ROLL_TONE[roll.result]} ${DEGREE_EMPHASIS[roll.degree]}`}
       >
-        <Dice5 aria-hidden className="size-4 shrink-0" />
+        <D10Icon aria-hidden className="size-4 shrink-0" />
         {rollLine(rollText(roll, t))}
       </span>
     </p>

@@ -923,7 +923,7 @@ s'y ajoute (section 6quater). Le round du BRP, les soins et les échéances atte
 | arbitrage | la période courante, une circonstance comme une autre (l'obscurité, une boutique fermée) |
 | narration | les périodes de début et de fin, l'heure de fin **arrondie au quart d'heure**, le numéro de jour, la date et le jour de la semaine si l'histoire a une date ; consigne : ne jamais contredire le temps écoulé, ne donner l'heure que si le personnage a de quoi la connaître (montre, horloge, cloches) |
 | extraction | rien |
-| joueur | la **période seule** (onglet « Situation ») : ni heure, ni date, ni jour, qui ne quittent jamais le backend |
+| joueur | la **période seule** (bandeau de scène, sous l'en-tête) : ni heure, ni date, ni jour, qui ne quittent jamais le backend |
 
 L'invariant 5 n'est pas en cause : l'heure n'est pas une donnée mécanique du jet. `turn_log`
 garde l'horloge avant et après le tour, et la durée proposée.

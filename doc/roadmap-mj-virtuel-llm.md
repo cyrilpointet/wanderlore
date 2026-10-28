@@ -382,7 +382,7 @@ Tranchées à l'ouverture de la phase (2026-10-26, epic `KAN-89`) :
   - l'arbitrage : la période courante, dont il tire au besoin une circonstance (obscurité, boutique fermée) ;
   - la narration : les périodes de départ et d'arrivée, l'heure d'arrivée **arrondie au quart d'heure**, la date si elle existe et le **numéro de jour** (les LLM calculent mal les écarts de dates). Consigne : ne jamais contredire le temps écoulé, et ne donner l'heure précise que si le personnage a de quoi la connaître (une montre qu'il détient, une horloge en marche, des cloches) et cherche à la savoir ; sinon, parler de lumière et de période. L'invariant 5 n'est pas en cause : il porte sur les données mécaniques du jet ;
   - l'extraction : rien.
-- **Le joueur ne voit que la période**, dans l'onglet « Situation » : ni heure, ni date, ni numéro de jour, qui ne quittent jamais le backend. Une heure précise s'obtient dans le récit, par les moyens du personnage.
+- **Le joueur ne voit que la période**, dans le bandeau de scène (d'abord l'onglet « Situation ») : ni heure, ni date, ni numéro de jour, qui ne quittent jamais le backend. Une heure précise s'obtient dans le récit, par les moyens du personnage.
 - **`turn_log`** enregistre l'horloge avant et après le tour, et la durée proposée.
 - **Parties en cours à la migration** : la migration leur copie le départ de leur scénario. Pas de `game:reset` obligatoire.
 
@@ -445,7 +445,7 @@ Tranchées à l'ouverture de la phase (2026-10-26, epic `KAN-89`) :
 - **Parcours** : classement des lieux, lieux atteignables, chemin le plus court en temps, destinations permises.
 - **Les lieux dans le tour** : description et sorties dans les prompts, destination et chemin, listes fermées de l'extraction, découverte et déverrouillage, libellé des pièces.
 - **Localisation des PNJ**.
-- **Back-office** : départ du scénario, sorties et entrée d'un lieu. **Front joueur** : la période dans l'onglet « Situation ».
+- **Back-office** : départ du scénario, sorties et entrée d'un lieu. **Front joueur** : la période dans l'onglet « Situation », passée depuis au bandeau de scène, toujours visible.
 - **Contenu** : départs des trois scénarios, réseau du manoir Ward. **Documentation**.
 
 ### Critère de sortie de phase

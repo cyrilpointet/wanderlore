@@ -1,19 +1,20 @@
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { MapPin, SunMoon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { HitPointGauge } from './hit_point_gauge'
 import { groupSkills, showsQuantity } from './presentation'
 import type { Character, Game } from './queries'
 
-const TABS = ['character', 'inventory', 'situation'] as const
+const TABS = ['character', 'inventory', 'quests'] as const
 
 type Tab = (typeof TABS)[number]
 
 /**
  * The player's sheet, read-only: their values are shown as they are, as at
  * the table. The name and the hit points stay in view; the rest is split in
- * three tabs: the character, what they carry, and where the story stands.
+ * three tabs: the character, what they carry, and the quests under way. The
+ * place and the period of the day are not here: the scene bar keeps them in
+ * view.
  */
 export function CharacterSheet({
   game,
@@ -31,7 +32,7 @@ export function CharacterSheet({
   const tabs = useRef<Record<Tab, HTMLButtonElement | null>>({
     character: null,
     inventory: null,
-    situation: null,
+    quests: null,
   })
 
   /** Arrow keys move to the previous or next tab, wrapping around, as a tab list expects. */
@@ -111,7 +112,7 @@ export function CharacterSheet({
       >
         {tab === 'character' && <CharacterTab character={character} />}
         {tab === 'inventory' && <InventoryTab inventory={character.inventory} />}
-        {tab === 'situation' && <SituationTab game={game} />}
+        {tab === 'quests' && <QuestsTab quests={game.activeQuests} />}
       </div>
     </div>
   )
@@ -211,35 +212,19 @@ function CharacterTab({ character }: { character: Character }) {
   )
 }
 
-/**
- * Where the story stands: the place, the period of the day and the quests
- * under way. Never the hour nor the date: the story gives them, to a
- * character with a way to know them.
- */
-function SituationTab({ game }: { game: Game }) {
+/** The quests under way, each with the summary the backend keeps of it. */
+function QuestsTab({ quests }: { quests: Game['activeQuests'] }) {
   const { t } = useTranslation('game')
-  const { t: enums } = useTranslation('enums')
+
+  if (quests.length === 0) {
+    return <p className="text-body text-muted">{t('sheet.quests.empty')}</p>
+  }
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h3 className="text-label text-subtle">{t('sheet.location')}</h3>
-        <p className="mt-1 flex items-center gap-2 text-body text-text">
-          <MapPin aria-hidden className="size-4 shrink-0 text-muted" />
-          {game.location?.label ?? t('sheet.noLocation')}
-        </p>
-      </div>
-      <div>
-        <h3 className="text-label text-subtle">{t('sheet.period')}</h3>
-        <p className="mt-1 flex items-center gap-2 text-body text-text">
-          <SunMoon aria-hidden className="size-4 shrink-0 text-muted" />
-          {enums(`period.${game.period}`)}
-        </p>
-      </div>
-      {game.activeQuests.map((quest) => (
+      {quests.map((quest) => (
         <div key={quest.reference}>
-          <h3 className="text-label text-subtle">{t('sheet.quest')}</h3>
-          <p className="mt-1 text-body text-text">{quest.label}</p>
+          <h3 className="text-body text-text">{quest.label}</h3>
           {quest.summary && (
             <p className="mt-1.5 font-serif text-body text-muted">{quest.summary}</p>
           )}

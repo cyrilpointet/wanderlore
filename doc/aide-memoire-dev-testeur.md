@@ -31,7 +31,7 @@ Mot de passe commun : `password`.
 ## Démarrer
 
 ```bash
-docker compose up -d          # PostgreSQL 17 (5432) + Redis 8 (6379), à la racine
+docker compose up -d          # PostgreSQL 17 (5433) + Redis 8 (6380), à la racine
 npm install                   # une fois, ou après un changement de dépendances
 npm run dev                   # backend, front joueur et back-office, via Turborepo
 ```

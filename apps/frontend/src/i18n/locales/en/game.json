@@ -34,21 +34,25 @@
     "skills": "Skills",
     "percent": "{{value, number}}%",
     "resources": "Resources",
-    "location": "Location",
-    "period": "Time of day",
-    "quest": "Quest",
-    "noLocation": "Unknown",
     "tabs": {
       "label": "Character sheet sections",
       "character": "Character",
       "inventory": "Inventory",
-      "situation": "Situation"
+      "quests": "Quests"
+    },
+    "quests": {
+      "empty": "No quest under way."
     },
     "inventory": {
       "empty": "You carry nothing.",
       "quantity": "×{{count, number}}",
       "equipped": "Equipped"
     }
+  },
+  "scene": {
+    "location": "Location",
+    "period": "Time of day",
+    "noLocation": "Unknown"
   },
   "composer": {
     "label": "Your action",

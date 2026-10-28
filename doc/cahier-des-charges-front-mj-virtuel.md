@@ -191,6 +191,12 @@ L'écran principal. Trois zones : **en-tête**, **journal**, **fiche du personna
   des préférences (5.5) — un seul réglage, deux accès, toujours d'accord.
 - Menu du compte.
 
+**Bandeau de scène**, sous l'en-tête et au-dessus du journal, à toutes les tailles d'écran :
+le lieu courant (épingle) et la période de la journée (*Meung-sur-Loire · Dusk*), alignés sur
+la colonne de lecture. Fixe, il ne défile pas avec le journal : le joueur sait toujours où et
+quand se passe la scène sans ouvrir la fiche. Comme la fiche, il ne suit un tour qu'à sa
+révélation (5.3.7). Jamais l'heure, la date ni les sorties (5.3.4).
+
 #### 5.3.2 Journal
 
 Le récit, du plus ancien au plus récent, défilé automatiquement vers le bas à l'arrivée d'un
@@ -257,19 +263,22 @@ Contenu Phase 2, tout fourni par le backend avec les libellés :
 
 - **Identité** : nom du personnage, univers.
 - **Points de vie** : jauge et valeur `8 / 10`. Couleur qui se dégrade en dessous du tiers.
-  Brève animation quand la valeur change à la fin d'un tour.
+  Quand la valeur change à la fin d'un tour, gain ou perte, la jauge rebondit et pulse brièvement.
 - **Caractéristiques** : les sept du BRP, *Strength 13 · Constitution 14 · Size 12…*
   (Phase 6 ; elles remplacent les attributs).
 - **Compétences**, groupées sous leur catégorie du BRP, en pourcentage. Seules les
   compétences que le personnage a entraînées.
 - **Ressources** : *Purse 15*.
-- **Situation** : lieu actuel et quête en cours avec son résumé. Retenu en Phase 2 (KAN-15) :
-  l'état d'accueil d'une partie neuve exige déjà ces données, et le bloc sert la reprise
-  après interruption. Depuis la Phase 7, la **période de la journée** (*Dusk*) sous le lieu —
-  jamais l'heure, la date ni le numéro de jour, et jamais les sorties du lieu : le joueur les
-  apprend par le récit, par les moyens de son personnage (une montre pour l'heure). Une pièce
-  d'un réseau s'affiche suivie du lieu qui la contient (*The kitchen · Ward House*), libellé
-  construit par le backend.
+- **Quêtes** : les quêtes en cours avec leur résumé, ou un message quand il n'y en a aucune.
+  Le lieu et la période de la journée, longtemps dans un onglet *Situation* avec les quêtes,
+  vivent depuis dans le **bandeau de scène** (5.3.1), toujours visible.
+- **Lieu et période** (bandeau de scène) : retenus en Phase 2 (KAN-15), l'état d'accueil d'une
+  partie neuve exigeant déjà ces données et la reprise après interruption s'en servant. Depuis
+  la Phase 7, la **période de la journée** (*Dusk*) à côté du lieu — jamais l'heure, la date
+  ni le numéro de jour, et jamais les sorties du lieu : le joueur les apprend par le récit, par
+  les moyens de son personnage (une montre pour l'heure). Une pièce d'un réseau s'affiche
+  suivie du lieu qui la contient (*The kitchen · Ward House*), libellé construit par le
+  backend.
 
 Pas d'inventaire (Phase 4), pas d'action possible depuis la fiche.
 
@@ -362,13 +371,11 @@ Trois temps :
 
 1. **Préparation** — à `roll_resolved`, une carte de jet prend la place de la pastille : la
    compétence ou la caractéristique et sa valeur, la difficulté si elle n'est pas `average`,
-   puis chaque modificateur, qui s'ajoute l'un après l'autre, et la chance finale. Une jauge
-   de 0 à 100 porte **le seul seuil de la chance** : ni zone de critique ou de spécial, ni
-   plages 01–05 et 96–00, qui reviendraient à recalculer les règles côté front. Un bouton
-   **Roll the dice** reçoit le focus (Entrée ou Espace le déclenchent).
+   puis chaque modificateur, qui s'ajoute l'un après l'autre, et la chance finale. Pas de
+   jauge : la chance chiffrée suffit. Un bouton **Roll the dice** reçoit le focus (Entrée ou
+   Espace le déclenchent).
 2. **Lancer** — deux d10, dizaines et unités, défilent environ une seconde ; les dizaines
-   s'arrêtent d'abord, les unités ensuite, sur le d100 transmis. Un marqueur glisse sur la
-   jauge jusqu'à cette valeur.
+   s'arrêtent d'abord, les unités ensuite, sur le d100 transmis.
 3. **Révélation** — le degré apparaît, avec un accent pour `critical` et `fumble` ; la carte
    se replie en pastille (5.3.2), puis la narration retenue apparaît en fondu et poursuit son
    écriture.
@@ -388,7 +395,7 @@ carte.
 préparation et le lancer, sans bouton ; avec l'**animation des dés** coupée, la révélation est
 immédiate (le bouton reste, sauf lancer automatique). Les deux réglages sont indépendants.
 
-**Accessibilité** : les dés et la jauge sont masqués aux lecteurs d'écran (`aria-hidden`) ; le
+**Accessibilité** : les dés sont masqués aux lecteurs d'écran (`aria-hidden`) ; le
 jet complet est annoncé une fois, à la révélation. Les couleurs d'issue doublent le libellé du
 degré, jamais l'inverse.
 
@@ -626,12 +633,18 @@ partie à l'autre, l'habillage ne doit pas en choisir un.
 - Les points de vie sont **toujours** en rouge brique — jamais en vert, qui signifie une
   réussite de jet. Dégradé vers l'ambre quand ils baissent (à confirmer à l'intégration).
 - Thème clair : fond papier (proche de `#F6F1E7`), texte encre — non maquetté en Phase 2.
+- **Texture du fond** (niveau 0 seulement, jamais sur une surface) : un grain fin et un
+  dégradé radial, figés à l'écran — ils ne défilent pas avec le journal. Thème sombre : une
+  lueur de bougie, ton chaud propre à la texture (pas l'accent), derrière la page, et des
+  bords qui s'assombrissent. Thème clair : un vieux papier, le centre plus clair, les bords
+  légèrement jaunis, le grain de sa fibre. Opacités de quelques pour cent, contraste WCAG AA
+  du texte inchangé ; jetons `--wl-glow`, `--wl-edge`, `--wl-grain`, `--wl-grain-opacity`.
 
 **Formes et mouvement** : coins faiblement arrondis — 4 px pour les puces et badges, 6 à
 8 px pour les champs, cartes et boutons ; pas de pilule, sauf les petits boutons-icônes
 ronds. Bordures fines plutôt qu'ombres, la profondeur venant des niveaux de surface ; seule
 la feuille ouverte porte une ombre ambiante. Beaucoup d'espace. Animations brèves :
-apparition en fondu de la narration, pulsation de la jauge de points de vie quand elle
+apparition en fondu de la narration, rebond et pulsation de la jauge de points de vie quand elle
 change, points de suspension animés pour l'attente, et le jet en direct (5.3.7), en 2D — pas
 de dés en trois dimensions ni de moteur physique. Chacune se coupe dans les préférences
 (5.5).
@@ -642,14 +655,16 @@ de dés en trois dimensions ni de moteur physique. Chacune se coupe dans les pr�
 - *Puce de jet* : centrée entre l'action et la narration, icône de dé, le jet en entier
   (« Compétence 60% · modificateurs · d100 · Degré »), teinte sémantique sur fond atténué.
 - *Carte de jet en direct* (5.3.7) : même emplacement, surface légèrement relevée ; la ligne
-  du jet qui se construit, une jauge fine de 0 à 100 marquée au seul seuil de la chance, deux
-  tuiles de d10 (dizaines, unités) en chiffres de l'interface, le bouton *Roll the dice*
+  du jet qui se construit, deux tuiles de d10 (dizaines, unités) en chiffres de l'interface,
+  icône de d10 au repos, le bouton *Roll the dice*
   (plein), puis le degré. Se replie en puce.
 - *Ligne d'effets* : sous la narration, discrète, icône et couleur sémantique (« −2 HP »).
 - *Carte d'erreur* : à la place de la narration, liseré rouge brique sans fond rouge,
   message et boutons *Retry* (plein) / *Edit* (contour).
-- *Fiche* : caractéristiques, compétences en retrait sous leur catégorie, ressources, bloc
-  « Situation » ;
+- *Bandeau de scène* : ligne fine sous l'en-tête, filet en bas, épingle et lieu, puis
+  période de la journée, en libellé discret.
+- *Fiche* : caractéristiques, compétences en retrait sous leur catégorie, ressources, onglet
+  « Quests » ;
   colonne de 320 px sur desktop, feuille couvrant les deux tiers de l'écran sur mobile.
 
 **Iconographie** : jeu d'icônes linéaire (Lucide, courant avec React). Une icône de dé pour
@@ -682,16 +697,15 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   détail du jet** : compétence ou caractéristique et sa valeur, modificateurs appliqués avec
   leur valeur (une circonstance par son label d'effet, un objet par son nom), chance finale,
   résultat du d100 et degré de réussite. Tout vient du backend, le front ne calcule rien.
-- **Phase 7 — Temps et lieux.** La période de la journée (aube, matin… nuit) s'affiche sous
-  le lieu, dans l'onglet *Situation*, libellée par l'i18n à partir de l'enum que transmet le
+- **Phase 7 — Temps et lieux.** La période de la journée (aube, matin… nuit) s'affiche à
+  côté du lieu, dans le bandeau de scène (d'abord dans l'onglet *Situation*), libellée par l'i18n à partir de l'enum que transmet le
   backend. Ni l'heure, ni la date, ni les sorties du lieu ne s'affichent (tranché à
   l'ouverture de la phase) : l'information de jeu passe par le récit. Une carte des lieux
   visités reste une piste, sans phase. Le front ne calcule ni durée ni période.
 - **Entre les Phases 7 et 8 — Jet en direct et préférences.** Lot d'interface sans
   changement d'API : le jet se lance à la main et s'anime (5.3.7) ; un écran de préférences
   (5.5) réunit le thème, la lecture à voix haute, le lancer automatique et les animations, le
-  tout en stockage local. Les zones de degré sur la jauge attendraient que le backend
-  transmette les seuils dans `roll_resolved`.
+  tout en stockage local.
 - **Phase 9 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
   probablement nécessaire.
 - **Phase 10 — Cycle de vie et combat.** Création de personnage guidée ; combat en rounds
@@ -851,7 +865,7 @@ one "Paused".
 ```
 Desktop game screen, 1440px wide. Header: back link "My games", then "d'Artagnan" with
 "The Three Musketeers · The Road to Paris" underneath, a compact hit points bar "8 / 10" on
-the right, and account initials. Main area: a centered reading column (max ~70 characters
+the right, and account initials. Under the header, a thin scene bar: map pin "Meung-sur-Loire · Dusk". Main area: a centered reading column (max ~70 characters
 per line) showing the story log from the sample content, turns 1 to 3. Player actions are
 compact, discreet blocks labelled "You", in the sans-serif, slightly tinted. Narration is
 full-width serif prose with no bubble, like a book page. Between action and narration, a
@@ -861,8 +875,8 @@ line: heart icon "−2 HP". At the bottom, a sticky multi-line input with placeh
 "What do you do?" and a send button in the accent colour.
 Right sidebar, 320px, the read-only character sheet: name, hit points bar 8 / 10, the seven
 characteristics in two columns (Strength 13…), skills in percent grouped under their category,
-"Purse 15", then a "Situation" block with location "Meung-sur-Loire" (map pin icon) and the
-quest "Deliver the letter" with its one-line summary.
+"Purse 15", then a "Quests" tab with the quest "Deliver the letter" and its one-line
+summary.
 ```
 
 **S4 — Partie, mobile, état normal et fiche ouverte**

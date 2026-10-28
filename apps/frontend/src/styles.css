@@ -31,6 +31,11 @@
   --wl-on-accent: #15130f;
   --wl-success: #7a9a7b;
   --wl-danger: #b85c50;
+  /* The background's texture: a candlelight glow on the page, darker edges, a fine grain. */
+  --wl-glow: rgb(196 140 80 / 0.07);
+  --wl-edge: rgb(0 0 0 / 0.45);
+  --wl-grain: #ede6d6;
+  --wl-grain-opacity: 0.05;
 }
 
 :root[data-theme='light'] {
@@ -49,6 +54,12 @@
   --wl-on-accent: #fbf8f1;
   --wl-success: #4a6e4c;
   --wl-danger: #a0453a;
+  /* Old paper: a lighter middle, edges gone slightly yellow, the grain of its fibre. */
+  --wl-glow: rgb(255 254 251 / 1);
+  /* No darker: the subtle text would fall below WCAG AA in the corners. */
+  --wl-edge: rgb(138 90 18 / 0.1);
+  --wl-grain: #5c4a30;
+  --wl-grain-opacity: 0.07;
 }
 
 @theme inline {
@@ -94,7 +105,6 @@
   --animate-fade-in: fade-in 450ms ease-out both;
   /* The live roll (front spec, section 5.3.7): each die's duration is set where it is drawn. */
   --animate-dice-spin: dice-spin 1s cubic-bezier(0.15, 0.6, 0.25, 1) both;
-  --animate-slide-in: slide-in 1.2s cubic-bezier(0.15, 0.6, 0.25, 1) both;
   --animate-shake: shake 400ms ease-in-out;
 
   @keyframes fade-in {
@@ -107,12 +117,6 @@
   @keyframes dice-spin {
     from {
       transform: translateY(0);
-    }
-  }
-
-  @keyframes slide-in {
-    from {
-      left: 0;
     }
   }
 
@@ -129,6 +133,33 @@
 @layer base {
   body {
     @apply bg-bg font-sans text-body text-text antialiased;
+  }
+
+  /*
+   * The background's texture, under every surface (front spec, section 8):
+   * fixed layers rather than `background-attachment: fixed`, which stutters
+   * on iOS, so the texture never scrolls with the journal. The grain is an
+   * SVG noise used as a mask, tinted by the theme.
+   */
+  body::before,
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  body::before {
+    background:
+      radial-gradient(ellipse 60% 55% at 50% 40%, var(--wl-glow), transparent 70%),
+      radial-gradient(ellipse 110% 100% at 50% 45%, transparent 45%, var(--wl-edge));
+  }
+
+  body::after {
+    background-color: var(--wl-grain);
+    opacity: var(--wl-grain-opacity);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 0 0 -0.7'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
   :focus-visible {

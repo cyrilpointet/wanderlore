@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { Dice5 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { gaugePercent, percentileDice } from './presentation'
+import { D10Icon } from '@/components/d10_icon'
+import { percentileDice } from './presentation'
 import type { LiveRoll } from './roll_reveal'
 import { DEGREE_EMPHASIS, ROLL_TONE, rollText } from './roll_text'
 
@@ -21,13 +21,13 @@ const LANDED_MS = 1500
 const TURNS = 2
 
 /**
- * A live roll, played out (front spec, section 5.3.7): set out part by part
- * with the chance on a gauge, thrown — by the player, or on its own — and
- * read on two d10. The d100 was drawn by the backend before the card ever
- * showed: the throw reveals it, nothing the player does changes it.
+ * A live roll, played out (front spec, section 5.3.7): set out part by part,
+ * thrown — by the player, or on its own — and read on two d10. The d100 was
+ * drawn by the backend before the card ever showed: the throw reveals it,
+ * nothing the player does changes it.
  *
  * Its timing is its own: it tells the reveal machine when the dice stop and
- * when it has folded. The dice and the gauge are hidden from screen readers;
+ * when it has folded. The dice are hidden from screen readers;
  * the roll is announced once revealed, with the turn.
  */
 export function RollCard({
@@ -88,8 +88,6 @@ export function RollCard({
         ))}
       </p>
 
-      <ChanceGauge chance={roll.chance} rolled={thrown ? roll.roll : null} sliding={spinning} />
-
       <div aria-hidden className="flex gap-3">
         <Die
           face={(n) => `${n}0`}
@@ -115,7 +113,7 @@ export function RollCard({
           onClick={onThrow}
           className="flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-label font-medium text-on-accent transition-colors hover:bg-accent-hover"
         >
-          <Dice5 aria-hidden className="size-4" />
+          <D10Icon aria-hidden className="size-4" />
           {t('journal.roll.throw')}
         </button>
       )}
@@ -138,39 +136,6 @@ const LANDING: Record<LiveRoll['roll']['degree'], string> = {
   success: 'animate-fade-in',
   failure: 'animate-fade-in',
   fumble: 'animate-shake',
-}
-
-/**
- * From 0 to 100, marked at the chance only: no zone of degree, which would
- * mean working the rules out on the front. Once thrown, a marker slides to
- * the d100.
- */
-function ChanceGauge({
-  chance,
-  rolled,
-  sliding,
-}: {
-  chance: number
-  rolled: number | null
-  sliding: boolean
-}) {
-  const at = `${gaugePercent(chance, 100)}%`
-
-  return (
-    <div aria-hidden className="relative my-1 h-1.5 w-full rounded-full bg-surface-1">
-      <div className="h-full rounded-full bg-accent/30" style={{ width: at }} />
-      <div
-        className="absolute -top-1 h-3.5 w-0.5 -translate-x-1/2 bg-accent"
-        style={{ left: at }}
-      />
-      {rolled !== null && (
-        <div
-          className={`absolute -top-1.5 size-4.5 -translate-x-1/2 rounded-sm border-2 border-text bg-surface-2 ${sliding ? 'animate-slide-in' : ''}`}
-          style={{ left: `${gaugePercent(rolled, 100)}%`, animationDuration: `${UNITS_MS}ms` }}
-        />
-      )}
-    </div>
-  )
 }
 
 /**
@@ -213,7 +178,7 @@ function Die({
         </div>
       ) : (
         <div className="grid h-full place-items-center text-subtle">
-          <Dice5 className="size-5" />
+          <D10Icon className="size-5" />
         </div>
       )}
     </div>

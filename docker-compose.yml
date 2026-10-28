@@ -14,7 +14,7 @@ services:
       POSTGRES_PASSWORD: ${PG_PASSWORD:-wanderlore}
       POSTGRES_DB: ${PG_DB_NAME:-wanderlore}
     ports:
-      - '${PG_PORT:-5432}:5432'
+      - '${PG_PORT:-5433}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Crée la base de test au premier démarrage du volume.
@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes']
     ports:
-      - '${REDIS_PORT:-6379}:6379'
+      - '${REDIS_PORT:-6380}:6379'
     volumes:
       - redis_data:/data
     healthcheck:

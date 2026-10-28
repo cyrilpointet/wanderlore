@@ -15,6 +15,7 @@ import { Composer } from '@/games/composer'
 import { heldInFlight } from '@/games/held_turn'
 import { liveRollOf, locksInput } from '@/games/roll_reveal'
 import { rollLine, rollText } from '@/games/roll_text'
+import { SceneBar } from '@/games/scene_bar'
 import { TurnInFlight } from '@/games/turn_in_flight'
 import { isBusy, progressKey } from '@/games/turn_machine'
 import { waitingText } from '@/games/waiting'
@@ -68,6 +69,7 @@ function GameScreen() {
 
       <div className="flex min-h-0 flex-1">
         <main className="flex min-w-0 flex-1 flex-col">
+          <SceneBar game={game} />
           <Journal
             game={game}
             turns={turns}

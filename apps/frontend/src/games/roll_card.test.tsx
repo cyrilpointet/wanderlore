@@ -61,14 +61,6 @@ describe('RollCard | set out', () => {
     expect(markup).not.toContain('rolled')
   })
 
-  test('marks the chance on the gauge, and nothing else', () => {
-    const markup = render(live('staged'))
-
-    expect(markup).toContain('width:40%')
-    expect(markup).toContain('left:40%')
-    expect(markup).not.toContain('left:45%')
-  })
-
   test('thrown automatically, it has no button to press', () => {
     expect(textOf(render(live('staged', { autoRoll: true })))).not.toContain('Roll the dice')
   })
@@ -86,7 +78,6 @@ describe('RollCard | thrown', () => {
     const markup = render(live('rolling'))
 
     expect(markup.match(/animate-dice-spin/g)).toHaveLength(2)
-    expect(markup).toContain('animate-slide-in')
     expect(textOf(markup)).not.toContain('Roll the dice')
     expect(textOf(markup)).not.toContain('Failure')
   })
@@ -101,11 +92,10 @@ describe('RollCard | thrown', () => {
     expect(markup).toContain('>5<')
   })
 
-  test('the dice and the gauge are hidden from screen readers', () => {
+  test('the dice are hidden from screen readers', () => {
     const markup = render(live('rolling'))
 
     expect(markup).toMatch(/<div aria-hidden="true" class="flex gap-3">/)
-    expect(markup).toMatch(/<div aria-hidden="true" class="relative my-1/)
   })
 })
 
