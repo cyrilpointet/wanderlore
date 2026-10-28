@@ -163,7 +163,8 @@ Toute la carte est cliquable → `/games/:gameId`.
 **États** : chargement (squelettes de cartes) ; aucune partie (*« No game yet. »* — pas de
 bouton de création en Phase 2) ; erreur de chargement avec **Try again**.
 
-L'en-tête porte le wordmark et le menu du compte (nom ou initiales, **Sign out**).
+L'en-tête porte le wordmark et le menu du compte (nom ou initiales, **Preferences**,
+**Sign out**).
 
 ### 5.3 Partie — `/games/:gameId`
 
@@ -185,6 +186,9 @@ L'écran principal. Trois zones : **en-tête**, **journal**, **fiche du personna
 - Nom du personnage et, en dessous, univers · chapitre.
 - Jauge compacte de points de vie (`8 / 10`) — visible sur toutes les tailles d'écran.
 - Bouton d'ouverture de la fiche (mobile et tablette uniquement).
+- Bouton de lecture à voix haute (icône, toutes tailles d'écran), si le navigateur sait lire :
+  il reste sur l'écran de jeu pour couper ou rétablir la voix d'un geste, et double le réglage
+  des préférences (5.5) — un seul réglage, deux accès, toujours d'accord.
 - Menu du compte.
 
 #### 5.3.2 Journal
@@ -198,7 +202,7 @@ Le journal se lit comme un livre, pas comme une messagerie. Types d'éléments :
 | Élément | Contenu | Rendu |
 |---|---|---|
 | **Action du joueur** | Texte saisi, tel quel | Bloc compact, discret, marqué « You » ; typographie d'interface ; retrait ou teinte légère pour le distinguer du récit |
-| **Jet** | Le jet en entier : *« Persuasion 60% · Difficult · Advantage +10 · → 40% · rolled 12 · Special success »* | Pastille centrée entre l'action et la narration, couleur selon l'issue, petite icône de dé ; la chance n'est montrée que quand elle diffère de la valeur, la difficulté que quand elle n'est pas `average` |
+| **Jet** | Le jet en entier : *« Persuasion 60% · Difficult · Advantage +10 · → 40% · rolled 12 · Special success »* | Pastille centrée entre l'action et la narration, couleur selon l'issue, petite icône de dé ; la chance n'est montrée que quand elle diffère de la valeur, la difficulté que quand elle n'est pas `average`. Pendant le tour en cours, carte de jet en direct (5.3.7), repliée en pastille une fois le résultat révélé |
 | **Narration** | Texte du MJ, un ou plusieurs paragraphes | Pleine largeur de la colonne, **typographie serif de lecture**, sans bulle, interligne généreux |
 | **Effets** | Conséquences appliquées : *« −2 HP »*, *« You arrive at Paris »* | Ligne discrète sous la narration, icônes ; absente si aucun effet visible |
 | **Attente** | Message d'étape (voir 5.3.5) | Ligne animée sous l'action en cours |
@@ -241,7 +245,9 @@ journal doit la permettre.
   l'approche de la limite (au-delà de 900).
 - Envoi impossible si le champ est vide ou ne contient que des espaces.
 - **Verrouillée pendant un tour en cours**, avec un indice (*« The game master is
-  answering… »*). C'est une commodité : la protection réelle est la clé d'idempotence.
+  answering… »*), et tant qu'un jet en direct n'est pas révélé (5.3.7), même si le tour est
+  déjà terminé côté backend. C'est une commodité : la protection réelle est la clé
+  d'idempotence.
 - **Brouillon conservé** par partie (stockage local du navigateur) : rechargement, session
   expirée et navigation ne le perdent pas. Il est effacé quand le tour est accepté.
 
@@ -284,7 +290,7 @@ idle ──submit──▶ submitting ──202──▶ in_progress ──turn_
 | `submitting` | Envoi du POST | L'action du joueur apparaît dans le journal, marquée *Sending…* |
 | `in_progress` | Accusé `202` reçu | *« The game master considers your action… »* |
 | — | `step_started { step: "arbitration" }` | *« The game master weighs your action… »* |
-| — | `roll_resolved` | Pastille de jet ; attente conservée |
+| — | `roll_resolved` | Carte de jet en direct (5.3.7) ; la narration qui suit est retenue jusqu'à la révélation |
 | — | `step_started { step: "narration" }` | *« The game master tells what happens… »* |
 | `idle` | `turn_completed` | Narration, effets, fiche mise à jour ; saisie déverrouillée |
 | `failed` | `turn_failed` | Encadré d'échec, **Retry** / **Edit** |
@@ -345,12 +351,84 @@ présentation et l'action proposée.
 Le détail `reasons[]` d'un `turn_validation_failed` sert au diagnostic développeur : il n'est
 pas montré au joueur (au plus dans une zone repliée, en environnement de développement).
 
+#### 5.3.7 Jet en direct
+
+Le jet d'un tour joué en direct se lance **à la main**, comme à la table. Le d100 est déjà
+tiré par le backend quand `roll_resolved` arrive : le geste du joueur déclenche la
+révélation, il ne pèse jamais sur le résultat. Aucune mécanique d'adresse (arrêter les dés
+au bon moment…) ne doit laisser croire le contraire.
+
+Trois temps :
+
+1. **Préparation** — à `roll_resolved`, une carte de jet prend la place de la pastille : la
+   compétence ou la caractéristique et sa valeur, la difficulté si elle n'est pas `average`,
+   puis chaque modificateur, qui s'ajoute l'un après l'autre, et la chance finale. Une jauge
+   de 0 à 100 porte **le seul seuil de la chance** : ni zone de critique ou de spécial, ni
+   plages 01–05 et 96–00, qui reviendraient à recalculer les règles côté front. Un bouton
+   **Roll the dice** reçoit le focus (Entrée ou Espace le déclenchent).
+2. **Lancer** — deux d10, dizaines et unités, défilent environ une seconde ; les dizaines
+   s'arrêtent d'abord, les unités ensuite, sur le d100 transmis. Un marqueur glisse sur la
+   jauge jusqu'à cette valeur.
+3. **Révélation** — le degré apparaît, avec un accent pour `critical` et `fumble` ; la carte
+   se replie en pastille (5.3.2), puis la narration retenue apparaît en fondu et poursuit son
+   écriture.
+
+**Narration retenue** : les fragments reçus avant la révélation sont conservés, pas affichés.
+`turn_completed` peut arriver avant le clic : le tour est alors **retenu** à la place du tour en
+cours, la même carte à l'écran, et la saisie reste verrouillée (5.3.3). Il ne rejoint le
+journal, la fiche et la lecture à voix haute qu'à la révélation : sinon les points de vie de
+l'en-tête ou la voix trahiraient l'issue avant les dés. Sur `turn_failed`, la révélation a
+lieu aussitôt, puis l'encadré d'échec remplace la narration comme d'ordinaire.
+
+**Jamais rejoué** : un tour relu (réouverture de l'écran, rattrapage, historique) affiche
+directement la pastille et sa narration. Seul un `roll_resolved` reçu en direct ouvre la
+carte.
+
+**Préférences** (5.5) : avec le **lancer automatique**, la carte enchaîne seule la
+préparation et le lancer, sans bouton ; avec l'**animation des dés** coupée, la révélation est
+immédiate (le bouton reste, sauf lancer automatique). Les deux réglages sont indépendants.
+
+**Accessibilité** : les dés et la jauge sont masqués aux lecteurs d'écran (`aria-hidden`) ; le
+jet complet est annoncé une fois, à la révélation. Les couleurs d'issue doublent le libellé du
+degré, jamais l'inverse.
+
+**Mise en œuvre** : la révélation suit une petite machine pure, distincte de `turnReducer`
+(qui repasse à `idle` sur `turn_completed`), attachée à l'identifiant du tour —
+`staged → rolling → landed → revealed`. Elle est testée unitairement, et chaque état de la
+carte en HTML statique.
+
 ### 5.4 Pages système
 
 - **Introuvable** (route inconnue ou partie inaccessible) : message court, retour à
   **My games**.
 - **Erreur inattendue** : message générique, bouton de rechargement. Jamais de trace
   technique à l'écran.
+
+### 5.5 Préférences
+
+Ouvertes depuis le menu du compte (**Preferences**), dans une feuille de dialogue. Ce sont
+des **choix d'interface propres à un appareil** : stockés dans le navigateur (section 7,
+*Stockage local*), **jamais en base**, jamais transmis au backend. Ils ne suivent donc pas le
+joueur d'un appareil à l'autre, et un appareil partagé par plusieurs comptes les partage.
+Une modification prend effet immédiatement, sans bouton d'enregistrement.
+
+| Groupe | Réglage | Valeurs | Défaut |
+|---|---|---|---|
+| Apparence | Thème | *System* / *Dark* / *Light* | *System* (sombre si le système n'exprime rien) |
+| Narration | Lecture à voix haute | on / off | on — si le navigateur sait lire ; doublé par le bouton de l'en-tête de l'écran de jeu (5.3.1) |
+| Dés | Lancer automatique | on / off | off |
+| Animations | Dés | on / off | on |
+| Animations | Apparition de la narration | on / off | on |
+| Animations | Jauge de points de vie | on / off | on |
+
+**Animations et `prefers-reduced-motion`** : le réglage du système est un **plancher**. Quand il
+demande moins de mouvement, toutes les animations sont coupées quoi qu'indiquent les
+préférences, et leurs interrupteurs s'affichent désactivés, avec la mention que le système en
+décide. Les indicateurs d'état (points d'attente, chargement) ne sont pas des animations
+réglables : ils signalent un état, et le réglage du système suffit à les figer.
+
+La liste des animations réglables grandit avec elles : toute nouvelle animation notable
+(au-delà d'une transition de survol) y prend sa ligne.
 
 ---
 
@@ -448,13 +526,13 @@ Exemple indicatif de la vue d'une partie :
 - Tout au clavier : navigation, envoi, ouverture et fermeture de la fiche, **Retry**.
 - La narration qui arrive est annoncée aux lecteurs d'écran (région `aria-live="polite"`),
   les messages d'attente aussi, sans répétition bavarde.
-- Respect de `prefers-reduced-motion`.
+- Respect de `prefers-reduced-motion`, plancher que les préférences ne lèvent jamais (5.5).
 
 **Responsive** : de 360 px à l'écran large. Points de rupture Tailwind par défaut ; la
 disposition à deux colonnes n'apparaît qu'à partir de `lg` (1024 px).
 
 **Thèmes** : clair et sombre, sombre par défaut, choix mémorisé ; suit le système si le
-joueur n'a rien choisi.
+joueur n'a rien choisi. Le choix se fait dans les préférences (5.5).
 
 **Internationalisation** : posée dès la Phase 2 avec **react-i18next** (i18next), même si elle
 ne contient au départ que l'anglais. Ajouter une langue ne doit être qu'un travail de
@@ -483,7 +561,20 @@ traduction.
 - Le texte de narration est affiché comme **texte**, jamais interprété en HTML : il vient
   d'un LLM, lui-même alimenté par le texte du joueur. Pas de rendu Markdown en Phase 2 ; les
   sauts de paragraphe sont les seuls éléments de mise en forme.
-- Aucun jeton en `localStorage` ; seul le brouillon de saisie y est stocké.
+- Aucun jeton en `localStorage` (voir *Stockage local*).
+
+**Stockage local** (`localStorage`) — n'y vivent que deux choses :
+- le **brouillon de saisie**, par partie (5.3.3) ;
+- les **préférences d'interface** (5.5) : choix purement d'affichage, propres à un appareil,
+  qui ne changent rien au jeu. Elles ne sont **jamais stockées en base** ni envoyées au
+  backend, et le backend n'en a jamais besoin pour jouer un tour.
+
+Rien d'autre : ni jeton, ni donnée de jeu, ni cache de réponses de l'API. Le stockage peut
+être bloqué (navigation privée, données de site désactivées) : chaque lecture a alors sa
+valeur par défaut, et un choix fait pendant la visite dure le temps de la visite. Une valeur
+lue inconnue ou mal formée vaut le défaut, sans erreur. Les clés sont préfixées
+`wanderlore.`. La déconnexion n'efface pas les préférences, qui ne sont pas des données
+personnelles.
 
 **Performance** : premier affichage de l'écran de jeu rapide sur mobile en 4G ; pas de
 bibliothèque lourde pour le journal en Phase 2 (virtualisation inutile tant que
@@ -541,13 +632,19 @@ partie à l'autre, l'habillage ne doit pas en choisir un.
 ronds. Bordures fines plutôt qu'ombres, la profondeur venant des niveaux de surface ; seule
 la feuille ouverte porte une ombre ambiante. Beaucoup d'espace. Animations brèves :
 apparition en fondu de la narration, pulsation de la jauge de points de vie quand elle
-change, points de suspension animés pour l'attente.
+change, points de suspension animés pour l'attente, et le jet en direct (5.3.7), en 2D — pas
+de dés en trois dimensions ni de moteur physique. Chacune se coupe dans les préférences
+(5.5).
 
 **Composants récurrents** (tels que maquettés)
 - *Action du joueur* : libellé « You » en métadonnée neutre, texte en *Inter*, filet laiton
   de 2 px à gauche.
 - *Puce de jet* : centrée entre l'action et la narration, icône de dé, le jet en entier
   (« Compétence 60% · modificateurs · d100 · Degré »), teinte sémantique sur fond atténué.
+- *Carte de jet en direct* (5.3.7) : même emplacement, surface légèrement relevée ; la ligne
+  du jet qui se construit, une jauge fine de 0 à 100 marquée au seul seuil de la chance, deux
+  tuiles de d10 (dizaines, unités) en chiffres de l'interface, le bouton *Roll the dice*
+  (plein), puis le degré. Se replie en puce.
 - *Ligne d'effets* : sous la narration, discrète, icône et couleur sémantique (« −2 HP »).
 - *Carte d'erreur* : à la place de la narration, liseré rouge brique sans fond rouge,
   message et boutons *Retry* (plein) / *Edit* (contour).
@@ -590,6 +687,11 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   backend. Ni l'heure, ni la date, ni les sorties du lieu ne s'affichent (tranché à
   l'ouverture de la phase) : l'information de jeu passe par le récit. Une carte des lieux
   visités reste une piste, sans phase. Le front ne calcule ni durée ni période.
+- **Entre les Phases 7 et 8 — Jet en direct et préférences.** Lot d'interface sans
+  changement d'API : le jet se lance à la main et s'anime (5.3.7) ; un écran de préférences
+  (5.5) réunit le thème, la lecture à voix haute, le lancer automatique et les animations, le
+  tout en stockage local. Les zones de degré sur la jauge attendraient que le backend
+  transmette les seuils dans `roll_resolved`.
 - **Phase 9 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
   probablement nécessaire.
 - **Phase 10 — Cycle de vie et combat.** Création de personnage guidée ; combat en rounds
