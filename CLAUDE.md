@@ -291,6 +291,17 @@ de bout en bout (`KAN-112`). Décisions (détail : cahier des charges du front, 
 - **bandeau de scène** sous l'en-tête (lieu et période, toujours visibles) ; l'onglet
   *Situation* de la fiche devient *Quests* ; texture du fond fixe par thème.
 
+**Complément de la Phase 7 : placement initial des PNJ** (détail : roadmap, « Complément de la
+Phase 7 » ; architecture §6ter et §6quater), sur le modèle du détenteur initial d'un objet :
+- un PNJ **unique** peut déclarer `initialLocation`, le lieu unique où il attend au début de la
+  partie (`npc_definitions.initial_location`) ; jamais un archétype ;
+- le backend l'instancie `absent` dans ce lieu à sa **première visite** (`visitUniqueLocation` →
+  `placeInitialNpcs`), puis l'arrivée le rend présent (`meetThoseWaiting`), au lancement compris ;
+  seule exception à « l'extraction crée les PNJ » ;
+- la narration de l'arrivée le reçoit dans `npcs_at_destination` avant qu'il existe ; tant qu'il
+  n'est pas rencontré, la liste fermée de l'extraction (`enterableNpcs`) ne l'admet que depuis son
+  lieu ou un lieu d'où l'on s'y rend.
+
 Phase suivante : **Phase 8 (lore étendu et RAG)**.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste

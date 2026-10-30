@@ -728,9 +728,17 @@ produit la langue du joueur.
 
 ### Création, départ, durée de vie
 
-- **Point de création unique : l'extraction (E)**, appliquée dans la transaction du tour —
+- **Point de création : l'extraction (E)**, appliquée dans la transaction du tour —
   cohérent avec « les effets viennent toujours de l'appel de narration ». Elle signale les
   entrées (`npcs_entered: [{ definition, descriptor }]`) et les sorties (`npcs_left`).
+- **Seule exception, le placement initial** (sur le modèle du détenteur initial d'un objet,
+  section 6bis) : un PNJ **unique** peut déclarer le lieu unique où il attend au début de la
+  partie (`initialLocation`). Le backend l'instancie dans ce lieu, `absent`, à la **première
+  visite** du lieu — à son lancement si c'est le lieu de départ — et l'arrivée du joueur le rend
+  présent comme quiconque y attend (section 6quater). Un unique déjà rencontré ailleurs n'est
+  jamais recréé. Tant qu'il n'est pas rencontré, l'extraction ne peut le faire entrer en scène
+  que depuis son lieu ou un lieu d'où l'on peut s'y rendre : sa liste fermée (`npc_definitions`)
+  l'écarte ailleurs. Un archétype n'a pas de lieu de départ.
 - Le backend valide chaque entrée : une définition hors liste est rejetée ; un **unique déjà
   instancié** est remis `present`, jamais dupliqué ; un **unique mort** est rejeté ; un
   **archétype** donne une nouvelle instance.
@@ -894,9 +902,14 @@ est celle de la scène ; son lieu est celui où il se trouve quand la scène n'e
 - **retrouvé** : à l'arrivée dans un lieu, le backend rend présents les PNJ absents qui s'y
   trouvent, les morts restant morts. Quand l'arbitrage a nommé la destination, la narration du
   tour d'arrivée les reçoit (`npcs_at_destination`) ; en voyage libre, ils n'apparaissent qu'au
-  tour suivant.
+  tour suivant ;
+- **attendu** : un unique doté d'un lieu de départ (`initialLocation`, section 6ter) y est
+  instancié `absent` à la première visite, puis retrouvé comme ci-dessus. La narration du tour
+  d'arrivée le reçoit dans `npcs_at_destination` avant même qu'il existe, son handle étant sa
+  référence.
 
-Les emplois du temps des PNJ (le vampire au tombeau le jour) attendent la Phase 10.
+Les emplois du temps des PNJ (le vampire au tombeau le jour) attendent la Phase 10 ; le
+placement initial en est le point de départ.
 
 ---
 

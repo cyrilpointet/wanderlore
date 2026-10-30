@@ -482,6 +482,24 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 
 ---
 
+## Complément de la Phase 7 — Placement initial des PNJ
+
+**Objectif** : qu'un scénario puisse poster ses personnages dans leurs pièces — le garde de son corps de garde, le prisonnier de son caveau — au lieu de laisser le modèle les faire surgir où bon lui semble. Révélé par le scénario « The Stolen Seal », un hôtel particulier joué comme un donjon, un garde au plus par pièce. Tranché le 2026-10-30, **sur le modèle du détenteur initial d'un objet** (Phase 4).
+
+### Décisions de cadrage
+
+- **`initialLocation` sur la définition d'un PNJ unique** : la référence du lieu unique où il attend au début de la partie, ou null. Un archétype n'en a pas (CHECK en base, refus `kind_mismatch` au back-office). `checkScenario` vérifie que le lieu existe.
+- **Instancié par le backend à la première visite du lieu**, `absent`, dans ce lieu — seule exception au principe « l'extraction crée les PNJ », comme le détenteur initial pour les objets. L'arrivée du joueur le rend présent, comme quiconque attend dans un lieu (Phase 7) ; si le lieu est celui du départ, il est présent dès le lancement. Un unique déjà rencontré ailleurs n'est jamais recréé.
+- **La narration du tour d'arrivée le reçoit** dans `npcs_at_destination`, avant même qu'il existe (handle = référence), quand l'arbitrage a nommé la destination.
+- **Liste fermée de l'extraction** : tant qu'il n'est pas rencontré, un PNJ placé ne peut entrer en scène que depuis son lieu ou un lieu d'où l'on peut s'y rendre. Rencontré, il va où l'histoire le mène.
+- **Hors périmètre** : les archétypes postés (« un garde dans chaque pièce » sans les nommer) et les emplois du temps, qui déplaceront ces instances au fil des heures (Phase 10).
+
+### Critère de sortie
+
+- Dans « The Stolen Seal », chaque garde attend dans sa pièce : on le trouve en y entrant, et nulle part ailleurs avant.
+
+---
+
 ## Phase 8 — Lore étendu et RAG
 
 **Objectif** : dépasser les limites de la connaissance native du LLM sur un univers, ou construire un lore original détaillé.
@@ -526,7 +544,7 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 - Branchement de la formule de dégâts du BRP posée en Phase 6 (dés de l'arme + modificateur de dégâts − armure) : l'arbitrage désigne attaquant et cible, le backend calcule les dégâts et les applique, et l'extraction cesse de chiffrer les blessures. Une arme détenue par un PNJ l'emporte sur l'arme ordinaire de son profil, et c'est l'arme qui désigne la compétence d'attaque.
 - Reste du combat du BRP (système de règles, sections 8 et 11) : matrice attaque / défense avec parade et esquive, jets opposés et table de résistance, armure, blessures grave et mortelle, effets spéciaux, table réduite de maladresses ; choix des points de vie totaux pour le personnage.
 - Temps du combat et du personnage, sur l'horloge de la Phase 7 : un tour de combat vaut un round du BRP (12 secondes), durée imposée par le backend et non proposée par l'arbitrage, sans rangs de `DEX` ni actions multiples ; soins (premiers soins en un round, guérison naturelle de 1D3 PV par semaine) et récupération calés sur le temps écoulé.
-- Échéances et événements déclenchés par le temps, à cadrer : une condition (jour, période, peut-être un flag) et un effet appliqué par le backend en delta validé, saisis comme contenu de scénario et vérifiés par `checkScenario`. Ils couvrent aussi les **emplois du temps des PNJ** (gardes moins nombreux la nuit, vampire au tombeau le jour et au château la nuit), qui déplacent ou retirent des instances via leur lieu (`location_instance_id`, Phase 7).
+- Échéances et événements déclenchés par le temps, à cadrer : une condition (jour, période, peut-être un flag) et un effet appliqué par le backend en delta validé, saisis comme contenu de scénario et vérifiés par `checkScenario`. Ils couvrent aussi les **emplois du temps des PNJ** (gardes moins nombreux la nuit, vampire au tombeau le jour et au château la nuit), qui déplacent ou retirent des instances via leur lieu (`location_instance_id`, Phase 7), en partant de leur placement initial (complément de la Phase 7).
 - Progression du personnage : tests d'expérience et jets d'amélioration du BRP, en fin de scénario.
 - Cycle de vie complet de la partie :
   - création de personnage guidée (au-delà d'un simple formulaire technique),

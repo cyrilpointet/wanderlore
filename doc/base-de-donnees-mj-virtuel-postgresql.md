@@ -123,7 +123,7 @@ Colonnes propres à chaque catalogue :
 
 | Table | Colonnes |
 |---|---|
-| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null) |
+| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null), `initial_location` (référence du lieu unique où un PNJ unique attend au début de la partie ; null sinon, et toujours pour un archétype — CHECK) |
 | `location_definitions` | `parent` (lieu unique englobant ; null pour un archétype, qui reçoit son parent par instance) ; depuis la Phase 7, `exits` (jsonb, `[]` par défaut : `to`, `passage`, `backPassage`, `hidden`, `requires`, `oneWay`, `duration` — voir architecture, section 6quater) et `entrance` (booléen) |
 | `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `weapon` (jsonb, nullable depuis la Phase 6 : `skill`, `damage` en dés comme `1D6+1`, `damageModifier` `full` / `half` / `none`, `special`), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement) |
 
@@ -373,6 +373,9 @@ est une instance d'archétype générique. Voir architecture, section 6ter.
   le backend, jamais par le LLM.
 - Un unique n'a qu'une instance par partie : une réapparition la repasse `present`.
 - Les instances ne sont jamais supprimées : un PNJ qui quitte la scène passe `absent`.
+- **Placement initial** : un unique doté d'un `initial_location` (définition) est instancié
+  `absent` dans ce lieu à la première visite de celui-ci, puis rendu `present` par l'arrivée du
+  joueur — comme un objet doté d'un `initial_holder` naît avec son détenteur.
 - La disposition initiale vient de la définition. L'extraction propose une disposition
   absolue, jamais un delta chiffré.
 
