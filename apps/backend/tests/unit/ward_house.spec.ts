@@ -87,7 +87,7 @@ test.group('The Ward House | its network', () => {
     assert.deepEqual(
       route.steps.map(({ to }) => to),
       [
-        'ward_family_cemetery',
+        'ward_house_entrance_hall',
         'ward_house_kitchen',
         'ward_house_cellar',
         'ward_laboratory',
@@ -110,6 +110,7 @@ test.group('The Ward House | its network', () => {
       'ward_house_dining_room',
       'ward_house_library',
       'ward_house_upstairs_corridor',
+      'ward_house_kitchen',
     ])
   })
 })
