@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 
 import User from '#models/user'
+import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 import GameMasterSeeder from '#database/seeders/03_test_game_master_seeder'
 import { seedContent } from '#tests/helpers/content'
 import { countRows, createUser, useTransaction } from '#tests/helpers/database'
@@ -44,7 +45,7 @@ test.group('Back-office | access', (group) => {
       ({ reference }: { reference: string }) => reference === 'three_musketeers'
     )
     assert.deepEqual(world.labels, { en: 'The Three Musketeers' })
-    assert.equal(world.scenarioCount, 1)
+    assert.equal(world.scenarioCount, THREE_MUSKETEERS_CONTENT.scenarios.length)
   })
 })
 

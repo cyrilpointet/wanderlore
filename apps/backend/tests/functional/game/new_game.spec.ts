@@ -53,17 +53,34 @@ test.group('New game | catalogue', (group) => {
     const musketeers = dataOf(response).filter(
       ({ world }: { world: { reference: string } }) => world.reference === 'three_musketeers'
     )
-    assert.deepEqual(musketeers, [
+    const world = {
+      reference: 'three_musketeers',
+      label: 'The Three Musketeers',
+      tone: THREE_MUSKETEERS_CONTENT.narrativeTone,
+    }
+    const stolenSeal = THREE_MUSKETEERS_CONTENT.scenarios.find(
+      ({ reference }) => reference === 'the_stolen_seal'
+    )!
+    const stolenSealRow = await db
+      .from('scenarios')
+      .where({ world_id: worldId, reference: stolenSeal.reference })
+      .firstOrFail()
+
+    /** The published scenarios only, the draft left out; in no particular order. */
+    assert.sameDeepMembers(musketeers, [
       {
         id: scenarioId,
         title: 'A Gascon in Paris',
         synopsis: THREE_MUSKETEERS_CONTENT.scenarios[0].synopsis,
         status: 'published',
-        world: {
-          reference: 'three_musketeers',
-          label: 'The Three Musketeers',
-          tone: THREE_MUSKETEERS_CONTENT.narrativeTone,
-        },
+        world,
+      },
+      {
+        id: stolenSealRow.id,
+        title: 'The Stolen Seal',
+        synopsis: stolenSeal.synopsis,
+        status: 'published',
+        world,
       },
     ])
   })

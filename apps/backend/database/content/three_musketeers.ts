@@ -1019,5 +1019,580 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       locations: [],
       items: [],
     },
+    {
+      reference: 'the_stolen_seal',
+      labels: { en: 'The Stolen Seal' },
+      synopsis:
+        "Paris, 1625. Cardinal's Guards have stolen Monsieur de Tréville's seal, the signet that makes his orders the King's, and carried it off to the Hôtel de Laffemas, the town house that serves them as barracks. Tréville cannot ask for it back without a scandal: he sends you to fetch it, tonight, and to come out alive with it.",
+      status: 'published',
+      chapters: [{ reference: 'the_guards_house', labels: { en: "The Guards' House" } }],
+      quests: [{ reference: 'recover_the_seal', labels: { en: 'Recover the stolen seal' } }],
+      pregeneratedCharacter: {
+        name: "d'Artagnan",
+        /** Quick, hot-headed and charming: a young Gascon in Tréville's favour. */
+        characteristics: { STR: 13, CON: 14, SIZ: 12, INT: 13, POW: 12, DEX: 16, CHA: 14 },
+        skills: {
+          swordsmanship: 60,
+          athletics: 40,
+          stealth: 35,
+          observation: 35,
+          persuasion: 40,
+          deception: 30,
+          etiquette: 30,
+        },
+        resources: { purse: 10 },
+        /** Armed for a night's work: his sword, a dagger, a rope for walls, and Tréville's note. */
+        items: [
+          {
+            definition: 'rapier',
+            descriptor: "his father's old sword, long and a little out of fashion",
+            quantity: 1,
+            equipped: true,
+          },
+          { definition: 'dagger', descriptor: 'a main-gauche', quantity: 1, equipped: false },
+          {
+            definition: 'rope',
+            descriptor: 'a knotted rope with a small grapnel, for climbing a wall',
+            quantity: 1,
+            equipped: false,
+          },
+          {
+            definition: 'document',
+            descriptor:
+              "Tréville's hasty note: the seal is a gold signet with his arms, taken to the Hôtel de Laffemas, rue du Cherche-Midi",
+            quantity: 1,
+            equipped: false,
+          },
+        ],
+      },
+      /** The story opens in the street, before the guards' house. */
+      initialState: {
+        location: 'rue_du_cherche_midi',
+        chapter: 'the_guards_house',
+        quests: [
+          {
+            reference: 'recover_the_seal',
+            step: 1,
+            summary:
+              "Get into the Hôtel de Laffemas, find Monsieur de Tréville's seal, and come back out of the house with it: the seal is won only once it is out.",
+          },
+        ],
+      },
+      /** Late at night: most of the guards are asleep, the post is not. */
+      startTime: '23:00',
+      startDate: '1625-06-02',
+      glossary: [
+        { reference: 'cardinals_guards', labels: { en: "the Cardinal's Guards" } },
+        { reference: 'kings_musketeers', labels: { en: "the King's Musketeers" } },
+        { reference: 'laffemas', labels: { en: 'Laffemas' } },
+      ],
+      /**
+       * Those who keep the house: never more than one guard to a room, each
+       * posted where the description of the room says. Any other guard met is
+       * an instance of the world's `cardinal_guard`; Jussac, who commands the
+       * post, is the world's own.
+       */
+      npcs: [
+        {
+          reference: 'cahusac',
+          labels: { en: 'Cahusac' },
+          description:
+            "A Cardinal's Guard keeping the carriage gate of the Hôtel de Laffemas from his sentry box in the courtyard: bored, sharp-eared, and quick to shout for help.",
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'hostile',
+          combat: {
+            skills: { swordsmanship: 60, observation: 50, athletics: 40 },
+            hitPointsMax: 13,
+            weapon: 'rapier',
+          },
+        },
+        {
+          reference: 'biscarat',
+          labels: { en: 'Biscarat' },
+          description:
+            "A Cardinal's Guard on duty in the guardroom, dicing alone over a jug of wine; a decent fellow at heart who serves the Cardinal without loving him.",
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'hostile',
+          combat: {
+            skills: { swordsmanship: 65, observation: 40, persuasion: 30 },
+            hitPointsMax: 13,
+            weapon: 'rapier',
+          },
+        },
+        {
+          reference: 'bernajoux',
+          labels: { en: 'Bernajoux' },
+          description:
+            "A Cardinal's Guard on watch at the head of the grand staircase: a braggart, a duellist, and after Jussac the best blade of the post.",
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'hostile',
+          combat: {
+            skills: { swordsmanship: 70, intimidation: 50, observation: 40 },
+            hitPointsMax: 14,
+            weapon: 'rapier',
+          },
+        },
+        {
+          reference: 'dame_perrine',
+          labels: { en: 'Dame Perrine' },
+          description:
+            'The cook of the Hôtel de Laffemas, still at her ovens at midnight: no guard, but she has no love for strangers in her kitchen and a voice that carries through the house.',
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'unfriendly',
+          combat: {
+            skills: { observation: 50, intimidation: 40 },
+            hitPointsMax: 10,
+            weapon: null,
+          },
+        },
+        {
+          reference: 'cerberus',
+          labels: { en: 'Cerberus' },
+          description:
+            "The guards' mastiff, chained by the garden wall on a long chain: it bites before it barks, and barks loud enough to wake the house.",
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'hostile',
+          combat: {
+            skills: { athletics: 60, observation: 60, intimidation: 60 },
+            hitPointsMax: 12,
+            weapon: null,
+          },
+        },
+      ],
+      /**
+       * The street, then the house room by room, like a dungeon: half of its
+       * seventeen places hold a guard or a trial, the other half nothing but
+       * their furniture. The house only contains them; its rooms are a
+       * network, entered from the street by the carriage gate (the
+       * courtyard), by the servants' door (the kitchen) or over the garden
+       * wall (the garden). The office is locked — its key hangs in the
+       * guardroom — but can be reached through Jussac's bedchamber, or by a
+       * jib door hidden in the library panelling.
+       */
+      locations: [
+        {
+          reference: 'rue_du_cherche_midi',
+          labels: { en: 'Rue du Cherche-Midi' },
+          description:
+            "A narrow street of the Faubourg Saint-Germain, dark at this hour, where the Hôtel de Laffemas shows its carriage gate; a side lane leads to its servants' door, a back lane runs along its garden wall.",
+          kind: 'unique',
+          parent: 'paris',
+          exits: [],
+          entrance: false,
+        },
+        {
+          reference: 'hotel_de_laffemas',
+          labels: { en: 'Hôtel de Laffemas' },
+          description:
+            'A town house lent by the Cardinal to his Guards as their barracks: fifteen rooms round a paved courtyard, and a walled garden behind.',
+          kind: 'unique',
+          parent: 'paris',
+          exits: [],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_courtyard',
+          labels: { en: 'The courtyard' },
+          description:
+            'The paved courtyard inside the carriage gate, lit by one lantern; Cahusac, the only guard here, keeps the gate from his sentry box.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [
+            {
+              to: 'laffemas_stables',
+              passage: 'the stable doors, on the left of the courtyard',
+              backPassage: 'the stable doors, out into the courtyard',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_guardroom',
+              passage: 'the guardroom door, under the archway, with light and voices behind it',
+              backPassage: 'the guardroom door, out into the courtyard',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_vestibule',
+              passage: 'the front steps, up to the double doors of the house',
+              backPassage: 'the double doors, down the steps to the courtyard',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_kitchen',
+              passage: 'a low door across the courtyard, into the kitchen',
+              backPassage: 'the low door out into the courtyard',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: true,
+        },
+        {
+          reference: 'laffemas_stables',
+          labels: { en: 'The stables' },
+          description:
+            'Stalls for a dozen horses, warm and dark, smelling of hay; nobody keeps them at night.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [
+            {
+              to: 'laffemas_garden',
+              passage: 'a wicket gate at the back of the stables, into the garden',
+              backPassage: 'the wicket gate into the stables',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_guardroom',
+          labels: { en: 'The guardroom' },
+          description:
+            "A low vaulted room with a fire, a table and a rack of cloaks; Biscarat, the only guard here, dices alone by the door, where the key to the captain's office hangs on a hook.",
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [
+            {
+              to: 'laffemas_armoury',
+              passage: 'an iron-studded door at the back of the guardroom',
+              backPassage: 'the iron-studded door back to the guardroom',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_armoury',
+          labels: { en: 'The armoury' },
+          description:
+            'Racks of muskets, halberds and swords, powder flasks and bandoliers on pegs; nobody watches it.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_vestibule',
+          labels: { en: 'The vestibule' },
+          description:
+            'A stone hall at the foot of the grand staircase, a single candle burning in a sconce; empty at this hour.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [
+            {
+              to: 'laffemas_refectory',
+              passage: 'the door of the refectory, on the right',
+              backPassage: 'the door back to the vestibule',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_gallery',
+              passage: 'the gallery opening on the left, toward the garden side',
+              backPassage: 'the way back to the vestibule',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_landing',
+              passage: 'the grand staircase, rising to the first floor',
+              backPassage: 'the grand staircase, down to the vestibule',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_kitchen',
+          labels: { en: 'The kitchen' },
+          description:
+            "A great smoky kitchen with a servants' door onto the side lane; Dame Perrine, the cook, is still at her ovens and will raise the house if she is not talked round or slipped past.",
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [
+            {
+              to: 'laffemas_pantry',
+              passage: 'the pantry door, by the ovens',
+              backPassage: 'the pantry door back to the kitchen',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_refectory',
+              passage: 'the service door to the refectory',
+              backPassage: 'the service door to the kitchen',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_dormitory',
+              passage: "the servants' stair, narrow and steep, up to the first floor",
+              backPassage: "the servants' stair, down to the kitchen",
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: true,
+        },
+        {
+          reference: 'laffemas_pantry',
+          labels: { en: 'The pantry' },
+          description:
+            'Hams, cheeses and wine casks in a cool, windowless room; nothing here but supper.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_refectory',
+          labels: { en: 'The refectory' },
+          description:
+            "The guards' mess: long tables still strewn with the remains of supper, benches pushed back; empty.",
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_gallery',
+          labels: { en: 'The gallery' },
+          description:
+            'A long gallery of portraits along the garden front, its parquet waxed to a mirror and a wire of little bells strung low across it in the dark, to betray anyone who crosses.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [
+            {
+              to: 'laffemas_garden',
+              passage: 'the French windows at the end of the gallery, onto the garden',
+              backPassage: 'the French windows into the gallery',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_chapel',
+              passage: 'a carved door halfway along the gallery, into the chapel',
+              backPassage: 'the carved door back to the gallery',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_garden',
+          labels: { en: 'The walled garden' },
+          description:
+            'A formal garden of box hedges and gravel behind high walls topped with broken glass, entered from the back lane by climbing the wall; Cerberus, the mastiff, is chained by the wall on a long chain.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [],
+          entrance: true,
+        },
+        {
+          reference: 'laffemas_chapel',
+          labels: { en: 'The chapel' },
+          description:
+            'A small private chapel, cold and smelling of old incense, a lamp burning before the altar; nobody prays here at midnight.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_landing',
+          labels: { en: 'The landing' },
+          description:
+            'The head of the grand staircase, opening on the rooms of the first floor; Bernajoux, the only guard here, keeps watch in a chair, sword across his knees.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [
+            {
+              to: 'laffemas_salon',
+              passage: 'the tall doors of the great salon',
+              backPassage: 'the tall doors back to the landing',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_dormitory',
+              passage: "the door of the guards' dormitory, snores behind it",
+              backPassage: 'the dormitory door, out to the landing',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_library',
+              passage: 'the library door, at the end of the landing',
+              backPassage: 'the library door, out to the landing',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+            {
+              to: 'laffemas_bedchamber',
+              passage: "the door of the captain's bedchamber",
+              backPassage: 'the bedchamber door, out to the landing',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_salon',
+          labels: { en: 'The great salon' },
+          description:
+            "A gilded salon under dust sheets, the house's finest room, unused and empty; at its far end, the locked door of the captain's office.",
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [
+            {
+              to: 'laffemas_office',
+              passage: "the locked door of the captain's office",
+              backPassage: 'the office door, out to the salon',
+              hidden: false,
+              requires: 'laffemas_office_key',
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_dormitory',
+          labels: { en: "The guards' dormitory" },
+          description:
+            'A long room of cots under the roof beams, every one unslept in but one, where a single off-duty guard sleeps, his sword hung at the bedhead; one wrong step on the boards and he wakes.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_library',
+          labels: { en: 'The library' },
+          description:
+            'Shelves of law books and sermons that no guard has opened, a globe and a reading desk; empty.',
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [
+            {
+              to: 'laffemas_office',
+              passage: 'a jib door hidden in the panelling between two bookcases',
+              backPassage: 'a narrow jib door in the office panelling',
+              hidden: true,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_office',
+          labels: { en: "The captain's office" },
+          description:
+            "The captain's office, its door kept locked: a desk heaped with orders and dispatches, a map of Paris on the wall, and the desk drawers, which are not.",
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [
+            {
+              to: 'laffemas_bedchamber',
+              passage: "a connecting door into the captain's bedchamber",
+              backPassage: 'the connecting door into the office',
+              hidden: false,
+              requires: null,
+              oneWay: false,
+              duration: null,
+            },
+          ],
+          entrance: false,
+        },
+        {
+          reference: 'laffemas_bedchamber',
+          labels: { en: "The captain's bedchamber" },
+          description:
+            "The captain's bedchamber, curtains drawn round the bed, where Jussac, who commands the post, sleeps lightly with a pistol on the night table; the only guard here, and the most dangerous in the house.",
+          kind: 'unique',
+          parent: 'hotel_de_laffemas',
+          exits: [],
+          entrance: false,
+        },
+      ],
+      /** What the guards took, and the key that opens where they keep it. */
+      items: [
+        {
+          reference: 'treville_seal',
+          labels: { en: "Monsieur de Tréville's seal" },
+          description:
+            "Monsieur de Tréville's gold signet, engraved with his arms, that makes his orders the King's: wrapped in a handkerchief in the top drawer of the captain's desk, which is not even locked.",
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [],
+          weapon: null,
+          initialHolder: { holder: 'location', reference: 'laffemas_office' },
+        },
+        {
+          reference: 'laffemas_office_key',
+          labels: { en: 'The office key' },
+          description: "The key to the captain's office, hanging on a hook by the guardroom door.",
+          kind: 'unique',
+          generic: false,
+          stackable: false,
+          equippable: false,
+          modifiers: [],
+          weapon: null,
+          initialHolder: { holder: 'location', reference: 'laffemas_guardroom' },
+        },
+      ],
+    },
   ],
 }
