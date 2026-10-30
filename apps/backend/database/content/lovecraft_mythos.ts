@@ -721,7 +721,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 14,
             weapon: 'knife',
           },
-          initialLocation: null,
+          initialLocation: 'black_sand_beach',
         },
         {
           reference: 'tomas_reyes',
@@ -736,7 +736,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 11,
             weapon: 'knife',
           },
-          initialLocation: null,
+          initialLocation: 'black_sand_beach',
         },
         {
           reference: 'professor_whitcombe',
@@ -751,7 +751,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 10,
             weapon: null,
           },
-          initialLocation: null,
+          initialLocation: 'black_sand_beach',
         },
         {
           reference: 'captain_voss',
@@ -766,7 +766,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 14,
             weapon: null,
           },
-          initialLocation: null,
+          initialLocation: 'sovereign_wreck',
         },
         {
           reference: 'the_drowned_priest',
@@ -781,7 +781,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 22,
             weapon: null,
           },
-          initialLocation: null,
+          initialLocation: 'drowned_temple',
         },
       ],
       /** The ocean, the schooner, and the island from its beach to its drowned heart. */
@@ -1059,7 +1059,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 10,
             weapon: null,
           },
-          initialLocation: null,
+          initialLocation: 'ward_house_kitchen',
         },
         {
           reference: 'henry_armitage',
@@ -1119,7 +1119,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 11,
             weapon: null,
           },
-          initialLocation: null,
+          initialLocation: 'sealed_vault',
         },
         {
           reference: 'imperfect_revenant',

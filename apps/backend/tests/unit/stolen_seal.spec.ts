@@ -100,11 +100,29 @@ test.group('The Stolen Seal | the Hôtel de Laffemas', () => {
     )
   })
 
-  test('never more than one guard to a room', ({ assert }) => {
-    const guards = ['Cahusac', 'Biscarat', 'Bernajoux', 'Jussac', 'off-duty guard']
-    for (const place of STOLEN_SEAL.locations) {
-      const posted = guards.filter((guard) => place.description.includes(guard))
-      assert.isAtMost(posted.length, 1, place.reference)
+  test('everyone keeping the house waits in a room of their own from the start', ({ assert }) => {
+    const placed = Object.fromEntries(
+      STOLEN_SEAL.npcs.map(({ reference, initialLocation }) => [reference, initialLocation])
+    )
+
+    assert.deepEqual(placed, {
+      cahusac: 'laffemas_courtyard',
+      biscarat: 'laffemas_guardroom',
+      bernajoux: 'laffemas_landing',
+      dame_perrine: 'laffemas_kitchen',
+      cerberus: 'laffemas_garden',
+      rouvray: 'laffemas_dormitory',
+      jussac: 'laffemas_bedchamber',
+    })
+    /** Never more than one to a room. */
+    const rooms = Object.values(placed)
+    assert.lengthOf(new Set(rooms), rooms.length)
+  })
+
+  test("each room's description names whoever waits in it", ({ assert }) => {
+    for (const npc of STOLEN_SEAL.npcs) {
+      const room = STOLEN_SEAL.locations.find(({ reference }) => reference === npc.initialLocation)!
+      assert.include(room.description, npc.labels.en, npc.reference)
     }
   })
 

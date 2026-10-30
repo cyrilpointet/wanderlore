@@ -1111,10 +1111,10 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         { reference: 'laffemas', labels: { en: 'Laffemas' } },
       ],
       /**
-       * Those who keep the house: never more than one guard to a room, each
-       * posted where the description of the room says. Any other guard met is
-       * an instance of the world's `cardinal_guard`; Jussac, who commands the
-       * post, is the world's own.
+       * Those who keep the house, each waiting in their room from the start —
+       * never more than one to a room. Jussac, who commands the post, is the
+       * world's own, placed in the captain's bedchamber. Any other guard met
+       * is an instance of the world's `cardinal_guard`.
        */
       npcs: [
         {
@@ -1130,7 +1130,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             hitPointsMax: 13,
             weapon: 'rapier',
           },
-          initialLocation: null,
+          initialLocation: 'laffemas_courtyard',
         },
         {
           reference: 'biscarat',
@@ -1145,7 +1145,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             hitPointsMax: 13,
             weapon: 'rapier',
           },
-          initialLocation: null,
+          initialLocation: 'laffemas_guardroom',
         },
         {
           reference: 'bernajoux',
@@ -1160,7 +1160,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             hitPointsMax: 14,
             weapon: 'rapier',
           },
-          initialLocation: null,
+          initialLocation: 'laffemas_landing',
         },
         {
           reference: 'dame_perrine',
@@ -1175,7 +1175,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             hitPointsMax: 10,
             weapon: null,
           },
-          initialLocation: null,
+          initialLocation: 'laffemas_kitchen',
         },
         {
           reference: 'cerberus',
@@ -1190,7 +1190,37 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             hitPointsMax: 12,
             weapon: null,
           },
-          initialLocation: null,
+          initialLocation: 'laffemas_garden',
+        },
+        {
+          reference: 'rouvray',
+          labels: { en: 'Rouvray' },
+          description:
+            "A Cardinal's Guard off duty, asleep on his cot in the dormitory with his sword hung at the bedhead: a heavy sleeper, but not a deaf one.",
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'hostile',
+          combat: {
+            skills: { swordsmanship: 55, athletics: 40 },
+            hitPointsMax: 12,
+            weapon: 'rapier',
+          },
+          initialLocation: 'laffemas_dormitory',
+        },
+        {
+          reference: 'jussac',
+          labels: { en: 'Jussac' },
+          description:
+            "An officer of the Cardinal's Guards, quick to provoke any musketeer; he commands the post at the Hôtel de Laffemas and sleeps lightly, a pistol on his night table.",
+          kind: 'unique',
+          generic: false,
+          defaultDisposition: 'hostile',
+          combat: {
+            skills: { swordsmanship: 75, intimidation: 45, marksmanship: 50 },
+            hitPointsMax: 13,
+            weapon: 'rapier',
+          },
+          initialLocation: 'laffemas_bedchamber',
         },
       ],
       /**
@@ -1537,7 +1567,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           reference: 'laffemas_dormitory',
           labels: { en: "The guards' dormitory" },
           description:
-            'A long room of cots under the roof beams, every one unslept in but one, where a single off-duty guard sleeps, his sword hung at the bedhead; one wrong step on the boards and he wakes.',
+            'A long room of cots under the roof beams, every one unslept in but one, where Rouvray, the only guard here, sleeps off duty, his sword hung at the bedhead; one wrong step on the boards and he wakes.',
           kind: 'unique',
           parent: 'hotel_de_laffemas',
           exits: [],

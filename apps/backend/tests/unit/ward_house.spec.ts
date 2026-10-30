@@ -32,6 +32,16 @@ test.group('The Ward House | its network', () => {
     assert.deepEqual(checkScenario(MYTHOS, INHERITANCE), [])
   })
 
+  test('the housekeeper waits in the kitchen, Silas in the sealed vault', ({ assert }) => {
+    const placed = Object.fromEntries(
+      INHERITANCE.npcs
+        .filter(({ initialLocation }) => initialLocation !== null)
+        .map(({ reference, initialLocation }) => [reference, initialLocation])
+    )
+
+    assert.deepEqual(placed, { martha_pike: 'ward_house_kitchen', silas_ward: 'sealed_vault' })
+  })
+
   test('every room is part of it; the house only contains them', ({ assert }) => {
     for (const room of ROOMS) {
       assert.include(['network', 'entrance'], placeKindOf(PLACES, room), room)
