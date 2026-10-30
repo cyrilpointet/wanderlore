@@ -91,6 +91,12 @@ Refusé en production. Arrêter le serveur avant, ou au moins ne laisser aucun t
 un job resté en file chercherait un tour qui n'existe plus. **`game:reset` efface aussi
 l'historique de consommation** (`turn_log`).
 
+**Préférences du front joueur** (menu du compte → *Preferences*) : thème, lecture à voix haute,
+lancer automatique des dés, animations une à une. Rangées dans le navigateur (clés
+`wanderlore.*` du `localStorage`), jamais en base : pour repartir des valeurs par défaut,
+vider ces clés dans les outils de développement. La réduction des animations du système
+(`prefers-reduced-motion`, émulable dans l'onglet *Rendering* de Chrome) les coupe toutes.
+
 ---
 
 ## LLM : vérifier et mesurer

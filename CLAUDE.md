@@ -72,7 +72,8 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
   jobs différés : **pg-boss** (PostgreSQL) en instance unique, **BullMQ** (Redis) au passage
   à plusieurs instances.
 - AdonisJS Transmit (SSE) pour le retour progressif au front pendant un tour.
-- Docker en local pour PostgreSQL + Redis (`docker compose up -d` à la racine) — Redis n'est
+- Docker en local pour PostgreSQL + Redis (`docker compose up -d` à la racine), sur les ports
+  **5433** et **6380** (les ports par défaut sont pris par un autre projet) — Redis n'est
   requis qu'une fois la file basculée sur BullMQ.
 - LLM : **Google Gemini** (`gemini-3.8-flash`, SDK `@google/genai`), encapsulé derrière le
   **LLM Gateway**. Aucun autre fichier de l'app n'importe un SDK de provider.
@@ -249,11 +250,8 @@ univers. Ses choix restent en vigueur (détail : roadmap Phase 6, système de r�
 
 Le livre (« ORC Content Document ») est rangé hors du dépôt, dans `tmp/` (ignoré par git).
 
-**Phase actuelle : Phase 7 (gestion du temps et des lieux)** — epic Jira `KAN-89` (tickets
-`KAN-90` à `KAN-103`). Implémentation, contenu du manoir Ward et documentation livrés
-(`KAN-90` à `KAN-101`) ; restent la bascule de la base de dev (`KAN-102`, avec feu vert) et la
-validation de bout en bout (`KAN-103`). Décisions (détail : roadmap Phase 7, architecture
-§6quater et §6quinquies) :
+**Phase 7 (gestion du temps et des lieux) terminée** — epic Jira `KAN-89`. Ses choix restent
+en vigueur (détail : roadmap Phase 7, architecture §6quater et §6quinquies) :
 - **horloge tenue par le backend** : compteur en secondes depuis minuit du premier jour,
   départ (heure obligatoire, date grégorienne facultative) copié du scénario au lancement ;
   sans rapport avec le port `Clock` ;
@@ -274,6 +272,24 @@ validation de bout en bout (`KAN-103`). Décisions (détail : roadmap Phase 7, a
   franchi dans le même tour (les passages s'appliquent avant le déplacement) ;
 - **localisation des PNJ** (`location_instance_id`) : laissé dans un lieu, retrouvé au retour ;
   un PNJ hostile bloque le passage au travers de sa pièce.
+
+**En cours : lot d'interface entre les Phases 7 et 8 (jet en direct et préférences)** — epic
+Jira `KAN-104` (tickets `KAN-105` à `KAN-112`), hors roadmap, front seul, **sans changement
+d'API**. Implémentation et documentation livrées (`KAN-105` à `KAN-111`) ; reste la validation
+de bout en bout (`KAN-112`). Décisions (détail : cahier des charges du front, 5.3.1, 5.3.7,
+5.5 et section 7) :
+- **jet lancé à la main** : le d100 est déjà tiré par le backend, le geste ne fait que le
+  révéler, sans mécanique d'adresse ; préparation, deux d10 en 2D (CSS, sans dépendance),
+  degré, repli en pastille ; pas de jauge, la chance chiffrée suffit ;
+- **narration retenue** jusqu'au lancer, saisie verrouillée ; un tour terminé avant le lancer
+  est **retenu** à la place du tour en cours, et ne rejoint le journal, la fiche, le bandeau
+  de scène et la voix qu'à la révélation ; un tour échoué révèle son jet aussitôt ; un tour
+  relu n'est jamais rejoué ;
+- **préférences d'interface** (thème, lecture à voix haute, lancer automatique, animations
+  une à une) propres au navigateur, **jamais en base** ni envoyées au backend ;
+  `prefers-reduced-motion` est un plancher ; le bouton de voix de l'en-tête double le réglage ;
+- **bandeau de scène** sous l'en-tête (lieu et période, toujours visibles) ; l'onglet
+  *Situation* de la fiche devient *Quests* ; texture du fond fixe par thème.
 
 Phase suivante : **Phase 8 (lore étendu et RAG)**.
 
@@ -414,6 +430,21 @@ serverless pour le backend).
   pure et testée : elle ne génère aucune clé et ne lit aucune horloge, c'est `useTurn` qui
   les lui fournit. Le flux SSE passe par `transmit()` (`src/api/transmit.ts`), fermé à la
   déconnexion et sur un `401`.
+- **Un jet en direct passe par la machine `revealReducer`** (`src/games/roll_reveal.ts`), pure
+  et distincte de `turnReducer` (qui repasse à `idle` sur `turn_completed`) : seul un
+  `roll_resolved` reçu en direct l'ouvre. Un tour terminé avant le lancer est retenu par
+  `useTurn` (`src/games/held_turn.ts`) : rien de ce qui trahirait l'issue — journal, fiche,
+  bandeau de scène, voix — ne le reçoit avant la révélation.
+- **Le texte d'un jet se construit par `rollText()`** (`src/games/roll_text.ts`), pour la
+  pastille comme pour la carte — jamais assemblé à la main.
+- **Une préférence d'interface passe par le module `src/preferences.ts`** (`usePreferences`,
+  `preferences.setX()`, `useAnimates`) — jamais `localStorage` directement. Le stockage local
+  ne contient que le brouillon de saisie et ces préférences : ni jeton, ni donnée de jeu, ni
+  rien qui aille en base ou au backend. La clé `wanderlore.theme` est lue aussi par le script
+  de premier affichage d'`index.html`.
+- **Toute animation notable a sa préférence** (`ANIMATIONS`) et se joue sous `useAnimates()`
+  ou `animates()` : `prefers-reduced-motion` est un plancher qu'aucune préférence ne lève. Les
+  indicateurs d'état (points d'attente, chargement) n'en ont pas.
 - **Couleurs par jetons sémantiques uniquement** (`src/styles.css`) — jamais une valeur brute.
 - **Un composant se teste rendu en HTML statique** (`*.test.tsx`, `renderToStaticMarkup`,
   sous Node) — jamais dans un DOM : la suite Vitest reste sans navigateur.
@@ -461,7 +492,7 @@ serverless pour le backend).
 Aide-mémoire complet, comptes de test compris : `doc/aide-memoire-dev-testeur.md`.
 
 ```bash
-docker compose up -d              # PostgreSQL + Redis (à la racine)
+docker compose up -d              # PostgreSQL (5433) + Redis (6380), à la racine
 npm run dev                       # tous les workspaces via Turborepo
 npm run test / lint / typecheck   # idem
 

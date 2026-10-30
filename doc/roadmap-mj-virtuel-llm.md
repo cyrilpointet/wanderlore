@@ -455,6 +455,33 @@ Tranchées à l'ouverture de la phase (2026-10-26, epic `KAN-89`) :
 
 ---
 
+## Entre les Phases 7 et 8 — Jet en direct et préférences (lot d'interface)
+
+**Objectif** : faire du jet un geste du joueur, animé, et réunir les choix d'interface dans un écran de préférences, avant d'ouvrir le chantier du lore. Lot hors roadmap, **front seul et sans changement d'API** : le backend tire toujours le d100, le front ne calcule rien. Epic Jira `KAN-104`. Le détail vit dans le cahier des charges du front (sections 5.3.1, 5.3.7, 5.5 et 7).
+
+### Décisions de cadrage
+
+Tranchées le 2026-10-28, ajustées à la livraison :
+
+- **Jet lancé à la main**, comme à la table : le d100 est déjà tiré quand `roll_resolved` arrive, le geste ne fait que le révéler. Aucune mécanique d'adresse ne laisse croire le contraire.
+- **Trois temps** : préparation (compétence, modificateurs un à un, chance), lancer (deux d10, dizaines puis unités), révélation (degré, accent pour `critical` et `fumble`, repli en pastille). **En 2D**, en CSS, sans dépendance. **Pas de jauge** : la chance chiffrée suffit ; des zones de degré exigeraient que le backend transmette les seuils.
+- **Narration retenue** jusqu'à la révélation, saisie verrouillée. Un tour terminé avant le lancer est **retenu** : il ne rejoint le journal, la fiche, le bandeau de scène et la voix qu'à la révélation, sans quoi les points de vie ou la voix trahiraient l'issue. Un tour échoué révèle son jet aussitôt ; un tour relu n'est jamais rejoué.
+- **Préférences d'interface** — thème, lecture à voix haute, lancer automatique, animations une à une — propres au navigateur : en stockage local, **jamais en base** ni envoyées au backend. `prefers-reduced-motion` est un plancher qu'aucune préférence ne lève.
+- **Stockage local** limité au brouillon de saisie et à ces préférences.
+
+### Contenu
+
+- **Préférences** : module unique, écran ouvert depuis le menu du compte, animations existantes soumises à leur préférence (fondu de la narration créé, jauge de points de vie qui rebondit et pulse).
+- **Jet en direct** : machine de révélation pure, distincte de celle du tour ; carte de jet ; branchement dans le tour.
+- **En cours de lot** : bandeau de scène sous l'en-tête (lieu et période, toujours visibles), l'onglet *Situation* de la fiche devenant *Quests* ; icône de d10 ; texture du fond par thème.
+
+### Critère de sortie
+
+- Pendant un tour avec jet, le joueur lance les dés à la main, les voit rouler et s'arrêter sur le d100 du backend, puis lit la narration ; avec le lancer automatique, les dés roulent seuls.
+- Toutes les préférences se règlent dans un écran dédié, survivent au rechargement, et aucune ne transite par l'API.
+
+---
+
 ## Phase 8 — Lore étendu et RAG
 
 **Objectif** : dépasser les limites de la connaissance native du LLM sur un univers, ou construire un lore original détaillé.
@@ -577,6 +604,7 @@ Tranchées à l'ouverture de la phase (2026-10-26, epic `KAN-89`) :
 | 5bis | Gestion des comptes | `superadmin` |
 | 6 | Bascule sur le système BRP | — |
 | 7 | Gestion du temps et des lieux | — |
+| 7–8 | Jet en direct et préférences (lot d'interface, sans API) | — |
 | 8 | Lore étendu et RAG | — |
 | 9 | Mémoire long terme | — |
 | 10 | Combat étendu, cycle de vie complet | — |
