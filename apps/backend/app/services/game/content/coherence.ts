@@ -142,6 +142,10 @@ export function checkScenario(
     if (npc.combat.weapon !== null && !itemsByReference.has(npc.combat.weapon)) {
       report('unknown_item', `npcs.${npc.reference}.combat.weapon`, npc.combat.weapon)
     }
+    /** Where a unique person waits from the start: a named place, like an item's holder. */
+    if (npc.initialLocation !== null && !uniqueLocations.has(npc.initialLocation)) {
+      report('unknown_location', `npcs.${npc.reference}.initialLocation`, npc.initialLocation)
+    }
   }
 
   for (const location of locations) {

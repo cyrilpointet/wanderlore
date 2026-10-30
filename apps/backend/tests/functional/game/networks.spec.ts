@@ -11,7 +11,7 @@ import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
 import { visitUniqueLocation } from '#services/game/locations'
 import { createItem } from '#services/game/inventory'
-import { enterScene } from '#services/game/npcs'
+import { enterScene, meetThoseWaiting } from '#services/game/npcs'
 import { passageStates } from '#services/game/passages'
 import { toMessage } from '#services/game/turn_events'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
@@ -300,18 +300,19 @@ test.group('Networks | extraction and the ways it opens', (group) => {
   })
 })
 
+/** Whether someone is present, absent or dead, and in which place. */
+async function placeOf(sessionId: string, handle: string) {
+  const npc = await NpcInstance.query()
+    .where('sessionId', sessionId)
+    .where('handle', handle)
+    .preload('location')
+    .firstOrFail()
+
+  return { status: npc.status, place: npc.location?.handle ?? null }
+}
+
 test.group('Networks | people where they were left', (group) => {
   useTransaction(group)
-
-  async function placeOf(sessionId: string, handle: string) {
-    const npc = await NpcInstance.query()
-      .where('sessionId', sessionId)
-      .where('handle', handle)
-      .preload('location')
-      .firstOrFail()
-
-    return { status: npc.status, place: npc.location?.handle ?? null }
-  }
 
   /** Someone met in a room of the house, present or left there. */
   async function meet(
@@ -408,5 +409,107 @@ test.group('Networks | people where they were left', (group) => {
     assert.include(arbitration.userMessage, '"reference": "house_hall"')
     /** Up the stairs from the kitchen is through the hall: no longer a way. */
     assert.notInclude(arbitration.userMessage, '"reference": "house_corridor"')
+  })
+})
+
+test.group('Networks | people waiting from the start', (group) => {
+  useTransaction(group)
+
+  const STEWARD = 'house_steward'
+
+  async function count(sessionId: string, handle: string) {
+    const instances = await NpcInstance.query()
+      .where('sessionId', sessionId)
+      .where('handle', handle)
+    return instances.length
+  }
+
+  test('the first visit brings them in, waiting there until the character arrives', async ({
+    assert,
+  }) => {
+    const { sessionId } = await arrangeHall()
+    assert.equal(await count(sessionId, STEWARD), 0)
+
+    const attic = await visitUniqueLocation(HOUSE_WORLD, sessionId, 'house_attic')
+    assert.deepEqual(await placeOf(sessionId, STEWARD), { status: 'absent', place: 'house_attic' })
+
+    await visitUniqueLocation(HOUSE_WORLD, sessionId, 'house_attic')
+    assert.equal(await count(sessionId, STEWARD), 1)
+
+    await meetThoseWaiting(sessionId, attic.id)
+    assert.deepEqual(await placeOf(sessionId, STEWARD), { status: 'present', place: 'house_attic' })
+  })
+
+  test('met on arriving in their room, and announced to the narration', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall(['house_yard', 'house_hall', 'house_corridor'])
+    const { provider, play } = buildService([
+      going('house_attic'),
+      streamed('The steward is crouching among the trunks.'),
+      extracted({ movement: 'house_attic' }),
+    ])
+
+    await play({ sessionId, userId, playerInput: 'I climb the ladder to the attic.' })
+
+    assert.deepEqual(await placeOf(sessionId, STEWARD), { status: 'present', place: 'house_attic' })
+    const narration = provider.requests.find(({ step }) => step === 'narration')!
+    assert.include(
+      narration.userMessage,
+      '"npcs_at_destination": [\n    {\n      "handle": "house_steward"'
+    )
+  })
+
+  test('within reach of their room, extraction may bring them in', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall(['house_yard', 'house_hall', 'house_corridor'])
+    const { provider, play } = buildService([
+      going(null),
+      streamed('The steward comes down the ladder, blinking.'),
+      extracted({ npcs_entered: [{ definition: STEWARD, descriptor: null }] }),
+    ])
+
+    await play({ sessionId, userId, playerInput: 'I call up the ladder.' })
+
+    const extraction = provider.requests.find(({ step }) => step === 'extraction')!
+    assert.include(extraction.userMessage, `"definition": "${STEWARD}"`)
+    assert.deepEqual(await placeOf(sessionId, STEWARD), {
+      status: 'present',
+      place: 'house_corridor',
+    })
+  })
+
+  test('far from their room, nobody brings them in before they are met', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHall()
+    const elsewhere = extracted({ npcs_entered: [{ definition: STEWARD, descriptor: null }] })
+    const { provider, play } = buildService([
+      going(null),
+      streamed('A man comes in.'),
+      elsewhere,
+      elsewhere,
+    ])
+
+    await assert.rejects(() => play({ sessionId, userId, playerInput: 'I wait in the hall.' }))
+
+    const extraction = provider.requests.find(({ step }) => step === 'extraction')!
+    assert.notInclude(extraction.userMessage, `"definition": "${STEWARD}"`)
+    assert.equal(await count(sessionId, STEWARD), 0)
+  })
+
+  test('met elsewhere first, they are not brought in again on the visit', async ({ assert }) => {
+    const { sessionId } = await arrangeHall()
+    const hall = await LocationInstance.query()
+      .where('sessionId', sessionId)
+      .where('handle', 'house_hall')
+      .firstOrFail()
+    await enterScene(
+      HOUSE_WORLD,
+      sessionId,
+      { definition: STEWARD, descriptor: null },
+      undefined,
+      hall.id
+    )
+
+    await visitUniqueLocation(HOUSE_WORLD, sessionId, 'house_attic')
+
+    assert.equal(await count(sessionId, STEWARD), 1)
+    assert.deepEqual(await placeOf(sessionId, STEWARD), { status: 'present', place: 'house_hall' })
   })
 })

@@ -178,7 +178,7 @@ export class LocationInstanceSchema extends BaseModel {
 }
 
 export class NpcDefinitionSchema extends BaseModel {
-  static $columns = ['combat', 'createdAt', 'defaultDisposition', 'description', 'generic', 'id', 'kind', 'labels', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
+  static $columns = ['combat', 'createdAt', 'defaultDisposition', 'description', 'generic', 'id', 'initialLocation', 'kind', 'labels', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
   $columns = NpcDefinitionSchema.$columns
   @column()
   declare combat: CombatProfile
@@ -192,6 +192,8 @@ export class NpcDefinitionSchema extends BaseModel {
   declare generic: boolean
   @column({ isPrimary: true })
   declare id: string
+  @column()
+  declare initialLocation: string | null
   @column()
   declare kind: DefinitionKind
   @column()

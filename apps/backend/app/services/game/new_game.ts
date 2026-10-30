@@ -14,6 +14,7 @@ import { resolveWorld } from './content/resolve.js'
 import { type CoherenceIssue, checkScenario } from './content/coherence.js'
 import { secondsOfTime } from './game_time.js'
 import { UnknownLocationError, visitUniqueLocation } from './locations.js'
+import { meetThoseWaiting } from './npcs.js'
 import { ItemRefusedError, UnknownItemError, createItem, equipItem } from './inventory.js'
 
 /**
@@ -120,8 +121,9 @@ export async function startGame(user: User, scenarioId: string): Promise<Session
     )
 
     try {
-      /** The first place of the story, with what it holds from the start. */
+      /** The first place of the story, with what it holds and who waits there from the start. */
       const start = await visitUniqueLocation(world, session.id, initialState.location, trx)
+      await meetThoseWaiting(session.id, start.id, trx)
 
       await WorldState.create(
         {

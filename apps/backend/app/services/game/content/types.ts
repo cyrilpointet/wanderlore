@@ -171,6 +171,13 @@ export type NpcDefinitionContent = DefinitionContent & {
   generic: boolean
   defaultDisposition: NpcDisposition
   combat: CombatProfile
+  /**
+   * Reference of the unique place a unique person waits in when the game
+   * starts, if any: they come into being there, the first time the game
+   * visits it — as an item does with its initial holder. An archetype has
+   * none.
+   */
+  initialLocation: string | null
 }
 
 /**

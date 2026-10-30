@@ -16,6 +16,7 @@ function npc(reference: string, description = 'Someone.'): NpcDefinitionContent 
     generic: false,
     defaultDisposition: 'neutral',
     combat: { skills: {}, hitPointsMax: 5, weapon: null },
+    initialLocation: null,
   }
 }
 

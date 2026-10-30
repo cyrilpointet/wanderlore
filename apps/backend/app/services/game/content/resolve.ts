@@ -77,7 +77,7 @@ function npcOf(npc: NpcDefinitionContent): NpcDefinition {
   }
 
   return npc.kind === 'unique'
-    ? { ...shared, kind: 'unique' }
+    ? { ...shared, kind: 'unique', initialLocation: npc.initialLocation }
     : { ...shared, kind: 'archetype', generic: npc.generic }
 }
 

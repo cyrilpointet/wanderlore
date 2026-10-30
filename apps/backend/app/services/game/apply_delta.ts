@@ -6,7 +6,7 @@ import type Character from '#models/character'
 import type WorldState from '#models/world_state'
 import type LocationInstance from '#models/location_instance'
 
-import { DeadNpcError, enterScene } from './npcs.js'
+import { DeadNpcError, enterScene, meetThoseWaiting } from './npcs.js'
 import { improviseLocation, visitUniqueLocation } from './locations.js'
 import { type PassageKey, discoverPassage, keyOf, unlockPassage, waysOutOf } from './passages.js'
 import { type TravelState, routesFrom, withExitsOpened } from './travel.js'
@@ -389,12 +389,8 @@ async function move(
     .whereIn('handle', following)
     .update({ locationInstanceId: destination.id })
 
-  /** Whoever was left here is here still. The dead stay dead. */
-  await NpcInstance.query({ client: trx })
-    .where('sessionId', target.sessionId)
-    .where('status', 'absent')
-    .where('locationInstanceId', destination.id)
-    .update({ status: 'present' })
+  /** Whoever was left here, or waits here from the start, is here still. */
+  await meetThoseWaiting(target.sessionId, destination.id, trx)
 
   return placed(destination)
 }

@@ -291,6 +291,7 @@ const catalogueFields = {
     generic: vine.boolean(),
     defaultDisposition: vine.enum(NPC_DISPOSITIONS),
     combat: combat(),
+    initialLocation: reference().nullable(),
   },
   locations: {
     parent: reference().nullable(),

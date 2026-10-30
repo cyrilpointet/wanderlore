@@ -26,6 +26,8 @@ export type DefinitionDraft = {
   generic: boolean
   defaultDisposition: Disposition
   combat: string
+  /** A named place, or empty for none. */
+  initialLocation: string
   parent: string
   /** JSON text: the exits of a named place. */
   exits: string
@@ -50,6 +52,7 @@ export function emptyDefinitionDraft(): DefinitionDraft {
     generic: false,
     defaultDisposition: 'neutral',
     combat: json(NEW_COMBAT),
+    initialLocation: '',
     parent: '',
     exits: '[]',
     entrance: false,
@@ -75,6 +78,7 @@ export function definitionDraftOf(definition: Definition): DefinitionDraft {
     generic: npc.generic ?? item.generic ?? false,
     defaultDisposition: npc.defaultDisposition ?? 'neutral',
     combat: npc.combat === undefined ? json(NEW_COMBAT) : json(npc.combat),
+    initialLocation: npc.initialLocation ?? '',
     parent: location.parent ?? '',
     exits: location.exits === undefined ? '[]' : json(location.exits),
     entrance: location.entrance ?? false,
@@ -126,6 +130,7 @@ export function definitionPayloadOf(
       generic: !unique && draft.generic,
       defaultDisposition: draft.defaultDisposition,
       combat: parse('combat'),
+      initialLocation: unique && draft.initialLocation !== '' ? draft.initialLocation : null,
     })
   } else if (catalogue === 'locations') {
     Object.assign(payload, {

@@ -197,10 +197,12 @@ export function buildExtractionMessage(request: ExtractionRequest): string {
       character_hit_points_max: request.character.hit_points_max,
     },
     /** Closed lists: every reference of the output comes from one of them. */
-    npc_definitions: request.world.npcs.map((npc) => ({
-      definition: npc.reference,
-      description: npc.description,
-    })),
+    npc_definitions: request.world.npcs
+      .filter((npc) => request.enterable_npcs.includes(npc.reference))
+      .map((npc) => ({
+        definition: npc.reference,
+        description: npc.description,
+      })),
     /** Where the scene began allows: the exits of a network, or the places travelled to freely. */
     movement_destinations: request.movement.destinations.map((reference) =>
       labels.of('location', reference)

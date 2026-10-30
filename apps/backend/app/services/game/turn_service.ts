@@ -22,7 +22,10 @@ import {
 import { applyDelta } from './apply_delta.js'
 import {
   type PresentNpc,
+  enterableNpcs,
   guardedPlaces,
+  metNpcs,
+  npcsPlacedIn,
   npcsWaitingIn,
   presentNpcDefinitions,
   presentNpcs,
@@ -54,7 +57,6 @@ import { loadWorld } from './content/load.js'
 import {
   type WorldDefinition,
   locationArchetypeReferences,
-  npcReferences,
   uniqueLocationReferences,
 } from './world.js'
 import {
@@ -375,6 +377,12 @@ export class TurnService {
     /** The world's own list, from the snapshot the turn was picked up with. */
     const actionTypes = actionTypesOf(world)
     const movement = movementOptionsOf(scene)
+    /** Someone waiting in a place from the start comes into a scene only there, or within reach. */
+    const npcDefinitions = enterableNpcs(
+      world,
+      scene.metNpcs,
+      new Set([...(scene.here === null ? [] : [scene.here]), ...movement.destinations])
+    )
     const meta: ValidationMeta = {
       actionTypes: actionTypes.map(({ actionType }) => actionType),
       npcHandles: scene.npcs.map(({ handle }) => handle),
@@ -384,7 +392,7 @@ export class TurnService {
       hiddenExits: scene.exits.filter(({ hidden }) => hidden).map(({ to }) => to),
       lockedExits: scene.exits.filter(({ locked }) => locked).map(({ to }) => to),
       destinationsAfter: movement.after,
-      npcDefinitions: npcReferences(world),
+      npcDefinitions,
       itemsInScene: itemReferencesOf(scene.items),
       sceneItems: sceneItemsOf(scene.items),
       creatableItems: scene.creatableItems,
@@ -411,8 +419,14 @@ export class TurnService {
     const route = aside ? null : routeTo(scene, decision.intent.destination)
     const time = timeOf(scene.worldState.gameTime, decision, aside, route)
     trace.time = time
-    /** Whoever was left where the character goes is there to meet them. */
-    const waiting = route === null ? [] : await npcsWaitingIn(scene.session.id, route.to)
+    /** Whoever was left where the character goes, or waits there from the start, is there to meet them. */
+    const waiting =
+      route === null
+        ? []
+        : [
+            ...(await npcsWaitingIn(scene.session.id, route.to)),
+            ...(await npcsPlacedIn(world, scene.session.id, route.to)),
+          ]
     const narration = await this.#narrate(
       turn,
       buildNarrationMessage({
@@ -442,6 +456,7 @@ export class TurnService {
         ...context,
         narration,
         creatable_items: scene.creatableItems,
+        enterable_npcs: npcDefinitions,
         movement: {
           destinations: movement.destinations,
           archetypes: movement.archetypes,
@@ -656,6 +671,7 @@ export class TurnService {
       worldState: session.worldState,
       npcs: await presentNpcs(sessionId),
       npcDefinitions: await presentNpcDefinitions(sessionId),
+      metNpcs: await metNpcs(sessionId),
       items,
       creatableItems: await creatableItems(world, sessionId),
       here,
@@ -754,6 +770,8 @@ type LoadedScene = {
   npcs: PresentNpc[]
   /** Definition of each person present, by handle. */
   npcDefinitions: Record<string, string>
+  /** The definitions of everyone the game has met: who may come back from anywhere. */
+  metNpcs: Set<string>
   items: ItemsInScene
   creatableItems: string[]
   /** The named place the scene stands in; null for an improvised one. */

@@ -63,6 +63,7 @@ const GUARD = {
   generic: false,
   defaultDisposition: 'neutral',
   combat: { skills: { deduction: 30 }, hitPointsMax: 9, weapon: null },
+  initialLocation: null,
 }
 
 /** A game in the seeded world whose character has a score in `persuasion`. */
@@ -507,9 +508,16 @@ test.group('Content API | kinds', (group) => {
       parent: 'paris',
     })
 
+    const placedArchetype = await as(client, user).post(`/worlds/${worldId}/npcs`, {
+      ...GUARD,
+      reference: 'watchman',
+      initialLocation: 'paris',
+    })
+
     for (const [response, field] of [
       [genericUnique, 'generic'],
       [parentedArchetype, 'parent'],
+      [placedArchetype, 'initialLocation'],
     ] as const) {
       response.assertStatus(422)
       assert.equal(bodyOf(response).error.code, 'kind_mismatch')

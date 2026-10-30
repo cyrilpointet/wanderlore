@@ -4,7 +4,7 @@ import NpcInstance from '#models/npc_instance'
 
 import { placeInitialItems } from './inventory.js'
 
-import type { NpcDisposition, WorldDefinition } from './world.js'
+import type { NpcDefinition, NpcDisposition, WorldDefinition } from './world.js'
 
 /** Someone entering the scene, as the extraction step will propose it. */
 export type NpcEntry = {
@@ -109,6 +109,22 @@ export async function enterScene(
     }
   }
 
+  return createInstance(world, sessionId, definition, entry, { status: 'present', place }, client)
+}
+
+/**
+ * A new instance, numbered by the backend when it is of an archetype, with the
+ * disposition and the hit points its definition declares — and, for a unique
+ * character, the items they hold from the start.
+ */
+async function createInstance(
+  world: WorldDefinition,
+  sessionId: string,
+  definition: NpcDefinition,
+  entry: NpcEntry,
+  at: { status: 'present' | 'absent'; place: string | null },
+  client?: QueryClientContract
+): Promise<NpcInstance> {
   const handle =
     definition.kind === 'unique'
       ? definition.reference
@@ -122,9 +138,9 @@ export async function enterScene(
       descriptor: entry.descriptor,
       name: entry.name ?? null,
       disposition: definition.defaultDisposition,
-      status: 'present',
+      status: at.status,
       hitPoints: definition.combat.hitPointsMax,
-      locationInstanceId: place,
+      locationInstanceId: at.place,
     },
     { client }
   )
@@ -140,6 +156,104 @@ export async function enterScene(
   }
 
   return instance
+}
+
+/** The unique people who wait in a place from the start, and have not been met yet. */
+async function placedUnmet(
+  world: WorldDefinition,
+  sessionId: string,
+  place: string,
+  client?: QueryClientContract
+): Promise<Extract<NpcDefinition, { kind: 'unique' }>[]> {
+  const placed = world.npcs.filter(
+    (npc): npc is Extract<NpcDefinition, { kind: 'unique' }> =>
+      npc.kind === 'unique' && npc.initialLocation === place
+  )
+  if (placed.length === 0) {
+    return []
+  }
+
+  const met = await metNpcs(sessionId, client)
+  return placed.filter((npc) => !met.has(npc.reference))
+}
+
+/**
+ * Brings into the game the unique people who wait in a named place from the
+ * start, the first time the game visits it — as the items kept there come
+ * into being with it. They wait there, absent, until the character arrives:
+ * arriving is what makes whoever waits in a place present. A unique character
+ * already met elsewhere is never created again.
+ */
+export async function placeInitialNpcs(
+  world: WorldDefinition,
+  sessionId: string,
+  place: { id: string; reference: string },
+  client?: QueryClientContract
+): Promise<NpcInstance[]> {
+  const placed: NpcInstance[] = []
+
+  for (const definition of await placedUnmet(world, sessionId, place.reference, client)) {
+    placed.push(
+      await createInstance(
+        world,
+        sessionId,
+        definition,
+        { definition: definition.reference, descriptor: null },
+        { status: 'absent', place: place.id },
+        client
+      )
+    )
+  }
+
+  return placed
+}
+
+/** Whoever was left in a place, or waits there from the start, is there still. The dead stay dead. */
+export async function meetThoseWaiting(
+  sessionId: string,
+  placeId: string,
+  client?: QueryClientContract
+): Promise<void> {
+  await NpcInstance.query({ client })
+    .where('sessionId', sessionId)
+    .where('status', 'absent')
+    .where('locationInstanceId', placeId)
+    .update({ status: 'present' })
+}
+
+/** The definitions of everyone the game has met, whatever became of them since. */
+export async function metNpcs(
+  sessionId: string,
+  client?: QueryClientContract
+): Promise<Set<string>> {
+  const npcs = await NpcInstance.query({ client })
+    .where('sessionId', sessionId)
+    .select('definitionReference')
+
+  return new Set(npcs.map(({ definitionReference }) => definitionReference))
+}
+
+/**
+ * Who extraction may bring into a scene: every archetype, every unique
+ * character met before or waiting nowhere in particular — and a unique one
+ * who waits in a place from the start only while the scene is in that place,
+ * or within reach of it. Nobody comes out of their guardroom before the game
+ * gets near it; met, they are free to go wherever the story takes them.
+ */
+export function enterableNpcs(
+  world: WorldDefinition,
+  met: Set<string>,
+  around: Set<string>
+): string[] {
+  return world.npcs
+    .filter(
+      (npc) =>
+        npc.kind === 'archetype' ||
+        npc.initialLocation === null ||
+        met.has(npc.reference) ||
+        around.has(npc.initialLocation)
+    )
+    .map((npc) => npc.reference)
 }
 
 /**
@@ -197,7 +311,8 @@ async function countOf(
 /**
  * Who waits in a place, left there earlier and alive: whom the character
  * finds on arriving. Named the way the scene names people present, with their
- * definition for a name they never gave.
+ * definition for a name they never gave. Those who wait there from the start
+ * and have not been met yet are `npcsPlacedIn`.
  */
 export async function npcsWaitingIn(
   sessionId: string,
@@ -236,4 +351,26 @@ export async function guardedPlaces(
     .preload('location')
 
   return new Set(npcs.map(({ location }) => location.definitionReference))
+}
+
+/**
+ * Who waits in a named place from the start and has not been met yet, in the
+ * shape of `npcsWaitingIn`: whom the character will find there on a first
+ * visit. Their handle is their reference, as it will be once they exist.
+ */
+export async function npcsPlacedIn(
+  world: WorldDefinition,
+  sessionId: string,
+  place: string,
+  client?: QueryClientContract
+): Promise<(PresentNpc & { definition: string })[]> {
+  const placed = await placedUnmet(world, sessionId, place, client)
+
+  return placed.map((npc) => ({
+    handle: npc.reference,
+    name: null,
+    descriptor: null,
+    disposition: npc.defaultDisposition,
+    definition: npc.reference,
+  }))
 }

@@ -247,6 +247,7 @@ export async function readCatalogues(
       generic: npc.generic,
       defaultDisposition: npc.defaultDisposition,
       combat: npc.combat,
+      initialLocation: npc.initialLocation,
     })),
     locations: locations.map((location): LocationDefinitionContent => ({
       reference: location.reference,

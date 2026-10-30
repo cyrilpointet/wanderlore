@@ -146,6 +146,15 @@ test.group('Coherence | references', () => {
     )
   })
 
+  test('a person waits from the start in a named place', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((world) => {
+        world.npcs.find(({ reference }) => reference === 'treville')!.initialLocation = 'tavern'
+      }),
+      [['unknown_location', 'npcs.treville.initialLocation', 'tavern']]
+    )
+  })
+
   test('a scenario definition counts like a world one', ({ assert }) => {
     assert.deepEqual(
       issuesAfter((world, scenario) => {

@@ -34,6 +34,8 @@
   "none": "None",
   "stackable": "Stackable: copies are interchangeable and counted by quantity",
   "equippable": "Can be worn or wielded",
+  "initialLocation": "Waits when the game starts in",
+  "initialLocationHint": "A named place; the person comes into being there, the first time the game visits it.",
   "initialHolder": "Held when the game starts by",
   "initialHolderHint": "A named person or place; the item comes into being with them.",
   "people": "People",

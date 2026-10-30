@@ -114,7 +114,7 @@ type DescribedEntry = ContentEntry & {
 export type NpcDefinition = DescribedEntry & {
   defaultDisposition: NpcDisposition
   combat: CombatProfile
-} & ({ kind: 'unique' } | { kind: 'archetype'; generic: boolean })
+} & ({ kind: 'unique'; initialLocation: string | null } | { kind: 'archetype'; generic: boolean })
 
 /**
  * A place of the world. A unique place declares the place that contains it,

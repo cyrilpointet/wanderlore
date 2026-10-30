@@ -49,6 +49,7 @@ export function DefinitionForm({
     generic: set('generic'),
     defaultDisposition: set('defaultDisposition'),
     combat: set('combat'),
+    initialLocation: set('initialLocation'),
     parent: set('parent'),
     exits: set('exits'),
     entrance: set('entrance'),
@@ -160,6 +161,28 @@ export function DefinitionForm({
               className={CODE_AREA}
             />
           </Field>
+          {unique && (
+            <Field
+              id={id('initialLocation')}
+              label={t('initialLocation')}
+              hint={t('initialLocationHint')}
+              error={errors.initialLocation}
+            >
+              <select
+                id={id('initialLocation')}
+                value={draft.initialLocation}
+                onChange={(event) => on.initialLocation(event.target.value)}
+                className={INPUT}
+              >
+                <option value="">{t('none')}</option>
+                {lists.uniqueLocations.map((reference) => (
+                  <option key={reference} value={reference}>
+                    {reference}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
         </>
       )}
 

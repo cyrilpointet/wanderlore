@@ -183,6 +183,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 14,
         weapon: 'rapier',
       },
+      initialLocation: null,
     },
     {
       reference: 'athos',
@@ -197,6 +198,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 14,
         weapon: 'rapier',
       },
+      initialLocation: null,
     },
     {
       reference: 'porthos',
@@ -210,6 +212,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 16,
         weapon: 'rapier',
       },
+      initialLocation: null,
     },
     {
       reference: 'aramis',
@@ -224,6 +227,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 13,
         weapon: 'rapier',
       },
+      initialLocation: null,
     },
     {
       reference: 'planchet',
@@ -237,6 +241,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 11,
         weapon: null,
       },
+      initialLocation: null,
     },
     {
       reference: 'rochefort',
@@ -251,6 +256,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 14,
         weapon: 'rapier',
       },
+      initialLocation: null,
     },
     {
       reference: 'milady',
@@ -265,6 +271,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 11,
         weapon: 'dagger',
       },
+      initialLocation: null,
     },
     {
       reference: 'jussac',
@@ -278,6 +285,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 13,
         weapon: 'rapier',
       },
+      initialLocation: null,
     },
     {
       reference: 'monsieur_bonacieux',
@@ -287,6 +295,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: { skills: { deception: 30, observation: 30 }, hitPointsMax: 10, weapon: null },
+      initialLocation: null,
     },
     {
       reference: 'constance_bonacieux',
@@ -296,6 +305,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: { skills: { stealth: 45, persuasion: 45 }, hitPointsMax: 10, weapon: null },
+      initialLocation: null,
     },
     {
       reference: 'richelieu',
@@ -309,6 +319,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 11,
         weapon: null,
       },
+      initialLocation: null,
     },
     {
       reference: 'louis_xiii',
@@ -319,6 +330,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: { skills: { etiquette: 75, marksmanship: 45 }, hitPointsMax: 12, weapon: null },
+      initialLocation: null,
     },
     {
       reference: 'anne_of_austria',
@@ -328,6 +340,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: false,
       defaultDisposition: 'neutral',
       combat: { skills: { etiquette: 75, persuasion: 60 }, hitPointsMax: 11, weapon: null },
+      initialLocation: null,
     },
     {
       reference: 'buckingham',
@@ -342,6 +355,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 13,
         weapon: 'rapier',
       },
+      initialLocation: null,
     },
     {
       reference: 'musketeer',
@@ -356,6 +370,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 13,
         weapon: 'rapier',
       },
+      initialLocation: null,
     },
     {
       reference: 'cardinal_guard',
@@ -370,6 +385,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 13,
         weapon: 'rapier',
       },
+      initialLocation: null,
     },
     {
       reference: 'royal_guard',
@@ -383,6 +399,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 12,
         weapon: 'common_sword',
       },
+      initialLocation: null,
     },
     {
       reference: 'commoner',
@@ -392,6 +409,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'neutral',
       combat: { skills: { athletics: 30 }, hitPointsMax: 10, weapon: null },
+      initialLocation: null,
     },
     {
       reference: 'merchant',
@@ -401,6 +419,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'neutral',
       combat: { skills: { persuasion: 45, observation: 30 }, hitPointsMax: 10, weapon: null },
+      initialLocation: null,
     },
     {
       reference: 'servant',
@@ -410,6 +429,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'neutral',
       combat: { skills: { stealth: 30, observation: 30 }, hitPointsMax: 10, weapon: null },
+      initialLocation: null,
     },
     {
       reference: 'noble',
@@ -419,6 +439,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'neutral',
       combat: { skills: { etiquette: 60, swordsmanship: 45 }, hitPointsMax: 11, weapon: 'rapier' },
+      initialLocation: null,
     },
     {
       reference: 'clergyman',
@@ -428,6 +449,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'neutral',
       combat: { skills: { scholarship: 60, persuasion: 45 }, hitPointsMax: 10, weapon: null },
+      initialLocation: null,
     },
     {
       reference: 'soldier',
@@ -441,6 +463,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 12,
         weapon: 'common_sword',
       },
+      initialLocation: null,
     },
     {
       reference: 'thug',
@@ -454,6 +477,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         hitPointsMax: 11,
         weapon: 'dagger',
       },
+      initialLocation: null,
     },
   ],
   /**
@@ -1106,6 +1130,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             hitPointsMax: 13,
             weapon: 'rapier',
           },
+          initialLocation: null,
         },
         {
           reference: 'biscarat',
@@ -1120,6 +1145,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             hitPointsMax: 13,
             weapon: 'rapier',
           },
+          initialLocation: null,
         },
         {
           reference: 'bernajoux',
@@ -1134,6 +1160,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             hitPointsMax: 14,
             weapon: 'rapier',
           },
+          initialLocation: null,
         },
         {
           reference: 'dame_perrine',
@@ -1148,6 +1175,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             hitPointsMax: 10,
             weapon: null,
           },
+          initialLocation: null,
         },
         {
           reference: 'cerberus',
@@ -1162,6 +1190,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             hitPointsMax: 12,
             weapon: null,
           },
+          initialLocation: null,
         },
       ],
       /**

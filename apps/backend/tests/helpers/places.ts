@@ -4,6 +4,7 @@ import type {
   ItemDefinitionContent,
   LocationDefinitionContent,
   LocationExit,
+  NpcDefinitionContent,
   ScenarioContent,
 } from '#services/game/content/types'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
@@ -108,11 +109,27 @@ export const IRON_KEY: ItemDefinitionContent = {
   initialHolder: null,
 }
 
+/** Someone who waits in the attic from the start, met there on a first visit. */
+export const STEWARD: NpcDefinitionContent = {
+  reference: 'house_steward',
+  labels: { en: 'The steward' },
+  description: 'The old steward of the house, hiding in the attic.',
+  kind: 'unique',
+  generic: false,
+  defaultDisposition: 'unfriendly',
+  combat: { skills: { observation: 50 }, hitPointsMax: 10, weapon: null },
+  initialLocation: 'house_attic',
+}
+
 const { scenarios, ...MUSKETEERS_WORLD } = THREE_MUSKETEERS_CONTENT
 
-/** *A Gascon in Paris*, with the house among its places and the key among its items. */
+/**
+ * *A Gascon in Paris*, with the house among its places, the key among its
+ * items, and the steward among its people.
+ */
 export const HOUSE_SCENARIO: ScenarioContent = {
   ...scenarios[0],
+  npcs: [...scenarios[0].npcs, STEWARD],
   locations: [...scenarios[0].locations, ...HOUSE_PLACES],
   items: [...scenarios[0].items, IRON_KEY],
 }

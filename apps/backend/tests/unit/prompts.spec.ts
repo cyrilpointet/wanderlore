@@ -539,6 +539,7 @@ test.group('Extraction | contract', () => {
       ...turnContext(),
       narration: 'Tréville reads the letter and waves you upstairs.',
       creatable_items: ['improvised_weapon', 'rope', 'food'],
+      enterable_npcs: npcReferences(THREE_MUSKETEERS),
       movement: FREE_MOVEMENT,
     })
   }
@@ -770,6 +771,7 @@ test.group('Prompts | the language of the game', () => {
       ...turnContext(inFrench),
       narration: 'Le garde vous laisse passer.',
       creatable_items: ['rope'],
+      enterable_npcs: npcReferences(THREE_MUSKETEERS),
       movement: FREE_MOVEMENT,
     })
 
@@ -837,6 +839,7 @@ test.group('Prompts | the time of the game', () => {
       ...turnContext(),
       narration: 'Night falls on the courtyard.',
       creatable_items: [],
+      enterable_npcs: npcReferences(THREE_MUSKETEERS),
       movement: FREE_MOVEMENT,
     })
 
@@ -974,6 +977,7 @@ test.group('Prompts | places and their exits', () => {
       ...inTheHall(),
       narration: 'You cross the hall.',
       creatable_items: [],
+      enterable_npcs: npcReferences(THREE_MUSKETEERS),
       movement: { destinations: ['house_hall', 'house_kitchen'], archetypes: [], parents: [] },
     })
     const payload = payloadOf(message)
@@ -990,6 +994,7 @@ test.group('Prompts | places and their exits', () => {
         ...inTheHall(),
         narration: 'You cross the hall.',
         creatable_items: [],
+        enterable_npcs: npcReferences(THREE_MUSKETEERS),
         movement: { destinations: ['house_hall', 'house_kitchen'], archetypes: [], parents: [] },
       })
     )

@@ -233,6 +233,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'neutral',
       combat: { skills: { athletics: 30, observation: 30 }, hitPointsMax: 10, weapon: null },
+      initialLocation: null,
     },
     {
       reference: 'sailor',
@@ -246,6 +247,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         hitPointsMax: 12,
         weapon: 'knife',
       },
+      initialLocation: null,
     },
     {
       reference: 'professional',
@@ -255,6 +257,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       generic: true,
       defaultDisposition: 'neutral',
       combat: { skills: { scholarship: 60, persuasion: 45 }, hitPointsMax: 10, weapon: null },
+      initialLocation: null,
     },
     {
       reference: 'lawman',
@@ -268,6 +271,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         hitPointsMax: 12,
         weapon: 'revolver',
       },
+      initialLocation: null,
     },
     {
       reference: 'thug',
@@ -281,6 +285,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         hitPointsMax: 12,
         weapon: 'knife',
       },
+      initialLocation: null,
     },
     {
       reference: 'cultist',
@@ -295,6 +300,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         hitPointsMax: 11,
         weapon: 'knife',
       },
+      initialLocation: null,
     },
     {
       reference: 'deep_one',
@@ -309,6 +315,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         hitPointsMax: 16,
         weapon: null,
       },
+      initialLocation: null,
     },
     {
       reference: 'deep_one_hybrid',
@@ -323,6 +330,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         hitPointsMax: 13,
         weapon: null,
       },
+      initialLocation: null,
     },
   ],
   /** Archetypes only: each scenario sets its own named places. */
@@ -698,6 +706,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 13,
             weapon: 'revolver',
           },
+          initialLocation: null,
         },
         {
           reference: 'bosun_mcrae',
@@ -712,6 +721,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 14,
             weapon: 'knife',
           },
+          initialLocation: null,
         },
         {
           reference: 'tomas_reyes',
@@ -726,6 +736,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 11,
             weapon: 'knife',
           },
+          initialLocation: null,
         },
         {
           reference: 'professor_whitcombe',
@@ -740,6 +751,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 10,
             weapon: null,
           },
+          initialLocation: null,
         },
         {
           reference: 'captain_voss',
@@ -754,6 +766,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 14,
             weapon: null,
           },
+          initialLocation: null,
         },
         {
           reference: 'the_drowned_priest',
@@ -768,6 +781,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 22,
             weapon: null,
           },
+          initialLocation: null,
         },
       ],
       /** The ocean, the schooner, and the island from its beach to its drowned heart. */
@@ -1030,6 +1044,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 10,
             weapon: null,
           },
+          initialLocation: null,
         },
         {
           reference: 'martha_pike',
@@ -1044,6 +1059,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 10,
             weapon: null,
           },
+          initialLocation: null,
         },
         {
           reference: 'henry_armitage',
@@ -1058,6 +1074,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 10,
             weapon: null,
           },
+          initialLocation: null,
         },
         {
           reference: 'nathaniel_crowe',
@@ -1072,6 +1089,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 12,
             weapon: 'revolver',
           },
+          initialLocation: null,
         },
         {
           reference: 'josiah_ward',
@@ -1086,6 +1104,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 12,
             weapon: null,
           },
+          initialLocation: null,
         },
         {
           reference: 'silas_ward',
@@ -1100,6 +1119,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 11,
             weapon: null,
           },
+          initialLocation: null,
         },
         {
           reference: 'imperfect_revenant',
@@ -1110,6 +1130,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           generic: false,
           defaultDisposition: 'hostile',
           combat: { skills: { brawling: 60, athletics: 45 }, hitPointsMax: 12, weapon: null },
+          initialLocation: null,
         },
         {
           reference: 'piping_servitor',
@@ -1124,6 +1145,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             hitPointsMax: 18,
             weapon: null,
           },
+          initialLocation: null,
         },
       ],
       /**
