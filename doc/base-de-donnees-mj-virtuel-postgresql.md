@@ -32,14 +32,15 @@ en `jsonb`, lues et écrites avec l'univers ; les catalogues ont leurs tables.
 | `reference` | varchar, unique | référence anglaise stable (`three_musketeers`), immuable après création |
 | `labels` | jsonb | noms d'affichage par langue, `en` obligatoire (`{ "en": "The Three Musketeers", "fr": "…" }`) |
 | `narrative_tone` | text | une ligne, transmise à l'arbitrage et à la narration |
-| `rules` | jsonb | liste de phrases anglaises : ce qui est possible dans l'univers, pour la seule arbitration |
-| `ambiance` | jsonb | liste de phrases anglaises : matière sensorielle pour le seul narrateur |
 | `skills` | jsonb | `[{ reference, labels, category, baseChance }]` : catégorie du BRP (`combat`, `communication`, `manipulation`, `mental`, `perception`, `physical`) et chance de base, fixe (`25`) ou caractéristique × multiplicateur (`{ characteristic: "DEX", multiplier: 2 }`). Plus de colonne `attributes` depuis la Phase 6 : les sept caractéristiques sont celles du système |
 | `resources` | jsonb | `[{ reference, labels }]` (ex. `purse`) |
 | `glossary` | jsonb | `[{ reference, labels }]` : noms propres qui ne sont pas des entités du jeu (factions, figures hors scène) et leurs traductions |
 | `created_by` | FK → users, nullable | auteur ; null pour le contenu que possède le seeder |
 | `created_at` / `updated_at` | timestamptz | — |
 
+- `rules` et `ambiance` (listes de phrases anglaises, de la Phase 5 à la Phase 7) deviennent
+  en Phase 8 des fragments de lore sans tag, de `kind` `rule` et `ambiance` : voir
+  `lore_fragments`.
 - `general_rules` n'existe pas : il est éclaté en colonnes distinctes. `content_boundaries`
   (tabous) est différé à la modération de la Phase 14.
 - **Les catégories d'action** vivent dans `resolution_rules` ; **les PNJ, lieux et objets**
@@ -47,20 +48,27 @@ en `jsonb`, lues et écrites avec l'univers ; les catalogues ont leurs tables.
 
 ### `lore_fragments`
 
-Unités atomiques de connaissance sur un univers. Sert de source pour l'indexation RAG (embeddings générés à partir du `content`), tout en restant en base relationnelle comme source de vérité éditable.
+Unités atomiques de connaissance sur un univers, **schéma de la Phase 8** : même forme que
+les trois catalogues, au niveau de l'univers ou d'un scénario qui remplace le fragment de
+l'univers de même référence. Filtrées par tags tirés de la scène (architecture, section 4).
 
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant |
-| `world_id` | FK → worlds | univers parent |
-| `content` | text | texte du fragment |
-| `fragment_type` | text | `mechanical_rule` / `ambiance_description` / `historical_fact` / `faction_description` |
-| `tags` | text[] ou jsonb | tags pour filtrage complémentaire au RAG (thème, lieu, catégorie) |
-| `sensitivity` | text | `public` / `arbitration_only` (info que le joueur ne doit pas connaître à l'avance) |
-| `embedding_id` | text/uuid | référence vers le vector store si l'indexation est gérée en externe |
-| `created_at` / `updated_at` | timestamp | — |
+| `world_id` | FK → worlds (cascade) | univers |
+| `scenario_id` | uuid, nullable | scénario qui surcharge ; clé étrangère composite `(scenario_id, world_id)` → `scenarios(id, world_id)`, comme les catalogues |
+| `reference` | varchar | référence anglaise stable, immuable, unique par univers ou par scénario |
+| `kind` | enum natif | `rule` (arbitrage seul), `ambiance` (narration seule), `fact` (les deux) |
+| `content` | text | une ou quelques phrases en anglais, jamais traduites ni affichées |
+| `tags` | text[] | références de lieux, de PNJ ou d'objets ; vide = toujours envoyé ; index GIN |
+| `secret` | boolean | ne part qu'à l'arbitrage ; jamais vrai pour une `ambiance` |
+| `created_at` / `updated_at` | timestamptz | — |
 
-> Note d'architecture : si le vector store choisi (ex: pgvector) est intégré directement à PostgreSQL, une colonne `embedding vector(n)` peut être ajoutée directement sur cette table plutôt que de référencer un store externe.
+- Ni `labels`, ni embeddings : un fragment ne s'affiche pas, et la recherche par similarité
+  n'est envisagée que si le volume de lore l'exige. Le cas échéant, une colonne
+  `embedding vector(n)` (pgvector) s'ajouterait ici plutôt qu'une référence vers un store
+  externe.
+- Suppression toujours permise : aucune partie ne référence un fragment.
 
 ### `scenarios`
 
@@ -524,9 +532,9 @@ Résumés hiérarchiques générés par le job asynchrone.
 ## 6. Schéma relationnel synthétique
 
 ```
-worlds ──┬── lore_fragments (Phase 8)
-         ├── resolution_rules
+worlds ──┬── resolution_rules
          ├── npc_ / location_ / item_definitions ──┐ (univers, ou scénario qui surcharge)
+         ├── lore_fragments (Phase 8) ─────────────┤ (idem)
          └── scenarios ────────────────────────────┘
                └── sessions ──┬── characters ─────────┐
                               ├── npc_instances ──────┼── inventory_items

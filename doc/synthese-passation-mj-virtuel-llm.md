@@ -304,7 +304,9 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 **Phases 0 à 5bis terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable. Depuis la Phase 4, les objets sont des instances détenues par le personnage, un PNJ ou un lieu, les jets comptent circonstances (labels) et objets, chacun tracé avec son origine, et l'inventaire du personnage s'affiche au front. Depuis la Phase 5, le contenu de jeu est en base (univers, scénarios, catalogues de PNJ, lieux et objets, avec surcharge par scénario et noms par langue) ; le joueur lance une partie depuis un catalogue de scénarios publiés, avec le personnage prétiré du scénario ; un `game_master` crée, teste et publie univers et scénarios depuis le back-office. Depuis la Phase 5bis, un superadmin gère les comptes depuis le back-office : il les crée avec un rôle, les suspend et les réactive.
 
-**Phase actuelle : Phase 6 (bascule sur le système BRP)**, epic Jira `KAN-78` : le Basic Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les univers. Voir la roadmap, Phase 6. Le lore étendu et le RAG passent en Phase 8.
+Depuis la Phase 6, le Basic Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les univers. Depuis la Phase 7, le backend tient l'horloge de jeu et la topologie des lieux (sorties, passages, réseaux), puis, avec les lots qui la suivent, le placement initial des PNJ et ce que le personnage sait.
+
+**Phase actuelle : Phase 8 (lore étendu)** : fragments de lore filtrés par des tags tirés de la scène. Voir la roadmap, Phase 8, et ses décisions de cadrage.
 
 ---
 

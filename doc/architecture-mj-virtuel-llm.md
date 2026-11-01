@@ -102,10 +102,10 @@ Les identifiants manipulés à cette étape (objets, PNJ, flags) sont des **réf
 
 ### Filtrage du lore : deux approches
 
-**Filtrage par tags (recommandé pour démarrer)**
-Chaque fragment de lore est découpé et tagué à la création de l'univers (ex : `magic`, `royal_guard`, `port_tavern`). L'orchestrateur détecte des mots-clés dans l'input joueur et/ou dans le contexte de scène, et récupère les fragments correspondants.
-- Avantages : simple, prévisible, coût de récupération quasi nul, facile à auditer.
-- Inconvénients : demande un effort de taggage à la création, peut rater une pertinence non littérale.
+**Filtrage par tags (retenu en Phase 8)**
+Chaque fragment de lore est tagué à l'écriture par des **références de contenu** : un lieu, un PNJ, un objet. À chaque tour, le backend tire les tags du moment **de la scène seule** — le lieu courant (sa définition) et ses parents, les PNJ présents, les objets en scène — et récupère les fragments qui en portent au moins un, plus les fragments sans tag, qui partent toujours. Jamais de mots-clés repérés dans l'input du joueur : il faudrait des synonymes par langue, contraires à « ni détection, ni traduction », et le joueur choisirait ce qui entre dans le contexte (roadmap, Phase 8).
+- Avantages : simple, prévisible, coût de récupération quasi nul, facile à auditer ; les tags étant des références, leur existence se vérifie et il n'y a pas de vocabulaire libre à entretenir.
+- Inconvénients : demande un effort de taggage à la création ; un fragment ne part que si la scène s'y rattache — un fragment qui vaut pour tout un village est donc tagué du village.
 
 **Recherche par similarité (RAG — embeddings + vector store)**
 Pertinent seulement pour des lores massifs (corpus de type encyclopédie) où le taggage manuel devient intenable. Ajoute une infrastructure (vector store), une latence d'embedding, et réduit l'auditabilité du pipeline.
@@ -116,12 +116,12 @@ Pertinent seulement pour des lores massifs (corpus de type encyclopédie) où le
 
 | Étape | Lore | State | Mémoire narrative |
 |---|---|---|---|
-| A+B+C | Règles ciblées par les tags déclenchés par l'input | Scène courante : PNJ présents, lieu et sa description, sorties du lieu avec leur état, lieux atteignables, période de la journée, objets en scène (personnage, PNJ présents, lieu) | Résumé + buffer court (2 derniers tours) |
-| D | Fragments d'ambiance/description liés au lieu (pas les règles) | Scène complète + résultat de résolution, noms des PNJ marqués connus ou non du personnage (`known`), description et sorties du lieu (cachées comprises, marquées ; le lieu où mène une sortie, seulement s'il a été visité), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) | Résumé + buffer récent (2–4 tours), pour la continuité de ton |
+| A+B+C | Fragments `rule` et `fact`, secrets compris, sans tag ou tagués de la scène | Scène courante : PNJ présents, lieu et sa description, sorties du lieu avec leur état, lieux atteignables, période de la journée, objets en scène (personnage, PNJ présents, lieu) | Résumé + buffer court (2 derniers tours) |
+| D | Fragments `ambiance` et `fact` non secrets, sans tag ou tagués de la scène (pas les règles) | Scène complète + résultat de résolution, noms des PNJ marqués connus ou non du personnage (`known`), description et sorties du lieu (cachées comprises, marquées ; le lieu où mène une sortie, seulement s'il a été visité), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) | Résumé + buffer récent (2–4 tours), pour la continuité de ton |
 | E | Aucun | Handles présents, objets en scène, destinations permises, sorties cachées et verrouillées du lieu, schéma des champs modifiables (pas les valeurs actuelles) — jamais la description du lieu ni le temps | Aucun (le texte narré suffit) |
 | Job résumé (async) | Aucun | Aucun | Résumé précédent + tours bruts à compresser |
 
-**Point clé** : le lore n'est jamais injecté en bloc. Il est filtré différemment selon l'usage — règles pour l'arbitrage (A+B+C), ambiance pour la narration (D) — même s'il provient de la même table source.
+**Point clé** : le lore n'est jamais injecté en bloc. Il est filtré différemment selon l'usage — règles pour l'arbitrage (A+B+C), ambiance pour la narration (D), faits pour les deux — même s'il provient de la même table source (`lore_fragments`, colonne `kind`). Les fragments sans tag d'abord, puis du plus spécifique au moins spécifique (lieu exact, parents, PNJ présents, objets), sous un plafond par étape ; `turn_log` enregistre les références envoyées.
 
 ---
 
@@ -205,7 +205,7 @@ Le résumé n'est jamais recalculé en synchrone dans le chemin critique de rép
 *Note : les valeurs de champs JSON ci-dessous sont en anglais, conformément à la convention. Les valeurs de contenu narratif (texte libre) restent dans la langue de la partie jouée — français ici pour l'exemple, cohérent avec un joueur francophone.*
 
 ### Étape 0 — Préparation backend (aucun LLM)
-Récupération déterministe : état de la scène (PNJ présents, lieu), fragments de lore taggués selon mots-clés détectés dans l'input, buffer récent + dernier résumé.
+Récupération déterministe : état de la scène (PNJ présents, lieu), fragments de lore tagués des références de la scène, buffer récent + dernier résumé.
 
 ### Étape 1 — Appel LLM fusionné A+B+C
 
@@ -774,7 +774,9 @@ produit la langue du joueur.
 ### Définitions transmises au LLM
 
 Les archétypes génériques, toujours (quelques entrées). Le reste du catalogue : en entier en
-Phase 3 (liste courte, en dur), filtré par scénario en Phase 5, puis par tags en Phase 8.
+Phase 3 (liste courte, en dur), filtré par scénario en Phase 5, puis par la scène en Phase 7
+(`enterable_npcs`, `creatable_items` : ce qui peut entrer en scène d'ici). Les tags de la
+Phase 8 ne filtrent que le lore, pas les catalogues.
 
 ### Découpage par phase
 
@@ -1136,7 +1138,7 @@ Tour de jeu
 
 ## 10. Points ouverts / prochaines décisions
 
-- Granularité de découpage et structure exacte des tags de lore (pour garder le taggage soutenable à mesure que les univers grandissent).
+- ~~Granularité de découpage et structure exacte des tags de lore~~ — tranché en Phase 8 : les tags sont des références de lieux, de PNJ et d'objets, tirées de la scène (section 4).
 - Gestion narrative des échecs (comment raconter un échec de façon crédible sans punir injustement le joueur).
 - Seuils de déclenchement du job de résumé (nombre de tours, changement de scène, ou les deux).
 - Choix définitif du provider LLM externe et impact sur le format exact du function calling / structured output utilisé par le LLM Gateway.

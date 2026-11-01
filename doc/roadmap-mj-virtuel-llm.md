@@ -525,15 +525,44 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 
 **Objectif** : dépasser les limites de la connaissance native du LLM sur un univers, ou construire un lore original détaillé.
 
+### Décisions de cadrage
+
+Tranchées à l'ouverture de la phase (2026-11-01, epic `KAN-120`) :
+
+- **Démonstration : un lore inventé dans les Trois Mousquetaires.** Un village des environs de La Rochelle, avec son histoire et ses factions, sur fond de guerre de religion (le siège de 1627-1628). Ce que le modèle ne peut pas savoir, il ne peut le tenir que des fragments : c'est ce qui rend le critère de sortie vérifiable. Le village est un **scénario de test**, écrit en JSON dans `test-worlds/` (hors dépôt) et importé par le back-office. `database/content/` ne reçoit que la reprise de `rules` et `ambiance` ; les tests automatisés ont leurs propres fixtures, au plus juste.
+- **Sélection par la scène, jamais par le texte du joueur.** Le backend détermine les tags du moment : le lieu courant (sa définition, unique ou archétype) et ses parents, les PNJ présents, les objets en scène. Un fragment part s'il porte au moins un de ces tags ; un fragment sans tag part toujours. Pas de repérage de mots-clés dans l'entrée du joueur, contrairement à ce qu'envisageait l'architecture : il faudrait des synonymes par langue (contraire à « ni détection, ni traduction »), il raterait toute formulation imprévue, et il laisserait le joueur choisir ce qui entre dans le contexte.
+- **Les tags sont des références de contenu** — un lieu, un PNJ ou un objet de l'univers ou du scénario — et rien d'autre : aucun vocabulaire thématique libre à entretenir. La cohérence (`checkScenario`) vérifie que chaque tag désigne une définition. Un fragment qui vaut pour tout le village est tagué du village ; un fragment qui vaut pour tout l'univers n'a pas de tag. Règle le point ouvert de l'architecture (§10) sur la tenue du taggage.
+- **`worlds.rules` et `worlds.ambiance` deviennent des fragments sans tag**, et les deux colonnes disparaissent : une seule source de lore, une seule édition, une seule sélection — et le scénario gagne du lore propre, ce qu'il n'avait pas. Migration de données réversible, univers créés au back-office compris. `narrative_tone` reste sur `worlds` : une ligne de cadrage, pas du lore.
+- **Table `lore_fragments`**, sur la forme des trois catalogues : au niveau de l'univers ou d'un scénario, qui remplace le fragment de l'univers de même référence.
+
+  | colonne | contenu |
+  |---|---|
+  | `reference` | référence anglaise, immuable, unique par univers ou par scénario |
+  | `kind` | enum natif : `rule` → arbitrage seul (ce qui est plausible) ; `ambiance` → narration seule (ce qui se voit, s'entend, se sent) ; `fact` → les deux (« les huguenots tiennent le moulin et se méfient des gens de Paris ») |
+  | `content` | une ou quelques phrases en anglais, jamais traduites ni affichées |
+  | `tags` | `text[]` de références, index GIN |
+  | `secret` | booléen : ne part qu'à l'arbitrage (« le bailli renseigne le Cardinal ») ; jamais vrai pour une `ambiance` |
+
+  Ni `labels` (un fragment ne s'affiche pas), ni `embedding_id` (pas d'embeddings), ni les quatre `fragment_type` du document de base de données, qui mêlaient le sujet et l'usage : `kind` dit à quelle étape le fragment part. Suppression toujours permise : aucune partie ne référence un fragment.
+- **Ce que reçoit chaque étape** : l'arbitrage, les `rule` et `fact`, secrets compris ; la narration, les `ambiance` et `fact` non secrets ; l'extraction, rien, comme avant.
+- **Ce que le personnage sait** : un fragment qui part à la narration ne nomme aucun PNJ unique — il le désigne par son rôle, le nom arrivant par `names`, marqué `known` — ni ce qui est derrière un passage, comme une description de lieu. Vérifié par `giveaways` sur le contenu en code et les fixtures ; à la charge de l'auteur pour le contenu importé.
+- **Priorité et plafond** : les fragments sans tag d'abord, toujours ; puis ceux du lieu exact, de ses parents du plus proche au plus lointain, des PNJ présents, des objets en scène. Au-delà d'un plafond par étape (12 fragments tagués, à ajuster d'après `llm:cost`), les moins spécifiques sont écartés. Plafond fixé dans le code, pas par univers.
+- **Traçabilité** : `turn_log` enregistre, par étape, les références des fragments envoyés — pour expliquer après coup d'où la narration tient le moulin.
+- **Chargement et sélection** : les fragments font partie de la `WorldDefinition` lue par `loadWorld`, une fois par tour ; la sélection est un service pur, sur le modèle de `travel`.
+- **Back-office** : fragments gérés au niveau de l'univers et du scénario ; les listes `rules` et `ambiance` quittent le formulaire d'univers. **L'import JSON d'un univers ou d'un scénario crée aussi ses catalogues** — lieux, PNJ, objets, fragments — en une seule requête et une seule transaction : tout ou rien, chaque entrée validée comme aujourd'hui. Sans quoi un univers importé perdrait ses règles et son ambiance, devenues des fragments. **Un univers s'importe clé en main** : ses catégories d'action viennent avec lui, seuls ses scénarios s'importent à part, un par un.
+- **Front joueur : rien.** Le lore ne s'affiche pas.
+- **Pas d'embeddings** : la bascule vers une recherche par similarité reste conditionnée au volume réel de lore.
+
 ### Contenu
 
 - Pertinent uniquement dans deux cas : un univers original créé pour le produit, ou l'approfondissement d'un univers connu au-delà de ce que le LLM sait déjà nativement.
-- Introduction de la table `lore_fragments`.
-- Mécanisme de filtrage : **approche par tags à privilégier pour démarrer** (simple, prévisible, auditable), conformément à la recommandation du document d'architecture. Le passage à une recherche par similarité (embeddings, pgvector ou vector store externe) n'est envisagé que si le volume de lore le justifie réellement.
+- Introduction de la table `lore_fragments`, reprise de `worlds.rules` et `worlds.ambiance`.
+- Mécanisme de filtrage : **approche par tags**, tirés de la scène (voir les décisions de cadrage). Le passage à une recherche par similarité (embeddings, pgvector ou vector store externe) n'est envisagé que si le volume de lore le justifie réellement.
+- Gestion des fragments au back-office, import JSON complet d'un univers (clé en main, scénarios mis à part) ou d'un scénario.
 
 ### Critère de sortie de phase
 
-- Le contexte transmis aux étapes LLM concernées (arbitrage, narration) inclut des fragments de lore correctement filtrés par tags, pour un univers dont le contenu dépasse la connaissance native du modèle.
+- Le contexte transmis aux étapes LLM concernées (arbitrage, narration) inclut des fragments de lore correctement filtrés par tags, pour un univers dont le contenu dépasse la connaissance native du modèle : dans le scénario du village de La Rochelle, importé par le back-office, l'arbitrage juge et la narration raconte d'après une histoire et des factions que le modèle ne peut pas connaître, et `turn_log` dit quels fragments ont été envoyés.
 
 ---
 
