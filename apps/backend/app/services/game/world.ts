@@ -5,6 +5,7 @@ import type {
   ItemHolderReference,
   ItemModifier,
   LocationExit,
+  LoreFragmentContent,
   NpcDisposition,
   SkillCategory,
   WeaponProfile,
@@ -19,6 +20,7 @@ export {
   type ItemHolderReference,
   type ItemModifier,
   type LocationExit,
+  type LoreFragmentContent,
   type NpcDisposition,
   type WeaponProfile,
 } from './content/types.js'
@@ -58,16 +60,6 @@ export type WorldDefinition = {
   labels: Labels
   /** One line, handed to both steps so arbitration and narration agree on register. */
   tone: string
-  /**
-   * Facts that constrain what is *possible*. Arbitration only — the narrator
-   * has no business ruling on plausibility.
-   */
-  rules: string[]
-  /**
-   * Sensory material for the narrator. Never sent to arbitration, which would
-   * only pay for tokens it cannot act on.
-   */
-  ambiance: string[]
   skills: WorldSkill[]
   resources: ContentEntry[]
   /**
@@ -91,6 +83,12 @@ export type WorldDefinition = {
    * item: one it invented would have no effect, no label and no translation.
    */
   items: ItemDefinition[]
+  /**
+   * The lore of the world and of the scenario, a scenario fragment replacing
+   * the world fragment of the same reference. Never sent whole: each step gets
+   * the fragments of its kinds that the scene calls for (`#services/game/lore`).
+   */
+  lore: LoreFragmentContent[]
   chapters: ContentEntry[]
   quests: ContentEntry[]
   /**

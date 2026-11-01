@@ -46,6 +46,10 @@ const ACTION_TYPES = THREE_MUSKETEERS_CONTENT.actionTypes.map(({ actionType, des
 }))
 
 /** Six past turns, numbered, so a spec can tell which ones travelled. */
+/** A rule and an ambiance of the world: untagged fragments, sent with every turn. */
+const RULE = THREE_MUSKETEERS.lore.find(({ kind }) => kind === 'rule')!.content
+const AMBIANCE = THREE_MUSKETEERS.lore.find(({ kind }) => kind === 'ambiance')!.content
+
 const SIX_TURNS: RecentTurn[] = [1, 2, 3, 4, 5, 6].flatMap((turn) => [
   { role: 'player' as const, text: `player action ${turn}` },
   { role: 'narration' as const, text: `narration ${turn}` },
@@ -345,12 +349,12 @@ test.group('Arbitration | context sent', () => {
   test('sends the world rules but not its ambiance', ({ assert }) => {
     const message = buildArbitrationMessage(arbitrationContext())
 
-    assert.include(message, THREE_MUSKETEERS.rules[0])
+    assert.include(message, RULE)
     /**
      * Arbitration cannot act on sensory material, so shipping it would be paid
      * for on every single turn for nothing.
      */
-    assert.notInclude(message, THREE_MUSKETEERS.ambiance[0])
+    assert.notInclude(message, AMBIANCE)
   })
 
   test('passes the player text through untouched', ({ assert }) => {
@@ -525,8 +529,8 @@ test.group('Narration | context sent', () => {
   test('sends the world ambiance but not its rules', ({ assert }) => {
     const message = buildNarrationMessage(narrationRequest())
 
-    assert.include(message, THREE_MUSKETEERS.ambiance[0])
-    assert.notInclude(message, THREE_MUSKETEERS.rules[0])
+    assert.include(message, AMBIANCE)
+    assert.notInclude(message, RULE)
   })
 
   test('frames the payload as game data rather than instructions', ({ assert }) => {
@@ -618,8 +622,8 @@ test.group('Extraction | contract', () => {
   test('sends no lore and no player text', ({ assert }) => {
     const message = extractionMessage()
 
-    assert.notInclude(message, THREE_MUSKETEERS.rules[0])
-    assert.notInclude(message, THREE_MUSKETEERS.ambiance[0])
+    assert.notInclude(message, RULE)
+    assert.notInclude(message, AMBIANCE)
     assert.notInclude(message, turnContext().player_input)
   })
 

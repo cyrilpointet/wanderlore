@@ -42,8 +42,6 @@ export type WorldDetail = {
   reference: string
   labels: Labels
   narrativeTone: string
-  rules: string[]
-  ambiance: string[]
   skills: Skill[]
   resources: Entry[]
   glossary: Entry[]

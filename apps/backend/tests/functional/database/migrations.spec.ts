@@ -19,6 +19,7 @@ const TABLES = [
   'location_definitions',
   'item_definitions',
   'passage_states',
+  'lore_fragments',
 ]
 
 const ENUM_TYPES = [
@@ -30,6 +31,7 @@ const ENUM_TYPES = [
   'item_state',
   'scenario_status',
   'definition_kind',
+  'lore_fragment_kind',
 ]
 
 async function existingTables(): Promise<string[]> {

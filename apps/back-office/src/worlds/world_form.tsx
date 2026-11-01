@@ -6,16 +6,15 @@ import { EntryListEditor } from '@/content/entry_list_editor'
 import { Field } from '@/content/field'
 import { errorUnder, type FieldErrors } from '@/content/form_errors'
 import { LabelsEditor } from '@/content/labels_editor'
-import { PhraseListEditor } from '@/content/phrase_list_editor'
 import { INPUT, SECTION, TEXTAREA } from '@/content/ui'
 import { CHARACTERISTICS, SKILL_CATEGORIES, type Characteristic, type SkillCategory } from './queries'
 import { newSkillDraft, type SkillDraft, type WorldDraft } from './world_draft'
 
 /**
- * Everything a world holds itself: its names and tone, the rules arbitration
- * reads and the ambiance the narrator reads, the skills and resources of a
- * character sheet, and its glossary. The characteristics are BRP's, the same
- * in every world: there is nothing to edit about them.
+ * Everything a world holds itself: its names and tone, the skills and
+ * resources of a character sheet, and its glossary. Its rules and ambiance are
+ * lore, edited with the lore. The characteristics are BRP's, the same in every
+ * world: there is nothing to edit about them.
  */
 export function WorldForm({
   draft,
@@ -41,8 +40,6 @@ export function WorldForm({
     reference: set('reference'),
     labels: set('labels'),
     narrativeTone: set('narrativeTone'),
-    rules: set('rules'),
-    ambiance: set('ambiance'),
     skills: set('skills'),
     resources: set('resources'),
     glossary: set('glossary'),
@@ -89,24 +86,6 @@ export function WorldForm({
 
       {(!creating || full) && (
         <>
-          <Section title={t('form.rules')} hint={t('form.rulesHint')}>
-            <PhraseListEditor
-              phrases={draft.rules}
-              onChange={on.rules}
-              errors={errors}
-              path="rules"
-            />
-          </Section>
-
-          <Section title={t('form.ambiance')} hint={t('form.ambianceHint')}>
-            <PhraseListEditor
-              phrases={draft.ambiance}
-              onChange={on.ambiance}
-              errors={errors}
-              path="ambiance"
-            />
-          </Section>
-
           <Section title={t('form.skills')} hint={t('form.skillsHint')}>
             <EntryListEditor<SkillDraft>
               entries={draft.skills}

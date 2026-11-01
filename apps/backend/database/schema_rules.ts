@@ -95,8 +95,6 @@ export default {
     worlds: {
       columns: {
         labels,
-        rules: { tsType: 'string[]', decorators: arrayColumn },
-        ambiance: { tsType: 'string[]', decorators: arrayColumn },
         skills: content('SkillEntry[]', { array: true }),
         resources: content('LabelledEntry[]', { array: true }),
         glossary: content('GlossaryEntry[]', { array: true }),
@@ -149,6 +147,14 @@ export default {
         modifiers: content('ItemModifier[]', { array: true }),
         weapon: content('WeaponProfile'),
         initial_holder: content('ItemHolderReference'),
+      },
+    },
+
+    /** `text[]` rather than jsonb: `pg` writes a JavaScript array into it as it is. */
+    lore_fragments: {
+      columns: {
+        kind: content('LoreFragmentKind'),
+        tags: { tsType: 'string[]', decorators: column },
       },
     },
 

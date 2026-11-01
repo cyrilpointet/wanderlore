@@ -39,6 +39,21 @@ test.group('Coherence | the seeded content', () => {
 })
 
 test.group('Coherence | references', () => {
+  test('a lore tag names a place, a person or an item', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        scenario.lore.push({
+          reference: 'siege',
+          kind: 'fact',
+          content: 'The town is under siege.',
+          tags: ['paris', 'treville', 'rapier', 'la_rochelle'],
+          secret: false,
+        })
+      }),
+      [['unknown_tag', 'lore.siege.tags', 'la_rochelle']]
+    )
+  })
+
   test('a base chance reads a characteristic of BRP', ({ assert }) => {
     assert.deepEqual(
       issuesAfter((world) => {

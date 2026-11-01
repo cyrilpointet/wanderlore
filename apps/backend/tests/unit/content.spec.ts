@@ -4,6 +4,7 @@ import { overlay, resolveWorld } from '#services/game/content/resolve'
 import type { NpcDefinitionContent, ScenarioContent } from '#services/game/content/types'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 import { SEEDED_WORLDS } from '#database/seeders/01_content_seeder'
+import { loreGiveaways } from '#tests/helpers/knowledge'
 
 const REFERENCE = /^[a-z][a-z0-9_]{0,63}$/
 
@@ -45,6 +46,21 @@ test.group('Content | scenario over world', () => {
       merged.map(({ reference }) => reference),
       ['a', 'z', 'm']
     )
+  })
+
+  test("a scenario fragment replaces the world's of the same reference", ({ assert }) => {
+    const [first] = THREE_MUSKETEERS_CONTENT.lore
+    const world = resolveWorld(THREE_MUSKETEERS_CONTENT, {
+      ...THREE_MUSKETEERS_CONTENT.scenarios[0],
+      lore: [
+        { ...first, content: 'Rewritten for the scenario.' },
+        { reference: 'only_here', kind: 'fact', content: 'New.', tags: [], secret: false },
+      ],
+    })
+
+    assert.equal(world.lore[0].content, 'Rewritten for the scenario.')
+    assert.equal(world.lore.at(-1)?.reference, 'only_here')
+    assert.lengthOf(world.lore, THREE_MUSKETEERS_CONTENT.lore.length + 1)
   })
 
   test('the resolved world reads its labels and its scenario', ({ assert }) => {
@@ -118,6 +134,50 @@ test.group('Content | seeded worlds', () => {
       assert.lengthOf(new Set(references), references.length)
     })
   }
+
+  for (const { scenarios, ...world } of SEEDED_WORLDS) {
+    for (const scenario of scenarios) {
+      test(`the lore ${world.reference} / ${scenario.reference} tells the narrator gives nothing away`, ({
+        assert,
+      }) => {
+        assert.deepEqual(loreGiveaways(world, scenario), [])
+      })
+    }
+
+    test(`${world.reference} lore fragments are unique, with a stable reference`, ({ assert }) => {
+      const references = world.lore.map(({ reference }) => reference)
+
+      for (const reference of references) {
+        assert.match(reference, REFERENCE)
+      }
+      assert.lengthOf(new Set(references), references.length)
+    })
+  }
+
+  test('the lore check catches a stranger named, and a room next door', ({ assert }) => {
+    const { scenarios, ...world } = THREE_MUSKETEERS_CONTENT
+    const scenario = {
+      ...scenarios[0],
+      lore: [
+        {
+          reference: 'gossip',
+          kind: 'ambiance' as const,
+          content: 'Everyone says Athos drinks alone.',
+          tags: [],
+          secret: false,
+        },
+        {
+          reference: 'kept_quiet',
+          kind: 'fact' as const,
+          content: 'Athos was a count.',
+          tags: [],
+          secret: true,
+        },
+      ],
+    }
+
+    assert.deepEqual(loreGiveaways(world, scenario), ['gossip: Athos'])
+  })
 
   test('seeds each world once', ({ assert }) => {
     const references = SEEDED_WORLDS.map((world) => world.reference)

@@ -8,6 +8,7 @@ import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 import { seedContent } from '#tests/helpers/content'
 import {
   PG_CHECK_VIOLATION,
+  PG_INVALID_TEXT_REPRESENTATION,
   PG_UNIQUE_VIOLATION,
   countRows,
   createResolutionRule,
@@ -37,11 +38,13 @@ function sorted(content: WorldContent): WorldContent {
     npcs: byReference(content.npcs),
     locations: byReference(content.locations),
     items: byReference(content.items),
+    lore: byReference(content.lore),
     scenarios: byReference(content.scenarios).map((scenario) => ({
       ...scenario,
       npcs: byReference(scenario.npcs),
       locations: byReference(scenario.locations),
       items: byReference(scenario.items),
+      lore: byReference(scenario.lore),
     })),
   }
 }
@@ -292,4 +295,58 @@ test.group('Content | constraints', (group) => {
       assert.equal(error.code, PG_CHECK_VIOLATION)
     }
   })
+
+  test('a lore reference is unique per world, and per scenario', async ({ assert }) => {
+    const worldId = await createWorld()
+    const scenarioId = await createScenario(worldId)
+    await insertFragment({ world_id: worldId })
+    await insertFragment({ world_id: worldId, scenario_id: scenarioId })
+
+    const atWorldLevel = await expectDbError(() => insertFragment({ world_id: worldId }))
+    const inScenario = await expectDbError(() =>
+      insertFragment({ world_id: worldId, scenario_id: scenarioId })
+    )
+
+    assert.equal(atWorldLevel.code, PG_UNIQUE_VIOLATION)
+    assert.equal(inScenario.code, PG_UNIQUE_VIOLATION)
+  })
+
+  test('an ambiance is never secret, and a kind is one of three', async ({ assert }) => {
+    const worldId = await createWorld()
+
+    const secretAmbiance = await expectDbError(() =>
+      insertFragment({ world_id: worldId, kind: 'ambiance', secret: true })
+    )
+    const gossip = await expectDbError(() => insertFragment({ world_id: worldId, kind: 'gossip' }))
+
+    assert.equal(secretAmbiance.code, PG_CHECK_VIOLATION)
+    assert.equal(gossip.code, PG_INVALID_TEXT_REPRESENTATION)
+    assert.isString(await insertFragment({ world_id: worldId, kind: 'rule', secret: true }))
+  })
+
+  test('a fragment goes with its world', async ({ assert }) => {
+    const worldId = await createWorld()
+    await insertFragment({ world_id: worldId, tags: ['paris', 'treville'] })
+
+    await db.from('worlds').where('id', worldId).delete()
+
+    assert.equal(await countRows('lore_fragments', { world_id: worldId }), 0)
+  })
 })
+
+async function insertFragment(values: Record<string, unknown>): Promise<string> {
+  const now = new Date()
+  const [row] = await db
+    .table('lore_fragments')
+    .insert({
+      reference: 'the_siege',
+      kind: 'fact',
+      content: 'La Rochelle is under siege.',
+      created_at: now,
+      updated_at: now,
+      ...values,
+    })
+    .returning('id')
+
+  return row.id
+}

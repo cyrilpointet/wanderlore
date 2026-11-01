@@ -4,6 +4,7 @@ import World from '#models/world'
 import Scenario from '#models/scenario'
 import NpcDefinition from '#models/npc_definition'
 import ItemDefinition from '#models/item_definition'
+import LoreFragment from '#models/lore_fragment'
 import ResolutionRule from '#models/resolution_rule'
 import LocationDefinition from '#models/location_definition'
 
@@ -12,6 +13,7 @@ import type {
   Catalogues,
   ItemDefinitionContent,
   LocationDefinitionContent,
+  LoreFragmentContent,
   NpcDefinitionContent,
   ScenarioContent,
   WorldContent,
@@ -43,8 +45,6 @@ export async function storeWorldContent(
     {
       labels: content.labels,
       narrativeTone: content.narrativeTone,
-      rules: content.rules,
-      ambiance: content.ambiance,
       skills: content.skills,
       resources: content.resources,
       glossary: content.glossary,
@@ -69,7 +69,7 @@ export async function storeWorldContent(
 
   const scenarios = new Map<string, Scenario>()
 
-  for (const { npcs, locations, items, ...scenario } of content.scenarios) {
+  for (const { npcs, locations, items, lore, ...scenario } of content.scenarios) {
     const row = await Scenario.updateOrCreate(
       { worldId: world.id, reference: scenario.reference },
       {
@@ -87,7 +87,7 @@ export async function storeWorldContent(
       { client: trx }
     )
 
-    await storeCatalogues(world.id, row.id, { npcs, locations, items }, trx)
+    await storeCatalogues(world.id, row.id, { npcs, locations, items, lore }, trx)
     scenarios.set(scenario.reference, row)
   }
 
@@ -104,9 +104,11 @@ async function storeCatalogues(
   await storeDefinitions(NpcDefinition, worldId, scenarioId, catalogues.npcs, trx)
   await storeDefinitions(LocationDefinition, worldId, scenarioId, catalogues.locations, trx)
   await storeDefinitions(ItemDefinition, worldId, scenarioId, catalogues.items, trx)
+  await storeDefinitions(LoreFragment, worldId, scenarioId, catalogues.lore, trx)
 }
 
-type DefinitionModel = typeof NpcDefinition | typeof LocationDefinition | typeof ItemDefinition
+type DefinitionModel =
+  typeof NpcDefinition | typeof LocationDefinition | typeof ItemDefinition | typeof LoreFragment
 
 /**
  * One level of one catalogue. Written row by row rather than through
@@ -184,8 +186,6 @@ export async function readWorldLevel(
     reference: world.reference,
     labels: world.labels,
     narrativeTone: world.narrativeTone,
-    rules: world.rules,
-    ambiance: world.ambiance,
     skills: world.skills,
     resources: world.resources,
     glossary: world.glossary,
@@ -214,7 +214,7 @@ export async function scenarioContentOf(
   }
 }
 
-/** One level of the three catalogues: the world's (`scenarioId` null) or a scenario's. */
+/** One level of the catalogues: the world's (`scenarioId` null) or a scenario's. */
 export async function readCatalogues(
   worldId: string,
   scenarioId: string | null,
@@ -237,6 +237,7 @@ export async function readCatalogues(
   const npcs = await level(NpcDefinition.query({ client }))
   const locations = await level(LocationDefinition.query({ client }))
   const items = await level(ItemDefinition.query({ client }))
+  const lore = await level(LoreFragment.query({ client }))
 
   return {
     npcs: npcs.map((npc): NpcDefinitionContent => ({
@@ -270,6 +271,17 @@ export async function readCatalogues(
       weapon: item.weapon,
       initialHolder: item.initialHolder,
     })),
+    lore: lore.map(loreFragmentOf),
+  }
+}
+
+export function loreFragmentOf(fragment: LoreFragment): LoreFragmentContent {
+  return {
+    reference: fragment.reference,
+    kind: fragment.kind,
+    content: fragment.content,
+    tags: fragment.tags,
+    secret: fragment.secret,
   }
 }
 

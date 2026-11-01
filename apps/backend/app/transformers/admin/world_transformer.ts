@@ -17,15 +17,13 @@ export default class WorldTransformer extends BaseTransformer<World> {
     }
   }
 
-  /** Everything the world itself holds; its scenarios and catalogues have routes of their own. */
+  /** Everything the world itself holds; its scenarios, catalogues and lore have routes of their own. */
   toDetail() {
     return this.pick(this.resource, [
       'id',
       'reference',
       'labels',
       'narrativeTone',
-      'rules',
-      'ambiance',
       'skills',
       'resources',
       'glossary',

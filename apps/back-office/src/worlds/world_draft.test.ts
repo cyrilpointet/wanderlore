@@ -8,8 +8,6 @@ const WORLD: WorldDetail = {
   reference: 'three_musketeers',
   labels: { en: 'The Three Musketeers', fr: 'Les Trois Mousquetaires' },
   narrativeTone: 'France, 1625.',
-  rules: ['No magic.'],
-  ambiance: ['Mud and torchlight.'],
   skills: [
     { reference: 'swordsmanship', labels: { en: 'Swordsmanship' }, category: 'combat', baseChance: 15 },
     {
@@ -51,12 +49,6 @@ describe('world draft', () => {
     const fixed = { ...draft.skills[1]!, baseCharacteristic: '' as const, baseValue: '25' }
     expect(worldPayloadOf({ ...draft, skills: [fixed] }).skills[0]!.baseChance).toBe(25)
   })
-
-  test('drops blank phrases and trims the rest', () => {
-    const draft = { ...worldDraftOf(WORLD), rules: ['  No magic.  ', ' ', ''] }
-
-    expect(worldPayloadOf(draft).rules).toEqual(['No magic.'])
-  })
 })
 
 describe('world update', () => {
@@ -80,8 +72,6 @@ describe('world from a JSON file', () => {
     const draft = worldDraftFromJson({
       reference: 42,
       labels: { fr: 'Monde', de: 7 },
-      rules: ['No magic.', 3],
-      ambiance: 'Mud.',
       skills: [{ reference: 'luck', category: 'mystic', baseChance: { characteristic: 'XYZ' } }, 'x'],
     })
 
@@ -90,8 +80,6 @@ describe('world from a JSON file', () => {
       { language: 'en', name: '' },
       { language: 'fr', name: 'Monde' },
     ])
-    expect(draft.rules).toEqual(['No magic.'])
-    expect(draft.ambiance).toEqual([])
     expect(draft.skills).toHaveLength(1)
     expect(draft.skills[0]).toMatchObject({
       reference: 'luck',

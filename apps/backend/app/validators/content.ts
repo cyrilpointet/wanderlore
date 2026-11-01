@@ -84,8 +84,6 @@ const characteristics = () =>
 
 const worldLists = {
   narrativeTone: sentence(500),
-  rules: vine.array(sentence()),
-  ambiance: vine.array(sentence()),
   skills: vine
     .array(
       vine.object({
@@ -110,8 +108,6 @@ export const createWorldValidator = vine.create({
 export const updateWorldValidator = vine.create({
   labels: labels().optional(),
   narrativeTone: worldLists.narrativeTone.optional(),
-  rules: worldLists.rules.optional(),
-  ambiance: worldLists.ambiance.optional(),
   skills: worldLists.skills.optional(),
   resources: worldLists.resources.optional(),
   glossary: worldLists.glossary.optional(),

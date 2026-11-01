@@ -61,7 +61,9 @@ export function buildNarrationMessage(request: NarrationRequest): string {
        * Ambiance, not rules: the narrator has nothing to arbitrate, and the
        * plausibility material would only be tokens paid for nothing.
        */
-      ambiance_fragments: request.world.ambiance,
+      ambiance_fragments: request.world.lore
+        .filter(({ kind }) => kind === 'ambiance')
+        .map(({ content }) => content),
     },
     /** Where the scene stands and who is in it: handle, name, descriptor, disposition. */
     scene_state: {

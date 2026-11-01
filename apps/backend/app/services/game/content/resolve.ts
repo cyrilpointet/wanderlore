@@ -29,8 +29,6 @@ export function resolveWorld(world: WorldLevelContent, scenario: ScenarioContent
     label: world.labels.en,
     labels: world.labels,
     tone: world.narrativeTone,
-    rules: world.rules,
-    ambiance: world.ambiance,
     skills: world.skills.map((skill) => ({
       ...entryOf(skill),
       category: skill.category,
@@ -41,6 +39,7 @@ export function resolveWorld(world: WorldLevelContent, scenario: ScenarioContent
     npcs: overlay(world.npcs, scenario.npcs).map(npcOf),
     locations: overlay(world.locations, scenario.locations).map(locationOf),
     items: overlay(world.items, scenario.items).map(itemOf),
+    lore: overlay(world.lore, scenario.lore),
     chapters: scenario.chapters.map(entryOf),
     quests: scenario.quests.map(entryOf),
     glossary: overlay(world.glossary, scenario.glossary).map(entryOf),

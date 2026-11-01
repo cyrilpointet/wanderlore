@@ -169,7 +169,9 @@ export function buildArbitrationMessage(context: ArbitrationContext): string {
     world_context: {
       tone: context.world.tone,
       /** Rules only. Ambiance is the narrator's material, and would be dead weight here. */
-      relevant_rules: context.world.rules,
+      relevant_rules: context.world.lore
+        .filter(({ kind }) => kind === 'rule')
+        .map(({ content }) => content),
       /**
        * The closed list resolution.action_type must come from, each with what
        * it covers — never the skill behind it, never a number.

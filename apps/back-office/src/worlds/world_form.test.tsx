@@ -11,8 +11,6 @@ const WORLD: WorldDetail = {
   reference: 'three_musketeers',
   labels: { en: 'The Three Musketeers' },
   narrativeTone: 'France, 1625.',
-  rules: [],
-  ambiance: [],
   skills: [
     {
       reference: 'dodge',

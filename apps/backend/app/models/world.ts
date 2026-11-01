@@ -2,6 +2,7 @@ import User from '#models/user'
 import Scenario from '#models/scenario'
 import NpcDefinition from '#models/npc_definition'
 import ItemDefinition from '#models/item_definition'
+import LoreFragment from '#models/lore_fragment'
 import ResolutionRule from '#models/resolution_rule'
 import LocationDefinition from '#models/location_definition'
 import { WorldSchema } from '#database/schema'
@@ -26,6 +27,10 @@ export default class World extends WorldSchema {
 
   @hasMany(() => ItemDefinition)
   declare itemDefinitions: HasMany<typeof ItemDefinition>
+
+  /** World and scenario fragments alike, like the definitions. */
+  @hasMany(() => LoreFragment)
+  declare loreFragments: HasMany<typeof LoreFragment>
 
   @hasMany(() => ResolutionRule)
   declare resolutionRules: HasMany<typeof ResolutionRule>

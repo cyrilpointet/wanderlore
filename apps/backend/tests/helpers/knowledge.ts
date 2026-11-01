@@ -1,4 +1,9 @@
-import type { NpcDefinitionContent, ScenarioContent } from '#services/game/content/types'
+import type {
+  NpcDefinitionContent,
+  ScenarioContent,
+  WorldContent,
+} from '#services/game/content/types'
+import { overlay } from '#services/game/content/resolve'
 
 /** A name as a text would write it: "The library" reads "library" in a sentence. */
 const inText = (label: string) => label.replace(/^The /, '').toLowerCase()
@@ -41,6 +46,51 @@ export function giveaways(
     }
     for (const name of strangers.filter((stranger) => room.description.includes(stranger))) {
       found.push(`${room.reference}: ${name}`)
+    }
+  }
+
+  return found
+}
+
+/**
+ * What the lore the narrator reads gives away (roadmap, Phase 8): a fragment
+ * of ambiance or a fact that is no secret naming a unique person — the name
+ * comes by `names`, marked known or not — or, tagged with a room of a
+ * network, naming a room next to it. Each as `fragment: what it names`.
+ */
+export function loreGiveaways(
+  world: Omit<WorldContent, 'scenarios'>,
+  scenario: ScenarioContent
+): string[] {
+  const locations = overlay(world.locations, scenario.locations)
+  const uniques = overlay(world.npcs, scenario.npcs)
+    .filter(({ kind }) => kind === 'unique')
+    .map(({ labels }) => labels.en)
+  const parentOf = new Map(locations.map(({ reference, parent }) => [reference, parent]))
+  const found: string[] = []
+
+  for (const fragment of overlay(world.lore, scenario.lore)) {
+    if (fragment.kind === 'rule' || fragment.secret) {
+      continue
+    }
+
+    for (const name of uniques.filter((unique) => fragment.content.includes(unique))) {
+      found.push(`${fragment.reference}: ${name}`)
+    }
+
+    const content = fragment.content.toLowerCase()
+    const rooms = locations.filter(({ reference, parent, exits }) => {
+      const container = parentOf.get(reference)
+      return (
+        exits.length > 0 &&
+        container !== null &&
+        !fragment.tags.includes(reference) &&
+        fragment.tags.some((tag) => parentOf.get(tag) === container) &&
+        parent === container
+      )
+    })
+    for (const room of rooms.filter(({ labels }) => content.includes(inText(labels.en)))) {
+      found.push(`${fragment.reference}: ${room.reference}`)
     }
   }
 

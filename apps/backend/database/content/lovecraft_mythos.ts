@@ -21,23 +21,122 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
   labels: { en: 'The Lovecraft Mythos', fr: 'Le Mythe de Lovecraft' },
   narrativeTone:
     '1920s cosmic horror: slow-building dread, knowledge that costs, and a universe vast, ancient and indifferent to mankind.',
-  rules: [
-    'The supernatural is real but rare, alien and never benevolent. It answers to no hero and offers no wonder without a price.',
-    'There is no magic at the call of the characters: a rite or a formula comes from a forbidden text, takes time and preparation, and always costs the one who uses it.',
-    'The creatures of the Mythos far outmatch ordinary people. Bullets wound them but rarely stop them; flight, hiding and wits save more lives than fighting.',
-    'Facing the unnatural shakes the mind as a blow shakes the body: a dreadful sight or revelation can cost hit points, and nerve fails before it.',
-    'Where the Outer Gods are invoked, reality comes apart little by little: distances shift, time slips, rooms and faces are not what they were. The closer a rite comes to completion, the worse it grows.',
-    'This is the 1920s: telegraph and wireless, steamships, a few motor cars, revolvers and shotguns. Prohibition is in force in the United States.',
-    'The authorities and the learned dismiss tales of the uncanny. Proof is hard to keep, and harder still to make anyone believe.',
-    'Travel takes days and help is far away: the isolated stay isolated.',
-  ],
-  ambiance: [
-    'Fog off the sea, old stone furred with lichen, the smell of brine, mildew and something rotten beneath.',
-    'Cyclopean masonry: monoliths too vast for human hands, at angles that seem at once convex and concave.',
-    'Sounds just below hearing — a far piping, a chant, a wet slither — that stop the moment anyone listens.',
-    'Decaying New England: gambrel roofs, shuttered windows, hollow-eyed farmhouses and villagers who say less than they know.',
-    'The ocean is vast, cold and older than anything that walks; it keeps what it takes.',
-    'Near a place where the Outer Gods have been called, the world wears thin: clocks disagree, a corridor runs longer than the house, a familiar face is wrong for an instant.',
+  /**
+   * Without tags: sent with every turn, the rules to arbitration, the ambiance
+   * to the narrator.
+   */
+  lore: [
+    {
+      reference: 'supernatural_is_rare',
+      kind: 'rule',
+      content:
+        'The supernatural is real but rare, alien and never benevolent. It answers to no hero and offers no wonder without a price.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'no_magic_at_call',
+      kind: 'rule',
+      content:
+        'There is no magic at the call of the characters: a rite or a formula comes from a forbidden text, takes time and preparation, and always costs the one who uses it.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'creatures_outmatch',
+      kind: 'rule',
+      content:
+        'The creatures of the Mythos far outmatch ordinary people. Bullets wound them but rarely stop them; flight, hiding and wits save more lives than fighting.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'unnatural_shakes_mind',
+      kind: 'rule',
+      content:
+        'Facing the unnatural shakes the mind as a blow shakes the body: a dreadful sight or revelation can cost hit points, and nerve fails before it.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'reality_unravels',
+      kind: 'rule',
+      content:
+        'Where the Outer Gods are invoked, reality comes apart little by little: distances shift, time slips, rooms and faces are not what they were. The closer a rite comes to completion, the worse it grows.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'the_1920s',
+      kind: 'rule',
+      content:
+        'This is the 1920s: telegraph and wireless, steamships, a few motor cars, revolvers and shotguns. Prohibition is in force in the United States.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'disbelief',
+      kind: 'rule',
+      content:
+        'The authorities and the learned dismiss tales of the uncanny. Proof is hard to keep, and harder still to make anyone believe.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'isolation',
+      kind: 'rule',
+      content: 'Travel takes days and help is far away: the isolated stay isolated.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'fog_and_lichen',
+      kind: 'ambiance',
+      content:
+        'Fog off the sea, old stone furred with lichen, the smell of brine, mildew and something rotten beneath.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'cyclopean_masonry',
+      kind: 'ambiance',
+      content:
+        'Cyclopean masonry: monoliths too vast for human hands, at angles that seem at once convex and concave.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'sounds_below_hearing',
+      kind: 'ambiance',
+      content:
+        'Sounds just below hearing — a far piping, a chant, a wet slither — that stop the moment anyone listens.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'decaying_new_england',
+      kind: 'ambiance',
+      content:
+        'Decaying New England: gambrel roofs, shuttered windows, hollow-eyed farmhouses and villagers who say less than they know.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'the_ocean',
+      kind: 'ambiance',
+      content:
+        'The ocean is vast, cold and older than anything that walks; it keeps what it takes.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'world_wears_thin',
+      kind: 'ambiance',
+      content:
+        'Near a place where the Outer Gods have been called, the world wears thin: clocks disagree, a corridor runs longer than the house, a familiar face is wrong for an instant.',
+      tags: [],
+      secret: false,
+    },
   ],
   /**
    * Flat and short, as in the first world, with the base chances of BRP.
@@ -694,6 +793,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
        * The landing party, the captain who sent it, and what waits ashore:
        * the Sovereign's master, changed, and the priest of the drowned temple.
        */
+      lore: [],
       npcs: [
         {
           reference: 'captain_elias_marsh',
@@ -1034,6 +1134,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
        * The living who help or hinder the heir, the dead the Wards raised or
        * would raise, and what seeps in through the rite.
        */
+      lore: [],
       npcs: [
         {
           reference: 'ephraim_crane',

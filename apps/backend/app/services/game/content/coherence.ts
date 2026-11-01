@@ -34,6 +34,7 @@ export type CoherenceIssueCode =
   | 'unknown_npc'
   | 'unknown_chapter'
   | 'unknown_quest'
+  | 'unknown_tag'
   | 'no_action_type'
   | 'missing_generic_npc'
   | 'missing_location_archetype'
@@ -191,6 +192,17 @@ export function checkScenario(
   }
   if (!items.some((item) => item.kind === 'archetype' && item.generic)) {
     report('missing_generic_item', 'items')
+  }
+
+  /**
+   * A tag is what sends a fragment: a place, a person or an item the scene can
+   * hold. Any other word would never match, and the fragment never be sent.
+   */
+  const taggable = new Set([...npcs, ...locations, ...items].map(({ reference }) => reference))
+  for (const fragment of overlay(world.lore, scenario.lore)) {
+    for (const tag of fragment.tags) {
+      if (!taggable.has(tag)) report('unknown_tag', `lore.${fragment.reference}.tags`, tag)
+    }
   }
 
   checkCharacter(scenario, { skills, resources, itemsByReference }, report)

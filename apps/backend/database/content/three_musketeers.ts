@@ -20,20 +20,93 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
   labels: { en: 'The Three Musketeers' },
   narrativeTone:
     'France, 1625: cloak-and-dagger adventure, court intrigue, honour and hot tempers.',
-  rules: [
-    'This is history, not fantasy: there is no magic, no monster and no supernatural event.',
-    'Firearms are single-shot, slow to reload, loud, and useless in the rain. The sword settles most fights.',
-    'Duelling is forbidden by edict of Cardinal Richelieu, and his Guards enforce it eagerly.',
-    'Rank, patronage and a letter from the right person open doors that coin cannot.',
-    'The King and the Cardinal each command loyal swords, and the two factions watch each other constantly.',
-    'Travel is by horse, cart or ship, and takes days. Nothing crosses to London overnight.',
-    'News travels by rumour, letter and messenger — never faster than a rider.',
-  ],
-  ambiance: [
-    'Paris is mud, torchlight, church bells and narrow streets that stink in summer.',
-    'Taverns are crowded, loud, and full of men looking for a reason to draw.',
-    'A musketeer is known by his cloak and his swagger before he is known by his name.',
-    'The court glitters, and everyone in it is calculating something.',
+  /**
+   * Without tags: sent with every turn, the rules to arbitration, the ambiance
+   * to the narrator. The novel is known to the model; nothing more is needed.
+   */
+  lore: [
+    {
+      reference: 'no_supernatural',
+      kind: 'rule',
+      content:
+        'This is history, not fantasy: there is no magic, no monster and no supernatural event.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'firearms',
+      kind: 'rule',
+      content:
+        'Firearms are single-shot, slow to reload, loud, and useless in the rain. The sword settles most fights.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'duelling_edict',
+      kind: 'rule',
+      content:
+        'Duelling is forbidden by edict of Cardinal Richelieu, and his Guards enforce it eagerly.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'patronage',
+      kind: 'rule',
+      content: 'Rank, patronage and a letter from the right person open doors that coin cannot.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'king_and_cardinal',
+      kind: 'rule',
+      content:
+        'The King and the Cardinal each command loyal swords, and the two factions watch each other constantly.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'travel_by_horse',
+      kind: 'rule',
+      content:
+        'Travel is by horse, cart or ship, and takes days. Nothing crosses to London overnight.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'news_by_rider',
+      kind: 'rule',
+      content: 'News travels by rumour, letter and messenger — never faster than a rider.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'paris_streets',
+      kind: 'ambiance',
+      content: 'Paris is mud, torchlight, church bells and narrow streets that stink in summer.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'taverns',
+      kind: 'ambiance',
+      content: 'Taverns are crowded, loud, and full of men looking for a reason to draw.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'musketeer_swagger',
+      kind: 'ambiance',
+      content: 'A musketeer is known by his cloak and his swagger before he is known by his name.',
+      tags: [],
+      secret: false,
+    },
+    {
+      reference: 'court_glitter',
+      kind: 'ambiance',
+      content: 'The court glitters, and everyone in it is calculating something.',
+      tags: [],
+      secret: false,
+    },
   ],
   /**
    * Flat and short on purpose: the rules document warns that the simpler the
@@ -1041,6 +1114,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       startTime: '10:00',
       startDate: '1625-04-07',
       glossary: [],
+      lore: [],
       npcs: [],
       locations: [],
       items: [],
@@ -1120,6 +1194,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
        * world's own, placed in the captain's bedchamber. Any other guard met
        * is an instance of the world's `cardinal_guard`.
        */
+      lore: [],
       npcs: [
         {
           reference: 'cahusac',

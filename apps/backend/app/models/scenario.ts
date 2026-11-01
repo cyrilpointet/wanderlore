@@ -2,6 +2,7 @@ import User from '#models/user'
 import World from '#models/world'
 import NpcDefinition from '#models/npc_definition'
 import ItemDefinition from '#models/item_definition'
+import LoreFragment from '#models/lore_fragment'
 import LocationDefinition from '#models/location_definition'
 import { ScenarioSchema } from '#database/schema'
 import { belongsTo, hasMany } from '@adonisjs/lucid/orm'
@@ -25,4 +26,8 @@ export default class Scenario extends ScenarioSchema {
 
   @hasMany(() => ItemDefinition)
   declare itemDefinitions: HasMany<typeof ItemDefinition>
+
+  /** The scenario's own lore, overriding or adding to the world's. */
+  @hasMany(() => LoreFragment)
+  declare loreFragments: HasMany<typeof LoreFragment>
 }

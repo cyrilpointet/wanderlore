@@ -41,8 +41,6 @@ const NEW_WORLD = {
   reference: 'baker_street',
   labels: { en: 'Baker Street', fr: 'Baker Street' },
   narrativeTone: 'London, 1890: fog, gaslight and deduction.',
-  rules: ['There is no magic.'],
-  ambiance: ['Fog rolls along the Thames.'],
   skills: [
     {
       reference: 'deduction',

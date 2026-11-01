@@ -5,7 +5,6 @@ import {
   isImported,
   labelRowsOf,
   listOf,
-  phrasesOf,
   textOf,
 } from '@/content/imports'
 import { labelsOf, rowsOf, type LabelRow } from '@/content/labels'
@@ -35,8 +34,6 @@ export type WorldDraft = {
   reference: string
   labels: LabelRow[]
   narrativeTone: string
-  rules: string[]
-  ambiance: string[]
   skills: SkillDraft[]
   resources: EntryDraft[]
   glossary: EntryDraft[]
@@ -48,8 +45,6 @@ export function emptyWorldDraft(): WorldDraft {
     reference: '',
     labels: [{ language: 'en', name: '' }],
     narrativeTone: '',
-    rules: [],
-    ambiance: [],
     skills: [],
     resources: [],
     glossary: [],
@@ -77,8 +72,6 @@ export function worldDraftOf(world: WorldDetail): WorldDraft {
     reference: world.reference,
     labels: rowsOf(world.labels),
     narrativeTone: world.narrativeTone,
-    rules: world.rules,
-    ambiance: world.ambiance,
     skills: world.skills.map(skillDraftOf),
     resources: world.resources.map(entryDraftOf),
     glossary: world.glossary.map(entryDraftOf),
@@ -95,8 +88,6 @@ export function worldDraftFromJson(world: Imported): WorldDraft {
     reference: textOf(world.reference),
     labels: labelRowsOf(world.labels),
     narrativeTone: textOf(world.narrativeTone),
-    rules: phrasesOf(world.rules),
-    ambiance: phrasesOf(world.ambiance),
     skills: listOf(world.skills, importedSkillOf),
     resources: listOf(world.resources, importedEntryOf),
     glossary: listOf(world.glossary, importedEntryOf),
@@ -121,19 +112,12 @@ function importedSkillOf(skill: Imported): SkillDraft {
   return draft
 }
 
-/**
- * The world as the backend takes it. Phrases are trimmed and blank ones
- * dropped; everything else is sent as written, for the backend to judge.
- */
+/** The world as the backend takes it: sent as written, for the backend to judge. */
 export function worldPayloadOf(draft: WorldDraft): WorldPayload {
-  const phrases = (list: string[]) => list.map((phrase) => phrase.trim()).filter(Boolean)
-
   return {
     reference: draft.reference.trim(),
     labels: labelsOf(draft.labels),
     narrativeTone: draft.narrativeTone.trim(),
-    rules: phrases(draft.rules),
-    ambiance: phrases(draft.ambiance),
     skills: draft.skills.map((skill) => ({
       ...entryPayloadOf(skill),
       category: skill.category,

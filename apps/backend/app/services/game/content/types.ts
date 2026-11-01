@@ -239,11 +239,43 @@ export type ItemDefinitionContent = DefinitionContent & {
   initialHolder: ItemHolderReference | null
 }
 
-/** The three catalogues, as a world or a scenario declares them. */
+/**
+ * Which step a lore fragment goes to: `rule` to arbitration (what is
+ * plausible), `ambiance` to the narration (what is seen, heard, smelt),
+ * `fact` to both.
+ */
+export const LORE_FRAGMENT_KINDS = ['rule', 'ambiance', 'fact'] as const
+
+export type LoreFragmentKind = (typeof LORE_FRAGMENT_KINDS)[number]
+
+/**
+ * What the world or the scenario tells the model beyond what it knows
+ * natively (roadmap, Phase 8). Sent only to the steps its kind serves, and
+ * only when the scene holds one of its tags — none: always.
+ *
+ * No names: a fragment is English for the model, never shown nor translated.
+ * One that reaches the narration names no unique person and nothing behind a
+ * passage, as a description of a place would not.
+ */
+export type LoreFragmentContent = {
+  reference: string
+  kind: LoreFragmentKind
+  content: string
+  /** References of places, people or items: the scene holding one sends it. */
+  tags: string[]
+  /** Arbitration only: the story knows it, the narrator must not tell it. Never an ambiance. */
+  secret: boolean
+}
+
+/**
+ * The catalogues, as a world or a scenario declares them: people, places and
+ * items, and the lore.
+ */
 export type Catalogues = {
   npcs: NpcDefinitionContent[]
   locations: LocationDefinitionContent[]
   items: ItemDefinitionContent[]
+  lore: LoreFragmentContent[]
 }
 
 /** A quest as a game carries it: where it stands, and what it asks, in English. */
@@ -322,10 +354,6 @@ export type WorldContent = Catalogues & {
   labels: Labels
   /** One line, handed to both arbitration and narration so they agree on register. */
   narrativeTone: string
-  /** Facts that constrain what is possible. Arbitration only. */
-  rules: string[]
-  /** Sensory material for the narrator. Never sent to arbitration. */
-  ambiance: string[]
   skills: SkillEntry[]
   resources: LabelledEntry[]
   glossary: GlossaryEntry[]

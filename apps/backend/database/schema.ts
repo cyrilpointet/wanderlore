@@ -6,7 +6,7 @@
 
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
-import type { Characteristics, ItemHolderReference, DefinitionKind, Labels, ItemModifier, WeaponProfile, LocationExit, CombatProfile, NpcDisposition, Characteristic, LabelledEntry, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
+import type { Characteristics, ItemHolderReference, DefinitionKind, Labels, ItemModifier, WeaponProfile, LocationExit, LoreFragmentKind, CombatProfile, NpcDisposition, Characteristic, LabelledEntry, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
 import type { Duration } from '#services/game/game_time'
 
 export class AuthAccessTokenSchema extends BaseModel {
@@ -175,6 +175,31 @@ export class LocationInstanceSchema extends BaseModel {
   declare sessionId: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+}
+
+export class LoreFragmentSchema extends BaseModel {
+  static $columns = ['content', 'createdAt', 'id', 'kind', 'reference', 'scenarioId', 'secret', 'tags', 'updatedAt', 'worldId'] as const
+  $columns = LoreFragmentSchema.$columns
+  @column()
+  declare content: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: LoreFragmentKind
+  @column()
+  declare reference: string
+  @column()
+  declare scenarioId: string | null
+  @column()
+  declare secret: boolean
+  @column()
+  declare tags: string[]
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare worldId: string
 }
 
 export class NpcDefinitionSchema extends BaseModel {
@@ -437,10 +462,8 @@ export class WorldStateSchema extends BaseModel {
 }
 
 export class WorldSchema extends BaseModel {
-  static $columns = ['ambiance', 'createdAt', 'createdBy', 'glossary', 'id', 'labels', 'narrativeTone', 'reference', 'resources', 'rules', 'skills', 'updatedAt'] as const
+  static $columns = ['createdAt', 'createdBy', 'glossary', 'id', 'labels', 'narrativeTone', 'reference', 'resources', 'skills', 'updatedAt'] as const
   $columns = WorldSchema.$columns
-  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
-  declare ambiance: string[]
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -457,8 +480,6 @@ export class WorldSchema extends BaseModel {
   declare reference: string
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare resources: LabelledEntry[]
-  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
-  declare rules: string[]
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare skills: SkillEntry[]
   @column.dateTime({ autoCreate: true, autoUpdate: true })
