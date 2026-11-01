@@ -273,10 +273,8 @@ en vigueur (détail : roadmap Phase 7, architecture §6quater et §6quinquies) :
 - **localisation des PNJ** (`location_instance_id`) : laissé dans un lieu, retrouvé au retour ;
   un PNJ hostile bloque le passage au travers de sa pièce.
 
-**En cours : lot d'interface entre les Phases 7 et 8 (jet en direct et préférences)** — epic
-Jira `KAN-104` (tickets `KAN-105` à `KAN-112`), hors roadmap, front seul, **sans changement
-d'API**. Implémentation et documentation livrées (`KAN-105` à `KAN-111`) ; reste la validation
-de bout en bout (`KAN-112`). Décisions (détail : cahier des charges du front, 5.3.1, 5.3.7,
+**Lot d'interface entre les Phases 7 et 8 (jet en direct et préférences) terminé** — epic
+Jira `KAN-104`, hors roadmap, front seul, **sans changement d'API**. Décisions (détail : cahier des charges du front, 5.3.1, 5.3.7,
 5.5 et section 7) :
 - **jet lancé à la main** : le d100 est déjà tiré par le backend, le geste ne fait que le
   révéler, sans mécanique d'adresse ; préparation, deux d10 en 2D (CSS, sans dépendance),
@@ -301,6 +299,19 @@ Phase 7 » ; architecture §6ter et §6quater), sur le modèle du détenteur ini
 - la narration de l'arrivée le reçoit dans `npcs_at_destination` avant qu'il existe ; tant qu'il
   n'est pas rencontré, la liste fermée de l'extraction (`enterableNpcs`) ne l'admet que depuis son
   lieu ou un lieu d'où l'on s'y rend.
+
+**Lot « Ce que le personnage sait » terminé** — epic Jira `KAN-113`, entre les Phases 7 et 8
+(détail : roadmap, même titre ; architecture §4, §6ter et §6quater) :
+- **ce que le personnage sait est tenu par le backend** : `world_states.known_npcs`, les uniques
+  dont il connaît le nom, copiés de `initialState.knownNpcs` au lancement, complétés quand un
+  unique se présente (`npc_names` ; la chaîne proposée est ignorée, le nom reste celui de la
+  définition) ;
+- la narration reçoit chaque nom **marqué `known`** : un unique inconnu est désigné par son
+  apparence ou son rôle ; un archétype est toujours connu ;
+- une sortie ne porte le lieu où elle mène (`to`) que s'il a été visité ;
+- **contenu** : `passage` et `backPassage` ne nomment jamais ce qu'il y a derrière, ni d'un côté
+  ni de l'autre ; une description ne nomme ni une pièce voisine ni un unique pas encore
+  rencontré — vérifié par `giveaways` (`#tests/helpers/knowledge`) sur les réseaux du contenu.
 
 Phase suivante : **Phase 8 (lore étendu et RAG)**.
 
@@ -406,6 +417,10 @@ serverless pour le backend).
   et dans une langue (celle du tour pour les événements, l'anglais ailleurs jusqu'au choix
   de langue de la Phase 14), avec repli sur l'anglais. Une référence sans libellé lève
   `MissingLabelError` : jamais de référence brute ni « embellie » en repli.
+- **La narration ne reçoit un nom de PNJ que marqué `known`**, et le lieu où mène une sortie
+  que s'il a été visité : ce que le personnage sait se lit dans l'état (`known_npcs`, lieux
+  visités), jamais dans le récit. Un scénario nouveau déclare `initialState.knownNpcs`, et un
+  réseau de lieux du contenu en code passe le test `giveaways`.
 - **Seule la narration reçoit des noms traduits** (`names`, `items_in_scene`), dans la seule
   langue du tour, et le glossaire réduit à ses entrées traduites dans cette langue. Arbitrage
   et extraction ne lisent que l'anglais (`label`) — jamais `labels` ni le glossaire.

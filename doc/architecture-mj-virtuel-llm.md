@@ -117,7 +117,7 @@ Pertinent seulement pour des lores massifs (corpus de type encyclopédie) où le
 | Étape | Lore | State | Mémoire narrative |
 |---|---|---|---|
 | A+B+C | Règles ciblées par les tags déclenchés par l'input | Scène courante : PNJ présents, lieu et sa description, sorties du lieu avec leur état, lieux atteignables, période de la journée, objets en scène (personnage, PNJ présents, lieu) | Résumé + buffer court (2 derniers tours) |
-| D | Fragments d'ambiance/description liés au lieu (pas les règles) | Scène complète + résultat de résolution, description et sorties du lieu (cachées comprises, marquées), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) | Résumé + buffer récent (2–4 tours), pour la continuité de ton |
+| D | Fragments d'ambiance/description liés au lieu (pas les règles) | Scène complète + résultat de résolution, noms des PNJ marqués connus ou non du personnage (`known`), description et sorties du lieu (cachées comprises, marquées ; le lieu où mène une sortie, seulement s'il a été visité), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) | Résumé + buffer récent (2–4 tours), pour la continuité de ton |
 | E | Aucun | Handles présents, objets en scène, destinations permises, sorties cachées et verrouillées du lieu, schéma des champs modifiables (pas les valeurs actuelles) — jamais la description du lieu ni le temps | Aucun (le texte narré suffit) |
 | Job résumé (async) | Aucun | Aucun | Résumé précédent + tours bruts à compresser |
 
@@ -712,6 +712,27 @@ avec qui le joueur interagit est une instance de `commoner`, accompagnée d'un
   l'extraction l'enregistre sur l'instance (`npc_names`). Il reste une instance de
   `commoner`, mais le narrateur le retrouve sous ce nom.
 
+### Ce que le personnage sait des noms
+
+Le nom d'un PNJ unique est celui de sa définition, mais le personnage ne le connaît pas
+d'office : la narration ne doit pas nommer Martha Pike avant qu'elle se soit présentée. **Ce
+que le personnage sait est tenu par le backend**, jamais deviné par le LLM.
+
+- **`world_states.known_npcs`** : les PNJ uniques dont le personnage connaît le nom. Le
+  scénario déclare ceux qu'il connaît dès le départ (`initialState.knownNpcs`, vérifiés par
+  `checkScenario` : uniques de l'univers ou du scénario, sinon `unknown_npc`), copiés au
+  lancement de la partie.
+- **La narration reçoit le nom, marqué** : chaque PNJ présent (`names.npcs_present`) ou attendu
+  à la destination (`npcs_at_destination`) porte `known`. Un unique hors de `known_npcs`, sans
+  nom appris en jeu, part `known: false` : le narrateur le désigne par son apparence ou son rôle
+  jusqu'à ce qu'il se présente dans la narration. Le nom part quand même, pour que le jour où il
+  se présente ce soit le sien et non un nom inventé. Un archétype est toujours `known: true` :
+  son libellé (« Royal Guard ») ne trahit rien.
+- **Apprendre un nom** : l'extraction signale qu'un PNJ a donné son nom (`npc_names`). Pour un
+  unique, le backend ajoute sa référence à `known_npcs` et ignore la chaîne proposée — son nom
+  reste celui de sa définition ; pour un archétype, la chaîne est enregistrée sur l'instance,
+  comme ci-dessus.
+
 ### Désigner une instance
 
 Le backend attribue à chaque instance un **handle** stable dans la partie :
@@ -856,8 +877,10 @@ traverser. Chaque lieu atteignable l'est par son **chemin le plus court en temps
   ignorée, elle ne chiffre rien) ;
 - le backend chiffre la durée du tour : le chemin vers la destination, puis le label de ce qui
   se fait à l'arrivée ;
-- la narration reçoit le lieu, ses sorties par le nom des lieux où elles mènent — les cachées
-  non trouvées comprises, marquées, avec la consigne de ne les révéler que si le personnage
+- la narration reçoit le lieu et ses sorties : chacune par son passage, et par le nom du lieu
+  où elle mène **seulement si la partie l'a visité** — derrière une porte jamais ouverte, le
+  personnage ne sait rien, et le narrateur reçoit la consigne de décrire le passage sans nommer
+  ni deviner ce qu'il y a derrière ; les cachées non trouvées comprises, marquées, avec la consigne de ne les révéler que si le personnage
   cherche et que l'histoire lui en donne la raison (sur le modèle des objets en scène) — et le
   chemin, passage par passage ; un aparté ne reçoit que les sorties connues ;
 - l'extraction reste juge du déplacement réel. Sa liste fermée est celle des destinations
@@ -869,6 +892,16 @@ traverser. Chaque lieu atteignable l'est par son **chemin le plus court en temps
 - à l'application, les passages trouvés ou ouverts passent **avant** le déplacement, qui peut
   les emprunter ; un passage verrouillé franchi avec l'objet requis est **déverrouillé pour de
   bon** par le backend. On ne referme pas une porte.
+
+**Écrire un passage sans rien trahir.** `passage` et `backPassage` décrivent le passage tel
+qu'on le voit depuis le lieu où l'on se tient, **sans nommer ce qu'il y a derrière** — « une
+lourde porte à côté de l'escalier », pas « la porte de la bibliothèque » : le personnage
+apprend ce qu'est une pièce en y entrant. La règle vaut **des deux côtés** : `backPassage` ne
+nomme pas non plus le lieu d'où vient le passage, car un lieu peut avoir plusieurs entrées, et
+le personnage peut arriver par l'une sans connaître l'autre. Pour la même raison, la
+description d'un lieu, que le narrateur reçoit, ne nomme ni une pièce voisine ni un PNJ unique
+que le personnage n'a pas encore rencontré. Le back-office rappelle la consigne sous les
+sorties, et un test du contenu en code la vérifie sur ses réseaux.
 
 Ce qu'une partie a appris de ses passages vit dans `passage_states` (une ligne par passage dont
 l'état a changé, partagée par ses deux sens), écrit par le service des passages seul.

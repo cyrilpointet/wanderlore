@@ -188,9 +188,17 @@ export type NpcDefinitionContent = DefinitionContent & {
 export type LocationExit = {
   /** Reference of the unique place it leads to. */
   to: string
-  /** One line of English for the model: the passage, seen from this side. */
+  /**
+   * One line of English for the model: the passage, seen from this side.
+   * It never names what lies beyond — "a heavy door beside the stairs", not
+   * "the library door": the character learns what a room is by going in.
+   */
   passage: string
-  /** The same passage seen from the other side; null when the text reads both ways. */
+  /**
+   * The same passage seen from the other side; null when the text reads both
+   * ways. It never names where it comes from either: a place may be entered
+   * by more than one way, and the character may know only one of them.
+   */
   backPassage: string | null
   /** Hidden from this side only: seen from the other side, it is always in sight. */
   hidden: boolean

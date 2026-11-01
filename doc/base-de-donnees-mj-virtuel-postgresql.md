@@ -77,7 +77,7 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
 | `chapters` | jsonb | `[{ reference, labels }]`, dans l'ordre ; sans conditions de progression à ce stade |
 | `quests` | jsonb | `[{ reference, labels }]` |
 | `pregenerated_character` | jsonb, nullable | le personnage copié dans chaque partie : `name`, `characteristics` (les sept du BRP), `skills` (en pourcentage, les seules compétences entraînées), `resources` (valeurs par référence), `items` (`definition`, `descriptor`, `quantity`, `equipped`). Pas de points de vie : ils se dérivent de CON et TAI au lancement de la partie |
-| `initial_state` | jsonb, nullable | là où une partie commence : `location` (lieu unique), `chapter`, `quests` (`reference`, `step`, `summary`) |
+| `initial_state` | jsonb, nullable | là où une partie commence : `location` (lieu unique), `chapter`, `quests` (`reference`, `step`, `summary`), `knownNpcs` facultatif (les PNJ uniques que le personnage connaît de nom au départ) |
 | `start_time` | time, non nul, 08:00 par défaut | heure d'ouverture de l'histoire, à la minute (Phase 7) |
 | `start_date` | date, nullable | date grégorienne d'ouverture, si l'histoire en a une (Phase 7) |
 | `glossary` | jsonb | complète le glossaire de l'univers |
@@ -319,6 +319,7 @@ de dégâts : ses dés sont dans son profil d'arme (`weapon`).
 | `current_location_id` | FK → location_instances | lieu courant de la partie (Phase 3) |
 | `game_time` | int, non nul | horloge de jeu : secondes depuis minuit du premier jour (Phase 7). Heure, période, jour et date en dérivent, jamais stockés |
 | `start_date` | date, nullable | date d'ouverture copiée du scénario au lancement (Phase 7) |
+| `known_npcs` | jsonb, non nul, `[]` par défaut | références des PNJ uniques dont le personnage connaît le nom, dans l'ordre où il les a appris : ceux de `initialState.knownNpcs`, copiés au lancement, puis ceux qui se présentent en jeu. Les parties lancées avant la colonne ont reçu les uniques déjà rencontrés. Voir architecture, section 6ter |
 | ~~`world_objects`~~ | — | **retiré en Phase 4** : les objets du monde sont les lignes d'`inventory_items` détenues par un lieu ou un PNJ |
 | `updated_at` | timestamp | — |
 

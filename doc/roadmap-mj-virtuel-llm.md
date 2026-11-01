@@ -500,6 +500,27 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 
 ---
 
+## Entre les Phases 7 et 8 — Ce que le personnage sait
+
+**Objectif** : que la narration ne donne pas au joueur ce que son personnage ignore — le nom de Martha Pike avant qu'elle se soit présentée, « la porte du salon » avant qu'il sache qu'un salon se trouve derrière. Relevé en test manuel le 2026-10-31. Epic Jira `KAN-113`.
+
+### Décisions de cadrage
+
+- **Ce que le personnage sait est tenu par le backend**, comme tout l'état : jamais deviné par le LLM.
+- **Noms des PNJ uniques** : `world_states.known_npcs`, rempli au lancement par `initialState.knownNpcs` du scénario (vérifié par `checkScenario`, code `unknown_npc`), puis par l'extraction quand un unique se présente (`npc_names`, dont la chaîne est alors ignorée : le nom reste celui de la définition). Les parties déjà lancées reçoivent les uniques qu'elles ont rencontrés.
+- **La narration reçoit le nom, marqué** `known` : un unique inconnu est désigné par son apparence ou son rôle jusqu'à ce qu'il se présente. Un archétype est toujours connu, son libellé ne trahissant rien.
+- **Sorties** : la narration ne reçoit le lieu où mène une sortie que si la partie l'a visité ; sinon, le seul passage, avec la consigne de ne rien nommer ni deviner au-delà.
+- **Contenu** : `passage` et `backPassage` ne nomment jamais ce qu'il y a derrière, **ni d'un côté ni de l'autre** — un lieu ayant parfois plusieurs entrées, on peut arriver par l'une sans connaître l'autre. La description d'un lieu ne nomme ni une pièce voisine ni un unique pas encore rencontré. Le back-office rappelle la consigne sous les sorties ; un test vérifie les réseaux du contenu en code.
+- Ce qu'on sait des prétirés : Tréville dans *A Gascon in Paris* ; Tréville et Jussac dans *The Stolen Seal* ; Silas Ward et Ephraim Crane dans *The Ward Inheritance* ; McRae, Reyes et Whitcombe dans *The Wreck of the Sovereign*, où Voss reste à découvrir.
+- **Hors périmètre** : un objet unique nommé avant d'être identifié (« The office key » trouvé dans le corps de garde, le Necronomicon avant qu'on l'ait ouvert), noté pour plus tard.
+
+### Critère de sortie
+
+- Un PNJ unique que le personnage n'a jamais rencontré est désigné par son apparence ou son rôle jusqu'à ce qu'il se présente, puis par son nom.
+- Une porte vers une pièce jamais visitée est décrite sans que le récit dise ce qu'il y a derrière.
+
+---
+
 ## Phase 8 — Lore étendu et RAG
 
 **Objectif** : dépasser les limites de la connaissance native du LLM sur un univers, ou construire un lore original détaillé.
@@ -658,7 +679,7 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 | 5bis | Gestion des comptes | `superadmin` |
 | 6 | Bascule sur le système BRP | — |
 | 7 | Gestion du temps et des lieux | — |
-| 7–8 | Jet en direct et préférences (lot d'interface, sans API) | — |
+| 7–8 | Jet en direct et préférences (lot d'interface, sans API) ; ce que le personnage sait | — |
 | 8 | Lore étendu et RAG | — |
 | 9 | Mémoire long terme | — |
 | 10 | Combat | — |
@@ -781,6 +802,7 @@ finit toujours par être ignoré.
 
 - Modalités précises de l'inscription self-service (Phase 14) : validation d'email, gestion des mots de passe oubliés, éventuelle authentification via fournisseur tiers.
 - Décision sur la nécessité future d'un cumul de rôles (un MJ qui voudrait aussi jouer).
+- Nom d'un objet unique avant qu'il soit identifié (« The office key », le Necronomicon) : le narrateur et le front le nomment d'emblée, comme un PNJ inconnu avant la connaissance des noms (lot entre les Phases 7 et 8).
 - Carte des lieux visités dans le front joueur, si le besoin se confirme après la Phase 7 (qui n'affiche pas les sorties).
 - Choix définitif entre pgvector intégré et vector store externe si la Phase 8 est activée (dépend du volume de lore réellement atteint).
 - Réintroduction éventuelle d'un retry automatique limité (Phase 14), une fois le comportement réel des erreurs observé en usage — restreint aux erreurs transitoires (timeout, 5xx). Les sorties rejetées ont leur nouvelle tentative unique depuis la Phase 3 ; un taux de rejet élevé reste le signe d'un prompt à corriger plutôt qu'à retenter.
