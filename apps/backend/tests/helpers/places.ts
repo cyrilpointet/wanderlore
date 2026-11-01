@@ -75,10 +75,13 @@ export const HOUSE_PLACES: LocationDefinitionContent[] = [
   }),
   place('house_kitchen', {
     entrance: true,
-    exits: [exit('house_cellar', 'the cellar stairs')],
+    exits: [exit('house_cellar', 'stairs going down')],
   }),
   place('house_corridor', {
-    exits: [exit('house_attic', 'a ladder'), exit('house_bedroom', 'a bedroom door')],
+    exits: [
+      exit('house_attic', 'a ladder'),
+      exit('house_bedroom', 'a door at the end of the corridor'),
+    ],
   }),
   place('house_attic'),
   place('house_bedroom'),

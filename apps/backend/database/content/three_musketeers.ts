@@ -1034,6 +1034,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             summary: 'Carry your father’s letter to Monsieur de Tréville.',
           },
         ],
+        /** The letter is for Tréville: d'Artagnan knows whom he rides to. */
+        knownNpcs: ['treville'],
       },
       /** Dumas: « le premier lundi du mois d'avril 1625 », as d'Artagnan rides into Meung. */
       startTime: '10:00',
@@ -1101,6 +1103,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
               "Get into the Hôtel de Laffemas, find Monsieur de Tréville's seal, and come back out of the house with it: the seal is won only once it is out.",
           },
         ],
+        /** Tréville sent him; Jussac crossed swords with him at the Carmes-Deschaux. */
+        knownNpcs: ['treville', 'jussac'],
       },
       /** Late at night: most of the guards are asleep, the post is not. */
       startTime: '23:00',
@@ -1258,14 +1262,14 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           reference: 'laffemas_courtyard',
           labels: { en: 'The courtyard' },
           description:
-            'The paved courtyard inside the carriage gate, lit by one lantern; Cahusac, the only guard here, keeps the gate from his sentry box.',
+            'The paved courtyard inside the carriage gate, lit by one lantern; the only guard here keeps the gate from his sentry box.',
           kind: 'unique',
           parent: 'hotel_de_laffemas',
           exits: [
             {
               to: 'laffemas_stables',
-              passage: 'the stable doors, on the left of the courtyard',
-              backPassage: 'the stable doors, out into the courtyard',
+              passage: 'wide doors on the left of the courtyard, smelling of horses',
+              backPassage: 'the wide front doors',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1273,8 +1277,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
             {
               to: 'laffemas_guardroom',
-              passage: 'the guardroom door, under the archway, with light and voices behind it',
-              backPassage: 'the guardroom door, out into the courtyard',
+              passage: 'a door under the archway, with light and voices behind it',
+              backPassage: 'the door out under the archway',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1283,7 +1287,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             {
               to: 'laffemas_vestibule',
               passage: 'the front steps, up to the double doors of the house',
-              backPassage: 'the double doors, down the steps to the courtyard',
+              backPassage: 'the double doors, down the front steps',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1291,8 +1295,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
             {
               to: 'laffemas_kitchen',
-              passage: 'a low door across the courtyard, into the kitchen',
-              backPassage: 'the low door out into the courtyard',
+              passage: 'a low door across the courtyard, a smell of cooking behind it',
+              backPassage: 'a low inner door',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1311,8 +1315,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           exits: [
             {
               to: 'laffemas_garden',
-              passage: 'a wicket gate at the back of the stables, into the garden',
-              backPassage: 'the wicket gate into the stables',
+              passage: 'a wicket gate at the back',
+              backPassage: 'a wicket gate in the wall',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1325,14 +1329,14 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           reference: 'laffemas_guardroom',
           labels: { en: 'The guardroom' },
           description:
-            "A low vaulted room with a fire, a table and a rack of cloaks; Biscarat, the only guard here, dices alone by the door, where the key to the captain's office hangs on a hook.",
+            'A low vaulted room with a fire, a table and a rack of cloaks; the only guard here dices alone by the door, beside a key hanging on a hook.',
           kind: 'unique',
           parent: 'hotel_de_laffemas',
           exits: [
             {
               to: 'laffemas_armoury',
               passage: 'an iron-studded door at the back of the guardroom',
-              backPassage: 'the iron-studded door back to the guardroom',
+              backPassage: 'the iron-studded door',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1361,8 +1365,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           exits: [
             {
               to: 'laffemas_refectory',
-              passage: 'the door of the refectory, on the right',
-              backPassage: 'the door back to the vestibule',
+              passage: 'a door on the right',
+              backPassage: 'the main door of the room',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1370,8 +1374,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
             {
               to: 'laffemas_gallery',
-              passage: 'the gallery opening on the left, toward the garden side',
-              backPassage: 'the way back to the vestibule',
+              passage: 'an opening on the left, toward the garden side',
+              backPassage: 'the way toward the front of the house',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1380,7 +1384,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             {
               to: 'laffemas_landing',
               passage: 'the grand staircase, rising to the first floor',
-              backPassage: 'the grand staircase, down to the vestibule',
+              backPassage: 'the grand staircase, going down',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1393,14 +1397,14 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           reference: 'laffemas_kitchen',
           labels: { en: 'The kitchen' },
           description:
-            "A great smoky kitchen with a servants' door onto the side lane; Dame Perrine, the cook, is still at her ovens and will raise the house if she is not talked round or slipped past.",
+            "A great smoky kitchen with a servants' door onto the side lane; the cook is still at her ovens and will raise the house if she is not talked round or slipped past.",
           kind: 'unique',
           parent: 'hotel_de_laffemas',
           exits: [
             {
               to: 'laffemas_pantry',
-              passage: 'the pantry door, by the ovens',
-              backPassage: 'the pantry door back to the kitchen',
+              passage: 'a small door by the ovens',
+              backPassage: 'the small door',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1408,8 +1412,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
             {
               to: 'laffemas_refectory',
-              passage: 'the service door to the refectory',
-              backPassage: 'the service door to the kitchen',
+              passage: 'a service door, for carrying dishes',
+              backPassage: 'a service door, smelling of the ovens',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1418,7 +1422,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             {
               to: 'laffemas_dormitory',
               passage: "the servants' stair, narrow and steep, up to the first floor",
-              backPassage: "the servants' stair, down to the kitchen",
+              backPassage: "the servants' stair, going down",
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1457,8 +1461,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           exits: [
             {
               to: 'laffemas_garden',
-              passage: 'the French windows at the end of the gallery, onto the garden',
-              backPassage: 'the French windows into the gallery',
+              passage: 'the French windows at the end, onto a dark garden',
+              backPassage: 'tall French windows into the house',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1466,8 +1470,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
             {
               to: 'laffemas_chapel',
-              passage: 'a carved door halfway along the gallery, into the chapel',
-              backPassage: 'the carved door back to the gallery',
+              passage: 'a carved door halfway along, smelling of incense',
+              backPassage: 'the carved door',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1480,7 +1484,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           reference: 'laffemas_garden',
           labels: { en: 'The walled garden' },
           description:
-            'A formal garden of box hedges and gravel behind high walls topped with broken glass, entered from the back lane by climbing the wall; Cerberus, the mastiff, is chained by the wall on a long chain.',
+            'A formal garden of box hedges and gravel behind high walls topped with broken glass, entered from the back lane by climbing the wall; a mastiff is chained by the wall on a long chain.',
           kind: 'unique',
           parent: 'hotel_de_laffemas',
           exits: [],
@@ -1500,14 +1504,14 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           reference: 'laffemas_landing',
           labels: { en: 'The landing' },
           description:
-            'The head of the grand staircase, opening on the rooms of the first floor; Bernajoux, the only guard here, keeps watch in a chair, sword across his knees.',
+            'The head of the grand staircase, opening on the rooms of the first floor; the only guard here keeps watch in a chair, sword across his knees.',
           kind: 'unique',
           parent: 'hotel_de_laffemas',
           exits: [
             {
               to: 'laffemas_salon',
-              passage: 'the tall doors of the great salon',
-              backPassage: 'the tall doors back to the landing',
+              passage: 'tall gilded doors',
+              backPassage: 'the tall doors',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1515,8 +1519,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
             {
               to: 'laffemas_dormitory',
-              passage: "the door of the guards' dormitory, snores behind it",
-              backPassage: 'the dormitory door, out to the landing',
+              passage: 'a door with snores behind it',
+              backPassage: 'the door at the end of the room',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1524,8 +1528,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
             {
               to: 'laffemas_library',
-              passage: 'the library door, at the end of the landing',
-              backPassage: 'the library door, out to the landing',
+              passage: 'a door at the end of the landing',
+              backPassage: 'the door out of the room',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1533,8 +1537,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
             {
               to: 'laffemas_bedchamber',
-              passage: "the door of the captain's bedchamber",
-              backPassage: 'the bedchamber door, out to the landing',
+              passage: 'a door with a coat of arms painted on it',
+              backPassage: 'the main door of the room',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1547,14 +1551,14 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           reference: 'laffemas_salon',
           labels: { en: 'The great salon' },
           description:
-            "A gilded salon under dust sheets, the house's finest room, unused and empty; at its far end, the locked door of the captain's office.",
+            "A gilded salon under dust sheets, the house's finest room, unused and empty; at its far end, a locked door.",
           kind: 'unique',
           parent: 'hotel_de_laffemas',
           exits: [
             {
               to: 'laffemas_office',
-              passage: "the locked door of the captain's office",
-              backPassage: 'the office door, out to the salon',
+              passage: 'a locked door at the far end',
+              backPassage: 'the main door of the room',
               hidden: false,
               requires: 'laffemas_office_key',
               oneWay: false,
@@ -1567,7 +1571,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           reference: 'laffemas_dormitory',
           labels: { en: "The guards' dormitory" },
           description:
-            'A long room of cots under the roof beams, every one unslept in but one, where Rouvray, the only guard here, sleeps off duty, his sword hung at the bedhead; one wrong step on the boards and he wakes.',
+            'A long room of cots under the roof beams, every one unslept in but one, where the only guard here sleeps off duty, his sword hung at the bedhead; one wrong step on the boards and he wakes.',
           kind: 'unique',
           parent: 'hotel_de_laffemas',
           exits: [],
@@ -1584,7 +1588,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             {
               to: 'laffemas_office',
               passage: 'a jib door hidden in the panelling between two bookcases',
-              backPassage: 'a narrow jib door in the office panelling',
+              backPassage: 'a narrow jib door in the panelling',
               hidden: true,
               requires: null,
               oneWay: false,
@@ -1603,8 +1607,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           exits: [
             {
               to: 'laffemas_bedchamber',
-              passage: "a connecting door into the captain's bedchamber",
-              backPassage: 'the connecting door into the office',
+              passage: 'a connecting door in the side wall',
+              backPassage: 'a connecting door in the side wall',
               hidden: false,
               requires: null,
               oneWay: false,
@@ -1617,7 +1621,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           reference: 'laffemas_bedchamber',
           labels: { en: "The captain's bedchamber" },
           description:
-            "The captain's bedchamber, curtains drawn round the bed, where Jussac, who commands the post, sleeps lightly with a pistol on the night table; the only guard here, and the most dangerous in the house.",
+            "The captain's bedchamber, curtains drawn round the bed, where the officer who commands the post sleeps lightly with a pistol on the night table; the only guard here, and the most dangerous in the house.",
           kind: 'unique',
           parent: 'hotel_de_laffemas',
           exits: [],

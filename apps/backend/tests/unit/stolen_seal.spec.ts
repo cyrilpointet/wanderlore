@@ -5,6 +5,7 @@ import { resolveWorld } from '#services/game/content/resolve'
 import { checkScenario } from '#services/game/content/coherence'
 import { keyOf } from '#services/game/passages'
 import { type TravelState, destinationsFrom, placeKindOf, routesFrom } from '#services/game/travel'
+import { giveaways } from '#tests/helpers/knowledge'
 
 const { scenarios, ...MUSKETEERS } = THREE_MUSKETEERS_CONTENT
 const STOLEN_SEAL = scenarios.find(({ reference }) => reference === 'the_stolen_seal')!
@@ -119,11 +120,12 @@ test.group('The Stolen Seal | the Hôtel de Laffemas', () => {
     assert.lengthOf(new Set(rooms), rooms.length)
   })
 
-  test("each room's description names whoever waits in it", ({ assert }) => {
-    for (const npc of STOLEN_SEAL.npcs) {
-      const room = STOLEN_SEAL.locations.find(({ reference }) => reference === npc.initialLocation)!
-      assert.include(room.description, npc.labels.en, npc.reference)
-    }
+  test('d’Artagnan knows Tréville and Jussac by name, nobody else yet', ({ assert }) => {
+    assert.deepEqual(STOLEN_SEAL.initialState!.knownNpcs, ['treville', 'jussac'])
+  })
+
+  test('no passage nor room gives away a room beyond, or a stranger’s name', ({ assert }) => {
+    assert.deepEqual(giveaways(STOLEN_SEAL, MUSKETEERS.npcs, 'hotel_de_laffemas'), [])
   })
 
   test('a guard or a trial in about half of the house, the rest quiet', ({ assert }) => {

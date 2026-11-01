@@ -159,7 +159,7 @@ test.group('Networks | arbitration and narration', (group) => {
 
     const narration = provider.requests.find(({ step }) => step === 'narration')!
     assert.include(narration.userMessage, '"through": "a swing door"')
-    assert.include(narration.userMessage, '"through": "the cellar stairs"')
+    assert.include(narration.userMessage, '"through": "stairs going down"')
   })
 
   test('a destination the exits do not reach is asked for again', async ({ assert }) => {

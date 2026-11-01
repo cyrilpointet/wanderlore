@@ -5,6 +5,7 @@ import { resolveWorld } from '#services/game/content/resolve'
 import { checkScenario } from '#services/game/content/coherence'
 import { keyOf } from '#services/game/passages'
 import { type TravelState, destinationsFrom, placeKindOf, routesFrom } from '#services/game/travel'
+import { giveaways } from '#tests/helpers/knowledge'
 
 const { scenarios, ...MYTHOS } = LOVECRAFT_MYTHOS_CONTENT
 const INHERITANCE = scenarios.find(({ reference }) => reference === 'the_ward_inheritance')!
@@ -30,6 +31,14 @@ function everywhere(rest: Partial<TravelState> = {}): TravelState {
 test.group('The Ward House | its network', () => {
   test('holds together', ({ assert }) => {
     assert.deepEqual(checkScenario(MYTHOS, INHERITANCE), [])
+  })
+
+  test('the heir knows Silas and his attorney by name, nobody else yet', ({ assert }) => {
+    assert.deepEqual(INHERITANCE.initialState!.knownNpcs, ['silas_ward', 'ephraim_crane'])
+  })
+
+  test('no passage nor room gives away a room beyond, or a stranger’s name', ({ assert }) => {
+    assert.deepEqual(giveaways(INHERITANCE, MYTHOS.npcs, 'ward_house'), [])
   })
 
   test('the housekeeper waits in the kitchen, Silas in the sealed vault', ({ assert }) => {
