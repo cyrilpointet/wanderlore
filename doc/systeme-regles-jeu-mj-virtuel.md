@@ -306,13 +306,13 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
   | Sous-système du BRP | Phase |
   |---|---|
   | Matrice attaque / défense, parade, esquive, jets opposés, table de résistance, dégâts branchés, armure, blessures grave et mortelle, effets spéciaux, maladresses ; points de vie totaux du personnage | Phase 10 |
-  | Création guidée (niveau de puissance, professions, réserves de points), expérience et progression | Phase 10 |
-  | Règles optionnelles par univers : Santé mentale (Mythe), Passions et Réputation (Mousquetaires), jets cachés | Phase 10bis |
+  | Création guidée (niveau de puissance, professions, réserves de points), expérience et progression | Phase 12 |
+  | Règles optionnelles par univers : Santé mentale (Mythe), Passions et Réputation (Mousquetaires), jets cachés | Phase 13 |
   | Dangers (chute, feu, noyade, poison), soins, guérison dans le temps, poursuites | Au cas par cas, quand un scénario le demande |
   | Pouvoirs (magie, sorcellerie, psychisme) | Hors roadmap actuelle |
 
 - **Écartés** : points de fatigue, localisation des coups (incompatible avec la blessure grave), encombrement, vieillissement, points de destin, rounds et rangs de `DEX`, actions multiples.
-- **Jets cachés et détail du jet** : un jet caché (Phase 10bis) ne pourra pas montrer son détail au joueur ; la règle de la section 6 aura alors une exception.
+- **Jets cachés et détail du jet** : un jet caché (Phase 13) ne pourra pas montrer son détail au joueur ; la règle de la section 6 aura alors une exception.
 - Modélisation précise des adversaires multiples en combat (plusieurs PNJ hostiles dans un même échange) — Phase 10.
 - Statuts temporaires (blessé, étourdi, à terre) traduits en modificateurs automatiques plutôt que proposés au cas par cas par le LLM — Phase 10, avec les effets spéciaux.
 - Gestion des objets à usage limité (usure, charges) — **différée à l'ouverture de la Phase 4** : les consommables passent par la quantité (une balle tirée est détruite), et le mécanisme de modificateurs d'objets (section 5.2) suppose un effet stable tant que l'objet est possédé/équipé. Le modèle définition / instance (architecture, section 6bis) permettra d'ajouter usure et charges sur l'instance le moment venu. Les points de vie des armes et la parade qui les abîme, dans le livre, attendent la même décision.

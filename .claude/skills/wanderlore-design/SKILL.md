@@ -139,9 +139,11 @@ jamais de valeur numérique de règle — uniquement des labels qualitatifs.
 | 7 | Gestion du temps et des lieux : horloge de jeu, jour/nuit, sorties entre lieux | — |
 | 8 | `lore_fragments`, filtrage par tags | — |
 | 9 | `narrative_summaries`, mémoire long terme | — |
-| 10 | Combat étendu, cycle de vie complet de la partie | — |
-| 10bis | Règles optionnelles par univers (santé mentale, passions, réputation) | — |
-| 11 | Production-ready : observabilité, versionning de prompts, modération, beta test | — |
+| 10 | Combat : boucle de rounds, dégâts branchés, matrice attaque / défense | — |
+| 11 | Échéances et événements déclenchés par le temps, emplois du temps des PNJ | — |
+| 12 | Progression du personnage, cycle de vie complet de la partie | — |
+| 13 | Règles optionnelles par univers (santé mentale, passions, réputation) | — |
+| 14 | Production-ready : observabilité, versionning de prompts, modération, beta test | — |
 
 Les simplifications d'une phase sont **volontaires** — ne pas implémenter le pipeline
 complet en Phase 1, ni les modificateurs avant la Phase 4. Chaque phase a un critère de

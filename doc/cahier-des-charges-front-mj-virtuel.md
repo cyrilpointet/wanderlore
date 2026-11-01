@@ -92,11 +92,13 @@ Ces principes découlent des invariants du projet. Ils s'appliquent à toutes le
 | 6 | Fiche au format BRP (caractéristiques, compétences en pourcentage) ; détail de chaque jet dans le journal |
 | 7 | Heure et période de jeu à côté du lieu ; éventuellement les sorties visibles du lieu courant |
 | 9 | Rien de visible (mémoire long terme côté backend) |
-| 10 | Création de personnage guidée, combat en rounds, pause / reprise, écrans de fin |
-| 10bis | Santé mentale, passions et réputation sur la fiche, selon l'univers |
-| 11 | Inscription, mot de passe oublié, choix de la langue, paramètres du compte |
+| 10 | Combat en rounds |
+| 11 | Rien de visible en propre : les échéances et les emplois du temps des PNJ passent par le récit |
+| 12 | Création de personnage guidée, progression du personnage, pause / reprise, écrans de fin |
+| 13 | Santé mentale, passions et réputation sur la fiche, selon l'univers |
+| 14 | Inscription, mot de passe oublié, choix de la langue, paramètres du compte |
 
-Les évolutions des phases 3 à 11 sont détaillées en section 9. **Elles ne s'implémentent pas
+Les évolutions des phases 3 à 14 sont détaillées en section 9. **Elles ne s'implémentent pas
 en Phase 2** ; seule la structure des écrans doit leur laisser la place.
 
 ---
@@ -122,7 +124,7 @@ en Phase 2** ; seule la structure des écrans doit leur laisser la place.
 
 Pas d'inscription, pas de mot de passe oublié, pas de création de partie en Phase 2 : les
 comptes et parties sont créés en base (seeders). La route `POST /auth/signup` du scaffolding
-existe côté backend, mais le front ne l'expose pas avant la Phase 11.
+existe côté backend, mais le front ne l'expose pas avant la Phase 14.
 
 ---
 
@@ -559,7 +561,7 @@ traduction.
 - **Dates et nombres** formatés selon la langue active (`Intl`), jamais à la main : dernière
   activité relative, points de vie, compteur de caractères.
 - **Langue active fixée à `en`** en Phase 2, sans sélecteur : le choix par le joueur arrive
-  en Phase 11.
+  en Phase 14.
 - **Ce que l'i18n ne couvre pas** : les références de contenu, dont le libellé vient du
   backend (principe 2), et la narration, produite par le LLM dans la langue de la partie. Les polices retenues couvrent le latin
 étendu (accents, ligatures) : la narration sera un jour dans la langue du joueur.
@@ -688,7 +690,7 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   mentionne l'objet qui a pesé sur le jet (avec sa valeur depuis la Phase 6).
 - **Phase 5 — Multi-univers.** Un écran **New game** : choix d'un scénario dans un
   catalogue (univers, synopsis, ton), puis démarrage avec le personnage prétiré du
-  scénario — aucune création de personnage avant la Phase 10. Le catalogue ne montre que
+  scénario — aucune création de personnage avant la Phase 12. Le catalogue ne montre que
   les scénarios publiés ; un compte `game_master` y voit aussi les brouillons, pour les
   tester. Le nom de l'univers et tous les libellés viennent de la base. Le back-office est
   un package séparé.
@@ -708,14 +710,17 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   tout en stockage local.
 - **Phase 9 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
   probablement nécessaire.
-- **Phase 10 — Cycle de vie et combat.** Création de personnage guidée ; combat en rounds
-  (même pipeline, donc même journal, avec un repère visuel de round et l'état de
-  l'adversaire si le backend le transmet) ; mise en pause et reprise ; écrans de fin
-  (victoire, mort du personnage, abandon).
-- **Phase 10bis — Règles optionnelles par univers.** Santé mentale, passions et réputation
+- **Phase 10 — Combat.** Combat en rounds (même pipeline, donc même journal, avec un repère
+  visuel de round et l'état de l'adversaire si le backend le transmet).
+- **Phase 11 — Échéances et événements déclenchés par le temps.** Pas d'impact visible : ce
+  que l'horloge déclenche passe par le récit, comme le temps lui-même (Phase 7).
+- **Phase 12 — Progression et cycle de vie.** Création de personnage guidée ; progression du
+  personnage en fin de scénario ; mise en pause et reprise ; écrans de fin (victoire, mort du
+  personnage, abandon).
+- **Phase 13 — Règles optionnelles par univers.** Santé mentale, passions et réputation
   sur la fiche, pour les seuls univers qui les emploient ; un jet caché n'affiche pas son
   détail.
-- **Phase 11 — Ouverture.** Inscription, validation d'email, mot de passe oublié ; choix de la
+- **Phase 14 — Ouverture.** Inscription, validation d'email, mot de passe oublié ; choix de la
   langue de la partie et de l'interface (traductions ajoutées à l'i18n posée en Phase 2) ; paramètres du
   compte ; messages de modération.
 

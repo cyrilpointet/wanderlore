@@ -908,7 +908,7 @@ est celle de la scène ; son lieu est celui où il se trouve quand la scène n'e
   d'arrivée le reçoit dans `npcs_at_destination` avant même qu'il existe, son handle étant sa
   référence.
 
-Les emplois du temps des PNJ (le vampire au tombeau le jour) attendent la Phase 10 ; le
+Les emplois du temps des PNJ (le vampire au tombeau le jour) attendent la Phase 11 ; le
 placement initial en est le point de départ.
 
 ---
@@ -927,7 +927,7 @@ cela n'est stocké. Tout est fixe dans le code, comme le moteur de règles (`gam
 `moment` (1 min), `minutes` (10 min), `hour`, `hours` (4 h), `days` avec un nombre de 1 à 7,
 `until` une période (jusqu'à son prochain début, strictement dans le futur). La même en réussite
 ou en échec ; un aparté ne prend aucun temps ; dans un réseau, le trajet vers la destination
-s'y ajoute (section 6quater). Le round du BRP, les soins et les échéances attendent la Phase 10.
+s'y ajoute (section 6quater). Le round du BRP et les soins attendent la Phase 10, les échéances la Phase 11.
 
 **Ce que voit chaque étape :**
 
@@ -1056,7 +1056,7 @@ La bascule n'est simple que si **rien de ce qui garantit l'intégrité d'un tour
 - **3 minutes de budget par tour**, comptées depuis sa prise en charge par le worker. Avant chaque appel LLM, le code du tour passe au gateway un `AbortSignal` limité à `min(timeout d'un appel, temps restant)` — le gateway combine déjà son timeout avec le signal de l'appelant.
 - **Budget épuisé = échec `llm_timeout`**, code que le front sait déjà afficher. Une nouvelle tentative ne dispose que du temps restant.
 - **Le balayage reste à 5 minutes** : 3 minutes de budget au plus, 2 minutes de marge pour l'attente en file. Le balayage ne rattrape plus un tour vivant, par construction.
-- **Limite connue** : le balayage compte depuis `created_at`, attente en file comprise. Négligeable avec un seul testeur ; avec plusieurs joueurs sous `concurrency: 1`, il faudra un `started_at` et deux seuils (tour jamais démarré, tour démarré) — à reprendre avec le passage à plusieurs instances (Phase 11).
+- **Limite connue** : le balayage compte depuis `created_at`, attente en file comprise. Négligeable avec un seul testeur ; avec plusieurs joueurs sous `concurrency: 1`, il faudra un `started_at` et deux seuils (tour jamais démarré, tour démarré) — à reprendre avec le passage à plusieurs instances (Phase 14).
 
 **Schéma `pgboss`.** pg-boss crée ses tables dans son propre schéma, hors des migrations Lucid. La génération de `database/schema.ts`, `db:truncate` et `db:wipe` ne regardent que `public` : ce schéma leur est invisible. La suite de tests n'utilise jamais pg-boss (pilote mémoire, `QUEUE_DRIVER=memory`).
 

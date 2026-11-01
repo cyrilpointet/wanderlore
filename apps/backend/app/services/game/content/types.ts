@@ -256,7 +256,7 @@ export type StartingItem = {
 
 /**
  * The character a scenario is played with, copied into every game started
- * from it. Guided creation comes in Phase 10.
+ * from it. Guided creation comes in Phase 12.
  */
 export type PregeneratedCharacter = {
   name: string

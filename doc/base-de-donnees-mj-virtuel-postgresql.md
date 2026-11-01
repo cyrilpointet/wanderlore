@@ -41,7 +41,7 @@ en `jsonb`, lues et écrites avec l'univers ; les catalogues ont leurs tables.
 | `created_at` / `updated_at` | timestamptz | — |
 
 - `general_rules` n'existe pas : il est éclaté en colonnes distinctes. `content_boundaries`
-  (tabous) est différé à la modération de la Phase 11.
+  (tabous) est différé à la modération de la Phase 14.
 - **Les catégories d'action** vivent dans `resolution_rules` ; **les PNJ, lieux et objets**
   dans les trois tables de définitions.
 
@@ -93,7 +93,7 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
   incohérences ; la vérification est refaite au lancement de chaque partie.
 - **Lancer une partie** copie le prétiré, l'état initial et le départ de l'horloge (heure et
   date) dans une partie neuve, dans une transaction : modifier ensuite le scénario ne décale
-  pas une partie en cours. La création guidée de personnage attend la Phase 10.
+  pas une partie en cours. La création guidée de personnage attend la Phase 12.
 - Différés : `branch_points`, conditions de progression des chapitres.
 
 **`glossary`** fige la traduction des noms propres, pour éviter qu'un même nom soit rendu
@@ -506,7 +506,7 @@ Résumés hiérarchiques générés par le job asynchrone.
   serveur, l'état du compte est donc relu à chaque requête. Ses parties sont conservées.
 - **Pas de suppression de compte** ni de changement de rôle à ce stade.
 - **Envisagé plus tard** : `preferences` (jsonb : langue, options d'affichage), avec le choix
-  de langue de la Phase 11.
+  de langue de la Phase 14.
 
 ### `usage_quotas` (optionnel, selon modèle économique)
 

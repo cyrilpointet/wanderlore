@@ -229,7 +229,7 @@ en vigueur (détail : roadmap Phase 5bis, « Décisions de cadrage ») :
 - ni suspension de soi-même (`cannot_suspend_self`) ni du dernier superadmin actif
   (`last_superadmin`) ;
 - pas de changement de rôle, de modification d'email ni de suppression ; l'inscription libre
-  attend la Phase 11.
+  attend la Phase 14.
 
 **Phase 6 (bascule sur le système BRP) terminée** — epic Jira `KAN-78`. Le Basic
 Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les
@@ -245,7 +245,7 @@ univers. Ses choix restent en vigueur (détail : roadmap Phase 6, système de r�
 - **le joueur voit le détail du jet** (compétence, modificateurs, chance, d100, degré) ; le
   narrateur n'en reçoit toujours que le résultat et le degré ;
 - points de vie du personnage dérivés (`(CON + SIZ) ÷ 2`) ; profil d'arme et formule de
-  dégâts du BRP posés, branchés en Phase 10 ; aucune règle optionnelle avant la Phase 10bis ;
+  dégâts du BRP posés, branchés en Phase 10 ; aucune règle optionnelle avant la Phase 13 ;
 - bascule sans reprise de données ; texte du livre jamais recopié, notice ORC dans le produit.
 
 Le livre (« ORC Content Document ») est rangé hors du dépôt, dans `tmp/` (ignoré par git).
@@ -404,7 +404,7 @@ serverless pour le backend).
   (`#services/game/content_labels`) et sort en `{ reference, label }`, construit sur l'univers
   de la partie concernée — par requête, ou par tour pour les événements SSE qui le portent —
   et dans une langue (celle du tour pour les événements, l'anglais ailleurs jusqu'au choix
-  de langue de la Phase 11), avec repli sur l'anglais. Une référence sans libellé lève
+  de langue de la Phase 14), avec repli sur l'anglais. Une référence sans libellé lève
   `MissingLabelError` : jamais de référence brute ni « embellie » en repli.
 - **Seule la narration reçoit des noms traduits** (`names`, `items_in_scene`), dans la seule
   langue du tour, et le glossaire réduit à ses entrées traduites dans cette langue. Arbitrage

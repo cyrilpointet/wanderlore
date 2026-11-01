@@ -76,7 +76,7 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 - **Colonne `turn_log.language` posée dès cette phase**, à côté du tracking de consommation. Le coût par tour varie sensiblement selon la langue, et un coût moyen toutes langues confondues fausserait la réflexion sur le modèle de revenu. La partie est en anglais à ce stade — la colonne est posée pour que la mesure soit exploitable plus tard, pas parce qu'elle sert déjà.
 - **Paramètre `language` présent dans le contexte transmis au LLM dès le premier appel**, même s'il vaut toujours `en` à ce stade. Le document d'architecture (section 4bis) impose qu'il soit explicite et jamais supposé fixe : l'introduire maintenant coûte une ligne, le rétro-ajouter obligerait à reprendre tous les prompts.
 - **Jet de dés injectable dès sa première implémentation** : le tirage aléatoire doit passer par un service substituable, faute de quoi le moteur de règles n'est pas testable. C'est une contrainte de conception à respecter tout de suite — la rattraper une fois le moteur appelé de partout est nettement plus coûteux. Même principe pour l'horloge, dès qu'une logique dépend du temps. Voir la section « Stratégie de test ».
-- Gestion d'erreur conforme à la décision prise pour le projet : **pas de retry automatique**. Une erreur est renvoyée avec un message spécifique selon le type détecté (timeout, sortie hors schéma, erreur HTTP de l'API externe, échec de validation backend). Un système de log d'erreurs structuré est explicitement différé (voir Phase 11 / todolist).
+- Gestion d'erreur conforme à la décision prise pour le projet : **pas de retry automatique**. Une erreur est renvoyée avec un message spécifique selon le type détecté (timeout, sortie hors schéma, erreur HTTP de l'API externe, échec de validation backend). Un système de log d'erreurs structuré est explicitement différé (voir Phase 14 / todolist).
 - Pas encore de front : validation du pipeline via des requêtes directes (Postman, curl, ou équivalent).
 
 ### Critère de sortie de phase
@@ -95,7 +95,7 @@ Même sans usage réel du multi-rôle à ce stade, poser ce champ dès la Phase 
 Tranchées à l'ouverture de la phase, avant toute implémentation :
 
 - **Stack front** : Vite + React, Tailwind CSS, TanStack Router. TanStack Query envisagé pour les lectures (partie, personnage, historique), à confirmer à l'usage.
-- **Internationalisation du front dès la Phase 2**, avec une bibliothèque d'i18n, même si elle ne contient au départ que l'anglais. Tous les textes d'interface passent par ses fichiers de traduction, jamais en dur : ajouter une langue ne doit être qu'un travail de traduction, pas une reprise de chaque écran. Bibliothèque retenue : **react-i18next** (motifs : cahier des charges front, section 7). Pas de sélecteur de langue avant la Phase 11.
+- **Internationalisation du front dès la Phase 2**, avec une bibliothèque d'i18n, même si elle ne contient au départ que l'anglais. Tous les textes d'interface passent par ses fichiers de traduction, jamais en dur : ajouter une langue ne doit être qu'un travail de traduction, pas une reprise de chaque écran. Bibliothèque retenue : **react-i18next** (motifs : cahier des charges front, section 7). Pas de sélecteur de langue avant la Phase 14.
 - **Authentification par cookie de session** (guard `web`, déjà configuré dans le scaffolding) plutôt que par access token. Motif : le flux SSE repose sur `EventSource`, qui ne peut pas porter d'en-tête `Authorization` mais envoie nativement les cookies. En développement, le serveur Vite proxifie l'API : front et backend partagent la même origine, sans configuration CORS avec credentials. Contrepartie : l'authentification par cookie expose au CSRF — la protection de `@adonisjs/shield`, aujourd'hui désactivée, est à activer.
 - **File de jobs derrière un port, servie par pg-boss.** La file est un service substituable (port, adaptateur choisi dans la configuration), comme le LLM Gateway. **pg-boss** stocke ses jobs dans PostgreSQL : aucun Redis à héberger tant qu'il n'y a qu'une instance, et l'hébergement léger de la phase de test n'a qu'une base à fournir. **BullMQ reste la cible** du passage à plusieurs instances, qui ramène de toute façon Redis pour le transport de Transmit : la bascule se fera en écrivant l'adaptateur BullMQ et en changeant la configuration, file vidée. Contrepartie acceptée : pg-boss interroge la base à intervalle régulier au lieu d'être notifié ; l'intervalle est réglé explicitement pour ne pas retarder visiblement le début du tour.
 - **Rien de ce qui garantit l'intégrité d'un tour ne dépend de la file** — c'est la condition d'une bascule simple :
@@ -105,7 +105,7 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
   - les événements SSE sont émis par le code du tour via Transmit, jamais dérivés des événements de la file ;
   - aucune logique ne repose sur la mise en file dans la même transaction que l'écriture du tour (pg-boss le permet, BullMQ non). Un tour resté `pending` au-delà d'un délai — process arrêté en cours de tour, mise en file échouée — est passé en échec.
   - **Tranché (KAN-18)** : délai de 5 minutes, balayage au démarrage du worker puis chaque minute ; échec immédiat si la mise en file échoue. Détail : architecture, section 8bis.
-- **Worker dans le process HTTP**, démarré au boot du serveur web (pas en environnement de test ni de console). C'est l'option la plus simple : un seul process à lancer, et Transmit diffuse en mémoire sans transport Redis — l'événement émis par le job atteint directement les connexions SSE du même process. **Limite assumée** : ne passe pas à plusieurs instances. Un worker séparé imposera le transport Redis de Transmit ; à reprendre au plus tard en Phase 11.
+- **Worker dans le process HTTP**, démarré au boot du serveur web (pas en environnement de test ni de console). C'est l'option la plus simple : un seul process à lancer, et Transmit diffuse en mémoire sans transport Redis — l'événement émis par le job atteint directement les connexions SSE du même process. **Limite assumée** : ne passe pas à plusieurs instances. Un worker séparé imposera le transport Redis de Transmit ; à reprendre au plus tard en Phase 14.
 - **Pas de retry de la file** (`retryLimit: 0` avec pg-boss, `attempts: 1` avec BullMQ), conformément à la décision projet sur les erreurs LLM.
 - **Clé d'idempotence fournie par le client** pour la protection contre les doubles soumissions (voir ci-dessous).
 - **Événements SSE limités aux jalons**, sans streaming de la narration (voir document d'architecture, section 8bis).
@@ -115,10 +115,10 @@ Tranchées à l'ouverture de la phase, avant toute implémentation :
 - Interface de chat : historique de messages + champ de saisie.
 - Affichage en lecture seule des statistiques du personnage (points de vie, compétences). Pas d'inventaire à ce stade (aucun objet n'existe encore dans le système).
 - **Routes de lecture** nécessaires au front : liste des parties du joueur, détail d'une partie (personnage, historique des tours pour le chat), lecture d'un tour. Cette dernière sert aussi de rattrapage quand le flux SSE a été manqué ou coupé.
-- **Exécution asynchrone du pipeline via la file de jobs (pg-boss), avec retour progressif via AdonisJS Transmit (SSE)** : le front soumet l'action du joueur, reçoit un accusé de réception (`202`), puis affiche des messages d'attente contextuels au fil des événements reçus (étape en cours, jet résolu) jusqu'au résultat final du tour. Voir document d'architecture, section 8bis, pour le contrat d'événements. Ce choix remplace l'hypothèse initiale d'une réponse synchrone simple, dès cette phase plutôt qu'en Phase 11.
+- **Exécution asynchrone du pipeline via la file de jobs (pg-boss), avec retour progressif via AdonisJS Transmit (SSE)** : le front soumet l'action du joueur, reçoit un accusé de réception (`202`), puis affiche des messages d'attente contextuels au fil des événements reçus (étape en cours, jet résolu) jusqu'au résultat final du tour. Voir document d'architecture, section 8bis, pour le contrat d'événements. Ce choix remplace l'hypothèse initiale d'une réponse synchrone simple, dès cette phase plutôt qu'en Phase 14.
 - **Sérialisation des tours par partie** — point non négociable, découvert en Phase 1 : un tour passe plusieurs secondes en attente du LLM entre la lecture du dernier numéro de tour et son écriture. Deux soumissions rapprochées calculent donc le même numéro. **Un seul joueur qui envoie deux fois suffit** : ce n'est pas un problème de multi-joueur. La contrainte d'unicité `(session_id, turn_number)` le rattrape et doit être conservée comme dernier filet, mais elle n'est pas une solution.
   - La file **ne règle pas ce point par sa seule présence** : sa concurrence se paramètre par worker, pas par clé (BullMQ ne sérialise par clé qu'avec les *groups* de sa version Pro, payante). Les pistes générales sont un verrou par `session_id` autour du job — en PostgreSQL, pour rester indépendant de la file — ou une file par partie (ingérable).
-  - **Retenu pour cette phase : un worker unique en `concurrency: 1`.** Les tours s'exécutent strictement l'un après l'autre, chacun lisant l'état laissé par le précédent : la course sur le numéro de tour disparaît. Le prix — un débit plafonné toutes parties confondues — est sans effet tant qu'un seul joueur teste. **À reprendre avant le beta test** (Phase 11), avec un verrou PostgreSQL par `session_id`.
+  - **Retenu pour cette phase : un worker unique en `concurrency: 1`.** Les tours s'exécutent strictement l'un après l'autre, chacun lisant l'état laissé par le précédent : la course sur le numéro de tour disparaît. Le prix — un débit plafonné toutes parties confondues — est sans effet tant qu'un seul joueur teste. **À reprendre avant le beta test** (Phase 14), avec un verrou PostgreSQL par `session_id`.
   - **La mise en file ne suffit pas non plus** : deux jobs valides produiraient deux tours de jeu là où le joueur en voulait un, chacun facturé — une erreur bruyante remplacée par un état de jeu faux. **Retenu : une clé d'idempotence fournie par le client** avec chaque soumission.
     - Une clé identifie **une soumission**, pas un texte : le client en génère une par action envoyée, et la réutilise telle quelle s'il renvoie la même requête (double clic, perte réseau avant l'accusé de réception). Le backend qui reçoit une clé déjà connue renvoie l'accusé du tour existant sans remettre de job en file.
     - La clé est enregistrée **au moment de la soumission**, avant la mise en file — un enregistrement en fin de tour laisserait passer le doublon pendant toute la durée des appels LLM. Elle est aussi conservée dans `turn_log`, sous contrainte d'unicité par partie.
@@ -147,7 +147,7 @@ Tranchées en clôture de la Phase 2 :
 - **Une seule nouvelle tentative sur une sortie structurée rejetée.** Quand le backend rejette la sortie JSON d'une étape (A+B+C ou E) — JSON illisible, hors schéma, hors bornes, référence absente de la liste fermée —, l'appel est renvoyé une fois avec un message correctif qui nomme les valeurs rejetées et rappelle la liste valide. Un second rejet fait échouer le tour. Les erreurs de transport ne sont toujours pas retentées. Détail : architecture, section 7.
 - **Narration en streaming dès cette phase** (événement `narration_chunk`). La narration diffusée reste provisoire jusqu'à `turn_completed`, et le front la retire si le tour échoue ensuite. Détail : architecture, section 8bis.
 - **Budget de 3 minutes par tour**, compté depuis sa prise en charge : chaque appel LLM reçoit au plus le temps restant, et un budget épuisé fait échouer le tour en `llm_timeout`. Le balayage des tours `pending` reste à 5 minutes et ne peut plus expirer un tour vivant. Détail : architecture, section 8bis.
-- **Un seul modèle pour toutes les étapes** (`gemini-2.5-flash`, remplacé en octobre 2026 par `gemini-3.8-flash`, le premier n'étant plus ouvert aux nouvelles clés API) pendant les phases de test. La séparation des étapes rend la différenciation possible, mais elle attend les mesures de coût réelles (Phase 11).
+- **Un seul modèle pour toutes les étapes** (`gemini-2.5-flash`, remplacé en octobre 2026 par `gemini-3.8-flash`, le premier n'étant plus ouvert aux nouvelles clés API) pendant les phases de test. La séparation des étapes rend la différenciation possible, mais elle attend les mesures de coût réelles (Phase 14).
 
 ### Contenu
 
@@ -156,7 +156,7 @@ Tranchées en clôture de la Phase 2 :
   - Calcul du jet en étape backend déterministe isolée, avec traçabilité complète (`applied_modifiers`) enregistrée dans `turn_log`.
   - Appel D (narration) — texte libre.
   - Appel E (extraction des effets) — sortie structurée, validée avant application au state.
-- Cette séparation permettra d'utiliser un modèle LLM différent (potentiellement moins coûteux) pour l'extraction que pour la narration — pas avant la Phase 11 (voir décisions de cadrage).
+- Cette séparation permettra d'utiliser un modèle LLM différent (potentiellement moins coûteux) pour l'extraction que pour la narration — pas avant la Phase 14 (voir décisions de cadrage).
 - Narration en streaming : événement `narration_chunk`, et côté front un bloc de narration qui grandit puis se remplace par le tour persisté, ou se retire sur `turn_failed`.
 - Introduction de la table `resolution_rules` en base — encore limitée à un seul univers, mais structurée proprement plutôt qu'écrite en dur dans le prompt. Premier pas vers la généricité multi-univers. Schéma réduit (`world_reference`, `action_type`, `description`, `associated_skill`), rempli par un seeder de contenu idempotent (voir document de base de données). L'arbitrage choisit désormais un `action_type` et non plus une compétence : `skill_used` disparaît de sa sortie, le backend déduit la compétence, et les valeurs de compétence du personnage ne sont plus transmises à l'arbitrage (architecture, section 6, étape 1).
 - **PNJ : définitions et instances** (tranché avant la phase — architecture, section 6ter). PNJ uniques, archétypes et PNJ improvisés passent par un seul mécanisme :
@@ -229,18 +229,18 @@ Tranchées à l'ouverture de la phase (epic `KAN-58`) :
 - **Back-office : même stack que le front joueur** (Vite + React + TypeScript, Tailwind CSS 4, TanStack Router et Query, react-i18next, Vitest), mêmes conventions (`api()`, aucun texte en dur, jetons de couleur sémantiques, tests en rendu HTML statique).
 - **Hébergement séparé, sur trois sous-domaines d'un domaine à nous** (`app.`, `admin.`, `api.`). Les trois applications forment ainsi un même site au sens du navigateur : le cookie de session reste `SameSite=Lax` et n'est jamais un cookie tiers, ce qui préserve aussi le flux SSE. L'API autorise les deux origines en CORS avec `credentials` ; le cookie de session et le cookie CSRF sont posés sur le domaine parent, lisible par les deux applications. Origines et domaine du cookie viennent de variables d'environnement ; en local, le proxy Vite reste la règle. Un domaine fourni par une plateforme (`*.up.railway.app`, `*.onrender.com`…) ne convient pas : il est inscrit sur la *Public Suffix List*, et ses sous-domaines y sont des sites distincts.
 - **Premier compte `game_master` créé par seeder**, comme le compte de test, restreint aux environnements locaux. L'administration des comptes attend la Phase 5bis.
-- **L'univers est chargé une fois par tour, sans cache.** Une fonction de chargement reconstruit, à partir des tables de contenu et de la surcharge scénario sur univers, la même forme `WorldDefinition` que la constante de la Phase 4. Le worker l'appelle à la prise en charge du tour et passe cette photo à toutes les étapes : un contenu modifié pendant un tour ne peut pas faire diverger l'arbitrage, l'extraction et l'application. Les libellés (`ContentLabels`) se construisent par requête ou par tour, d'après l'univers de la partie, et non plus au chargement du module. Pas de cache : son gain (quelques millisecondes face à trois appels LLM) ne justifie pas une invalidation à partager entre instances ; à réexaminer en Phase 11 sur mesures réelles.
-- **Un personnage prétiré et un état initial par scénario.** Le scénario porte le personnage (nom, attributs, compétences, points de vie, ressources, objets de départ, équipés ou non) et l'état de départ (lieu, quêtes actives, chapitre initial). Lancer une partie les copie dans une partie neuve — ce que fait aujourd'hui le seeder de démo, à partir de la base. Aucune personnalisation avant la création guidée de la Phase 10 ; plusieurs prétirés au choix par scénario, plus tard.
+- **L'univers est chargé une fois par tour, sans cache.** Une fonction de chargement reconstruit, à partir des tables de contenu et de la surcharge scénario sur univers, la même forme `WorldDefinition` que la constante de la Phase 4. Le worker l'appelle à la prise en charge du tour et passe cette photo à toutes les étapes : un contenu modifié pendant un tour ne peut pas faire diverger l'arbitrage, l'extraction et l'application. Les libellés (`ContentLabels`) se construisent par requête ou par tour, d'après l'univers de la partie, et non plus au chargement du module. Pas de cache : son gain (quelques millisecondes face à trois appels LLM) ne justifie pas une invalidation à partager entre instances ; à réexaminer en Phase 14 sur mesures réelles.
+- **Un personnage prétiré et un état initial par scénario.** Le scénario porte le personnage (nom, attributs, compétences, points de vie, ressources, objets de départ, équipés ou non) et l'état de départ (lieu, quêtes actives, chapitre initial). Lancer une partie les copie dans une partie neuve — ce que fait aujourd'hui le seeder de démo, à partir de la base. Aucune personnalisation avant la création guidée de la Phase 12 ; plusieurs prétirés au choix par scénario, plus tard.
 - **Le back-office couvre tout ce dont un tour a besoin**, faute de quoi un univers créé ne serait pas jouable : en plus des formulaires listés plus bas, les catégories d'action (`resolution_rules`), les archétypes génériques, les profils de combat des PNJ et les ressources. Formulaires pour les champs simples (références, libellés, descriptions, rattachements) ; **champ JSON brut validé par le backend** pour les structures imbriquées (profil de combat, modificateurs d'objet), une saisie invalide étant refusée avec un message précis.
 - **Scénario en brouillon (`draft`) ou publié (`published`), cohérence vérifiée à la publication.** Le backend contrôle les références croisées (compétence → attribut, `action_type` → compétence, lieu → parent, objet → détenteur initial), la présence des archétypes génériques dont l'improvisation a besoin, et la validité du personnage prétiré et de l'état initial. Un joueur ne voit que les scénarios publiés.
 - **Un `game_master` peut lancer une partie** sur n'importe quel scénario, brouillons compris, depuis le front joueur : c'est ainsi qu'il teste un scénario avant de le publier, sans outillage dédié. La restriction initialement prévue (« un compte `game_master` ne peut pas créer de partie ») est levée.
 - **Trois catalogues de même forme** : `npc_definitions`, `location_definitions` et **`item_definitions`** (table dédiée plutôt que `scenarios.item_catalog`), chacun avec univers obligatoire et scénario facultatif. **La surcharge vaut pour les trois** : une définition de scénario remplace celle de l'univers de même référence. Compétences, attributs, ressources et catégories d'action restent propres à l'univers, sans surcharge.
-- **Contenu déjà joué** : une référence est **immuable après création** (saisie une fois, verrouillée ensuite) ; une définition ne se supprime que si **aucune instance** ne l'emploie, toutes parties confondues ; libellés, descriptions et mécanique restent modifiables et valent pour les parties en cours dès le tour suivant. Le versionnement complet du contenu reste ouvert (Phase 11).
-- **Noms d'affichage par langue sur chaque définition**, et sur chaque compétence, attribut, ressource, chapitre et quête : anglais obligatoire, autres langues facultatives avec repli sur l'anglais. Ces noms forment déjà le glossaire des PNJ et des lieux ; **le glossaire ne porte plus que les noms propres qui ne sont pas des entités** (factions, figures historiques hors scène), saisi au niveau de l'univers et complété par le scénario. Le modèle accepte tout code de langue : la liste des langues cibles reste ouverte, le joueur ne choisissant sa langue qu'en Phase 11.
+- **Contenu déjà joué** : une référence est **immuable après création** (saisie une fois, verrouillée ensuite) ; une définition ne se supprime que si **aucune instance** ne l'emploie, toutes parties confondues ; libellés, descriptions et mécanique restent modifiables et valent pour les parties en cours dès le tour suivant. Le versionnement complet du contenu reste ouvert (Phase 14).
+- **Noms d'affichage par langue sur chaque définition**, et sur chaque compétence, attribut, ressource, chapitre et quête : anglais obligatoire, autres langues facultatives avec repli sur l'anglais. Ces noms forment déjà le glossaire des PNJ et des lieux ; **le glossaire ne porte plus que les noms propres qui ne sont pas des entités** (factions, figures historiques hors scène), saisi au niveau de l'univers et complété par le scénario. Le modèle accepte tout code de langue : la liste des langues cibles reste ouverte, le joueur ne choisissant sa langue qu'en Phase 14.
 - **Ce qui sort de la définition en dur** :
   - `worlds` : `reference` stable (cible de la clé étrangère de `resolution_rules`, qui remplace `world_reference`), noms d'affichage, `narrative_tone`, `rules` et `ambiance` en listes de phrases (même rôle qu'aujourd'hui pour l'arbitrage et la narration, jusqu'au lore de la Phase 8), `attributes`, `skills` et `resources` chacun dans sa colonne `jsonb` plutôt que regroupés dans `general_rules` ;
   - `scenarios` : synopsis, chapitres et quêtes en listes `{ reference, labels }`, personnage prétiré, état initial, statut ;
-  - **différés** : `content_boundaries` (modération, Phase 11), `branch_points` et conditions de progression des chapitres (tant qu'aucun tour ne sait les exploiter).
+  - **différés** : `content_boundaries` (modération, Phase 14), `branch_points` et conditions de progression des chapitres (tant qu'aucun tour ne sait les exploiter).
 - **Les Trois Mousquetaires passent en base** par un seeder de contenu idempotent placé en tête (`01_`), qui crée l'univers et son scénario publié d'après leur référence ; `world.ts` ne garde que les types. `sessions` reçoit `world_id` et `scenario_id` **`NOT NULL`, sans reprise de données** : seules existent des parties de dev et de test, recréées par `game:reset`.
 - **Pas de versionnement de structure des `jsonb`** à ce stade : chaque `jsonb` saisi est validé côté backend avant écriture, et aucune donnée de production n'existe à faire migrer.
 
@@ -286,8 +286,8 @@ Tranchées à l'ouverture de la phase (epic `KAN-71`) :
 - **Un compte = un rôle** : le superadmin gère les comptes et seulement eux ; le `game_master` garde le contenu. Le back-office accueille les deux rôles, chacun ne voyant que ses sections ; les routes `/api/v1/admin/accounts` sont réservées au superadmin.
 - **Suspension par `users.suspended_at`** : connexion refusée (`account_suspended`) ; une session déjà ouverte est coupée à la requête suivante — la session est un cookie chiffré, impossible à révoquer côté serveur, donc l'état du compte est relu à chaque requête ; les parties sont conservées et retrouvées à la réactivation.
 - **Garde-fous** : un superadmin ne peut pas se suspendre lui-même, et le dernier superadmin actif ne peut pas être suspendu.
-- **Création d'un compte** : nom, email, rôle et mot de passe initial, transmis par le superadmin hors de l'application. Ni envoi d'email ni changement de mot de passe imposé avant la Phase 11.
-- **Hors périmètre** : changement de rôle d'un compte existant, modification d'email, suppression ; l'inscription libre (`/auth/signup`) reste en l'état, et crée toujours un `player`, jusqu'aux modalités d'inscription de la Phase 11.
+- **Création d'un compte** : nom, email, rôle et mot de passe initial, transmis par le superadmin hors de l'application. Ni envoi d'email ni changement de mot de passe imposé avant la Phase 14.
+- **Hors périmètre** : changement de rôle d'un compte existant, modification d'email, suppression ; l'inscription libre (`/auth/signup`) reste en l'état, et crée toujours un `player`, jusqu'aux modalités d'inscription de la Phase 14.
 
 Tranchés en cours de phase :
 
@@ -329,7 +329,7 @@ Tranchées à l'ouverture de la phase (2026-10-25, epic `KAN-78`), d'après une 
 - **Points de vie du personnage dérivés** de la fiche, `(CON + SIZ) ÷ 2` ; ceux des PNJ restent saisis. Les points de vie totaux attendent la Phase 10.
 - **Modificateurs d'objets en pourcentage**, même mécanisme. Le bonus d'arme disparaît, remplacé par un **profil d'arme** sur la définition d'objet : compétence, dés de dégâts, usage du modificateur de dégâts, type d'effet spécial.
 - **Formule de dégâts du BRP** (dés de l'arme + modificateur de dégâts − armure ; critique au maximum, armure ignorée) posée et testée ici ; son branchement reste en Phase 10. La décision « pas de second jet » est abandonnée : un jet de dés backend ne coûte aucun appel LLM.
-- **Aucune règle optionnelle** : pas de jet opposé, de table de résistance, de progression ni de drapeau de règle par univers. Santé mentale, Passions, Réputation et jets cachés attendent la Phase 10bis.
+- **Aucune règle optionnelle** : pas de jet opposé, de table de résistance, de progression ni de drapeau de règle par univers. Santé mentale, Passions, Réputation et jets cachés attendent la Phase 13.
 - **Bascule sans reprise de données** : les parties sont vidées par `game:reset --no-seed` avant la migration, le contenu créé à la main dans les bases de dev est supprimé plutôt que converti, et le seeder réécrit les deux univers au format BRP.
 - **Licence ORC** : notice à la racine du dépôt et mention « Powered by BRP » dans le front ; le texte du livre n'est jamais recopié.
 
@@ -377,7 +377,7 @@ Tranchées à l'ouverture de la phase (2026-10-26, epic `KAN-89`) :
 - **Même durée en réussite et en échec**, sans modulation par le degré : la durée mesure le temps passé à *tenter*. Un échec qui coûte du temps se traduit par une nouvelle action au tour suivant.
 - **Durées fixes imposées par le backend** : l'aparté au MJ ne prend aucun temps. **Aucune autre durée du BRP dans cette phase** — le round (12 s), les soins (guérison naturelle 1D3 PV par semaine) et la récupération attendent la Phase 10 ; d'ici là, un coup d'épée vaut `moment`.
 - **Sept périodes à bornes fixes**, codées en dur, identiques pour tous les univers et sans saison : `night` 22 h–5 h, `dawn` 5 h–7 h, `morning` 7 h–12 h, `midday` 12 h–14 h, `afternoon` 14 h–18 h, `dusk` 18 h–20 h, `evening` 20 h–22 h. Dérivées de l'heure, jamais stockées ; enum fermé du système. `until` vise le début de la période.
-- **Calendrier grégorien seul**, sans clé par univers (un calendrier propre attend la Phase 10 au plus tôt). Sans date de départ, l'horloge reste un compteur de jours.
+- **Calendrier grégorien seul**, sans clé par univers (un calendrier propre attend la Phase 11 au plus tôt). Sans date de départ, l'horloge reste un compteur de jours.
 - **Ce que voit chaque étape** :
   - l'arbitrage : la période courante, dont il tire au besoin une circonstance (obscurité, boutique fermée) ;
   - la narration : les périodes de départ et d'arrivée, l'heure d'arrivée **arrondie au quart d'heure**, la date si elle existe et le **numéro de jour** (les LLM calculent mal les écarts de dates). Consigne : ne jamais contredire le temps écoulé, et ne donner l'heure précise que si le personnage a de quoi la connaître (une montre qu'il détient, une horloge en marche, des cloches) et cherche à la savoir ; sinon, parler de lumière et de période. L'invariant 5 n'est pas en cause : il porte sur les données mécaniques du jet ;
@@ -431,10 +431,10 @@ Tranchées à l'ouverture de la phase (2026-10-26, epic `KAN-89`) :
 
 ### Hors périmètre
 
-- Échéances de scénario, événements déclenchés par le temps et emplois du temps des PNJ : Phase 10 (voir ses notes).
-- Horaires d'ouverture des lieux, météo, calendrier propre à un univers : après la Phase 10 au plus tôt.
+- Échéances de scénario, événements déclenchés par le temps et emplois du temps des PNJ : Phase 11.
+- Horaires d'ouverture des lieux, météo, calendrier propre à un univers : après la Phase 11 au plus tôt.
 - Retour dans un lieu improvisé : reste à la mémoire long terme (Phase 9).
-- Effets du temps sur le personnage (récupération des points de vie, vivres) : avec le combat et le cycle de vie de la Phase 10.
+- Effets du temps sur le personnage : récupération des points de vie avec le combat (Phase 10), vivres avec le cycle de vie (Phase 12).
 
 ### Contenu
 
@@ -492,7 +492,7 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 - **Instancié par le backend à la première visite du lieu**, `absent`, dans ce lieu — seule exception au principe « l'extraction crée les PNJ », comme le détenteur initial pour les objets. L'arrivée du joueur le rend présent, comme quiconque attend dans un lieu (Phase 7) ; si le lieu est celui du départ, il est présent dès le lancement. Un unique déjà rencontré ailleurs n'est jamais recréé.
 - **La narration du tour d'arrivée le reçoit** dans `npcs_at_destination`, avant même qu'il existe (handle = référence), quand l'arbitrage a nommé la destination.
 - **Liste fermée de l'extraction** : tant qu'il n'est pas rencontré, un PNJ placé ne peut entrer en scène que depuis son lieu ou un lieu d'où l'on peut s'y rendre. Rencontré, il va où l'histoire le mène.
-- **Hors périmètre** : les archétypes postés (« un garde dans chaque pièce » sans les nommer) et les emplois du temps, qui déplaceront ces instances au fil des heures (Phase 10).
+- **Hors périmètre** : les archétypes postés (« un garde dans chaque pièce » sans les nommer) et les emplois du temps, qui déplaceront ces instances au fil des heures (Phase 11).
 
 ### Critère de sortie
 
@@ -534,9 +534,9 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 
 ---
 
-## Phase 10 — Combat étendu et cycle de vie complet
+## Phase 10 — Combat
 
-**Objectif** : compléter les mécaniques de jeu et le cycle de vie d'une partie.
+**Objectif** : jouer un combat du BRP de bout en bout, round par round, les dégâts calculés par le backend.
 
 ### Contenu
 
@@ -544,12 +544,6 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 - Branchement de la formule de dégâts du BRP posée en Phase 6 (dés de l'arme + modificateur de dégâts − armure) : l'arbitrage désigne attaquant et cible, le backend calcule les dégâts et les applique, et l'extraction cesse de chiffrer les blessures. Une arme détenue par un PNJ l'emporte sur l'arme ordinaire de son profil, et c'est l'arme qui désigne la compétence d'attaque.
 - Reste du combat du BRP (système de règles, sections 8 et 11) : matrice attaque / défense avec parade et esquive, jets opposés et table de résistance, armure, blessures grave et mortelle, effets spéciaux, table réduite de maladresses ; choix des points de vie totaux pour le personnage.
 - Temps du combat et du personnage, sur l'horloge de la Phase 7 : un tour de combat vaut un round du BRP (12 secondes), durée imposée par le backend et non proposée par l'arbitrage, sans rangs de `DEX` ni actions multiples ; soins (premiers soins en un round, guérison naturelle de 1D3 PV par semaine) et récupération calés sur le temps écoulé.
-- Échéances et événements déclenchés par le temps, à cadrer : une condition (jour, période, peut-être un flag) et un effet appliqué par le backend en delta validé, saisis comme contenu de scénario et vérifiés par `checkScenario`. Ils couvrent aussi les **emplois du temps des PNJ** (gardes moins nombreux la nuit, vampire au tombeau le jour et au château la nuit), qui déplacent ou retirent des instances via leur lieu (`location_instance_id`, Phase 7), en partant de leur placement initial (complément de la Phase 7).
-- Progression du personnage : tests d'expérience et jets d'amélioration du BRP, en fin de scénario.
-- Cycle de vie complet de la partie :
-  - création de personnage guidée (au-delà d'un simple formulaire technique),
-  - conditions de fin de partie (victoire, mort du personnage, abandon volontaire),
-  - gestion de la reprise après une pause longue (régénération du résumé avant reprise si nécessaire).
 
 > **Prérequis** : la boucle de combat s'appuie sur `npc_instances`, posée en Phase 3 (état et disposition) et complétée en Phase 4 (données de combat). Cette phase n'ajoute que la boucle de rounds.
 >
@@ -558,13 +552,46 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 ### Critère de sortie de phase
 
 - Un combat complet est jouable de bout en bout avec plusieurs rounds.
+
+---
+
+## Phase 11 — Échéances et événements déclenchés par le temps
+
+**Objectif** : que le monde avance de lui-même avec l'horloge de la Phase 7, sans attendre une action du joueur.
+
+### Contenu
+
+- Échéances et événements déclenchés par le temps, à cadrer : une condition (jour, période, peut-être un flag) et un effet appliqué par le backend en delta validé, saisis comme contenu de scénario et vérifiés par `checkScenario`.
+- **Emplois du temps des PNJ** (gardes moins nombreux la nuit, vampire au tombeau le jour et au château la nuit), qui déplacent ou retirent des instances via leur lieu (`location_instance_id`, Phase 7), en partant de leur placement initial (complément de la Phase 7).
+
+### Critère de sortie de phase
+
+- Un scénario déclare une échéance, un événement et un emploi du temps de PNJ, et le backend les applique quand l'horloge les atteint.
+
+---
+
+## Phase 12 — Progression du personnage et cycle de vie complet de la partie
+
+**Objectif** : faire progresser le personnage et mener une partie de sa création à sa fin.
+
+### Contenu
+
+- Progression du personnage : tests d'expérience et jets d'amélioration du BRP, en fin de scénario.
+- Cycle de vie complet de la partie :
+  - création de personnage guidée (au-delà d'un simple formulaire technique),
+  - conditions de fin de partie (victoire, mort du personnage, abandon volontaire),
+  - gestion de la reprise après une pause longue (régénération du résumé avant reprise si nécessaire).
+
+### Critère de sortie de phase
+
+- Le personnage améliore ses compétences d'après l'expérience acquise au cours d'un scénario.
 - Une partie peut être créée, mise en pause, reprise et menée jusqu'à une fin définie.
 
 ---
 
-## Phase 10bis — Règles optionnelles par univers
+## Phase 13 — Règles optionnelles par univers
 
-**Objectif** : activer, univers par univers, les règles optionnelles du BRP qui font le genre — sans toucher au moteur commun. Placée après la Phase 10, dont elle réutilise la progression (une passion s'améliore comme une compétence).
+**Objectif** : activer, univers par univers, les règles optionnelles du BRP qui font le genre — sans toucher au moteur commun. Placée après la Phase 12, dont elle réutilise la progression (une passion s'améliore comme une compétence).
 
 ### Contenu
 
@@ -579,7 +606,7 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 
 ---
 
-## Phase 11 — Production-ready
+## Phase 14 — Production-ready
 
 **Objectif** : préparer le système à une exposition plus large et à un usage soutenu, au-delà du prototype fonctionnel.
 
@@ -601,6 +628,15 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 
 - Inscription self-service pour les joueurs, si une ouverture au public est prévue : validation d'email, réinitialisation de mot de passe, et tout ce qui relève de l'authentification grand public plutôt que de comptes créés manuellement.
 - Durcissement des permissions : audit systématique qu'aucune route de back-office ou d'administration n'est accessible sans contrôle de rôle correctement vérifié.
+
+### À trancher à l'ouverture de la phase
+
+- **Nom affiché d'un objet improvisé.** Le front n'affiche que le libellé de l'archétype (« Outil », « Babiole »), le descripteur anglais restant réservé au narrateur (architecture, section 6bis) : une lampe torche et un trousseau de clés s'affichent tous deux « Outil », alors que le narrateur, qui lit les descripteurs, les nomme précisément. Relevé le 2026-10-31. Trois pistes :
+  1. enrichir les archétypes du contenu (lanterne, clé…), sans toucher aux règles — l'improvisé pur reste générique ;
+  2. **un nom court par objet, écrit par l'extraction dans la langue de la partie**, sur le modèle de `npc_names`, stocké sur l'instance et envoyé au front à la place du libellé de l'archétype quand il existe ;
+  3. afficher le descripteur anglais tel quel — exclu par la section 6bis dans une partie qui n'est pas en anglais.
+
+  **Préférence pour la piste 2**, à confirmer avec le choix de la langue : précise partout, sans appel supplémentaire. Elle crée une exception à la convention « seule la narration produit du texte dans la langue du joueur » (l'extraction ne lit et n'écrit que l'anglais) ; elle demande une colonne sur `inventory_items`, un champ de sortie de l'extraction validé par le backend (longueur, présence de l'objet), et un changement de l'API de l'inventaire.
 
 ### Critère de sortie de phase
 
@@ -625,9 +661,11 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 | 7–8 | Jet en direct et préférences (lot d'interface, sans API) | — |
 | 8 | Lore étendu et RAG | — |
 | 9 | Mémoire long terme | — |
-| 10 | Combat étendu, cycle de vie complet | — |
-| 10bis | Règles optionnelles par univers | — |
-| 11 | Production-ready | — |
+| 10 | Combat | — |
+| 11 | Échéances et événements déclenchés par le temps | — |
+| 12 | Progression du personnage, cycle de vie complet de la partie | — |
+| 13 | Règles optionnelles par univers | — |
+| 14 | Production-ready | — |
 
 ---
 
@@ -677,12 +715,12 @@ Ces points sont pénibles à rattraper après coup :
 | 2 | Contrat d'API : authentification requise, accusé de réception, **séquence des événements SSE** (granularité tranchée, voir architecture section 8bis), et idempotence — une clé rejouée ne remet aucun job en file |
 | 3 | Un test de contrat par étape du pipeline, filet de sécurité lors des modifications de prompt |
 | 4 | Séparation des deux familles de modificateurs, conditions `owned`/`equipped`, traçabilité de l'origine, refus d'un identifiant d'objet hors liste ou hors scène, transferts entre détenteurs, formule de dégâts |
-| 5 | Contrôle d'accès par rôle, route par route — rend continu l'audit prévu en Phase 11 |
+| 5 | Contrôle d'accès par rôle, route par route — rend continu l'audit prévu en Phase 14 |
 | 6 | Moteur BRP : bornes 01–05 et 96–00, seuils des degrés, difficulté multiplicative, ordre des modificateurs, jets de caractéristique, formule de dégâts sur dés simulés ; le narrateur ne reçoit jamais le détail du jet |
 | 7 | Horloge de jeu : conversion des labels de durée, bornes, attente jusqu'à une période, période dérivée de l'heure, jour et date ; sorties : destinations atteignables, passages cachés et verrouillés, refus d'une destination hors liste, durée d'un chemin, passage trouvé et franchi dans le même tour, porte ouverte par sa clé ; PNJ laissé, suivant, parti, retrouvé ; cohérence d'un réseau (`checkScenario`) ; le joueur ne reçoit que la période |
 | 8 | Qualité de récupération du lore : sur un jeu annoté, les bons fragments remontent-ils, et avec quel bruit |
 | 9 | Le résumé ne perd pas les faits critiques (eval, pas test) |
-| 11 | Evals automatisés, détection de dérive de prompt, taux d'échec de schéma |
+| 14 | Evals automatisés, détection de dérive de prompt, taux d'échec de schéma |
 
 Chaque **critère de sortie de phase** fait par ailleurs un bon test d'acceptation de bout en
 bout : un par phase suffit.
@@ -690,9 +728,9 @@ bout : un par phase suffit.
 ### Le corpus d'évaluation s'accumule dès la Phase 1
 
 `turn_log` enregistre l'entrée joueur, les sorties intermédiaires et la narration finale : c'est
-déjà le jeu de données d'évaluation. Les evals sont prévus en Phase 11, mais le **corpus** se
+déjà le jeu de données d'évaluation. Les evals sont prévus en Phase 14, mais le **corpus** se
 constitue dès la Phase 1, en sélectionnant au fil de l'eau les tours intéressants — cas limites,
-échecs, comportements aberrants. Sans cette accumulation, la Phase 11 commencerait par plusieurs
+échecs, comportements aberrants. Sans cette accumulation, la Phase 14 commencerait par plusieurs
 jours de collecte.
 
 Cas à verser au corpus dès la Phase 7, que les tests ne peuvent pas trancher : le narrateur
@@ -723,15 +761,15 @@ finit toujours par être ignoré.
 ## Décisions déjà actées (rappel)
 
 - **Multi-joueur** : explicitement hors scope, à traiter dans un projet distinct avec ses propres réflexions d'architecture (concurrence d'accès au state, infrastructure temps réel, visibilité narrative différenciée par joueur).
-- **Retry/fallback LLM** : pas de retry automatique des erreurs de transport. Depuis la Phase 3, une sortie structurée rejetée par la validation backend a droit à **une** nouvelle tentative avec message correctif, puis le tour échoue (voir Phase 3). Chaque erreur est renvoyée au front avec un message spécifique selon le type détecté. Un système de log d'erreurs API structuré est prévu en todolist, à traiter en Phase 11.
+- **Retry/fallback LLM** : pas de retry automatique des erreurs de transport. Depuis la Phase 3, une sortie structurée rejetée par la validation backend a droit à **une** nouvelle tentative avec message correctif, puis le tour échoue (voir Phase 3). Chaque erreur est renvoyée au front avec un message spécifique selon le type détecté. Un système de log d'erreurs API structuré est prévu en todolist, à traiter en Phase 14.
 - **Modificateurs contextuels vs modificateurs d'objets** : séparation stricte actée — le LLM ne propose que des modificateurs contextuels, en labels qualitatifs convertis par le backend (3 au plus), les modificateurs d'objets sont toujours calculés par le backend à partir des objets du détenteur.
 - **Un compte = un rôle unique** pour l'instant (`player` / `game_master` / `superadmin`), pas de cumul multi-rôle. À réévaluer si le besoin se présente concrètement.
 - **Budget de développement** : hébergement léger (ex. Vercel, Supabase, Railway) et LLM économique (ex. Gemini) pour la phase de test, budget cadré à 15-20€ mensuels — voir Phase 0.
-- **Démarche de monétisation** : aucun modèle choisi à ce stade, mais une démarche en deux temps est actée — mesure du coût réel par tour/partie dès la Phase 3, puis validation de l'appétence des joueurs lors du beta test fermé prévu en Phase 11 — avant toute sélection de modèle économique.
+- **Démarche de monétisation** : aucun modèle choisi à ce stade, mais une démarche en deux temps est actée — mesure du coût réel par tour/partie dès la Phase 3, puis validation de l'appétence des joueurs lors du beta test fermé prévu en Phase 14 — avant toute sélection de modèle économique.
 - **Convention de nommage** : tables, colonnes, enums et code exclusivement en anglais ; langue par défaut de l'application en anglais, support multi-langue en complément.
 - **Architecture multi-langue** : « tout en anglais en interne, traduction au dernier moment ». Le lore, le scénario, le state, les system prompts et le résumé narratif restent en anglais et ne sont jamais dupliqués par langue ; seule l'étape de narration produit du texte dans la langue du joueur. Pas de second appel de traduction, pas de détection si le joueur écrit dans une autre langue. Un glossaire compact de noms propres assure la cohérence des noms. Voir document d'architecture, section 4bis.
 - **Objets** : définitions et instances ; séparation entre référence stable anglaise et nom d'affichage ; trois détenteurs possibles (personnage, PNJ, lieu) ; catalogue fermé ; l'étape d'extraction ne peut faire apparaître qu'un objet figurant dans la liste transmise, ni déplacer un objet hors scène. Voir document d'architecture, section 6bis.
-- **Exécution asynchrone et contrat d'API front/backend** : pipeline exécuté en tâche de fond via une file de jobs derrière un port — pg-boss (PostgreSQL) en instance unique, BullMQ (Redis) au passage à plusieurs instances —, retour progressif au front via AdonisJS Transmit (SSE) — introduit dès la Phase 2, pas différé à la Phase 11. Voir document d'architecture, section 8bis, pour le détail des événements.
+- **Exécution asynchrone et contrat d'API front/backend** : pipeline exécuté en tâche de fond via une file de jobs derrière un port — pg-boss (PostgreSQL) en instance unique, BullMQ (Redis) au passage à plusieurs instances —, retour progressif au front via AdonisJS Transmit (SSE) — introduit dès la Phase 2, pas différé à la Phase 14. Voir document d'architecture, section 8bis, pour le détail des événements.
 - **Environnement technique** : dev et tests locaux sous Docker (PostgreSQL ; Redis provisionné pour la bascule vers BullMQ), repo structuré en monorepo AdonisJS (`--kit=api`, Turborepo) avec packages `backend` et `frontend` dès la Phase 0, et `back-office` ajouté en Phase 5.
 - **Authentification** : le scaffolding register/login inclus par défaut dans un projet AdonisJS est réutilisé comme base pour l'authentification joueur (Phase 2), plutôt que de construire ce système from scratch — seul le champ `role` (enum `player`/`game_master`/`superadmin`) est une extension propre au projet. Le front s'authentifie par **cookie de session**, seul mode compatible sans contournement avec `EventSource`.
 - **Front** : Vite + React, Tailwind CSS, TanStack Router (TanStack Query envisagé pour les lectures).
@@ -741,11 +779,11 @@ finit toujours par être ignoré.
 
 ## Points ouverts pour les phases avancées
 
-- Modalités précises de l'inscription self-service (Phase 11) : validation d'email, gestion des mots de passe oubliés, éventuelle authentification via fournisseur tiers.
+- Modalités précises de l'inscription self-service (Phase 14) : validation d'email, gestion des mots de passe oubliés, éventuelle authentification via fournisseur tiers.
 - Décision sur la nécessité future d'un cumul de rôles (un MJ qui voudrait aussi jouer).
 - Carte des lieux visités dans le front joueur, si le besoin se confirme après la Phase 7 (qui n'affiche pas les sorties).
 - Choix définitif entre pgvector intégré et vector store externe si la Phase 8 est activée (dépend du volume de lore réellement atteint).
-- Réintroduction éventuelle d'un retry automatique limité (Phase 11), une fois le comportement réel des erreurs observé en usage — restreint aux erreurs transitoires (timeout, 5xx). Les sorties rejetées ont leur nouvelle tentative unique depuis la Phase 3 ; un taux de rejet élevé reste le signe d'un prompt à corriger plutôt qu'à retenter.
+- Réintroduction éventuelle d'un retry automatique limité (Phase 14), une fois le comportement réel des erreurs observé en usage — restreint aux erreurs transitoires (timeout, 5xx). Les sorties rejetées ont leur nouvelle tentative unique depuis la Phase 3 ; un taux de rejet élevé reste le signe d'un prompt à corriger plutôt qu'à retenter.
 - Support multi-langue : l'architecture est actée et répercutée dans les phases ci-dessus (paramètre `language` et colonne `turn_log.language` en Phase 1, séparation référence/affichage en Phase 4, catalogue et glossaire en Phase 5, résumé anglais en Phase 9). L'i18n du front est posée dès la Phase 2, avec l'anglais seul. **Restent ouverts** : la liste des langues cibles, et la phase à laquelle une seconde langue est effectivement activée — probablement pas avant que la Phase 5 rende le contenu paramétrable.
 - Événements SSE : la granularité et le rattrapage par lecture du tour sont tranchés pour la Phase 2 (architecture, section 8bis). Le streaming de la narration est tranché pour la Phase 3 (voir ses décisions de cadrage). **Reste ouvert** le rejeu des événements manqués, jugé inutile tant que la lecture du tour suffit.
-- Passage à plusieurs instances : bascule de la file de pg-boss vers BullMQ, worker séparé (transport Redis de Transmit) et sérialisation par verrou PostgreSQL sur `session_id` plutôt que par `concurrency: 1` — à trancher avant le beta test de la Phase 11.
+- Passage à plusieurs instances : bascule de la file de pg-boss vers BullMQ, worker séparé (transport Redis de Transmit) et sérialisation par verrou PostgreSQL sur `session_id` plutôt que par `concurrency: 1` — à trancher avant le beta test de la Phase 14.

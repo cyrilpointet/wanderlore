@@ -43,7 +43,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
    * Flat and short, as in the first world, with the base chances of BRP.
    * `composure` stands where a sanity score would: the nerve to face the
    * unnatural is rolled, and what it costs comes off hit points — until BRP's
-   * own sanity rules arrive with the optional rules (Phase 10bis).
+   * own sanity rules arrive with the optional rules (Phase 13).
    */
   skills: [
     {
