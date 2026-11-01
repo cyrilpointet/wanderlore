@@ -925,6 +925,7 @@ test.group('Prompts | places and their exits', () => {
         scene: {
           ...study.scene,
           place_description: 'A cluttered study.',
+          visited_locations: ['house_hall', 'house_study', 'house_cellar'],
           exits: exitsOf(HOUSE_WORLD.locations, 'house_study', state),
         },
       })
@@ -954,7 +955,11 @@ test.group('Prompts | places and their exits', () => {
         ...request,
         world: HOUSE_WORLD,
         aside: true,
-        scene: { ...request.scene, exits: exitsOf(HOUSE_WORLD.locations, 'house_study', state) },
+        scene: {
+          ...request.scene,
+          visited_locations: ['house_hall', 'house_study'],
+          exits: exitsOf(HOUSE_WORLD.locations, 'house_study', state),
+        },
       })
     )
 
@@ -962,6 +967,29 @@ test.group('Prompts | places and their exits', () => {
       payload.exits.map(({ to }: { to: string }) => to),
       ['The hall']
     )
+  })
+
+  test('an exit to a place never visited goes without the name of what lies beyond', ({
+    assert,
+  }) => {
+    const hall = inTheHall()
+    const payload = payloadOf(
+      buildNarrationMessage({
+        ...narrationRequest(),
+        world: HOUSE_WORLD,
+        scene: { ...hall.scene, visited_locations: ['house_yard', 'house_hall'] },
+      })
+    )
+
+    assert.deepInclude(payload.exits, { passage: 'a swing door', hidden: false, locked: false })
+    assert.deepInclude(payload.exits, {
+      to: 'The yard',
+      passage: 'the front door',
+      hidden: false,
+      locked: false,
+    })
+    assert.notInclude(JSON.stringify(payload.exits), 'The kitchen')
+    assert.include(NARRATION_SYSTEM_PROMPT, 'never name or guess what lies beyond')
   })
 
   test('the narrator follows the route, passage by passage', ({ assert }) => {

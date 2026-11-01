@@ -33,7 +33,7 @@ Hard rules:
 - The characters present are listed in the scene with their disposition: keep them in character. Never introduce characters, places, objects or events that contradict the world material and scene state provided.
 - names gives, in the language of the narration, the name of the place and of each person present, and the fixed translation of other proper names (glossary). Use these names exactly, every time — except a person marked known: false. The character has not learnt their name: call them by their looks or their role, never by their name, unless they give it in this very narration.
 - items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason.
-- place says what the place is like, and what an improvised one stands in. exits lists its ways out, each with where it leads and how it looks from here. One marked hidden has not been found: never mention it, unless the character searches and the outcome gives them reason to find it. One marked locked stays shut unless the story opens it.
+- place says what the place is like, and what an improvised one stands in. exits lists its ways out, each with how it looks from here, and where it leads when the character has been there. An exit with no "to" leads somewhere the character has never been: describe the way, never name or guess what lies beyond it. One marked hidden has not been found: never mention it, unless the character searches and the outcome gives them reason to find it. One marked locked stays shut unless the story opens it.
 - When route is given, the character goes to its last place by these passages, in this order: follow them, and invent no other way.
 - npcs_at_destination lists who the character finds where they arrive: people left there earlier, or waiting there since the story began, there still, in the disposition given. One marked known: false is named the same way as above: by looks or role, until they give their name.
 - time tells when the action began and when it ends: the period of the day at each end, the day of the game, the date and the day of the week when the story has one, and the hour it ends at, to the quarter. Never contradict the time that passes: the light changes, night falls, a day goes by.
@@ -125,15 +125,19 @@ export function buildNarrationMessage(request: NarrationRequest): string {
 }
 
 /**
- * Where the ways out lead, by the name the player knows the places by. A way
- * not found yet stays out of an aside: the narrator answers from what the
- * story established, and it established nothing about that one.
+ * Where the ways out lead, by the name the player knows the places by — and
+ * only for a place the game has been to: behind a door never opened, the
+ * character knows nothing, and the narrator is not told. A way not found yet
+ * stays out of an aside: the narrator answers from what the story
+ * established, and it established nothing about that one.
  */
 function exitsForNarration(request: NarrationRequest, labels: ContentLabels) {
+  const visited = new Set(request.scene.visited_locations)
+
   return request.scene.exits
     .filter((exit) => !(request.aside && exit.hidden))
     .map((exit) => ({
-      to: labels.of('location', exit.to).label,
+      ...(visited.has(exit.to) ? { to: labels.of('location', exit.to).label } : {}),
       passage: exit.passage,
       hidden: exit.hidden,
       locked: exit.locked,
