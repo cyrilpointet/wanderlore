@@ -47,12 +47,23 @@ export type TracedTime = {
   duration: Duration
 }
 
+/**
+ * The references of the lore fragments each step was sent, null for a step
+ * the turn did not reach — to tell afterwards where the narration took
+ * something from.
+ */
+export type TracedLore = {
+  arbitration: string[] | null
+  narration: string[] | null
+}
+
 export type TurnTrace = {
   arbitration: ArbitrationOutput | null
   roll: TracedRoll | null
   time: TracedTime | null
   narration: string | null
   extraction: Record<string, unknown> | null
+  lore: TracedLore
   rejectedAttempts: RejectedAttempt[]
   calls: TracedCall[]
 }
@@ -80,6 +91,7 @@ export function emptyTrace(): TurnTrace {
     time: null,
     narration: null,
     extraction: null,
+    lore: { arbitration: null, narration: null },
     rejectedAttempts: [],
     calls: [],
   }
@@ -104,6 +116,7 @@ export function traceColumns(trace: TurnTrace) {
     duration: trace.time?.duration ?? null,
     narratedText: trace.narration,
     extractionOutput: trace.extraction,
+    loreSent: trace.lore.arbitration === null ? null : trace.lore,
     rejectedAttempts:
       trace.rejectedAttempts.length > 0
         ? (trace.rejectedAttempts as unknown as Record<string, unknown>[])

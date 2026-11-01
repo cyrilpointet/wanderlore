@@ -190,6 +190,57 @@ test.group('TurnService | a settled turn', (group) => {
   })
 })
 
+test.group('TurnService | lore', (group) => {
+  useTransaction(group)
+
+  test('sends each step the lore its scene calls for, and logs it', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    /** The first turn takes the game to Tréville's: the second is played there. */
+    await buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I go to Tréville.' })
+    const session = await Session.findOrFail(sessionId)
+    const now = new Date()
+    const fragment = (reference: string, values: Record<string, unknown>) => ({
+      world_id: session.worldId,
+      reference,
+      kind: 'fact',
+      tags: [],
+      secret: false,
+      created_at: now,
+      updated_at: now,
+      ...values,
+    })
+    await db.table('lore_fragments').multiInsert([
+      fragment('courtyard_drills', {
+        content: 'Musketeers drill in this courtyard every morning.',
+        tags: ['hotel_de_treville'],
+      }),
+      fragment('treville_debts', {
+        content: 'Tréville owes a Rochelais banker more than he can repay.',
+        tags: ['paris'],
+        secret: true,
+      }),
+      fragment('london_fog', { content: 'London fog.', kind: 'ambiance', tags: ['london'] }),
+    ])
+    const { provider, play } = buildService(SETTLED_TURN)
+
+    await play({ sessionId, userId, playerInput: 'I look around.' })
+
+    const [arbitration, narration] = provider.requests.map(({ userMessage }) => userMessage)
+    assert.include(arbitration, 'Tréville owes a Rochelais banker')
+    assert.include(narration, 'Musketeers drill in this courtyard')
+    assert.notInclude(narration, 'Tréville owes a Rochelais banker')
+    assert.notInclude(narration, 'London fog.')
+
+    const turn = await TurnLog.query()
+      .where('sessionId', sessionId)
+      .orderBy('turnNumber', 'desc')
+      .firstOrFail()
+    assert.includeMembers(turn.loreSent!.arbitration!, ['courtyard_drills', 'treville_debts'])
+    assert.include(turn.loreSent!.narration!, 'courtyard_drills')
+    assert.notInclude(turn.loreSent!.narration!, 'treville_debts')
+  })
+})
+
 test.group('TurnService | a turn with a roll', (group) => {
   useTransaction(group)
 

@@ -1,6 +1,6 @@
 import type { PlacedLocation } from '#services/game/content_labels'
 import type { ContextualModifier, Degree, Difficulty, RollOutcome } from '#services/rules/types'
-import type { NpcDisposition, WorldDefinition } from '#services/game/world'
+import type { LoreFragmentContent, NpcDisposition, WorldDefinition } from '#services/game/world'
 import type { ActionType } from '#services/game/resolution_rules'
 import type { PresentNpc } from '#services/game/npcs'
 import type { ItemsInScene } from '#services/game/inventory'
@@ -246,9 +246,14 @@ export type TurnContext = {
   language: GameLanguage
 }
 
-/** Arbitration also gets the world's closed list of action types, read from `resolution_rules`. */
+/**
+ * Arbitration also gets the world's closed list of action types, read from
+ * `resolution_rules`, and the lore the scene calls for: rules and facts,
+ * secrets included.
+ */
 export type ArbitrationContext = TurnContext & {
   action_types: ActionType[]
+  lore: LoreFragmentContent[]
 }
 
 /**
@@ -275,6 +280,8 @@ export type NarrationRequest = TurnContext & {
   intent_summary: string
   /** The player spoke to the game master rather than acting: answer, do not move the story. */
   aside: boolean
+  /** The lore the scene and the arrival call for: ambiance and facts, never a secret. */
+  lore: LoreFragmentContent[]
 }
 
 /** What extraction reads: the narration as written, and the scene it happened in. */

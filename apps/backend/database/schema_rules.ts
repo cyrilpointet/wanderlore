@@ -232,6 +232,11 @@ export default {
         alerts: jsonObjectList,
         llm_usage: jsonObjectList,
         extraction_output: jsonObject,
+        lore_sent: {
+          tsType: 'TracedLore',
+          decorators: column,
+          imports: [{ source: '#services/game/turn_trace', typeImports: ['TracedLore'] }],
+        },
         rejected_attempts: jsonObjectList,
         duration: {
           tsType: 'Duration',

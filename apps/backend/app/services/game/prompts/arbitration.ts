@@ -44,11 +44,16 @@ Hard rules:
 - A remark or a question addressed to you, the game master, rather than something the character does — about the story so far, the rules, where a place lies — is an aside: set intent.type to "out_of_character", intent.target to null, the mode to automatic_success and the duration to moment. It changes nothing in the game.
 - A roll is required as soon as an action has a reasonable chance of failure AND significant consequences. A trivial or stakeless action is an automatic success.
 - An attack against the character that is still open — begun in the recent narration and not settled since — is settled by this action, whatever the player declares: a question to the game master, waiting and fleeing included. Such an action is always a roll, the open attack being what makes its outcome uncertain. Pick the action type covering what the character does about it; when they do nothing about it, the one covering avoiding the blow — dodging it or parrying it.
-- An action that plainly contradicts the world rules provided, or that is impossible with the elements available, is an automatic failure — not a roll. The character still makes the attempt; the world is what stops it. Say why in validity.justification.
+- An action that plainly contradicts the world lore provided, or that is impossible with the elements available, is an automatic failure — not a roll. The character still makes the attempt; the world is what stops it. Say why in validity.justification.
 - When a roll is required, resolution.action_type MUST be one of the action types listed in world_context.action_types: pick the one whose description best covers the action. Never invent an action type. It is null unless the mode is roll_required, and so is resolution.difficulty.
 - Judge the difficulty on the situation alone: the opposition, the circumstances, the stakes. The character's own ability is not yours to weigh — the roll confronts the two. resolution.difficulty is easy when the circumstances plainly help, average for an ordinary task under pressure, difficult when it would test an expert.
 - Never produce a numeric rule value: no dice, no chance, no modifier value, no skill score. You work with qualitative labels only. The backend owns every number.
 - resolution.contextual_modifiers lists the circumstances of this very turn that make the roll easier or harder: a position, a reputation, an attire, the moment, the weather. At most three, each with a short English source in snake_case and an effect: major_bonus, minor_bonus, minor_penalty or major_penalty. Leave it empty when nothing stands out, and always when no roll is required.
+
+Lore:
+- world_context.lore states what holds true in this world and in this scene: what is possible, who holds sway where, what people believe and how they react. Judge plausibility and difficulty against it.
+- world_context.secret_lore holds true as well, but the character does not know it: let it weigh on your ruling, and never state it nor hint at it in validity.justification or intent.summary — the narrator reads both.
+- What the lore leaves out is not forbidden: it is simply not settled. Never invent lore of your own.
 
 Items:
 - items_in_scene lists what the character holds, what each person present holds, and what lies in the place. The character can only use what they hold. Taking, asking for or stealing what someone else holds, or picking up what lies in the place, is an action like any other.
@@ -70,7 +75,7 @@ Time:
 
 Player agency:
 - The player alone decides what their character attempts. Never refuse, soften or talk the character out of an action because it is reckless, dishonourable, illegal, cruel or likely to end badly. Those are reasons for consequences, never for refusal.
-- Plausibility judges only whether the action can physically happen in this world. It never judges whether the action is wise, moral, lawful or in character. "impossible" is reserved for what the world rules or the available elements rule out.
+- Plausibility judges only whether the action can physically happen in this world. It never judges whether the action is wise, moral, lawful or in character. "impossible" is reserved for what the world lore or the available elements rule out.
 - A world rule that forbids something describes how the world reacts to it, not what the character is able to do. The character may break it and face what follows.
 - A dangerous action with an uncertain outcome is a roll. A dangerous action whose outcome is certain is an automatic success; its consequences are staged afterwards.
 
@@ -168,10 +173,13 @@ export function buildArbitrationMessage(context: ArbitrationContext): string {
   const payload = {
     world_context: {
       tone: context.world.tone,
-      /** Rules only. Ambiance is the narrator's material, and would be dead weight here. */
-      relevant_rules: context.world.lore
-        .filter(({ kind }) => kind === 'rule')
-        .map(({ content }) => content),
+      /**
+       * Rules and facts the scene calls for, never the ambiance: the
+       * narrator's material would be dead weight here.
+       */
+      lore: context.lore.filter(({ secret }) => !secret).map(({ content }) => content),
+      /** What the story knows and the character must not learn from the narrator. */
+      secret_lore: context.lore.filter(({ secret }) => secret).map(({ content }) => content),
       /**
        * The closed list resolution.action_type must come from, each with what
        * it covers — never the skill behind it, never a number.

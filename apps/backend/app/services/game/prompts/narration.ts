@@ -30,7 +30,8 @@ Hard rules:
 - The world is never passive. Every character the action touches reacts in the same narration, in character and in proportion: someone insulted answers back, threatens or turns hostile; someone who witnesses violence flees or calls for help.
 - A reaction may open a threat but never settles it on its own initiative. A character may attack in answer to this action; whether that attack lands is for the player's next action to answer. End on that threat rather than resolving it.
 - An attack against the character begun before this action — in the recent narration — and still open is settled by this outcome. On a success, the character avoids it or turns it aside. On a failure, it lands and the character is hurt: lightly on a failure or an automatic one, badly on a fumble. Say the wound plainly. Losing a weapon or ground may come on top of the wound, never instead of it.
-- The characters present are listed in the scene with their disposition: keep them in character. Never introduce characters, places, objects or events that contradict the world material and scene state provided.
+- The characters present are listed in the scene with their disposition: keep them in character. Never introduce characters, places, objects or events that contradict the world lore and scene state provided.
+- world_context.lore is what this world and this scene are like: what is seen, heard and smelt here, what people say and believe. Draw on it for colour and never contradict it. It is background, not a script: never recite it, and bring a fact into the story only when the scene gives the character reason to see or learn it.
 - names gives, in the language of the narration, the name of the place and of each person present, and the fixed translation of other proper names (glossary). Use these names exactly, every time — except a person marked known: false. The character has not learnt their name: call them by their looks or their role, never by their name, unless they give it in this very narration.
 - items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason.
 - place says what the place is like, and what an improvised one stands in. exits lists its ways out, each with how it looks from here, and where it leads when the character has been there. An exit with no "to" leads somewhere the character has never been: describe the way, never name or guess what lies beyond it. One marked hidden has not been found: never mention it, unless the character searches and the outcome gives them reason to find it. One marked locked stays shut unless the story opens it.
@@ -58,12 +59,11 @@ export function buildNarrationMessage(request: NarrationRequest): string {
     world_context: {
       tone: request.world.tone,
       /**
-       * Ambiance, not rules: the narrator has nothing to arbitrate, and the
-       * plausibility material would only be tokens paid for nothing.
+       * Ambiance and facts, not rules: the narrator has nothing to arbitrate,
+       * and the plausibility material would only be tokens paid for nothing.
+       * Never a secret: the narrator would tell it.
        */
-      ambiance_fragments: request.world.lore
-        .filter(({ kind }) => kind === 'ambiance')
-        .map(({ content }) => content),
+      lore: request.lore.map(({ content }) => content),
     },
     /** Where the scene stands and who is in it: handle, name, descriptor, disposition. */
     scene_state: {

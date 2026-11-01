@@ -54,6 +54,7 @@ import {
 import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
 import { loadWorld } from './content/load.js'
+import { loreFor, loreReferences, loreSceneOf } from './lore.js'
 import {
   type WorldDefinition,
   locationArchetypeReferences,
@@ -118,7 +119,7 @@ const NO_CHANGE: TurnEffects = {
  * hardcoded downstream: the architecture document requires the language to
  * never be assumed fixed.
  */
-export const DEFAULT_LANGUAGE: GameLanguage = 'en'
+export const DEFAULT_LANGUAGE: GameLanguage = 'fr'
 
 /** The queue turns are played from, one job per turn. */
 export const PLAY_TURN_QUEUE = 'play-turn'
@@ -408,9 +409,13 @@ export class TurnService {
     }
     const step = { trace, budget }
 
+    /** Picked by the scene as the turn began, never by the player's text. */
+    const arbitrationLore = loreFor(world, 'arbitration', loreSceneOf(world, context.scene))
+    trace.lore.arbitration = loreReferences(arbitrationLore)
+
     const decision = await this.#arbitrate(
       turn,
-      buildArbitrationMessage({ ...context, action_types: actionTypes }),
+      buildArbitrationMessage({ ...context, action_types: actionTypes, lore: arbitrationLore }),
       meta,
       step
     )
@@ -427,6 +432,19 @@ export class TurnService {
             ...(await npcsWaitingIn(scene.session.id, route.to)),
             ...(await npcsPlacedIn(world, scene.session.id, route.to)),
           ]
+    /** Staging an arrival calls for the lore of where it ends, and of who waits there. */
+    const narrationLore = loreFor(
+      world,
+      'narration',
+      loreSceneOf(
+        world,
+        context.scene,
+        route === null
+          ? null
+          : { destination: route.to, npcs: waiting.map(({ definition }) => definition) }
+      )
+    )
+    trace.lore.narration = loreReferences(narrationLore)
     const narration = await this.#narrate(
       turn,
       buildNarrationMessage({
@@ -438,6 +456,7 @@ export class TurnService {
         npcs_at_destination: waiting,
         intent_summary: decision.intent.summary,
         aside,
+        lore: narrationLore,
       }),
       trace,
       budget

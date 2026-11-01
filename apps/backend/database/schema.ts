@@ -8,6 +8,7 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 import type { Characteristics, ItemHolderReference, DefinitionKind, Labels, ItemModifier, WeaponProfile, LocationExit, LoreFragmentKind, CombatProfile, NpcDisposition, Characteristic, LabelledEntry, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
 import type { Duration } from '#services/game/game_time'
+import type { TracedLore } from '#services/game/turn_trace'
 
 export class AuthAccessTokenSchema extends BaseModel {
   static $columns = ['abilities', 'createdAt', 'expiresAt', 'hash', 'id', 'lastUsedAt', 'name', 'tokenableId', 'type', 'updatedAt'] as const
@@ -367,7 +368,7 @@ export class SessionSchema extends BaseModel {
 }
 
 export class TurnLogSchema extends BaseModel {
-  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'duration', 'extractionOutput', 'failure', 'gameTimeAfter', 'gameTimeBefore', 'id', 'idempotencyKey', 'language', 'llmUsage', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
+  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'duration', 'extractionOutput', 'failure', 'gameTimeAfter', 'gameTimeBefore', 'id', 'idempotencyKey', 'language', 'llmUsage', 'loreSent', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
   $columns = TurnLogSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare alerts: Record<string, unknown>[] | null
@@ -395,6 +396,8 @@ export class TurnLogSchema extends BaseModel {
   declare language: string
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare llmUsage: Record<string, unknown>[] | null
+  @column()
+  declare loreSent: TracedLore | null
   @column()
   declare narratedText: string | null
   @column()

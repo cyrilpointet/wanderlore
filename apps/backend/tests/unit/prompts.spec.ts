@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 import {
+  type LoreFragmentContent,
   locationArchetypeReferences,
   npcReferences,
   skillReferences,
@@ -46,10 +47,6 @@ const ACTION_TYPES = THREE_MUSKETEERS_CONTENT.actionTypes.map(({ actionType, des
 }))
 
 /** Six past turns, numbered, so a spec can tell which ones travelled. */
-/** A rule and an ambiance of the world: untagged fragments, sent with every turn. */
-const RULE = THREE_MUSKETEERS.lore.find(({ kind }) => kind === 'rule')!.content
-const AMBIANCE = THREE_MUSKETEERS.lore.find(({ kind }) => kind === 'ambiance')!.content
-
 const SIX_TURNS: RecentTurn[] = [1, 2, 3, 4, 5, 6].flatMap((turn) => [
   { role: 'player' as const, text: `player action ${turn}` },
   { role: 'narration' as const, text: `narration ${turn}` },
@@ -139,8 +136,19 @@ function turnContext(overrides: Partial<TurnContext> = {}): TurnContext {
   }
 }
 
+/** Lore of each kind, as a step is handed it once selected (`#services/game/lore`). */
+const RULE = THREE_MUSKETEERS.lore.find(({ kind }) => kind === 'rule')!
+const AMBIANCE = THREE_MUSKETEERS.lore.find(({ kind }) => kind === 'ambiance')!
+const SECRET: LoreFragmentContent = {
+  reference: 'treville_debts',
+  kind: 'fact',
+  content: 'Tréville owes a Rochelais banker more than he can repay.',
+  tags: ['treville'],
+  secret: true,
+}
+
 function arbitrationContext(overrides: Partial<ArbitrationContext> = {}): ArbitrationContext {
-  return { ...turnContext(), action_types: ACTION_TYPES, ...overrides }
+  return { ...turnContext(), action_types: ACTION_TYPES, lore: [RULE, SECRET], ...overrides }
 }
 
 function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationRequest {
@@ -153,6 +161,7 @@ function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationR
     npcs_at_destination: [],
     intent_summary: 'Persuading the guard with a letter of recommendation',
     aside: false,
+    lore: [AMBIANCE],
     ...overrides,
   }
 }
@@ -346,15 +355,13 @@ test.group('Arbitration | context sent', () => {
     )
   })
 
-  test('sends the world rules but not its ambiance', ({ assert }) => {
-    const message = buildArbitrationMessage(arbitrationContext())
+  test('sends the lore it is handed, the secrets apart', ({ assert }) => {
+    const { world_context: world } = payloadOf(buildArbitrationMessage(arbitrationContext()))
 
-    assert.include(message, RULE)
-    /**
-     * Arbitration cannot act on sensory material, so shipping it would be paid
-     * for on every single turn for nothing.
-     */
-    assert.notInclude(message, AMBIANCE)
+    assert.deepEqual(world.lore, [RULE.content])
+    /** True for the ruling, hidden from the character: the prompt keeps it out of the justification. */
+    assert.deepEqual(world.secret_lore, [SECRET.content])
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'never state it nor hint at it')
   })
 
   test('passes the player text through untouched', ({ assert }) => {
@@ -526,11 +533,11 @@ test.group('Narration | context sent', () => {
     assert.equal(memory.recent_buffer[0].text, 'player action 3')
   })
 
-  test('sends the world ambiance but not its rules', ({ assert }) => {
+  test('sends the lore it is handed, nothing else of the world', ({ assert }) => {
     const message = buildNarrationMessage(narrationRequest())
 
-    assert.include(message, AMBIANCE)
-    assert.notInclude(message, RULE)
+    assert.deepEqual(payloadOf(message).world_context.lore, [AMBIANCE.content])
+    assert.notInclude(message, RULE.content)
   })
 
   test('frames the payload as game data rather than instructions', ({ assert }) => {
@@ -622,8 +629,9 @@ test.group('Extraction | contract', () => {
   test('sends no lore and no player text', ({ assert }) => {
     const message = extractionMessage()
 
-    assert.notInclude(message, RULE)
-    assert.notInclude(message, AMBIANCE)
+    for (const fragment of THREE_MUSKETEERS.lore) {
+      assert.notInclude(message, fragment.content)
+    }
     assert.notInclude(message, turnContext().player_input)
   })
 
@@ -883,7 +891,7 @@ test.group('Prompts | places and their exits', () => {
 
   test('arbitration is handed the place, all its exits and where they lead', ({ assert }) => {
     const payload = payloadOf(
-      buildArbitrationMessage({ ...inTheHall(), action_types: ACTION_TYPES })
+      buildArbitrationMessage({ ...inTheHall(), action_types: ACTION_TYPES, lore: [] })
     )
 
     assert.equal(payload.scene_state.description, 'A tall hall with a staircase.')
