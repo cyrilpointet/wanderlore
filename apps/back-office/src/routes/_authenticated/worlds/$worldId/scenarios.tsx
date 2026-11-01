@@ -3,8 +3,15 @@ import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-q
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
+import { CatalogueSummary } from '@/content/catalogue_summary'
 import { Field, FormAlert } from '@/content/field'
 import { errorUnder, formFailureOf, type FormFailure } from '@/content/form_errors'
+import {
+  type ImportedCatalogues,
+  cataloguesOf,
+  importedUniques,
+  noCatalogues,
+} from '@/content/imports'
 import { JsonImport } from '@/content/json_import'
 import { labelsOf, type LabelRow } from '@/content/labels'
 import { LabelsEditor } from '@/content/labels_editor'
@@ -68,8 +75,8 @@ function Scenarios() {
 
 /**
  * A new scenario: its reference and title; everything else in its editor. A
- * scenario filled in from a file shows its whole form at once, to be checked
- * before it is created.
+ * scenario filled in from a file shows its whole form at once, with the
+ * catalogues and lore it carries, to be checked before it is all created.
  */
 function NewScenario({ worldId }: { worldId: string }) {
   const { t } = useTranslation('scenarios')
@@ -78,6 +85,7 @@ function NewScenario({ worldId }: { worldId: string }) {
   const [reference, setReference] = useState('')
   const [labels, setLabels] = useState<LabelRow[]>([{ language: 'en', name: '' }])
   const [imported, setImported] = useState<ScenarioDraft | null>(null)
+  const [catalogues, setCatalogues] = useState<ImportedCatalogues>(noCatalogues)
   const [failure, setFailure] = useState<FormFailure | null>(null)
   const englishName = labels[0]?.name ?? ''
 
@@ -94,7 +102,11 @@ function NewScenario({ worldId }: { worldId: string }) {
         return Promise.resolve(null)
       }
 
-      return createScenario(worldId, { ...built.payload, reference: reference.trim() })
+      return createScenario(worldId, {
+        ...built.payload,
+        ...catalogues,
+        reference: reference.trim(),
+      })
     },
     onMutate: () => setFailure(null),
     onSuccess: async (scenario) => {
@@ -127,6 +139,7 @@ function NewScenario({ worldId }: { worldId: string }) {
           const read = scenarioDraftFromJson(value)
           setReference(read.reference)
           setImported(read.draft)
+          setCatalogues(cataloguesOf(value))
           setFailure(null)
         }}
       />
@@ -165,8 +178,10 @@ function NewScenario({ worldId }: { worldId: string }) {
           draft={imported}
           onChange={setImported}
           errors={errors}
+          catalogues={catalogues}
         />
       )}
+      <CatalogueSummary catalogues={catalogues} errors={errors} />
       {failure?.general && <FormAlert message={failure.general} />}
       {failure && !failure.general && Object.keys(failure.fields).length > 0 && (
         <FormAlert message={t('fixErrors', { ns: 'worlds' })} />
@@ -180,16 +195,24 @@ function NewScenario({ worldId }: { worldId: string }) {
   )
 }
 
-/** The whole form of a scenario not created yet: its places and people are the world's. */
+/**
+ * The whole form of a scenario not created yet: its places and people are the
+ * world's, and those its file brings along.
+ */
 function ImportedScenario({
   worldId,
+  catalogues,
   ...form
-}: { worldId: string } & Omit<
+}: { worldId: string; catalogues: ImportedCatalogues } & Omit<
   ComponentProps<typeof ScenarioForm>,
   'uniqueLocations' | 'uniqueNpcs'
 >) {
-  const uniqueLocations = useUniques({ worldId }, 'locations')
-  const uniqueNpcs = useUniques({ worldId }, 'npcs')
+  const worldLocations = useUniques({ worldId }, 'locations')
+  const worldNpcs = useUniques({ worldId }, 'npcs')
+  const uniqueLocations = [
+    ...new Set([...worldLocations, ...importedUniques(catalogues.locations)]),
+  ]
+  const uniqueNpcs = [...new Set([...worldNpcs, ...importedUniques(catalogues.npcs)])]
 
   return <ScenarioForm {...form} uniqueLocations={uniqueLocations} uniqueNpcs={uniqueNpcs} />
 }

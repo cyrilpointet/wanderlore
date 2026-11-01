@@ -60,3 +60,52 @@ export async function readImport(
 
   return isImported(value) ? { value } : { error: 'not_an_object' }
 }
+
+/** The catalogues a world or a scenario file may carry, created with it. */
+export const IMPORTED_CATALOGUES = ['locations', 'npcs', 'items', 'lore'] as const
+export type ImportedCatalogue = (typeof IMPORTED_CATALOGUES)[number]
+
+/**
+ * The entries of each catalogue of a file, as written: the server checks
+ * every one of them when the world or the scenario is created, and refuses
+ * the whole file on the first fault. Anything that is no object is dropped.
+ */
+export type ImportedCatalogues = Record<ImportedCatalogue, Imported[]>
+
+export function cataloguesOf(value: Imported): ImportedCatalogues {
+  return Object.fromEntries(
+    IMPORTED_CATALOGUES.map((catalogue) => [
+      catalogue,
+      Array.isArray(value[catalogue]) ? value[catalogue].filter(isImported) : [],
+    ])
+  ) as ImportedCatalogues
+}
+
+export function noCatalogues(): ImportedCatalogues {
+  return { locations: [], npcs: [], items: [], lore: [] }
+}
+
+/**
+ * What a world file brings besides the form: its catalogues and lore, and
+ * its categories of action — a world ready to play, but for its scenarios.
+ */
+export type ImportedWorldContent = ImportedCatalogues & { actionTypes: Imported[] }
+
+export function worldContentOf(value: Imported): ImportedWorldContent {
+  return {
+    ...cataloguesOf(value),
+    actionTypes: Array.isArray(value.actionTypes) ? value.actionTypes.filter(isImported) : [],
+  }
+}
+
+export function noWorldContent(): ImportedWorldContent {
+  return { ...noCatalogues(), actionTypes: [] }
+}
+
+/** The named entries of a file's catalogue: what the rest of the form may name before it exists. */
+export function importedUniques(entries: Imported[]): string[] {
+  return entries
+    .filter((entry) => entry.kind === 'unique')
+    .map((entry) => textOf(entry.reference))
+    .filter(Boolean)
+}

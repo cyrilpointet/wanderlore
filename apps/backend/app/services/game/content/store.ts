@@ -94,8 +94,8 @@ export async function storeWorldContent(
   return { world, scenarios }
 }
 
-/** The three catalogues of one level: the world's (`scenarioId` null) or a scenario's. */
-async function storeCatalogues(
+/** The catalogues of one level: the world's (`scenarioId` null) or a scenario's. */
+export async function storeCatalogues(
   worldId: string,
   scenarioId: string | null,
   catalogues: Catalogues,

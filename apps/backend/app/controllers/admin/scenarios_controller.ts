@@ -1,3 +1,5 @@
+import db from '@adonisjs/lucid/services/db'
+
 import World from '#models/world'
 import Scenario from '#models/scenario'
 import { createScenarioValidator, updateScenarioValidator } from '#validators/content'
@@ -13,7 +15,10 @@ import { loadContent } from '#services/game/content/load'
 import { checkScenario } from '#services/game/content/coherence'
 import type { HttpContext } from '@adonisjs/core/http'
 
+import { storeCatalogues } from '#services/game/content/store'
+
 import { referenceTaken, refuseReferenceChange } from './content.js'
+import { importedCatalogues, refuseImportedCatalogues } from './catalogue_checks.js'
 
 /** The scenarios of a world, as the back-office edits them. */
 export default class ScenariosController {
@@ -28,10 +33,15 @@ export default class ScenariosController {
     return serialize(ScenarioTransformer.transform(await Scenario.findOrFail(params.scenarioId)))
   }
 
-  /** Always a draft: publishing checks the whole scenario holds together. */
+  /**
+   * Always a draft: publishing checks the whole scenario holds together. With
+   * the catalogues of an imported file, if any: all written in one
+   * transaction, or nothing at all.
+   */
   async store({ params, request, response, auth, serialize }: HttpContext) {
     const world = await World.findOrFail(params.worldId)
-    const payload = await request.validateUsing(createScenarioValidator)
+    const { npcs, locations, items, lore, ...payload } =
+      await request.validateUsing(createScenarioValidator)
 
     const taken = await Scenario.query()
       .where('worldId', world.id)
@@ -42,11 +52,22 @@ export default class ScenariosController {
       throw referenceTaken(payload.reference)
     }
 
-    const scenario = await Scenario.create({
-      ...payload,
-      worldId: world.id,
-      status: 'draft',
-      createdBy: auth.getUserOrFail().id,
+    const catalogues = importedCatalogues({ npcs, locations, items, lore })
+    await refuseImportedCatalogues(catalogues, { worldId: world.id, scenarioId: null })
+
+    const scenario = await db.transaction(async (trx) => {
+      const created = await Scenario.create(
+        {
+          ...payload,
+          worldId: world.id,
+          status: 'draft',
+          createdBy: auth.getUserOrFail().id,
+        },
+        { client: trx }
+      )
+      await storeCatalogues(world.id, created.id, catalogues, trx)
+
+      return created
     })
 
     response.status(201)

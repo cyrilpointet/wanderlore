@@ -21,5 +21,20 @@
   "jsonHint": "JSON, checked by the server when saved.",
   "importJson": "Fill in from a JSON file",
   "importedFrom": "Filled in from {{file}}. Check everything: nothing is saved until it is created.",
-  "importNotObject": "This file holds no single object to fill the form from."
+  "importNotObject": "This file holds no single object to fill the form from.",
+  "importedCatalogues": "Created with it",
+  "importedCataloguesHint": "What the file carries besides the form, created in the same go. The server checks every entry: one at fault, and nothing is created.",
+  "catalogueCount": {
+    "actionTypes_one": "{{count}} category of action",
+    "actionTypes_other": "{{count}} categories of action",
+    "locations_one": "{{count}} place",
+    "locations_other": "{{count}} places",
+    "npcs_one": "{{count}} person",
+    "npcs_other": "{{count}} people",
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} items",
+    "lore_one": "{{count}} lore fragment",
+    "lore_other": "{{count}} lore fragments"
+  },
+  "noReference": "(no reference)"
 }

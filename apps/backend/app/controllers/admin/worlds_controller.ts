@@ -1,4 +1,7 @@
+import db from '@adonisjs/lucid/services/db'
+
 import World from '#models/world'
+import ResolutionRule from '#models/resolution_rule'
 import { createWorldValidator, updateWorldValidator } from '#validators/content'
 import {
   refuseIfPlayed,
@@ -8,7 +11,14 @@ import {
 import WorldTransformer from '#transformers/admin/world_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 
+import { storeCatalogues } from '#services/game/content/store'
+
 import { referenceTaken, refuseReferenceChange } from './content.js'
+import {
+  importedCatalogues,
+  refuseImportedCatalogues,
+  refuseUnlessOneResolution,
+} from './catalogue_checks.js'
 
 /** The worlds of the game, as the back-office edits them. Game masters only. */
 export default class WorldsController {
@@ -24,14 +34,52 @@ export default class WorldsController {
     return serialize(WorldTransformer.transform(world).useVariant('toDetail'))
   }
 
+  /**
+   * With what an imported file brings besides — catalogues, lore, categories
+   * of action: a world ready to play but for its scenarios. All written in one
+   * transaction, or nothing at all.
+   */
   async store({ request, response, auth, serialize }: HttpContext) {
-    const payload = await request.validateUsing(createWorldValidator)
+    const {
+      npcs,
+      locations,
+      items,
+      lore,
+      actionTypes = [],
+      ...payload
+    } = await request.validateUsing(createWorldValidator)
 
     if (await World.findBy('reference', payload.reference)) {
       throw referenceTaken(payload.reference)
     }
 
-    const world = await World.create({ ...payload, createdBy: auth.getUserOrFail().id })
+    const catalogues = importedCatalogues({ npcs, locations, items, lore })
+    await refuseImportedCatalogues(catalogues, { worldId: null, scenarioId: null })
+    const rules = actionTypes.map((rule, index) => {
+      const resolved = {
+        actionType: rule.actionType,
+        description: rule.description,
+        associatedSkill: rule.associatedSkill ?? null,
+        associatedCharacteristic: rule.associatedCharacteristic ?? null,
+      }
+      refuseUnlessOneResolution(resolved, `actionTypes.${index}`)
+
+      return resolved
+    })
+
+    const world = await db.transaction(async (trx) => {
+      const created = await World.create(
+        { ...payload, createdBy: auth.getUserOrFail().id },
+        { client: trx }
+      )
+      await storeCatalogues(created.id, null, catalogues, trx)
+      await ResolutionRule.createMany(
+        rules.map((rule) => ({ ...rule, worldId: created.id })),
+        { client: trx }
+      )
+
+      return created
+    })
 
     response.status(201)
 

@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
+import type { ImportedCatalogues } from '@/content/imports'
 import type { Labels } from '@/content/labels'
 
 export type Entry = { reference: string; labels: Labels }
@@ -55,9 +56,12 @@ export const scenarioQuery = (scenarioId: string) =>
   })
 
 /** A reference and a title at least; the rest of a scenario may come with them, from a file. */
+/** With the catalogues of an imported file, if any: created in the same go. */
 export async function createScenario(
   worldId: string,
-  payload: Pick<ScenarioPayload, 'reference' | 'labels'> & Partial<ScenarioPayload>
+  payload: Pick<ScenarioPayload, 'reference' | 'labels'> &
+    Partial<ScenarioPayload> &
+    Partial<ImportedCatalogues>
 ): Promise<Scenario> {
   return (
     await api<{ data: Scenario }>(`/admin/worlds/${worldId}/scenarios`, {

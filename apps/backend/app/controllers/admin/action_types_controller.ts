@@ -1,5 +1,4 @@
 import World from '#models/world'
-import { Refusal } from '#exceptions/refusal'
 import ResolutionRule from '#models/resolution_rule'
 import { createActionTypeValidator, updateActionTypeValidator } from '#validators/content'
 import { refuseRemovedActionTypes } from '#services/game/content/usage'
@@ -7,6 +6,7 @@ import ActionTypeTransformer from '#transformers/admin/action_type_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 
 import { referenceTaken, refuseReferenceChange } from './content.js'
+import { refuseUnlessOneResolution } from './catalogue_checks.js'
 
 /** The categories of action of a world, each tied to the skill or characteristic that resolves it. */
 export default class ActionTypesController {
@@ -82,26 +82,5 @@ export default class ActionTypesController {
     await rule.delete()
 
     return response.noContent()
-  }
-}
-
-/**
- * A skill or a characteristic, exactly one: the table refuses anything else,
- * but with a message the back-office cannot show.
- */
-function refuseUnlessOneResolution(resolution: {
-  associatedSkill: string | null
-  associatedCharacteristic: string | null
-}) {
-  const set = [resolution.associatedSkill, resolution.associatedCharacteristic].filter(
-    (value) => value !== null
-  )
-
-  if (set.length !== 1) {
-    throw new Refusal(
-      422,
-      'one_resolution',
-      'A category of action is resolved by a skill or by a characteristic, exactly one of them.'
-    )
   }
 }

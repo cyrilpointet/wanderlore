@@ -2,6 +2,7 @@ import NpcDefinition from '#models/npc_definition'
 import ItemDefinition from '#models/item_definition'
 import LocationDefinition from '#models/location_definition'
 import { Refusal } from '#exceptions/refusal'
+import type { Catalogues } from '#services/game/content/types'
 
 /**
  * What the validators cannot see in a definition or a fragment on its own:
@@ -110,5 +111,88 @@ export async function refuseUnknownTags(
       `"${unknown[0]}" is no place, person or item of this world.`,
       { field: `${path}tags`, references: unknown }
     )
+  }
+}
+
+/**
+ * A skill or a characteristic, exactly one: the table refuses anything else,
+ * but with a message the back-office cannot show. `path` names the entry of
+ * an imported file at fault.
+ */
+export function refuseUnlessOneResolution(
+  resolution: { associatedSkill: string | null; associatedCharacteristic: string | null },
+  path?: string
+) {
+  const set = [resolution.associatedSkill, resolution.associatedCharacteristic].filter(
+    (value) => value !== null
+  )
+
+  if (set.length !== 1) {
+    throw new Refusal(
+      422,
+      'one_resolution',
+      'A category of action is resolved by a skill or by a characteristic, exactly one of them.',
+      path === undefined ? undefined : { field: path }
+    )
+  }
+}
+
+/**
+ * The catalogues of an imported world or scenario, entry by entry, before
+ * anything is written: the first fault refuses the whole file, on the path of
+ * the faulty field (`lore.3.tags`). A tag may name a definition of the file
+ * itself.
+ */
+export async function refuseImportedCatalogues(catalogues: Catalogues, level: CatalogueLevel) {
+  const lists = [
+    ['npcs', catalogues.npcs],
+    ['locations', catalogues.locations],
+    ['items', catalogues.items],
+  ] as const
+
+  for (const [list, definitions] of lists) {
+    definitions.forEach((definition, index) =>
+      refuseKindMismatch(definition as unknown as Record<string, unknown>, `${list}.${index}.`)
+    )
+  }
+
+  const imported = new Set(
+    [...catalogues.npcs, ...catalogues.locations, ...catalogues.items].map(
+      ({ reference }) => reference
+    )
+  )
+
+  for (const [index, fragment] of catalogues.lore.entries()) {
+    refuseSecretAmbiance(fragment, `lore.${index}.`)
+    await refuseUnknownTags(fragment, level, imported, `lore.${index}.`)
+  }
+}
+
+/** Imported catalogues, with what a file may leave out filled in as a form would. */
+export function importedCatalogues(payload: {
+  npcs?: Catalogues['npcs']
+  locations?: (Omit<Catalogues['locations'][number], 'exits' | 'entrance'> & {
+    exits?: Catalogues['locations'][number]['exits']
+    entrance?: boolean
+  })[]
+  items?: Catalogues['items']
+  lore?: (Omit<Catalogues['lore'][number], 'tags' | 'secret'> & {
+    tags?: string[]
+    secret?: boolean
+  })[]
+}): Catalogues {
+  return {
+    npcs: payload.npcs ?? [],
+    locations: (payload.locations ?? []).map((location) => ({
+      ...location,
+      exits: location.exits ?? [],
+      entrance: location.entrance ?? false,
+    })),
+    items: payload.items ?? [],
+    lore: (payload.lore ?? []).map((fragment) => ({
+      ...fragment,
+      tags: fragment.tags ?? [],
+      secret: fragment.secret ?? false,
+    })),
   }
 }

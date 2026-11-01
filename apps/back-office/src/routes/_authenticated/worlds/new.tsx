@@ -5,8 +5,10 @@ import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { AppHeader } from '@/components/app_header'
+import { CatalogueSummary } from '@/content/catalogue_summary'
 import { FormAlert } from '@/content/field'
 import { formFailureOf, type FormFailure } from '@/content/form_errors'
+import { noWorldContent, worldContentOf } from '@/content/imports'
 import { JsonImport } from '@/content/json_import'
 import { PRIMARY } from '@/content/ui'
 import { createWorld, worldQuery, worldsQuery } from '@/worlds/queries'
@@ -19,8 +21,9 @@ export const Route = createFileRoute('/_authenticated/worlds/new')({
 
 /**
  * A new world: its reference, names and tone first; everything else in its
- * editor. A world filled in from a file shows everything at once, to be
- * checked before it is created.
+ * editor. A world filled in from a file comes ready to play but for its
+ * scenarios: everything shows at once, with the categories of action,
+ * catalogues and lore it carries, to be checked before it is all created.
  */
 function NewWorld() {
   const { t } = useTranslation('worlds')
@@ -29,9 +32,10 @@ function NewWorld() {
   const [draft, setDraft] = useState(emptyWorldDraft)
   const [failure, setFailure] = useState<FormFailure | null>(null)
   const [imported, setImported] = useState(false)
+  const [catalogues, setCatalogues] = useState(noWorldContent)
 
   const create = useMutation({
-    mutationFn: () => createWorld(worldPayloadOf(draft)),
+    mutationFn: () => createWorld({ ...worldPayloadOf(draft), ...catalogues }),
     onMutate: () => setFailure(null),
     onSuccess: async (world) => {
       queryClient.setQueryData(worldQuery(world.id).queryKey, world)
@@ -65,6 +69,7 @@ function NewWorld() {
             hint={t('importHint')}
             onImport={(world) => {
               setDraft(worldDraftFromJson(world))
+              setCatalogues(worldContentOf(world))
               setImported(true)
               setFailure(null)
             }}
@@ -76,6 +81,7 @@ function NewWorld() {
             creating
             full={imported}
           />
+          <CatalogueSummary catalogues={catalogues} errors={failure?.fields ?? {}} />
           {failure?.general && <FormAlert message={failure.general} />}
           {failure && !failure.general && Object.keys(failure.fields).length > 0 && (
             <FormAlert message={t('fixErrors')} />

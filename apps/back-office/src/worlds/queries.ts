@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
+import type { ImportedWorldContent } from '@/content/imports'
 import type { Labels } from '@/content/labels'
 
 export type { Labels }
@@ -79,7 +80,10 @@ export const actionTypesQuery = (worldId: string) =>
       (await api<{ data: ActionType[] }>(`/admin/worlds/${worldId}/action-types`)).data,
   })
 
-export async function createWorld(payload: WorldPayload): Promise<WorldDetail> {
+/** With what an imported file brings besides, if anything: created in the same go. */
+export async function createWorld(
+  payload: WorldPayload & Partial<ImportedWorldContent>
+): Promise<WorldDetail> {
   return (await api<{ data: WorldDetail }>('/admin/worlds', { method: 'POST', body: payload }))
     .data
 }

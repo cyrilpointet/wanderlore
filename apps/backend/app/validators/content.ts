@@ -83,6 +83,130 @@ const characteristics = () =>
     ) as Record<(typeof CHARACTERISTICS)[number], ReturnType<typeof vine.number>>
   )
 
+const combat = () =>
+  vine.object({
+    skills: percentages(),
+    hitPointsMax: vine.number().withoutDecimals().min(1).max(999),
+    weapon: reference().nullable(),
+  })
+
+/** In percent, as BRP prices equipment: ±20 for a tool of quality, up to ±50 for the exceptional. */
+const modifier = () =>
+  vine.object({
+    target: vine.enum(['skill'] as const),
+    skill: reference(),
+    value: vine.number().withoutDecimals().min(-50).max(50),
+    condition: vine.enum(ITEM_CONDITIONS),
+    description: sentence(300),
+  })
+
+const weapon = () =>
+  vine.object({
+    skill: reference(),
+    damage: vine.string().trim().maxLength(40).use(isDice()),
+    damageModifier: vine.enum(DAMAGE_MODIFIER_USES),
+    special: vine.enum(SPECIAL_EFFECTS).nullable(),
+  })
+
+/** A way out of a unique place: where it leads, how it reads, what shuts it. */
+const exit = () =>
+  vine.object({
+    to: reference(),
+    passage: sentence(300),
+    backPassage: sentence(300).nullable(),
+    hidden: vine.boolean(),
+    requires: reference().nullable(),
+    oneWay: vine.boolean(),
+    duration: vine
+      .enum(Object.keys(FIXED_DURATIONS) as (keyof typeof FIXED_DURATIONS)[])
+      .nullable(),
+  })
+
+const initialHolder = () =>
+  vine.object({
+    holder: vine.enum(['npc', 'location'] as const),
+    reference: reference(),
+  })
+
+const definitionBase = {
+  labels: labels(),
+  description: sentence(),
+  kind: vine.enum(DEFINITION_KINDS),
+}
+
+const catalogueFields = {
+  npcs: {
+    generic: vine.boolean(),
+    defaultDisposition: vine.enum(NPC_DISPOSITIONS),
+    combat: combat(),
+    initialLocation: reference().nullable(),
+  },
+  locations: {
+    parent: reference().nullable(),
+    exits: vine.array(exit()),
+    entrance: vine.boolean(),
+  },
+  items: {
+    generic: vine.boolean(),
+    stackable: vine.boolean(),
+    equippable: vine.boolean(),
+    modifiers: vine.array(modifier()),
+    weapon: weapon().nullable(),
+    initialHolder: initialHolder().nullable(),
+  },
+}
+
+/**
+ * A lore fragment: no names, no description — the content is the text. Its
+ * tags are references; whether they name something is checked against the
+ * catalogues by the controller.
+ */
+const loreFields = {
+  kind: vine.enum(LORE_FRAGMENT_KINDS),
+  content: sentence(2000),
+  tags: vine.array(reference()).distinct(),
+  secret: vine.boolean(),
+}
+
+/**
+ * The catalogues a world or a scenario may be created with, from an imported
+ * file: each entry as its own form would take it, written in one transaction
+ * with what declares them.
+ */
+const importedCatalogues = () => ({
+  npcs: vine
+    .array(vine.object({ reference: reference(), ...definitionBase, ...catalogueFields.npcs }))
+    .distinct('reference')
+    .optional(),
+  locations: vine
+    .array(
+      vine.object({
+        reference: reference(),
+        ...definitionBase,
+        ...catalogueFields.locations,
+        exits: catalogueFields.locations.exits.optional(),
+        entrance: catalogueFields.locations.entrance.optional(),
+      })
+    )
+    .distinct('reference')
+    .optional(),
+  items: vine
+    .array(vine.object({ reference: reference(), ...definitionBase, ...catalogueFields.items }))
+    .distinct('reference')
+    .optional(),
+  lore: vine
+    .array(
+      vine.object({
+        reference: reference(),
+        ...loreFields,
+        tags: loreFields.tags.optional(),
+        secret: loreFields.secret.optional(),
+      })
+    )
+    .distinct('reference')
+    .optional(),
+})
+
 const worldLists = {
   narrativeTone: sentence(500),
   skills: vine
@@ -99,10 +223,26 @@ const worldLists = {
   glossary: vine.array(entry()).distinct('reference'),
 }
 
+/**
+ * A world ready to play may come from a file with everything but its
+ * scenarios: its catalogues, its lore and its categories of action.
+ */
 export const createWorldValidator = vine.create({
   reference: reference(),
   labels: labels(),
   ...worldLists,
+  ...importedCatalogues(),
+  actionTypes: vine
+    .array(
+      vine.object({
+        actionType: reference(),
+        description: sentence(),
+        associatedSkill: reference().nullable().optional(),
+        associatedCharacteristic: vine.enum(CHARACTERISTICS).nullable().optional(),
+      })
+    )
+    .distinct('actionType')
+    .optional(),
 })
 
 /** Everything but the reference, which never changes once created. */
@@ -219,6 +359,7 @@ export const createScenarioValidator = vine.create({
   startTime: scenarioFields.startTime.optional(),
   startDate: scenarioFields.startDate.optional(),
   glossary: scenarioFields.glossary.optional(),
+  ...importedCatalogues(),
 })
 
 export const updateScenarioValidator = vine.create({
@@ -232,91 +373,6 @@ export const updateScenarioValidator = vine.create({
   startDate: scenarioFields.startDate.optional(),
   glossary: scenarioFields.glossary.optional(),
 })
-
-const combat = () =>
-  vine.object({
-    skills: percentages(),
-    hitPointsMax: vine.number().withoutDecimals().min(1).max(999),
-    weapon: reference().nullable(),
-  })
-
-/** In percent, as BRP prices equipment: ±20 for a tool of quality, up to ±50 for the exceptional. */
-const modifier = () =>
-  vine.object({
-    target: vine.enum(['skill'] as const),
-    skill: reference(),
-    value: vine.number().withoutDecimals().min(-50).max(50),
-    condition: vine.enum(ITEM_CONDITIONS),
-    description: sentence(300),
-  })
-
-const weapon = () =>
-  vine.object({
-    skill: reference(),
-    damage: vine.string().trim().maxLength(40).use(isDice()),
-    damageModifier: vine.enum(DAMAGE_MODIFIER_USES),
-    special: vine.enum(SPECIAL_EFFECTS).nullable(),
-  })
-
-/** A way out of a unique place: where it leads, how it reads, what shuts it. */
-const exit = () =>
-  vine.object({
-    to: reference(),
-    passage: sentence(300),
-    backPassage: sentence(300).nullable(),
-    hidden: vine.boolean(),
-    requires: reference().nullable(),
-    oneWay: vine.boolean(),
-    duration: vine
-      .enum(Object.keys(FIXED_DURATIONS) as (keyof typeof FIXED_DURATIONS)[])
-      .nullable(),
-  })
-
-const initialHolder = () =>
-  vine.object({
-    holder: vine.enum(['npc', 'location'] as const),
-    reference: reference(),
-  })
-
-const definitionBase = {
-  labels: labels(),
-  description: sentence(),
-  kind: vine.enum(DEFINITION_KINDS),
-}
-
-const catalogueFields = {
-  npcs: {
-    generic: vine.boolean(),
-    defaultDisposition: vine.enum(NPC_DISPOSITIONS),
-    combat: combat(),
-    initialLocation: reference().nullable(),
-  },
-  locations: {
-    parent: reference().nullable(),
-    exits: vine.array(exit()),
-    entrance: vine.boolean(),
-  },
-  items: {
-    generic: vine.boolean(),
-    stackable: vine.boolean(),
-    equippable: vine.boolean(),
-    modifiers: vine.array(modifier()),
-    weapon: weapon().nullable(),
-    initialHolder: initialHolder().nullable(),
-  },
-}
-
-/**
- * A lore fragment: no names, no description — the content is the text. Its
- * tags are references; whether they name something is checked against the
- * catalogues by the controller.
- */
-const loreFields = {
-  kind: vine.enum(LORE_FRAGMENT_KINDS),
-  content: sentence(2000),
-  tags: vine.array(reference()).distinct(),
-  secret: vine.boolean(),
-}
 
 export const CATALOGUES = ['npcs', 'locations', 'items', 'lore'] as const
 

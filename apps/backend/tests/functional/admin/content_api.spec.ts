@@ -595,6 +595,144 @@ test.group('Content API | lore', (group) => {
   })
 })
 
+test.group('Content API | imports', (group) => {
+  useTransaction(group)
+
+  const SCENARIO = {
+    reference: 'the_ripper',
+    labels: { en: 'The Ripper' },
+    locations: [WHITECHAPEL],
+    npcs: [GUARD],
+    lore: [RUMOUR, { ...RUMOUR, reference: 'beat', tags: ['constable'], kind: 'rule' }],
+  }
+
+  test('creates a scenario with its catalogues and its lore, in one go', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/scenarios`, SCENARIO)
+
+    response.assertStatus(201)
+    const scenarioId = bodyOf(response).data.id
+    const places = bodyOf(await as(client, user).get(`/scenarios/${scenarioId}/locations`)).data
+    const lore = bodyOf(await as(client, user).get(`/scenarios/${scenarioId}/lore`)).data
+    assert.deepEqual(
+      places.map(({ reference }: { reference: string }) => reference),
+      ['whitechapel']
+    )
+    /** What a file leaves out is filled in as a form would. */
+    assert.deepEqual(places[0].exits, [])
+    assert.deepEqual(
+      lore.map(({ reference }: { reference: string }) => reference),
+      ['beat', 'fog_of_whitechapel']
+    )
+  })
+
+  test('creates a world ready to play but for its scenarios, in one go', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+
+    const response = await as(client, user).post('/worlds', {
+      ...NEW_WORLD,
+      locations: [WHITECHAPEL],
+      lore: [RUMOUR],
+      actionTypes: [
+        {
+          actionType: 'investigation',
+          description: 'Reading clues and drawing conclusions.',
+          associatedSkill: 'deduction',
+        },
+        {
+          actionType: 'feat_of_strength',
+          description: 'Forcing, lifting, breaking.',
+          associatedCharacteristic: 'STR',
+        },
+      ],
+    })
+
+    response.assertStatus(201)
+    const worldId = bodyOf(response).data.id
+    const lore = bodyOf(await as(client, user).get(`/worlds/${worldId}/lore`)).data
+    const actionTypes = bodyOf(await as(client, user).get(`/worlds/${worldId}/action-types`)).data
+    assert.lengthOf(lore, 1)
+    assert.sameMembers(
+      actionTypes.map(({ actionType }: { actionType: string }) => actionType),
+      ['investigation', 'feat_of_strength']
+    )
+  })
+
+  test('refuses a category of action resolved by neither or both, on its entry', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+
+    const response = await as(client, user).post('/worlds', {
+      ...NEW_WORLD,
+      actionTypes: [
+        { actionType: 'investigation', description: 'Clues.', associatedSkill: 'deduction' },
+        { actionType: 'anything', description: 'Whatever.' },
+      ],
+    })
+
+    response.assertStatus(422)
+    assert.deepEqual(bodyOf(response).error.details, { field: 'actionTypes.1' })
+    assert.isNull(await db.from('worlds').where('reference', NEW_WORLD.reference).first())
+  })
+
+  test('writes nothing when one entry is at fault', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/scenarios`, {
+      ...SCENARIO,
+      lore: [...SCENARIO.lore, { ...RUMOUR, reference: 'nowhere', tags: ['limehouse'] }],
+    })
+
+    response.assertStatus(422)
+    assert.deepEqual(bodyOf(response).error.details, {
+      field: 'lore.2.tags',
+      references: ['limehouse'],
+    })
+    assert.isNull(await db.from('scenarios').where('world_id', worldId).first())
+    assert.isNull(await db.from('location_definitions').where('world_id', worldId).first())
+  })
+
+  test('refuses what only the other kind may have, on its entry', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/scenarios`, {
+      ...SCENARIO,
+      npcs: [GUARD, { ...GUARD, reference: 'inspector', kind: 'unique', generic: true }],
+    })
+
+    response.assertStatus(422)
+    assert.deepEqual(bodyOf(response).error.details, { field: 'npcs.1.generic' })
+  })
+
+  test('names the faulty field of an imported entry', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/scenarios`, {
+      ...SCENARIO,
+      lore: [{ ...RUMOUR, kind: 'gossip' }],
+    })
+
+    response.assertStatus(422)
+    assert.include(
+      bodyOf(response).errors.map((error: { field: string }) => error.field),
+      'lore.0.kind'
+    )
+  })
+})
+
 test.group('Content API | access', (group) => {
   useTransaction(group)
 
