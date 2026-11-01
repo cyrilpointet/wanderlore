@@ -171,6 +171,13 @@ export type NpcDefinitionContent = DefinitionContent & {
   generic: boolean
   defaultDisposition: NpcDisposition
   combat: CombatProfile
+  /**
+   * Reference of the unique place a unique person waits in when the game
+   * starts, if any: they come into being there, the first time the game
+   * visits it — as an item does with its initial holder. An archetype has
+   * none.
+   */
+  initialLocation: string | null
 }
 
 /**
@@ -249,7 +256,7 @@ export type StartingItem = {
 
 /**
  * The character a scenario is played with, copied into every game started
- * from it. Guided creation comes in Phase 10.
+ * from it. Guided creation comes in Phase 12.
  */
 export type PregeneratedCharacter = {
   name: string
@@ -270,6 +277,12 @@ export type InitialState = {
   location: string
   chapter: string | null
   quests: ActiveQuest[]
+  /**
+   * The unique people whose names the character knows from the start: a
+   * relative, the person a letter is for. Anyone else is named only once they
+   * give their name in play. Absent from a state written before it existed.
+   */
+  knownNpcs?: string[]
 }
 
 export const SCENARIO_STATUSES = ['draft', 'published'] as const

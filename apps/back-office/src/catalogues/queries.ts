@@ -31,6 +31,8 @@ export type NpcDefinition = DefinitionBase & {
   generic: boolean
   defaultDisposition: Disposition
   combat: unknown
+  /** The named place a unique person waits in from the start; null for none. */
+  initialLocation: string | null
 }
 
 /**

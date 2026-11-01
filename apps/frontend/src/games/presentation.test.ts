@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest'
 
-import { gaugePercent, groupSkills, paragraphs, showsQuantity } from './presentation'
+import {
+  gaugePercent,
+  groupSkills,
+  paragraphs,
+  percentileDice,
+  showsQuantity,
+} from './presentation'
 
 describe('groupSkills', () => {
   test('puts each skill under its BRP category, in the order of the categories', () => {
@@ -53,5 +59,18 @@ describe('showsQuantity', () => {
     expect(showsQuantity({ handle: null, quantity: 1 })).toBe(true)
     expect(showsQuantity({ handle: null, quantity: 6 })).toBe(true)
     expect(showsQuantity({ handle: 'rapier_1', quantity: 1 })).toBe(false)
+  })
+})
+
+describe('percentileDice', () => {
+  test('splits the d100 into the tens die and the units die', () => {
+    expect(percentileDice(45)).toEqual({ tens: 4, units: 5 })
+    expect(percentileDice(10)).toEqual({ tens: 1, units: 0 })
+    expect(percentileDice(1)).toEqual({ tens: 0, units: 1 })
+    expect(percentileDice(99)).toEqual({ tens: 9, units: 9 })
+  })
+
+  test('reads a hundred as 00 and 0, as on the table', () => {
+    expect(percentileDice(100)).toEqual({ tens: 0, units: 0 })
   })
 })

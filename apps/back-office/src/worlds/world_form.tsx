@@ -22,12 +22,15 @@ export function WorldForm({
   onChange,
   errors,
   creating,
+  full = false,
 }: {
   draft: WorldDraft
   onChange: (draft: WorldDraft) => void
   errors: FieldErrors
   /** The reference is only written once, when the world is created. */
   creating: boolean
+  /** Every section, even on creation: a world filled in from a file comes whole. */
+  full?: boolean
 }) {
   const { t } = useTranslation('worlds')
   const set =
@@ -84,7 +87,7 @@ export function WorldForm({
         </Field>
       </Section>
 
-      {!creating && (
+      {(!creating || full) && (
         <>
           <Section title={t('form.rules')} hint={t('form.rulesHint')}>
             <PhraseListEditor

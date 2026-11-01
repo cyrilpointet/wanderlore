@@ -20,6 +20,7 @@ const ATHOS: NpcDefinition = {
   generic: false,
   defaultDisposition: 'neutral',
   combat: { skills: { swordsmanship: 90 }, hitPointsMax: 14, weapon: 'rapier' },
+  initialLocation: null,
 }
 
 const STUDS: ItemDefinition = {
@@ -46,12 +47,25 @@ describe('definition draft', () => {
         generic: false,
         defaultDisposition: 'neutral',
         combat: ATHOS.combat,
+        initialLocation: null,
       },
     })
     expect(definitionPayloadOf('npcs', draft, { creating: true }).payload).toHaveProperty(
       'reference',
       'athos'
     )
+  })
+
+  test('keeps the place a person waits in from the start, a unique one only', () => {
+    const waiting = { ...ATHOS, initialLocation: 'hotel_de_treville' }
+    const draft = definitionDraftOf(waiting)
+
+    expect(definitionPayloadOf('npcs', draft, { creating: false }).payload).toMatchObject({
+      initialLocation: 'hotel_de_treville',
+    })
+    expect(
+      definitionPayloadOf('npcs', { ...draft, kind: 'archetype' }, { creating: false }).payload
+    ).toMatchObject({ initialLocation: null })
   })
 
   test('keeps an item’s initial holder through the draft', () => {

@@ -206,6 +206,8 @@ export type SceneState = {
   place: PlacedLocation | null
   /** Definition of each person present, by handle, for naming them. */
   npc_definitions: Record<string, string>
+  /** The unique people whose names the character knows. Anyone else unique is named once they give their name. */
+  known_npcs: string[]
   /**
    * What the character, the people present and the place hold. Each step is
    * handed its own view of it, never the modifiers.
@@ -282,7 +284,14 @@ export type ExtractionRequest = Pick<TurnContext, 'world' | 'scene' | 'character
    * The closed list of definitions an item may come into being from:
    * archetypes, and unique items the game has not met and nobody holds.
    */
-  creatable_items: string[] /**
+  creatable_items: string[]
+  /**
+   * The closed list of people who may come into the scene: archetypes, and
+   * unique characters met before, waiting nowhere in particular, or waiting
+   * here or within reach from the start.
+   */
+  enterable_npcs: string[]
+  /**
    * Where a movement may lead from where the scene began: the places the
    * exits reach — once those it finds or opens are — or, outside a network,
    * the places travelled to freely; and whether a place may be improvised,

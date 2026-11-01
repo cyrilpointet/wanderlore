@@ -5,6 +5,7 @@ import { resolveWorld } from '#services/game/content/resolve'
 import { checkScenario } from '#services/game/content/coherence'
 import { keyOf } from '#services/game/passages'
 import { type TravelState, destinationsFrom, placeKindOf, routesFrom } from '#services/game/travel'
+import { giveaways } from '#tests/helpers/knowledge'
 
 const { scenarios, ...MYTHOS } = LOVECRAFT_MYTHOS_CONTENT
 const INHERITANCE = scenarios.find(({ reference }) => reference === 'the_ward_inheritance')!
@@ -30,6 +31,24 @@ function everywhere(rest: Partial<TravelState> = {}): TravelState {
 test.group('The Ward House | its network', () => {
   test('holds together', ({ assert }) => {
     assert.deepEqual(checkScenario(MYTHOS, INHERITANCE), [])
+  })
+
+  test('the heir knows Silas and his attorney by name, nobody else yet', ({ assert }) => {
+    assert.deepEqual(INHERITANCE.initialState!.knownNpcs, ['silas_ward', 'ephraim_crane'])
+  })
+
+  test('no passage nor room gives away a room beyond, or a stranger’s name', ({ assert }) => {
+    assert.deepEqual(giveaways(INHERITANCE, MYTHOS.npcs, 'ward_house'), [])
+  })
+
+  test('the housekeeper waits in the kitchen, Silas in the sealed vault', ({ assert }) => {
+    const placed = Object.fromEntries(
+      INHERITANCE.npcs
+        .filter(({ initialLocation }) => initialLocation !== null)
+        .map(({ reference, initialLocation }) => [reference, initialLocation])
+    )
+
+    assert.deepEqual(placed, { martha_pike: 'ward_house_kitchen', silas_ward: 'sealed_vault' })
   })
 
   test('every room is part of it; the house only contains them', ({ assert }) => {
@@ -87,7 +106,7 @@ test.group('The Ward House | its network', () => {
     assert.deepEqual(
       route.steps.map(({ to }) => to),
       [
-        'ward_family_cemetery',
+        'ward_house_entrance_hall',
         'ward_house_kitchen',
         'ward_house_cellar',
         'ward_laboratory',
@@ -110,6 +129,7 @@ test.group('The Ward House | its network', () => {
       'ward_house_dining_room',
       'ward_house_library',
       'ward_house_upstairs_corridor',
+      'ward_house_kitchen',
     ])
   })
 })

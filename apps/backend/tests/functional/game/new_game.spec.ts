@@ -4,6 +4,8 @@ import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
 import WorldState from '#models/world_state'
 import InventoryItem from '#models/inventory_item'
+import NpcDefinition from '#models/npc_definition'
+import NpcInstance from '#models/npc_instance'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 import { seedMusketeers } from '#tests/helpers/content'
 import { createScenario, createUser, useTransaction } from '#tests/helpers/database'
@@ -53,17 +55,34 @@ test.group('New game | catalogue', (group) => {
     const musketeers = dataOf(response).filter(
       ({ world }: { world: { reference: string } }) => world.reference === 'three_musketeers'
     )
-    assert.deepEqual(musketeers, [
+    const world = {
+      reference: 'three_musketeers',
+      label: 'The Three Musketeers',
+      tone: THREE_MUSKETEERS_CONTENT.narrativeTone,
+    }
+    const stolenSeal = THREE_MUSKETEERS_CONTENT.scenarios.find(
+      ({ reference }) => reference === 'the_stolen_seal'
+    )!
+    const stolenSealRow = await db
+      .from('scenarios')
+      .where({ world_id: worldId, reference: stolenSeal.reference })
+      .firstOrFail()
+
+    /** The published scenarios only, the draft left out; in no particular order. */
+    assert.sameDeepMembers(musketeers, [
       {
         id: scenarioId,
         title: 'A Gascon in Paris',
         synopsis: THREE_MUSKETEERS_CONTENT.scenarios[0].synopsis,
         status: 'published',
-        world: {
-          reference: 'three_musketeers',
-          label: 'The Three Musketeers',
-          tone: THREE_MUSKETEERS_CONTENT.narrativeTone,
-        },
+        world,
+      },
+      {
+        id: stolenSealRow.id,
+        title: 'The Stolen Seal',
+        synopsis: stolenSeal.synopsis,
+        status: 'published',
+        world,
       },
     ])
   })
@@ -133,6 +152,62 @@ test.group('New game | starting', (group) => {
         ['rapier', 'equipped', 1],
       ]
     )
+  })
+
+  test('knows from the start the names the scenario says the character knows', async ({
+    client,
+    assert,
+  }) => {
+    const { scenarioId } = await seedMusketeers()
+    const row = await db.from('scenarios').where('id', scenarioId).firstOrFail()
+    await db
+      .from('scenarios')
+      .where('id', scenarioId)
+      .update({ initial_state: JSON.stringify({ ...row.initial_state, knownNpcs: ['treville'] }) })
+
+    const response = await client
+      .post('/api/v1/sessions')
+      .json({ scenarioId })
+      .loginAs(await userWith())
+      .withCsrfToken()
+
+    response.assertStatus(201)
+    const state = await WorldState.findByOrFail('sessionId', dataOf(response).id)
+    assert.deepEqual(state.knownNpcs, ['treville'])
+  })
+
+  test('whoever waits where the story starts is there from the first turn', async ({
+    client,
+    assert,
+  }) => {
+    const { worldId, scenarioId } = await seedMusketeers()
+    await NpcDefinition.create({
+      worldId,
+      scenarioId,
+      reference: 'innkeeper_of_meung',
+      labels: { en: 'The innkeeper' },
+      description: 'The innkeeper of the Jolly Miller, at Meung.',
+      kind: 'unique',
+      generic: false,
+      defaultDisposition: 'neutral',
+      combat: { skills: {}, hitPointsMax: 10, weapon: null },
+      initialLocation: 'meung_sur_loire',
+    })
+
+    const response = await client
+      .post('/api/v1/sessions')
+      .json({ scenarioId })
+      .loginAs(await userWith())
+      .withCsrfToken()
+
+    response.assertStatus(201)
+    const innkeeper = await NpcInstance.query()
+      .where('sessionId', dataOf(response).id)
+      .where('handle', 'innkeeper_of_meung')
+      .preload('location')
+      .firstOrFail()
+    assert.equal(innkeeper.status, 'present')
+    assert.equal(innkeeper.location.handle, 'meung_sur_loire')
   })
 
   test('opens the clock at the time and on the date the story starts', async ({

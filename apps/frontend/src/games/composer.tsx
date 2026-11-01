@@ -63,7 +63,7 @@ export function Composer({
   }
 
   return (
-    <form onSubmit={send} className="shrink-0 border-t border-border bg-bg px-3 py-3 sm:px-6">
+    <form onSubmit={send} className="shrink-0 border-t border-border px-3 py-3 sm:px-6">
       <div className="mx-auto flex w-full max-w-reading items-end gap-2 rounded-lg border border-border-strong bg-surface-1 p-2 transition-colors focus-within:border-accent">
         <label htmlFor="player-input" className="sr-only">
           {t('composer.label')}

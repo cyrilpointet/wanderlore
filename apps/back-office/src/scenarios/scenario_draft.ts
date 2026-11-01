@@ -1,5 +1,14 @@
 import { entryDraftOf, entryPayloadOf, type EntryDraft } from '@/content/drafts'
 import type { FieldErrors } from '@/content/form_errors'
+import {
+  type Imported,
+  importedEntryOf,
+  isImported,
+  labelRowsOf,
+  listOf,
+  phrasesOf,
+  textOf,
+} from '@/content/imports'
 import { labelsOf, rowsOf, type LabelRow } from '@/content/labels'
 import i18n from '@/i18n'
 import type { Scenario, ScenarioPayload } from './queries'
@@ -23,6 +32,8 @@ export type ScenarioDraft = {
   startLocation: string
   startChapter: string
   startQuests: QuestDraft[]
+  /** The named people the character knows by name from the start. */
+  startKnownNpcs: string[]
   /** `HH:MM`, always: a story opens at some time of day. */
   startTime: string
   /** `YYYY-MM-DD`; empty for a story with no date. */
@@ -59,8 +70,49 @@ export function scenarioDraftOf(scenario: Scenario): ScenarioDraft {
       step: String(quest.step),
       summary: quest.summary,
     })),
+    startKnownNpcs: state?.knownNpcs ?? [],
     startTime: scenario.startTime,
     startDate: scenario.startDate ?? '',
+  }
+}
+
+/** When a story opens if it says nothing: the default of a scenario created empty. */
+const DEFAULT_START_TIME = '08:00'
+
+/**
+ * A scenario read from a JSON file, with its reference: a new scenario, every
+ * reference still open to change. Its catalogues are not read — they have
+ * editors of their own, once the scenario exists.
+ */
+export function scenarioDraftFromJson(scenario: Imported): {
+  reference: string
+  draft: ScenarioDraft
+} {
+  const state = isImported(scenario.initialState) ? scenario.initialState : null
+  const character = scenario.pregeneratedCharacter
+
+  return {
+    reference: textOf(scenario.reference),
+    draft: {
+      labels: labelRowsOf(scenario.labels),
+      synopsis: textOf(scenario.synopsis),
+      chapters: listOf(scenario.chapters, importedEntryOf),
+      quests: listOf(scenario.quests, importedEntryOf),
+      glossary: listOf(scenario.glossary, importedEntryOf),
+      pregeneratedCharacter:
+        character === undefined || character === null ? '' : JSON.stringify(character, null, 2),
+      startLocation: textOf(state?.location),
+      startChapter: textOf(state?.chapter),
+      startQuests: listOf(state?.quests, (quest) => ({
+        key: crypto.randomUUID(),
+        reference: textOf(quest.reference),
+        step: typeof quest.step === 'number' ? String(quest.step) : '1',
+        summary: textOf(quest.summary),
+      })),
+      startKnownNpcs: phrasesOf(state?.knownNpcs),
+      startTime: textOf(scenario.startTime) || DEFAULT_START_TIME,
+      startDate: textOf(scenario.startDate),
+    },
   }
 }
 
@@ -103,6 +155,7 @@ export function scenarioUpdateOf(draft: ScenarioDraft): ScenarioUpdate {
                 step: Number(quest.step),
                 summary: quest.summary.trim(),
               })),
+              knownNpcs: draft.startKnownNpcs,
             },
       startTime: draft.startTime,
       startDate: draft.startDate === '' ? null : draft.startDate,

@@ -31,7 +31,7 @@ Mot de passe commun : `password`.
 ## Démarrer
 
 ```bash
-docker compose up -d          # PostgreSQL 17 (5432) + Redis 8 (6379), à la racine
+docker compose up -d          # PostgreSQL 17 (5433) + Redis 8 (6380), à la racine
 npm install                   # une fois, ou après un changement de dépendances
 npm run dev                   # backend, front joueur et back-office, via Turborepo
 ```
@@ -90,6 +90,12 @@ node ace game:reset --no-seed     # supprime sans recréer (avant une migration 
 Refusé en production. Arrêter le serveur avant, ou au moins ne laisser aucun tour en cours :
 un job resté en file chercherait un tour qui n'existe plus. **`game:reset` efface aussi
 l'historique de consommation** (`turn_log`).
+
+**Préférences du front joueur** (menu du compte → *Preferences*) : thème, lecture à voix haute,
+lancer automatique des dés, animations une à une. Rangées dans le navigateur (clés
+`wanderlore.*` du `localStorage`), jamais en base : pour repartir des valeurs par défaut,
+vider ces clés dans les outils de développement. La réduction des animations du système
+(`prefers-reduced-motion`, émulable dans l'onglet *Rendering* de Chrome) les coupe toutes.
 
 ---
 

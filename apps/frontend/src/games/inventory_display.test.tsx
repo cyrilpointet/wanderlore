@@ -83,7 +83,7 @@ describe('Character sheet | inventory tab', () => {
     expect(textOf(markup)).not.toContain('Letter for M. de Tréville')
   })
 
-  test('keeps where the story stands for its own tab', () => {
+  test('keeps the quests under way for their own tab, the place left to the scene bar', () => {
     const quest = {
       reference: 'deliver_the_letter',
       label: 'Deliver the letter',
@@ -92,28 +92,23 @@ describe('Character sheet | inventory tab', () => {
     const withQuest = { ...game([]), activeQuests: [quest] }
 
     const character = textOf(renderToStaticMarkup(<CharacterSheet game={withQuest} />))
-    const situation = textOf(
-      renderToStaticMarkup(<CharacterSheet game={withQuest} initialTab="situation" />)
+    const quests = textOf(
+      renderToStaticMarkup(<CharacterSheet game={withQuest} initialTab="quests" />)
     )
 
-    expect(character).toContain('Situation')
-    expect(character).not.toContain('Paris')
+    expect(character).toContain('Quests')
     expect(character).not.toContain('Deliver the letter')
-    expect(situation).toContain('Paris')
-    expect(situation).toContain('Deliver the letter')
-    expect(situation).not.toContain('Persuasion')
+    expect(quests).toContain('Deliver the letter')
+    expect(quests).toContain('Carry the letter to Tréville.')
+    expect(quests).not.toContain('Persuasion')
+    expect(quests).not.toContain('Paris')
+    expect(quests).not.toContain('Afternoon')
   })
 
-  test('tells the period of the day where the story stands, and nothing finer', () => {
-    const situation = textOf(
-      renderToStaticMarkup(
-        <CharacterSheet game={{ ...game([]), period: 'dusk' }} initialTab="situation" />
-      )
-    )
+  test('says so when no quest is under way', () => {
+    const markup = renderToStaticMarkup(<CharacterSheet game={game([])} initialTab="quests" />)
 
-    expect(situation).toContain('Time of day')
-    expect(situation).toContain('Dusk')
-    expect(situation).not.toMatch(/\d{1,2}:\d{2}/)
+    expect(textOf(markup)).toContain('No quest under way.')
   })
 
   test('says so when the character carries nothing', () => {

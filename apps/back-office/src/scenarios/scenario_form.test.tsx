@@ -31,6 +31,7 @@ function render(scenario: Scenario, errors = {}) {
       onChange={() => {}}
       errors={errors}
       uniqueLocations={['ward_house_entrance_hall']}
+      uniqueNpcs={['silas_ward', 'martha_pike']}
     />
   )
 }
@@ -52,5 +53,42 @@ describe('ScenarioForm', () => {
     expect(render(SCENARIO, { startTime: 'The startTime field format is invalid' })).toContain(
       'The startTime field format is invalid'
     )
+  })
+
+  test('ticks the names the character knows from the start, among the named people', () => {
+    const html = render({
+      ...SCENARIO,
+      initialState: {
+        location: 'ward_house_entrance_hall',
+        chapter: null,
+        quests: [],
+        knownNpcs: ['silas_ward'],
+      },
+    })
+
+    expect(html).toContain('Names known from the start')
+    expect(html).toMatch(/<input type="checkbox" checked=""\/><span class="font-mono">silas_ward/)
+    expect(html).toMatch(/<input type="checkbox"\/><span class="font-mono">martha_pike/)
+  })
+})
+
+describe('ScenarioForm | creation', () => {
+  test('the reference is written only before the scenario is created', () => {
+    const saved = render(SCENARIO)
+    const created = renderToStaticMarkup(
+      <ScenarioForm
+        reference=""
+        onReferenceChange={() => {}}
+        draft={scenarioDraftOf(SCENARIO)}
+        onChange={() => {}}
+        errors={{ reference: 'This reference is already taken.' }}
+        uniqueLocations={[]}
+        uniqueNpcs={[]}
+      />
+    )
+
+    expect(saved).toMatch(/id="scenario-reference"[^>]*disabled=""/)
+    expect(created).not.toMatch(/id="scenario-reference"[^>]*disabled=""/)
+    expect(created).toContain('This reference is already taken.')
   })
 })

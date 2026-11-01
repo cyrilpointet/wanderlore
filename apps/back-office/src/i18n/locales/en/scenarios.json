@@ -50,6 +50,8 @@
     "questSummary": "What the quest asks",
     "questSummaryHint": "In English, for the model: what the character has to do.",
     "addQuest": "Add a quest",
+    "knownNpcs": "Names known from the start",
+    "knownNpcsHint": "The named people the character knows by name before meeting them — a relative, the person a letter is for. Anyone else is named only once they give their name.",
     "removeQuest": "Remove this quest"
   },
   "publication": {
@@ -72,6 +74,7 @@
     "unknown_location": "“{{reference}}” is no named place of this world.",
     "unknown_item": "“{{reference}}” is no item of this world.",
     "unknown_holder": "“{{reference}}” is no named person or place of this world.",
+    "unknown_npc": "“{{reference}}” is no named person of this world.",
     "unknown_chapter": "“{{reference}}” is no chapter of this scenario.",
     "unknown_quest": "“{{reference}}” is no quest of this scenario.",
     "no_action_type": "The world has no category of action: no action could be rolled.",
@@ -89,5 +92,6 @@
     "entrance_without_exits": "“{{reference}}” is an entrance, but has no exit: it is part of no network.",
     "unreachable_network": "Nothing leads into the network of “{{reference}}”: mark one of its places as an entrance, or start the story in it.",
     "start_contains_network": "“{{reference}}” only contains a network: start the story in one of its places."
-  }
+  },
+  "importHint": "A scenario as the server sends it, or as written in the game content. Its catalogues are left out: they are added in its editor."
 }

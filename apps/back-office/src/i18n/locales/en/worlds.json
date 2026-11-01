@@ -69,5 +69,6 @@
     "POW": "Power",
     "DEX": "Dexterity",
     "CHA": "Charisma"
-  }
+  },
+  "importHint": "A world as the server sends it, or as written in the game content. Its catalogues, action types and scenarios are left out: they are added in its editor."
 }

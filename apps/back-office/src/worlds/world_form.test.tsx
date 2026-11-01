@@ -38,3 +38,19 @@ describe('WorldForm | skills', () => {
     expect(html).not.toContain('Attribute')
   })
 })
+
+describe('WorldForm | creation', () => {
+  test('asks only for names and tone, unless the world comes whole from a file', () => {
+    const draft = worldDraftOf(WORLD)
+    const plain = renderToStaticMarkup(
+      <WorldForm draft={draft} onChange={() => {}} errors={{}} creating />
+    )
+    const full = renderToStaticMarkup(
+      <WorldForm draft={draft} onChange={() => {}} errors={{}} creating full />
+    )
+
+    expect(plain).not.toContain('Skills')
+    expect(full).toContain('Skills')
+    expect(full).not.toMatch(/id="world-reference"[^>]*disabled=""/)
+  })
+})

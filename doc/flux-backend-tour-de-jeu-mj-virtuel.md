@@ -3,7 +3,7 @@
 ## Document de référence technique
 
 **Objet** : décrire, sous forme d'organigrammes, le fonctionnement **cible** du backend une
-fois la roadmap achevée (Phase 11) — de l'action écrite par le joueur jusqu'à la réponse finale
+fois la roadmap achevée (Phase 14) — de l'action écrite par le joueur jusqu'à la réponse finale
 reçue par le front.
 
 **Ce que ce document n'est pas** : une nouvelle source de décisions. Il assemble ce qui est
@@ -328,7 +328,7 @@ flowchart TD
     T --> U[(turn_log : applied_effects,<br/>status = completed)]
     U --> V[Commit]
     V -.-> W[/turn_completed<br/>tour relu + fiche + lieu libellés<br/>+ période de la journée/]
-    V --> Z{Fin de partie ?<br/>mort, victoire<br/>à trancher en Phase 10}
+    V --> Z{Fin de partie ?<br/>mort, victoire<br/>à trancher en Phase 12}
     Z --> J([Seuil de résumé ? — §9])
 ```
 
@@ -466,7 +466,7 @@ flowchart LR
   quelle que soit l'instance HTTP qui tient sa connexion.
 - **Verrou PostgreSQL par `session_id`** pour sérialiser les tours d'une même partie entre
   workers.
-- Le passage à cette topologie est prévu avant le beta test (Phase 11) ; jusque-là, un seul
+- Le passage à cette topologie est prévu avant le beta test (Phase 14) ; jusque-là, un seul
   process tient HTTP et worker, avec pg-boss et Transmit en mémoire.
 
 ---
@@ -478,8 +478,9 @@ Repris des points ouverts des autres documents, sans les résoudre :
 - **Durabilité et charges des objets** — différées en Phase 4, consommables par la quantité.
 - **Branchement des dégâts dans le tour** (attaquant, cible) — Phase 10.
 - **Seuils de déclenchement du résumé narratif** — Phase 9.
-- **Conditions de fin de partie et jets opposés contre un PNJ improvisé** — Phase 10.
-- **Modération de contenu** au-delà du prompt injection — Phase 11.
-- **Versionning des prompts** et différenciation du modèle par étape — Phase 11.
+- **Jets opposés contre un PNJ improvisé** — Phase 10.
+- **Conditions de fin de partie** — Phase 12.
+- **Modération de contenu** au-delà du prompt injection — Phase 14.
+- **Versionning des prompts** et différenciation du modèle par étape — Phase 14.
 - **Battement de cœur SSE** (`pingInterval`) à régler selon l'hébergement retenu.
 - **Hébergement** définitif.

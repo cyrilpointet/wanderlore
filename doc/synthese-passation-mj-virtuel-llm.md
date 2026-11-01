@@ -127,7 +127,7 @@ Ce document de synthèse s'appuie sur cinq documents détaillés, à fournir en 
 | **architecture-mj-virtuel-llm.md** | Pipeline complet du tour de jeu (5 étapes), modèle de données conceptuel, gestion du contexte (lore/state/mémoire), exemple de flow complet avec prompts LLM détaillés, principes de sécurité anti prompt-injection, architecture applicative AdonisJS |
 | **base-de-donnees-mj-virtuel-postgresql.md** | Structure complète des tables PostgreSQL, types de colonnes, exemples de contenu JSONB, schéma relationnel, recommandations spécifiques PostgreSQL (JSONB/GIN, pgvector, partitionnement) |
 | **systeme-regles-jeu-mj-virtuel.md** | Système de règles : le BRP de Chaosium (licence ORC) depuis la Phase 6 — d100 sous la chance, cinq degrés, sept caractéristiques fixes, compétences en pourcentage paramétrables par univers, échelle de difficulté, gestion des modificateurs contextuels (LLM) vs modificateurs d'objets (backend), points de vie et dégâts, modélisation du combat |
-| **roadmap-mj-virtuel-llm.md** | Roadmap détaillée en phases (0 à 10 + 5bis et 9bis), contenu et critères de sortie de chaque phase, intégration de la gestion de comptes (`player` / `game_master` / `superadmin`), **stratégie de test transverse**, synthèse et points ouverts |
+| **roadmap-mj-virtuel-llm.md** | Roadmap détaillée en phases (0 à 14, plus 5bis), contenu et critères de sortie de chaque phase, intégration de la gestion de comptes (`player` / `game_master` / `superadmin`), **stratégie de test transverse**, synthèse et points ouverts |
 | **aide-memoire-dev-testeur.md** | Aide-mémoire du dev testeur : toutes les commandes (démarrage, migrations, seeders, remise à zéro des parties, consommation de jetons, comptes, tests, codegen), les comptes de test et les variables d'environnement utiles |
 | **cahier-des-charges-front-mj-virtuel.md** | Cahier des charges du front joueur : principes, parcours et écrans de la Phase 2, machine d'état d'un tour, gestion des erreurs, besoins d'API, direction visuelle, évolutions par phase, et base de prompts pour générer les maquettes avec Stitch |
 
@@ -153,7 +153,7 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - **Objets : même modèle que les PNJ** (principe acté avant la Phase 3, schéma à l'ouverture de la Phase 4) : définitions univers / scénario, `unique` ou `archetype`, archétypes génériques pour l'improvisé, ligne d'inventaire réduite à l'état de l'instance, `stackable` pour les objets interchangeables ; le front affiche le libellé de l'archétype, jamais le descripteur. Voir architecture, section 6bis, et document de base de données, `inventory_items`.
 - **Trois détenteurs d'objets : le personnage, un PNJ, un lieu** (Phase 4). Donner, voler, cacher, ramasser sont des transferts, l'objet gardant son identité ; seuls les objets en scène (personnage, PNJ présents, lieu courant) sont transmis au pipeline ; à la mort d'un PNJ, ses objets passent au lieu courant. Voir architecture, section 6bis.
 - **Budget de 3 minutes par tour** (Phase 3) : chaque appel LLM reçoit au plus le temps restant, un budget épuisé fait échouer le tour (`llm_timeout`) ; le balayage des tours `pending` reste à 5 minutes. Voir architecture, section 8bis.
-- **Un seul modèle LLM pour toutes les étapes** pendant les phases de test (`gemini-3.8-flash`, qui remplace en octobre 2026 `gemini-2.5-flash`, fermé aux nouvelles clés API). La différenciation par étape attend les mesures de coût réelles (Phase 11).
+- **Un seul modèle LLM pour toutes les étapes** pendant les phases de test (`gemini-3.8-flash`, qui remplace en octobre 2026 `gemini-2.5-flash`, fermé aux nouvelles clés API). La différenciation par étape attend les mesures de coût réelles (Phase 14).
 - **Soumission d'un tour idempotente** : clé fournie par le client, une par soumission, enregistrée avant la mise en file. En Phase 2, worker unique dans le process HTTP, en `concurrency: 1` et sans retry — simplification à reprendre avant le beta test.
 - **File de jobs substituable, pg-boss puis BullMQ** : port + adaptateur, pg-boss (PostgreSQL) tant qu'il n'y a qu'une instance — pas de Redis à héberger —, BullMQ au passage à plusieurs instances, qui ramène Redis pour Transmit. Condition de la bascule : idempotence, sérialisation des tours et événements SSE ne dépendent jamais de la file (voir architecture, section 8bis).
 
@@ -261,7 +261,7 @@ L'inventaire se scinde exactement sur la ligne « le LLM propose, le backend dé
 - **Sur la sécurité, le confinement se teste, la détection s'évalue** : même quand la détection
   d'injection échoue, aucun état ne doit avoir été modifié.
 - **Le corpus d'évaluation s'accumule depuis `turn_log` dès la Phase 1**, bien avant que les
-  evals eux-mêmes soient outillés en Phase 11.
+  evals eux-mêmes soient outillés en Phase 14.
 
 Voir le document de roadmap, section « Stratégie de test », pour le détail par phase.
 
@@ -269,7 +269,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 - **Pas de retry automatique** des erreurs de transport (timeout, API injoignable, erreur HTTP).
 - **Une seule nouvelle tentative sur une sortie structurée rejetée** (tranché avant la Phase 3) : quand le backend rejette la sortie JSON d'une étape (A+B+C ou E) — JSON illisible, hors schéma, hors bornes, ou référence absente de la liste fermée —, l'appel est renvoyé une fois, avec un message correctif qui nomme les valeurs rejetées et rappelle la liste valide. Un second rejet fait échouer le tour. Détail : architecture, section 7.
 - Chaque erreur est renvoyée au front avec un `code` spécifique selon sa catégorie (timeout/API injoignable, sortie LLM hors schéma, erreur HTTP de l'API externe, échec de validation backend). Le front en affiche la traduction via son i18n ; le `message` textuel de l'API sert au débogage et de repli pour un code inconnu.
-- Système de log d'erreurs API structuré explicitement différé (prévu en Phase 11 / todolist).
+- Système de log d'erreurs API structuré explicitement différé (prévu en Phase 14 / todolist).
 
 ### Scope
 - **Multi-joueur explicitement exclu du projet** — à traiter, le cas échéant, dans un projet distinct avec ses propres réflexions d'architecture (concurrence d'accès au state, infrastructure temps réel, visibilité narrative différenciée).
@@ -294,6 +294,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 - **Choix du modèle de monétisation** — la démarche pour y parvenir est actée (voir section 4 : mesure du coût réel puis validation de l'appétence en beta test), mais aucune piste n'est encore sélectionnée.
 - Modalités d'une éventuelle ouverture future du rôle "maître du jeu" à des utilisateurs tiers (aujourd'hui strictement technique/interne) — non planifiée, envisagée comme possibilité à long terme.
 - Support multi-langue : l'architecture est actée (voir section 7), mais **la liste des langues cibles** reste ouverte. L'i18n du front est posée dès la Phase 2, avec l'anglais seul ; bibliothèque retenue : react-i18next. Le glossaire est tranché en Phase 5 : noms d'affichage par langue sur chaque définition (anglais obligatoire, repli sur l'anglais), glossaire réduit aux noms propres qui ne sont pas des entités, porté par l'univers et complété par le scénario (voir roadmap, Phase 5).
+- **Nom affiché d'un objet improvisé** : le front ne montre que le libellé de l'archétype (« Outil »), quand le narrateur nomme l'objet d'après son descripteur. À trancher en Phase 14, avec le choix de la langue ; préférence pour un nom court écrit par l'extraction dans la langue de la partie, exception à la règle « seule la narration écrit dans la langue du joueur » (voir roadmap, Phase 14).
 - Événements SSE : granularité et rattrapage tranchés pour la Phase 2 ; le streaming de la narration est tranché pour la Phase 3 ; reste ouvert un éventuel rejeu des événements manqués (voir document d'architecture, section 8bis).
 - Passage à plusieurs instances : bascule de la file vers BullMQ, worker séparé (transport Redis de Transmit) et sérialisation des tours par verrou PostgreSQL sur `session_id` — à trancher avant le beta test.
 

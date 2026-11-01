@@ -3,7 +3,8 @@ import db from '@adonisjs/lucid/services/db'
 import ContentSeeder from '#database/seeders/01_content_seeder'
 import ItemDefinition from '#models/item_definition'
 import LocationDefinition from '#models/location_definition'
-import { HOUSE_PLACES, IRON_KEY } from '#tests/helpers/places'
+import NpcDefinition from '#models/npc_definition'
+import { HOUSE_PLACES, IRON_KEY, STEWARD } from '#tests/helpers/places'
 
 /**
  * Writes the game content a game reads — worlds, scenarios, catalogues and
@@ -37,8 +38,8 @@ export async function seedMusketeers(): Promise<SeededGameContent> {
 
 /**
  * The seeded *Three Musketeers*, with the house of the specs among the places
- * of *A Gascon in Paris* and its key among the items — for a test that plays
- * a turn inside a network.
+ * of *A Gascon in Paris*, its key among the items and its steward among the
+ * people — for a test that plays a turn inside a network.
  */
 export async function seedHouse(): Promise<SeededGameContent> {
   const content = await seedMusketeers()
@@ -47,6 +48,7 @@ export async function seedHouse(): Promise<SeededGameContent> {
     await LocationDefinition.create({ ...place, ...content })
   }
   await ItemDefinition.create({ ...IRON_KEY, ...content })
+  await NpcDefinition.create({ ...STEWARD, ...content })
 
   return content
 }

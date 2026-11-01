@@ -70,18 +70,18 @@ test.group('Content | seeder', (group) => {
       await countRows('resolution_rules', { world_id: worldId }),
       THREE_MUSKETEERS_CONTENT.actionTypes.length
     )
-    assert.equal(
-      await countRows('npc_definitions', { world_id: worldId }),
-      THREE_MUSKETEERS_CONTENT.npcs.length
-    )
-    assert.equal(
-      await countRows('location_definitions', { world_id: worldId }),
-      THREE_MUSKETEERS_CONTENT.locations.length
-    )
-    assert.equal(
-      await countRows('item_definitions', { world_id: worldId }),
-      THREE_MUSKETEERS_CONTENT.items.length
-    )
+    /** The world's own catalogues, then each scenario's, both written under the world. */
+    for (const [table, catalogue] of [
+      ['npc_definitions', 'npcs'],
+      ['location_definitions', 'locations'],
+      ['item_definitions', 'items'],
+    ] as const) {
+      const declared = THREE_MUSKETEERS_CONTENT.scenarios.reduce(
+        (total, scenario) => total + scenario[catalogue].length,
+        THREE_MUSKETEERS_CONTENT[catalogue].length
+      )
+      assert.equal(await countRows(table, { world_id: worldId }), declared, table)
+    }
   })
 
   test('re-run, brings edited rows back in line with the code', async ({ assert }) => {

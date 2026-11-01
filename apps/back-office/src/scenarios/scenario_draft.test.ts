@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 
 import '@/i18n'
 import type { Scenario } from './queries'
-import { scenarioDraftOf, scenarioUpdateOf } from './scenario_draft'
+import { scenarioDraftFromJson, scenarioDraftOf, scenarioUpdateOf } from './scenario_draft'
 
 const SCENARIO: Scenario = {
   id: 's1',
@@ -21,6 +21,7 @@ const SCENARIO: Scenario = {
     location: 'meung_sur_loire',
     chapter: 'the_road_to_paris',
     quests: [{ reference: 'deliver_the_letter', step: 1, summary: 'Carry the letter.' }],
+    knownNpcs: ['treville'],
   },
   startTime: '10:00',
   startDate: '1625-04-07',
@@ -45,6 +46,13 @@ describe('scenario draft', () => {
     })
   })
 
+  test('a state written before names were known starts knowing none', () => {
+    const older = { ...SCENARIO.initialState!, knownNpcs: undefined }
+    const update = scenarioUpdateOf(scenarioDraftOf({ ...SCENARIO, initialState: older }))
+
+    expect(update.payload?.initialState).toMatchObject({ knownNpcs: [] })
+  })
+
   test('a story with no date sends none', () => {
     const draft = { ...scenarioDraftOf({ ...SCENARIO, startDate: null }) }
 
@@ -66,6 +74,38 @@ describe('scenario draft', () => {
 
     expect(scenarioUpdateOf(draft)).toEqual({
       errors: { pregeneratedCharacter: 'This is not valid JSON.' },
+    })
+  })
+})
+
+describe('scenario from a JSON file', () => {
+  test('sends back what the file held, its reference apart, catalogues left out', () => {
+    const notSent = ['id', 'worldId', 'status', 'updatedAt', 'reference']
+    const rest = Object.fromEntries(
+      Object.entries(SCENARIO).filter(([key]) => !notSent.includes(key))
+    )
+    const read = scenarioDraftFromJson({ ...SCENARIO, npcs: [{ reference: 'treville' }] })
+
+    expect(read.reference).toBe(SCENARIO.reference)
+    expect(scenarioUpdateOf(read.draft).payload).toEqual(rest)
+    expect(read.draft.chapters.every(({ locked }) => !locked)).toBe(true)
+  })
+
+  test('a file with little in it opens like an empty scenario', () => {
+    const { reference, draft } = scenarioDraftFromJson({ labels: { en: 'The Stolen Seal' } })
+
+    expect(reference).toBe('')
+    expect(draft).toMatchObject({
+      synopsis: '',
+      pregeneratedCharacter: '',
+      startLocation: '',
+      startKnownNpcs: [],
+      startTime: '08:00',
+      startDate: '',
+    })
+    expect(scenarioUpdateOf(draft).payload).toMatchObject({
+      initialState: null,
+      pregeneratedCharacter: null,
     })
   })
 })

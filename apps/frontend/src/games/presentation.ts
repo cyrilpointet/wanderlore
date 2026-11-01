@@ -46,3 +46,12 @@ export function gaugePercent(current: number, max: number): number {
 export function showsQuantity(item: Pick<InventoryItem, 'handle' | 'quantity'>): boolean {
   return item.handle === null || item.quantity > 1
 }
+
+/**
+ * The d100 the backend drew, as the two d10 of the table show it: the tens
+ * die from `00` to `90`, the units die from `0` to `9`, a hundred reading
+ * `00` and `0`. A matter of display, not of rules.
+ */
+export function percentileDice(roll: number): { tens: number; units: number } {
+  return { tens: Math.floor((roll % 100) / 10), units: roll % 10 }
+}

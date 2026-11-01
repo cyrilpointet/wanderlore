@@ -72,7 +72,8 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
   jobs différés : **pg-boss** (PostgreSQL) en instance unique, **BullMQ** (Redis) au passage
   à plusieurs instances.
 - AdonisJS Transmit (SSE) pour le retour progressif au front pendant un tour.
-- Docker en local pour PostgreSQL + Redis (`docker compose up -d` à la racine) — Redis n'est
+- Docker en local pour PostgreSQL + Redis (`docker compose up -d` à la racine), sur les ports
+  **5433** et **6380** (les ports par défaut sont pris par un autre projet) — Redis n'est
   requis qu'une fois la file basculée sur BullMQ.
 - LLM : **Google Gemini** (`gemini-3.8-flash`, SDK `@google/genai`), encapsulé derrière le
   **LLM Gateway**. Aucun autre fichier de l'app n'importe un SDK de provider.
@@ -228,7 +229,7 @@ en vigueur (détail : roadmap Phase 5bis, « Décisions de cadrage ») :
 - ni suspension de soi-même (`cannot_suspend_self`) ni du dernier superadmin actif
   (`last_superadmin`) ;
 - pas de changement de rôle, de modification d'email ni de suppression ; l'inscription libre
-  attend la Phase 11.
+  attend la Phase 14.
 
 **Phase 6 (bascule sur le système BRP) terminée** — epic Jira `KAN-78`. Le Basic
 Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les
@@ -244,16 +245,13 @@ univers. Ses choix restent en vigueur (détail : roadmap Phase 6, système de r�
 - **le joueur voit le détail du jet** (compétence, modificateurs, chance, d100, degré) ; le
   narrateur n'en reçoit toujours que le résultat et le degré ;
 - points de vie du personnage dérivés (`(CON + SIZ) ÷ 2`) ; profil d'arme et formule de
-  dégâts du BRP posés, branchés en Phase 10 ; aucune règle optionnelle avant la Phase 10bis ;
+  dégâts du BRP posés, branchés en Phase 10 ; aucune règle optionnelle avant la Phase 13 ;
 - bascule sans reprise de données ; texte du livre jamais recopié, notice ORC dans le produit.
 
 Le livre (« ORC Content Document ») est rangé hors du dépôt, dans `tmp/` (ignoré par git).
 
-**Phase actuelle : Phase 7 (gestion du temps et des lieux)** — epic Jira `KAN-89` (tickets
-`KAN-90` à `KAN-103`). Implémentation, contenu du manoir Ward et documentation livrés
-(`KAN-90` à `KAN-101`) ; restent la bascule de la base de dev (`KAN-102`, avec feu vert) et la
-validation de bout en bout (`KAN-103`). Décisions (détail : roadmap Phase 7, architecture
-§6quater et §6quinquies) :
+**Phase 7 (gestion du temps et des lieux) terminée** — epic Jira `KAN-89`. Ses choix restent
+en vigueur (détail : roadmap Phase 7, architecture §6quater et §6quinquies) :
 - **horloge tenue par le backend** : compteur en secondes depuis minuit du premier jour,
   départ (heure obligatoire, date grégorienne facultative) copié du scénario au lancement ;
   sans rapport avec le port `Clock` ;
@@ -274,6 +272,35 @@ validation de bout en bout (`KAN-103`). Décisions (détail : roadmap Phase 7, a
   franchi dans le même tour (les passages s'appliquent avant le déplacement) ;
 - **localisation des PNJ** (`location_instance_id`) : laissé dans un lieu, retrouvé au retour ;
   un PNJ hostile bloque le passage au travers de sa pièce.
+
+**En cours : lot d'interface entre les Phases 7 et 8 (jet en direct et préférences)** — epic
+Jira `KAN-104` (tickets `KAN-105` à `KAN-112`), hors roadmap, front seul, **sans changement
+d'API**. Implémentation et documentation livrées (`KAN-105` à `KAN-111`) ; reste la validation
+de bout en bout (`KAN-112`). Décisions (détail : cahier des charges du front, 5.3.1, 5.3.7,
+5.5 et section 7) :
+- **jet lancé à la main** : le d100 est déjà tiré par le backend, le geste ne fait que le
+  révéler, sans mécanique d'adresse ; préparation, deux d10 en 2D (CSS, sans dépendance),
+  degré, repli en pastille ; pas de jauge, la chance chiffrée suffit ;
+- **narration retenue** jusqu'au lancer, saisie verrouillée ; un tour terminé avant le lancer
+  est **retenu** à la place du tour en cours, et ne rejoint le journal, la fiche, le bandeau
+  de scène et la voix qu'à la révélation ; un tour échoué révèle son jet aussitôt ; un tour
+  relu n'est jamais rejoué ;
+- **préférences d'interface** (thème, lecture à voix haute, lancer automatique, animations
+  une à une) propres au navigateur, **jamais en base** ni envoyées au backend ;
+  `prefers-reduced-motion` est un plancher ; le bouton de voix de l'en-tête double le réglage ;
+- **bandeau de scène** sous l'en-tête (lieu et période, toujours visibles) ; l'onglet
+  *Situation* de la fiche devient *Quests* ; texture du fond fixe par thème.
+
+**Complément de la Phase 7 : placement initial des PNJ** (détail : roadmap, « Complément de la
+Phase 7 » ; architecture §6ter et §6quater), sur le modèle du détenteur initial d'un objet :
+- un PNJ **unique** peut déclarer `initialLocation`, le lieu unique où il attend au début de la
+  partie (`npc_definitions.initial_location`) ; jamais un archétype ;
+- le backend l'instancie `absent` dans ce lieu à sa **première visite** (`visitUniqueLocation` →
+  `placeInitialNpcs`), puis l'arrivée le rend présent (`meetThoseWaiting`), au lancement compris ;
+  seule exception à « l'extraction crée les PNJ » ;
+- la narration de l'arrivée le reçoit dans `npcs_at_destination` avant qu'il existe ; tant qu'il
+  n'est pas rencontré, la liste fermée de l'extraction (`enterableNpcs`) ne l'admet que depuis son
+  lieu ou un lieu d'où l'on s'y rend.
 
 Phase suivante : **Phase 8 (lore étendu et RAG)**.
 
@@ -377,7 +404,7 @@ serverless pour le backend).
   (`#services/game/content_labels`) et sort en `{ reference, label }`, construit sur l'univers
   de la partie concernée — par requête, ou par tour pour les événements SSE qui le portent —
   et dans une langue (celle du tour pour les événements, l'anglais ailleurs jusqu'au choix
-  de langue de la Phase 11), avec repli sur l'anglais. Une référence sans libellé lève
+  de langue de la Phase 14), avec repli sur l'anglais. Une référence sans libellé lève
   `MissingLabelError` : jamais de référence brute ni « embellie » en repli.
 - **Seule la narration reçoit des noms traduits** (`names`, `items_in_scene`), dans la seule
   langue du tour, et le glossaire réduit à ses entrées traduites dans cette langue. Arbitrage
@@ -414,6 +441,21 @@ serverless pour le backend).
   pure et testée : elle ne génère aucune clé et ne lit aucune horloge, c'est `useTurn` qui
   les lui fournit. Le flux SSE passe par `transmit()` (`src/api/transmit.ts`), fermé à la
   déconnexion et sur un `401`.
+- **Un jet en direct passe par la machine `revealReducer`** (`src/games/roll_reveal.ts`), pure
+  et distincte de `turnReducer` (qui repasse à `idle` sur `turn_completed`) : seul un
+  `roll_resolved` reçu en direct l'ouvre. Un tour terminé avant le lancer est retenu par
+  `useTurn` (`src/games/held_turn.ts`) : rien de ce qui trahirait l'issue — journal, fiche,
+  bandeau de scène, voix — ne le reçoit avant la révélation.
+- **Le texte d'un jet se construit par `rollText()`** (`src/games/roll_text.ts`), pour la
+  pastille comme pour la carte — jamais assemblé à la main.
+- **Une préférence d'interface passe par le module `src/preferences.ts`** (`usePreferences`,
+  `preferences.setX()`, `useAnimates`) — jamais `localStorage` directement. Le stockage local
+  ne contient que le brouillon de saisie et ces préférences : ni jeton, ni donnée de jeu, ni
+  rien qui aille en base ou au backend. La clé `wanderlore.theme` est lue aussi par le script
+  de premier affichage d'`index.html`.
+- **Toute animation notable a sa préférence** (`ANIMATIONS`) et se joue sous `useAnimates()`
+  ou `animates()` : `prefers-reduced-motion` est un plancher qu'aucune préférence ne lève. Les
+  indicateurs d'état (points d'attente, chargement) n'en ont pas.
 - **Couleurs par jetons sémantiques uniquement** (`src/styles.css`) — jamais une valeur brute.
 - **Un composant se teste rendu en HTML statique** (`*.test.tsx`, `renderToStaticMarkup`,
   sous Node) — jamais dans un DOM : la suite Vitest reste sans navigateur.
@@ -461,7 +503,7 @@ serverless pour le backend).
 Aide-mémoire complet, comptes de test compris : `doc/aide-memoire-dev-testeur.md`.
 
 ```bash
-docker compose up -d              # PostgreSQL + Redis (à la racine)
+docker compose up -d              # PostgreSQL (5433) + Redis (6380), à la racine
 npm run dev                       # tous les workspaces via Turborepo
 npm run test / lint / typecheck   # idem
 

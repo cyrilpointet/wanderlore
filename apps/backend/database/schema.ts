@@ -178,7 +178,7 @@ export class LocationInstanceSchema extends BaseModel {
 }
 
 export class NpcDefinitionSchema extends BaseModel {
-  static $columns = ['combat', 'createdAt', 'defaultDisposition', 'description', 'generic', 'id', 'kind', 'labels', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
+  static $columns = ['combat', 'createdAt', 'defaultDisposition', 'description', 'generic', 'id', 'initialLocation', 'kind', 'labels', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
   $columns = NpcDefinitionSchema.$columns
   @column()
   declare combat: CombatProfile
@@ -192,6 +192,8 @@ export class NpcDefinitionSchema extends BaseModel {
   declare generic: boolean
   @column({ isPrimary: true })
   declare id: string
+  @column()
+  declare initialLocation: string | null
   @column()
   declare kind: DefinitionKind
   @column()
@@ -406,7 +408,7 @@ export class UserSchema extends BaseModel {
 }
 
 export class WorldStateSchema extends BaseModel {
-  static $columns = ['activeQuests', 'createdAt', 'currentLocationId', 'gameTime', 'id', 'narrativeFlags', 'sessionId', 'startDate', 'updatedAt'] as const
+  static $columns = ['activeQuests', 'createdAt', 'currentLocationId', 'gameTime', 'id', 'knownNpcs', 'narrativeFlags', 'sessionId', 'startDate', 'updatedAt'] as const
   $columns = WorldStateSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare activeQuests: Record<string, unknown>[]
@@ -418,6 +420,8 @@ export class WorldStateSchema extends BaseModel {
   declare gameTime: number
   @column({ isPrimary: true })
   declare id: string
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare knownNpcs: string[]
   @column()
   declare narrativeFlags: Record<string, unknown>
   @column()

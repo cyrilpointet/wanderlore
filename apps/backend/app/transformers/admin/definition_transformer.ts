@@ -10,7 +10,7 @@ type Definition = NpcDefinition | LocationDefinition | ItemDefinition
 const SHARED = ['id', 'worldId', 'scenarioId', 'reference', 'labels', 'description', 'kind']
 
 const OWN: Record<string, string[]> = {
-  npc_definitions: ['generic', 'defaultDisposition', 'combat'],
+  npc_definitions: ['generic', 'defaultDisposition', 'combat', 'initialLocation'],
   location_definitions: ['parent', 'exits', 'entrance'],
   item_definitions: ['generic', 'stackable', 'equippable', 'modifiers', 'initialHolder'],
 }

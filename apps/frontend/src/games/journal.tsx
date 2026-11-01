@@ -1,10 +1,12 @@
-import { ArrowDown, Dice5, Heart, MapPin, Package } from 'lucide-react'
+import { ArrowDown, Heart, MapPin, Package } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { Degree } from '@/api/enums'
+import { D10Icon } from '@/components/d10_icon'
+import { useAnimates } from '@/preferences'
 import { paragraphs } from './presentation'
 import type { Game, ItemChangeEffect, Roll, Turn } from './queries'
+import { DEGREE_EMPHASIS, ROLL_TONE, rollLine, rollText } from './roll_text'
 import { useStickToBottom } from './use_stick_to_bottom'
 
 /**
@@ -16,6 +18,7 @@ export function Journal({
   turns,
   inFlight,
   progress,
+  revealedTurnId,
 }: {
   game: Game
   turns: Turn[]
@@ -23,8 +26,14 @@ export function Journal({
   inFlight?: ReactNode
   /** Changes whenever the turn in flight moves on, so the journal follows it. */
   progress?: string
+  /**
+   * The turn that joined the journal once its dice were thrown: its
+   * narration appears there, and fades in as any narration does.
+   */
+  revealedTurnId?: string | null
 }) {
   const { t } = useTranslation('game')
+  const fades = useAnimates('narration')
   const { ref, hasNew, scrollToBottom } = useStickToBottom<HTMLDivElement>(
     `${turns.length}:${progress ?? ''}`
   )
@@ -39,7 +48,7 @@ export function Journal({
             <ol aria-label={t('journal.label')} className="flex flex-col gap-12">
               {turns.map((turn) => (
                 <li key={turn.id}>
-                  <TurnEntry turn={turn} />
+                  <TurnEntry turn={turn} fadeIn={fades && turn.id === revealedTurnId} />
                 </li>
               ))}
               {inFlight && <li>{inFlight}</li>}
@@ -62,12 +71,12 @@ export function Journal({
   )
 }
 
-function TurnEntry({ turn }: { turn: Turn }) {
+function TurnEntry({ turn, fadeIn }: { turn: Turn; fadeIn: boolean }) {
   return (
     <article className="flex flex-col gap-6">
       <PlayerAction text={turn.playerInput} />
       {turn.roll && <RollChip roll={turn.roll} />}
-      {turn.narration && <Narration text={turn.narration} />}
+      {turn.narration && <Narration text={turn.narration} fadeIn={fadeIn} />}
       {turn.effects && <Effects effects={turn.effects} />}
     </article>
   )
@@ -85,20 +94,6 @@ export function PlayerAction({ text }: { text: string }) {
   )
 }
 
-const ROLL_TONE = {
-  success: 'border-success/40 bg-success/10 text-success',
-  failure: 'border-danger/40 bg-danger/10 text-danger',
-}
-
-/** A critical or a fumble stands out; the other degrees read plainly. */
-const DEGREE_EMPHASIS: Record<Degree, string> = {
-  critical: 'font-semibold',
-  special: '',
-  success: '',
-  failure: '',
-  fumble: 'font-semibold',
-}
-
 /**
  * The roll in full, as at the table: what was rolled and at how much, the
  * difficulty when it is not average, each modifier with its value, the chance
@@ -108,37 +103,13 @@ const DEGREE_EMPHASIS: Record<Degree, string> = {
 export function RollChip({ roll }: { roll: Roll }) {
   const { t } = useTranslation('game')
 
-  const parts = [
-    roll.skill !== null
-      ? t('journal.roll.skill', { name: roll.skill.label, value: roll.value })
-      : t('journal.roll.characteristic', {
-          name: t(`characteristic.${roll.characteristic!}`, { ns: 'enums' }),
-          value: roll.value,
-        }),
-    ...(roll.difficulty === 'average'
-      ? []
-      : [t(`difficulty.${roll.difficulty}`, { ns: 'enums' })]),
-    ...roll.modifiers.map((modifier) =>
-      t('journal.roll.modifier', {
-        label:
-          modifier.source === 'item'
-            ? modifier.item.label
-            : t(`contextualEffect.${modifier.effect}`, { ns: 'enums' }),
-        value: modifier.value,
-      })
-    ),
-    ...(roll.chance === roll.value ? [] : [t('journal.roll.chance', { chance: roll.chance })]),
-    t('journal.roll.rolled', { roll: roll.roll }),
-    t(`degree.${roll.degree}`, { ns: 'enums' }),
-  ]
-
   return (
     <p className="flex justify-center">
       <span
         className={`inline-flex flex-wrap items-center justify-center gap-x-2 rounded-sm border px-3 py-1 text-label ${ROLL_TONE[roll.result]} ${DEGREE_EMPHASIS[roll.degree]}`}
       >
-        <Dice5 aria-hidden className="size-4 shrink-0" />
-        {parts.join(' · ')}
+        <D10Icon aria-hidden className="size-4 shrink-0" />
+        {rollLine(rollText(roll, t))}
       </span>
     </p>
   )
@@ -151,12 +122,23 @@ export function RollChip({ roll }: { roll: Roll }) {
  * region, so a screen reader is not read the whole text again at every
  * fragment: the waiting message announces the step, and the finished
  * narration is announced once the turn completes.
+ *
+ * `fadeIn` once, as it appears: the animation plays when the element is
+ * mounted, never again as fragments make it grow.
  */
-export function Narration({ text, provisional = false }: { text: string; provisional?: boolean }) {
+export function Narration({
+  text,
+  provisional = false,
+  fadeIn = false,
+}: {
+  text: string
+  provisional?: boolean
+  fadeIn?: boolean
+}) {
   return (
     <div
       aria-busy={provisional || undefined}
-      className="flex flex-col gap-4 font-serif text-narration text-text lg:text-narration-lg"
+      className={`flex flex-col gap-4 font-serif text-narration text-text lg:text-narration-lg ${fadeIn ? 'animate-fade-in' : ''}`}
     >
       {paragraphs(text).map((paragraph, index) => (
         <p key={index}>{paragraph}</p>

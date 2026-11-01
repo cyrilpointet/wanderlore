@@ -4,8 +4,9 @@ const keyOf = (gameId: string) => `wanderlore.draft.${gameId}`
 
 /**
  * The action being typed, kept per game in the browser: a reload, an expired
- * session or leaving the screen never loses it (front spec, principle 5). The
- * only thing the front keeps in storage — never a token.
+ * session or leaving the screen never loses it (front spec, principle 5).
+ * With the interface preferences, the only thing the front keeps in storage —
+ * never a token (front spec, section 7).
  */
 export function useDraft(gameId: string) {
   const [draft, setDraftState] = useState(() => {

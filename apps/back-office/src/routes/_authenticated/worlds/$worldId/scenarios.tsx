@@ -1,15 +1,23 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type ComponentProps, type FormEvent } from 'react'
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Field, FormAlert } from '@/content/field'
 import { errorUnder, formFailureOf, type FormFailure } from '@/content/form_errors'
+import { JsonImport } from '@/content/json_import'
 import { labelsOf, type LabelRow } from '@/content/labels'
 import { LabelsEditor } from '@/content/labels_editor'
 import { suggestReference } from '@/content/references'
 import { INPUT, PRIMARY, SECTION } from '@/content/ui'
 import { createScenario, scenarioQuery, scenariosQuery } from '@/scenarios/queries'
+import {
+  type ScenarioDraft,
+  scenarioDraftFromJson,
+  scenarioUpdateOf,
+} from '@/scenarios/scenario_draft'
+import { ScenarioForm } from '@/scenarios/scenario_form'
+import { useUniques } from '@/scenarios/uniques'
 import { worldsQuery } from '@/worlds/queries'
 
 export const Route = createFileRoute('/_authenticated/worlds/$worldId/scenarios')({
@@ -58,21 +66,39 @@ function Scenarios() {
   )
 }
 
-/** A new scenario: its reference and title; everything else in its editor. */
+/**
+ * A new scenario: its reference and title; everything else in its editor. A
+ * scenario filled in from a file shows its whole form at once, to be checked
+ * before it is created.
+ */
 function NewScenario({ worldId }: { worldId: string }) {
   const { t } = useTranslation('scenarios')
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [reference, setReference] = useState('')
   const [labels, setLabels] = useState<LabelRow[]>([{ language: 'en', name: '' }])
+  const [imported, setImported] = useState<ScenarioDraft | null>(null)
   const [failure, setFailure] = useState<FormFailure | null>(null)
   const englishName = labels[0]?.name ?? ''
 
   const create = useMutation({
-    mutationFn: () =>
-      createScenario(worldId, { reference: reference.trim(), labels: labelsOf(labels) }),
+    mutationFn: () => {
+      if (imported === null) {
+        return createScenario(worldId, { reference: reference.trim(), labels: labelsOf(labels) })
+      }
+
+      const built = scenarioUpdateOf(imported)
+
+      if (built.errors) {
+        setFailure({ fields: built.errors, general: null })
+        return Promise.resolve(null)
+      }
+
+      return createScenario(worldId, { ...built.payload, reference: reference.trim() })
+    },
     onMutate: () => setFailure(null),
     onSuccess: async (scenario) => {
+      if (!scenario) return
       queryClient.setQueryData(scenarioQuery(scenario.id).queryKey, scenario)
       void queryClient.invalidateQueries({ queryKey: scenariosQuery(worldId).queryKey })
       void queryClient.invalidateQueries({ queryKey: worldsQuery.queryKey, exact: true })
@@ -90,27 +116,61 @@ function NewScenario({ worldId }: { worldId: string }) {
   const labelsError = errorUnder(errors, 'labels')
 
   return (
-    <form onSubmit={submit} className={`${SECTION} flex flex-col gap-4`}>
+    <form
+      onSubmit={submit}
+      className={imported === null ? `${SECTION} flex flex-col gap-4` : 'flex flex-col gap-6'}
+    >
       <h2 className="font-serif text-[1.25rem] text-text">{t('newScenario')}</h2>
-      <LabelsEditor rows={labels} onChange={setLabels} error={labelsError} label={t('form.title')} />
-      <Field
-        id="new-scenario-reference"
-        label={t('form.reference')}
-        hint={t('referenceHint', { ns: 'content' })}
-        error={errors.reference}
-      >
-        <input
-          id="new-scenario-reference"
-          value={reference}
-          placeholder={suggestReference(englishName)}
-          onChange={(event) => setReference(event.target.value)}
-          onBlur={() => {
-            if (reference === '' && englishName !== '') setReference(suggestReference(englishName))
-          }}
-          className={`${INPUT} font-mono`}
+      <JsonImport
+        hint={t('importHint')}
+        onImport={(value) => {
+          const read = scenarioDraftFromJson(value)
+          setReference(read.reference)
+          setImported(read.draft)
+          setFailure(null)
+        }}
+      />
+      {imported === null ? (
+        <>
+          <LabelsEditor
+            rows={labels}
+            onChange={setLabels}
+            error={labelsError}
+            label={t('form.title')}
+          />
+          <Field
+            id="new-scenario-reference"
+            label={t('form.reference')}
+            hint={t('referenceHint', { ns: 'content' })}
+            error={errors.reference}
+          >
+            <input
+              id="new-scenario-reference"
+              value={reference}
+              placeholder={suggestReference(englishName)}
+              onChange={(event) => setReference(event.target.value)}
+              onBlur={() => {
+                if (reference === '' && englishName !== '')
+                  setReference(suggestReference(englishName))
+              }}
+              className={`${INPUT} font-mono`}
+            />
+          </Field>
+        </>
+      ) : (
+        <ImportedScenario
+          worldId={worldId}
+          reference={reference}
+          onReferenceChange={setReference}
+          draft={imported}
+          onChange={setImported}
+          errors={errors}
         />
-      </Field>
+      )}
       {failure?.general && <FormAlert message={failure.general} />}
+      {failure && !failure.general && Object.keys(failure.fields).length > 0 && (
+        <FormAlert message={t('fixErrors', { ns: 'worlds' })} />
+      )}
       <div>
         <button type="submit" disabled={create.isPending} className={PRIMARY}>
           {create.isPending ? t('creating') : t('create')}
@@ -118,4 +178,18 @@ function NewScenario({ worldId }: { worldId: string }) {
       </div>
     </form>
   )
+}
+
+/** The whole form of a scenario not created yet: its places and people are the world's. */
+function ImportedScenario({
+  worldId,
+  ...form
+}: { worldId: string } & Omit<
+  ComponentProps<typeof ScenarioForm>,
+  'uniqueLocations' | 'uniqueNpcs'
+>) {
+  const uniqueLocations = useUniques({ worldId }, 'locations')
+  const uniqueNpcs = useUniques({ worldId }, 'npcs')
+
+  return <ScenarioForm {...form} uniqueLocations={uniqueLocations} uniqueNpcs={uniqueNpcs} />
 }

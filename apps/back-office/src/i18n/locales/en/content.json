@@ -21,5 +21,8 @@
   "cancel": "Cancel",
   "loading": "Loading…",
   "notFound": "This no longer exists.",
-  "jsonHint": "JSON, checked by the server when saved."
+  "jsonHint": "JSON, checked by the server when saved.",
+  "importJson": "Fill in from a JSON file",
+  "importedFrom": "Filled in from {{file}}. Check everything: nothing is saved until it is created.",
+  "importNotObject": "This file holds no single object to fill the form from."
 }

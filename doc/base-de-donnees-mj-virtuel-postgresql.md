@@ -41,7 +41,7 @@ en `jsonb`, lues et écrites avec l'univers ; les catalogues ont leurs tables.
 | `created_at` / `updated_at` | timestamptz | — |
 
 - `general_rules` n'existe pas : il est éclaté en colonnes distinctes. `content_boundaries`
-  (tabous) est différé à la modération de la Phase 11.
+  (tabous) est différé à la modération de la Phase 14.
 - **Les catégories d'action** vivent dans `resolution_rules` ; **les PNJ, lieux et objets**
   dans les trois tables de définitions.
 
@@ -93,7 +93,7 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
   incohérences ; la vérification est refaite au lancement de chaque partie.
 - **Lancer une partie** copie le prétiré, l'état initial et le départ de l'horloge (heure et
   date) dans une partie neuve, dans une transaction : modifier ensuite le scénario ne décale
-  pas une partie en cours. La création guidée de personnage attend la Phase 10.
+  pas une partie en cours. La création guidée de personnage attend la Phase 12.
 - Différés : `branch_points`, conditions de progression des chapitres.
 
 **`glossary`** fige la traduction des noms propres, pour éviter qu'un même nom soit rendu
@@ -123,7 +123,7 @@ Colonnes propres à chaque catalogue :
 
 | Table | Colonnes |
 |---|---|
-| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null) |
+| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null), `initial_location` (référence du lieu unique où un PNJ unique attend au début de la partie ; null sinon, et toujours pour un archétype — CHECK) |
 | `location_definitions` | `parent` (lieu unique englobant ; null pour un archétype, qui reçoit son parent par instance) ; depuis la Phase 7, `exits` (jsonb, `[]` par défaut : `to`, `passage`, `backPassage`, `hidden`, `requires`, `oneWay`, `duration` — voir architecture, section 6quater) et `entrance` (booléen) |
 | `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `weapon` (jsonb, nullable depuis la Phase 6 : `skill`, `damage` en dés comme `1D6+1`, `damageModifier` `full` / `half` / `none`, `special`), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement) |
 
@@ -373,6 +373,9 @@ est une instance d'archétype générique. Voir architecture, section 6ter.
   le backend, jamais par le LLM.
 - Un unique n'a qu'une instance par partie : une réapparition la repasse `present`.
 - Les instances ne sont jamais supprimées : un PNJ qui quitte la scène passe `absent`.
+- **Placement initial** : un unique doté d'un `initial_location` (définition) est instancié
+  `absent` dans ce lieu à la première visite de celui-ci, puis rendu `present` par l'arrivée du
+  joueur — comme un objet doté d'un `initial_holder` naît avec son détenteur.
 - La disposition initiale vient de la définition. L'extraction propose une disposition
   absolue, jamais un delta chiffré.
 
@@ -503,7 +506,7 @@ Résumés hiérarchiques générés par le job asynchrone.
   serveur, l'état du compte est donc relu à chaque requête. Ses parties sont conservées.
 - **Pas de suppression de compte** ni de changement de rôle à ce stade.
 - **Envisagé plus tard** : `preferences` (jsonb : langue, options d'affichage), avec le choix
-  de langue de la Phase 11.
+  de langue de la Phase 14.
 
 ### `usage_quotas` (optionnel, selon modèle économique)
 

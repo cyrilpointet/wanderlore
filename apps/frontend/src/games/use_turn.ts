@@ -2,11 +2,19 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { transmit } from '@/api/transmit'
-import type { Period } from '@/api/enums'
-import type { ContentLabel } from '@/api/types'
-import { gameQuery, gamesQuery, turnsQuery, type Character, type Game, type Turn } from './queries'
+import { animates, preferences, systemReducesMotion } from '@/preferences'
+import { gameQuery, gamesQuery, turnsQuery, type Game, type Turn } from './queries'
 import { channelOf, readTurn, submitTurn } from './turn_api'
 import { withCompletedTurn } from './game_cache'
+import { waitsForDice, type Completion } from './held_turn'
+import {
+  holdsNarration,
+  initialRevealState,
+  revealReducer,
+  type RevealAction,
+  type RevealOptions,
+  type RevealState,
+} from './roll_reveal'
 import { classifySubmitError } from './turn_errors'
 import {
   concerns,
@@ -25,16 +33,31 @@ import {
  */
 export const SILENCE_BEFORE_READ_MS = 30_000
 
+/** How a live roll is to be shown, as the preferences stand when it arrives. */
+function revealOptions(): RevealOptions {
+  const current = preferences.get()
+  return { autoRoll: current.autoRoll, animated: animates(current, 'dice', systemReducesMotion()) }
+}
+
 /**
  * Plays turns for one game: subscribes to its channel before anything can be
  * sent, drives the turn machine with what the API and the channel say, and
  * writes each finished turn into the journal and the sheet.
+ *
+ * A roll received live is played out by the reveal machine. A turn finished
+ * before its dice were thrown is held — neither in the journal nor on the
+ * sheet, nor read aloud — and recorded once they are.
  */
 export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) {
   const queryClient = useQueryClient()
   const [state, dispatch] = useReducer(turnReducer, initialTurnState)
   const [subscribed, setSubscribed] = useState(false)
   const [narrated, setNarrated] = useState<string | null>(null)
+  const [reveal, revealDispatch] = useReducer(revealReducer, initialRevealState)
+  /** The finished turn waiting for its dice. */
+  const [held, setHeld] = useState<Completion | null>(null)
+  /** The last turn recorded once its dice were thrown: its narration appears then. */
+  const [released, setReleased] = useState<string | null>(null)
   const gameId = game.id
 
   /**
@@ -42,6 +65,8 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
    * event can arrive between a dispatch and the render that follows it.
    */
   const latest = useRef<TurnState>(initialTurnState)
+  const latestReveal = useRef<RevealState>(initialRevealState)
+  const heldRef = useRef<Completion | null>(null)
   const onAcceptedRef = useRef(onAccepted)
   useEffect(() => {
     onAcceptedRef.current = onAccepted
@@ -58,7 +83,7 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
    * event carried them.
    */
   const record = useCallback(
-    (turn: Turn, character?: Character, location?: ContentLabel | null, period?: Period) => {
+    ({ turn, character, location, period }: Completion) => {
       queryClient.setQueryData(turnsQuery(gameId).queryKey, (turns) =>
         !turns || turns.some((known) => known.id === turn.id) ? turns : [...turns, turn]
       )
@@ -78,13 +103,40 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
     [queryClient, gameId]
   )
 
+  /** Records a finished turn — unless its narration still waits for the dice. */
+  const complete = useCallback(
+    (completion: Completion) => {
+      if (!waitsForDice(latestReveal.current, completion)) return record(completion)
+      heldRef.current = completion
+      setHeld(completion)
+    },
+    [record]
+  )
+
+  /** Drives the reveal machine; the dice thrown, the turn they held is recorded. */
+  const revealAct = useCallback(
+    (action: RevealAction) => {
+      latestReveal.current = revealReducer(latestReveal.current, action)
+      revealDispatch(action)
+
+      const waiting = heldRef.current
+      if (!waiting || holdsNarration(latestReveal.current, waiting.turn.id)) return
+      heldRef.current = null
+      setHeld(null)
+      setReleased(waiting.turn.id)
+      record(waiting)
+    },
+    [record]
+  )
+
   /** Applies a turn read back, or answered by the `202`, recording it if it is over. */
   const settle = useCallback(
     (turn: Turn, action: TurnAction) => {
-      if (turn.status === 'completed') record(turn)
+      if (turn.status === 'completed') complete({ turn })
+      if (turn.status === 'failed') revealAct({ type: 'turn_failed', turnId: turn.id })
       act(action)
     },
-    [act, record]
+    [act, complete, revealAct]
   )
 
   const catchUp = useCallback(async () => {
@@ -103,11 +155,26 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
     (message: TurnMessage) => {
       if (!concerns(latest.current, message)) return
       if (message.event === 'turn_completed') {
-        record(message.turn, message.character, message.location, message.period)
+        const { turn, character, location, period } = message
+        complete({ turn, character, location, period })
       }
       act({ type: 'message', message })
+
+      // Only a roll heard live is played out: one read back is shown as it stands.
+      const current = latest.current
+      if (message.event === 'roll_resolved' && current.status === 'in_progress' && current.roll) {
+        revealAct({
+          type: 'roll_received',
+          turnId: message.turnId,
+          roll: current.roll,
+          ...revealOptions(),
+        })
+      }
+      if (message.event === 'turn_failed') {
+        revealAct({ type: 'turn_failed', turnId: message.turnId })
+      }
     },
-    [act, record]
+    [act, complete, revealAct]
   )
 
   // Subscribed on opening the screen, before anything can be sent (architecture, section 8bis).
@@ -158,12 +225,12 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
     try {
       const fresh = await queryClient.fetchQuery({ ...gameQuery(gameId), staleTime: 0 })
       const turn = fresh.pendingTurn ? await readTurn(gameId, fresh.pendingTurn.id) : null
-      if (turn?.status === 'completed') record(turn)
+      if (turn?.status === 'completed') complete({ turn })
       act({ type: 'superseded', turn })
     } catch {
       act({ type: 'superseded', turn: null })
     }
-  }, [queryClient, gameId, act, record])
+  }, [queryClient, gameId, act, complete])
 
   const send = useCallback(async () => {
     const current = latest.current
@@ -192,7 +259,8 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
 
   const submit = useCallback(
     (playerInput: string) => {
-      if (latest.current.status !== 'idle') return
+      // The input is locked meanwhile; this is the belt to its braces.
+      if (latest.current.status !== 'idle' || heldRef.current) return
       act({ type: 'submit', playerInput, key: crypto.randomUUID() })
       void send()
     },
@@ -217,5 +285,23 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
       act({ type: 'input_changed' })
   }, [act])
 
-  return { state, subscribed, narrated, submit, retry, edit, inputChanged }
+  const throwDice = useCallback(() => revealAct({ type: 'throw' }), [revealAct])
+  const diceStopped = useCallback(() => revealAct({ type: 'dice_stopped' }), [revealAct])
+  const folded = useCallback(() => revealAct({ type: 'folded' }), [revealAct])
+
+  return {
+    state,
+    subscribed,
+    narrated,
+    reveal,
+    held,
+    released,
+    throwDice,
+    diceStopped,
+    folded,
+    submit,
+    retry,
+    edit,
+    inputChanged,
+  }
 }

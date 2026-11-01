@@ -12,6 +12,10 @@ import { Journal } from '@/games/journal'
 import { gameQuery, turnsQuery } from '@/games/queries'
 import { SheetDialog } from '@/games/sheet_dialog'
 import { Composer } from '@/games/composer'
+import { heldInFlight } from '@/games/held_turn'
+import { liveRollOf, locksInput } from '@/games/roll_reveal'
+import { rollLine, rollText } from '@/games/roll_text'
+import { SceneBar } from '@/games/scene_bar'
 import { TurnInFlight } from '@/games/turn_in_flight'
 import { isBusy, progressKey } from '@/games/turn_machine'
 import { waitingText } from '@/games/waiting'
@@ -45,9 +49,14 @@ function GameScreen() {
   const [draft, setDraft] = useDraft(gameId)
   // The draft is cleared once the turn is accepted, never before: a failed POST keeps it.
   const turn = useTurn(game, { onAccepted: () => setDraft('') })
-  const { state } = turn
+  const { state, reveal } = turn
+  // Recorded only once its dice are thrown: the voice never gives the outcome away.
   const voice = useNarrationVoice(turn.narrated)
   const { t } = useTranslation('game')
+
+  // A turn over before its dice were thrown stays where the turn in flight was.
+  const shown = state.status !== 'idle' ? state : turn.held ? heldInFlight(turn.held) : null
+  const liveRoll = liveRollOf(reveal, shown?.submission.turnId ?? null)
 
   function edit() {
     const text = turn.edit()
@@ -60,13 +69,23 @@ function GameScreen() {
 
       <div className="flex min-h-0 flex-1">
         <main className="flex min-w-0 flex-1 flex-col">
+          <SceneBar game={game} />
           <Journal
             game={game}
             turns={turns}
-            progress={progressKey(state)}
+            progress={`${progressKey(shown ?? state)}:${reveal.status}`}
+            revealedTurnId={turn.released}
             inFlight={
-              state.status !== 'idle' && (
-                <TurnInFlight state={state} onRetry={turn.retry} onEdit={edit} />
+              shown && (
+                <TurnInFlight
+                  state={shown}
+                  reveal={reveal}
+                  onThrow={turn.throwDice}
+                  onDiceStopped={turn.diceStopped}
+                  onFolded={turn.folded}
+                  onRetry={turn.retry}
+                  onEdit={edit}
+                />
               )
             }
           />
@@ -77,7 +96,7 @@ function GameScreen() {
               turn.inputChanged()
             }}
             onSubmit={turn.submit}
-            locked={isBusy(state)}
+            locked={isBusy(state) || locksInput(reveal)}
             ready={turn.subscribed}
             error={
               state.status === 'idle' && state.inputError
@@ -85,9 +104,20 @@ function GameScreen() {
                 : undefined
             }
           />
-          {/* Waiting messages, then the narration, told once to screen readers. */}
+          {/*
+           * Waiting messages, then the narration, told once to screen readers.
+           * Silent while the dice wait: the card's button speaks for itself.
+           */}
           <p aria-live="polite" className="sr-only">
-            {state.status === 'in_progress' ? waitingText(state, t) : (turn.narrated ?? '')}
+            {liveRoll
+              ? ''
+              : state.status === 'in_progress'
+                ? waitingText(state, t)
+                : (turn.narrated ?? '')}
+          </p>
+          {/* The roll in full, once its dice are thrown. */}
+          <p aria-live="polite" className="sr-only">
+            {reveal.status === 'revealed' ? rollLine(rollText(reveal.roll, t)) : ''}
           </p>
         </main>
 

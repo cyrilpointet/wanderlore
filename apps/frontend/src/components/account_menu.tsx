@@ -1,25 +1,27 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { LogOut } from 'lucide-react'
+import { LogOut, SlidersHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { closeTransmit } from '@/api/transmit'
 import { currentUserQuery, signOut } from '@/auth/session'
 import { failureMessage } from '@/i18n/errors'
+import { PreferencesDialog } from './preferences_dialog'
 
 /**
- * The player's initials, opening their name and **Sign out**.
+ * The player's initials, opening their name, **Preferences** and **Sign out**.
  *
  * A disclosure rather than an ARIA menu: two plain elements do not need the
  * arrow-key contract a `role="menu"` would promise.
  */
 export function AccountMenu() {
-  const { t } = useTranslation('auth')
+  const { t } = useTranslation(['auth', 'preferences'])
   const { data: user } = useQuery(currentUserQuery)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [preferencesOpen, setPreferencesOpen] = useState(false)
   const panelId = useId()
   const root = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -83,6 +85,18 @@ export function AccountMenu() {
           <div className="my-1 border-t border-border-strong" />
           <button
             type="button"
+            aria-haspopup="dialog"
+            onClick={() => {
+              setOpen(false)
+              setPreferencesOpen(true)
+            }}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-body text-text transition-colors hover:bg-surface-2"
+          >
+            <SlidersHorizontal aria-hidden className="size-4 text-muted" />
+            {t('open', { ns: 'preferences' })}
+          </button>
+          <button
+            type="button"
             onClick={() => signOutMutation.mutate()}
             disabled={signOutMutation.isPending}
             className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-body text-text transition-colors hover:bg-surface-2 disabled:opacity-60"
@@ -97,6 +111,15 @@ export function AccountMenu() {
           )}
         </div>
       )}
+
+      <PreferencesDialog
+        open={preferencesOpen}
+        onClose={() => {
+          setPreferencesOpen(false)
+          // The menu that opened it is gone: back to the button that opens the menu.
+          trigger.current?.focus()
+        }}
+      />
     </div>
   )
 }

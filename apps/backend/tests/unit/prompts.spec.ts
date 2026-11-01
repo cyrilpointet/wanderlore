@@ -118,6 +118,7 @@ function turnContext(overrides: Partial<TurnContext> = {}): TurnContext {
         name: null,
       },
       npc_definitions: { royal_guard_1: 'royal_guard' },
+      known_npcs: [],
       items: ITEMS,
       /** Four in the afternoon, on the first day, a Monday. */
       game_time: 16 * 3600,
@@ -539,6 +540,7 @@ test.group('Extraction | contract', () => {
       ...turnContext(),
       narration: 'Tréville reads the letter and waves you upstairs.',
       creatable_items: ['improvised_weapon', 'rope', 'food'],
+      enterable_npcs: npcReferences(THREE_MUSKETEERS),
       movement: FREE_MOVEMENT,
     })
   }
@@ -714,7 +716,9 @@ test.group('Prompts | the language of the game', () => {
     const { names } = payloadOf(buildNarrationMessage(narrationRequest(inFrench)))
 
     assert.deepEqual(names.location, 'Hôtel de Tréville')
-    assert.deepEqual(names.npcs_present, [{ handle: 'royal_guard_1', name: 'Garde du Roi' }])
+    assert.deepEqual(names.npcs_present, [
+      { handle: 'royal_guard_1', name: 'Garde du Roi', known: true },
+    ])
   })
 
   test('a name learnt in play wins over the definition', ({ assert }) => {
@@ -727,7 +731,9 @@ test.group('Prompts | the language of the game', () => {
       buildNarrationMessage(narrationRequest({ ...inFrench, scene: named }))
     )
 
-    assert.deepEqual(names.npcs_present, [{ handle: 'royal_guard_1', name: 'Jacques' }])
+    assert.deepEqual(names.npcs_present, [
+      { handle: 'royal_guard_1', name: 'Jacques', known: true },
+    ])
   })
 
   test('items go to the narrator in the language too, English where untranslated', ({ assert }) => {
@@ -770,6 +776,7 @@ test.group('Prompts | the language of the game', () => {
       ...turnContext(inFrench),
       narration: 'Le garde vous laisse passer.',
       creatable_items: ['rope'],
+      enterable_npcs: npcReferences(THREE_MUSKETEERS),
       movement: FREE_MOVEMENT,
     })
 
@@ -837,6 +844,7 @@ test.group('Prompts | the time of the game', () => {
       ...turnContext(),
       narration: 'Night falls on the courtyard.',
       creatable_items: [],
+      enterable_npcs: npcReferences(THREE_MUSKETEERS),
       movement: FREE_MOVEMENT,
     })
 
@@ -917,6 +925,7 @@ test.group('Prompts | places and their exits', () => {
         scene: {
           ...study.scene,
           place_description: 'A cluttered study.',
+          visited_locations: ['house_hall', 'house_study', 'house_cellar'],
           exits: exitsOf(HOUSE_WORLD.locations, 'house_study', state),
         },
       })
@@ -946,7 +955,11 @@ test.group('Prompts | places and their exits', () => {
         ...request,
         world: HOUSE_WORLD,
         aside: true,
-        scene: { ...request.scene, exits: exitsOf(HOUSE_WORLD.locations, 'house_study', state) },
+        scene: {
+          ...request.scene,
+          visited_locations: ['house_hall', 'house_study'],
+          exits: exitsOf(HOUSE_WORLD.locations, 'house_study', state),
+        },
       })
     )
 
@@ -954,6 +967,29 @@ test.group('Prompts | places and their exits', () => {
       payload.exits.map(({ to }: { to: string }) => to),
       ['The hall']
     )
+  })
+
+  test('an exit to a place never visited goes without the name of what lies beyond', ({
+    assert,
+  }) => {
+    const hall = inTheHall()
+    const payload = payloadOf(
+      buildNarrationMessage({
+        ...narrationRequest(),
+        world: HOUSE_WORLD,
+        scene: { ...hall.scene, visited_locations: ['house_yard', 'house_hall'] },
+      })
+    )
+
+    assert.deepInclude(payload.exits, { passage: 'a swing door', hidden: false, locked: false })
+    assert.deepInclude(payload.exits, {
+      to: 'The yard',
+      passage: 'the front door',
+      hidden: false,
+      locked: false,
+    })
+    assert.notInclude(JSON.stringify(payload.exits), 'The kitchen')
+    assert.include(NARRATION_SYSTEM_PROMPT, 'never name or guess what lies beyond')
   })
 
   test('the narrator follows the route, passage by passage', ({ assert }) => {
@@ -974,6 +1010,7 @@ test.group('Prompts | places and their exits', () => {
       ...inTheHall(),
       narration: 'You cross the hall.',
       creatable_items: [],
+      enterable_npcs: npcReferences(THREE_MUSKETEERS),
       movement: { destinations: ['house_hall', 'house_kitchen'], archetypes: [], parents: [] },
     })
     const payload = payloadOf(message)
@@ -990,6 +1027,7 @@ test.group('Prompts | places and their exits', () => {
         ...inTheHall(),
         narration: 'You cross the hall.',
         creatable_items: [],
+        enterable_npcs: npcReferences(THREE_MUSKETEERS),
         movement: { destinations: ['house_hall', 'house_kitchen'], archetypes: [], parents: [] },
       })
     )
@@ -1029,7 +1067,13 @@ test.group('Prompts | people left behind', () => {
     )
 
     assert.deepEqual(payload.npcs_at_destination, [
-      { handle: 'treville', name: 'M. de Tréville', descriptor: null, disposition: 'friendly' },
+      {
+        handle: 'treville',
+        name: 'M. de Tréville',
+        known: false,
+        descriptor: null,
+        disposition: 'friendly',
+      },
     ])
     assert.include(NARRATION_SYSTEM_PROMPT, 'npcs_at_destination')
   })
@@ -1053,5 +1097,73 @@ test.group('Prompts | people left behind', () => {
     )
 
     assert.deepEqual(payload.npcs_at_destination, [])
+  })
+})
+
+test.group('Prompts | what the character knows of names', () => {
+  /** Tréville in the scene, beside the guard: a unique person, named by his definition. */
+  function withTreville(known: string[]) {
+    const context = turnContext()
+    return narrationRequest({
+      scene: {
+        ...context.scene,
+        npcs_present: [
+          ...context.scene.npcs_present,
+          { handle: 'treville', name: null, descriptor: null, disposition: 'neutral' },
+        ],
+        npc_definitions: { ...context.scene.npc_definitions, treville: 'treville' },
+        known_npcs: known,
+      },
+    })
+  }
+
+  test('a unique person the character never heard of goes marked unknown, name and all', ({
+    assert,
+  }) => {
+    const { names } = payloadOf(buildNarrationMessage(withTreville([])))
+
+    assert.deepEqual(names.npcs_present, [
+      { handle: 'royal_guard_1', name: 'Royal Guard', known: true },
+      { handle: 'treville', name: 'M. de Tréville', known: false },
+    ])
+    assert.include(NARRATION_SYSTEM_PROMPT, 'known: false')
+  })
+
+  test('known from the start or learnt in play, they are named', ({ assert }) => {
+    const { names } = payloadOf(buildNarrationMessage(withTreville(['treville'])))
+
+    assert.deepInclude(names.npcs_present, {
+      handle: 'treville',
+      name: 'M. de Tréville',
+      known: true,
+    })
+  })
+
+  test('someone waiting where the character arrives is marked the same way', ({ assert }) => {
+    const { npcs_at_destination: waiting } = payloadOf(
+      buildNarrationMessage(
+        narrationRequest({
+          npcs_at_destination: [
+            {
+              handle: 'treville',
+              name: null,
+              descriptor: null,
+              disposition: 'neutral',
+              definition: 'treville',
+            },
+          ],
+        })
+      )
+    )
+
+    assert.deepEqual(waiting, [
+      {
+        handle: 'treville',
+        name: 'M. de Tréville',
+        known: false,
+        descriptor: null,
+        disposition: 'neutral',
+      },
+    ])
   })
 })
