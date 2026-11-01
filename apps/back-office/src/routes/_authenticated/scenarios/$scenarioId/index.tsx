@@ -44,7 +44,8 @@ function ScenarioEditorForm({ scenario }: { scenario: Scenario }) {
   const [draft, setDraft] = useState(() => scenarioDraftOf(scenario))
   const [failure, setFailure] = useState<FormFailure | null>(null)
   const [saved, setSaved] = useState(false)
-  const uniqueLocations = useUniqueLocations(scenario)
+  const uniqueLocations = useUniques(scenario, 'locations')
+  const uniqueNpcs = useUniques(scenario, 'npcs')
 
   const save = useMutation({
     mutationFn: () => {
@@ -86,6 +87,7 @@ function ScenarioEditorForm({ scenario }: { scenario: Scenario }) {
         }}
         errors={failure?.fields ?? {}}
         uniqueLocations={uniqueLocations}
+        uniqueNpcs={uniqueNpcs}
       />
       {failure?.general && <FormAlert message={failure.general} />}
       {failure && !failure.general && Object.keys(failure.fields).length > 0 && (
@@ -107,9 +109,10 @@ function ScenarioEditorForm({ scenario }: { scenario: Scenario }) {
 }
 
 /** The named places a game of this scenario may start in: the world's and its own. */
-function useUniqueLocations(scenario: Scenario): string[] {
-  const world = useQuery(catalogueQuery({ worldId: scenario.worldId }, 'locations'))
-  const own = useQuery(catalogueQuery({ scenarioId: scenario.id }, 'locations'))
+/** The named places, or people, of the world and the scenario. */
+function useUniques(scenario: Scenario, catalogue: 'locations' | 'npcs'): string[] {
+  const world = useQuery(catalogueQuery({ worldId: scenario.worldId }, catalogue))
+  const own = useQuery(catalogueQuery({ scenarioId: scenario.id }, catalogue))
 
   return [
     ...new Set(

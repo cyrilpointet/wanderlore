@@ -21,6 +21,7 @@ const SCENARIO: Scenario = {
     location: 'meung_sur_loire',
     chapter: 'the_road_to_paris',
     quests: [{ reference: 'deliver_the_letter', step: 1, summary: 'Carry the letter.' }],
+    knownNpcs: ['treville'],
   },
   startTime: '10:00',
   startDate: '1625-04-07',
@@ -43,6 +44,13 @@ describe('scenario draft', () => {
         startDate: '1625-04-07',
       },
     })
+  })
+
+  test('a state written before names were known starts knowing none', () => {
+    const older = { ...SCENARIO.initialState!, knownNpcs: undefined }
+    const update = scenarioUpdateOf(scenarioDraftOf({ ...SCENARIO, initialState: older }))
+
+    expect(update.payload?.initialState).toMatchObject({ knownNpcs: [] })
   })
 
   test('a story with no date sends none', () => {

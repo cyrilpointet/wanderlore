@@ -31,6 +31,7 @@ function render(scenario: Scenario, errors = {}) {
       onChange={() => {}}
       errors={errors}
       uniqueLocations={['ward_house_entrance_hall']}
+      uniqueNpcs={['silas_ward', 'martha_pike']}
     />
   )
 }
@@ -52,5 +53,21 @@ describe('ScenarioForm', () => {
     expect(render(SCENARIO, { startTime: 'The startTime field format is invalid' })).toContain(
       'The startTime field format is invalid'
     )
+  })
+
+  test('ticks the names the character knows from the start, among the named people', () => {
+    const html = render({
+      ...SCENARIO,
+      initialState: {
+        location: 'ward_house_entrance_hall',
+        chapter: null,
+        quests: [],
+        knownNpcs: ['silas_ward'],
+      },
+    })
+
+    expect(html).toContain('Names known from the start')
+    expect(html).toMatch(/<input type="checkbox" checked=""\/><span class="font-mono">silas_ward/)
+    expect(html).toMatch(/<input type="checkbox"\/><span class="font-mono">martha_pike/)
   })
 })

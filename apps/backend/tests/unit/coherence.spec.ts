@@ -146,6 +146,18 @@ test.group('Coherence | references', () => {
     )
   })
 
+  test('only a named person can be known by name from the start', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((_, scenario) => {
+        scenario.initialState!.knownNpcs = ['treville', 'cardinal_guard', 'nobody']
+      }),
+      [
+        ['unknown_npc', 'initialState.knownNpcs.1', 'cardinal_guard'],
+        ['unknown_npc', 'initialState.knownNpcs.2', 'nobody'],
+      ]
+    )
+  })
+
   test('a person waits from the start in a named place', ({ assert }) => {
     assert.deepEqual(
       issuesAfter((world) => {

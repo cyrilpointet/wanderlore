@@ -154,6 +154,28 @@ test.group('New game | starting', (group) => {
     )
   })
 
+  test('knows from the start the names the scenario says the character knows', async ({
+    client,
+    assert,
+  }) => {
+    const { scenarioId } = await seedMusketeers()
+    const row = await db.from('scenarios').where('id', scenarioId).firstOrFail()
+    await db
+      .from('scenarios')
+      .where('id', scenarioId)
+      .update({ initial_state: JSON.stringify({ ...row.initial_state, knownNpcs: ['treville'] }) })
+
+    const response = await client
+      .post('/api/v1/sessions')
+      .json({ scenarioId })
+      .loginAs(await userWith())
+      .withCsrfToken()
+
+    response.assertStatus(201)
+    const state = await WorldState.findByOrFail('sessionId', dataOf(response).id)
+    assert.deepEqual(state.knownNpcs, ['treville'])
+  })
+
   test('whoever waits where the story starts is there from the first turn', async ({
     client,
     assert,

@@ -408,7 +408,7 @@ export class UserSchema extends BaseModel {
 }
 
 export class WorldStateSchema extends BaseModel {
-  static $columns = ['activeQuests', 'createdAt', 'currentLocationId', 'gameTime', 'id', 'narrativeFlags', 'sessionId', 'startDate', 'updatedAt'] as const
+  static $columns = ['activeQuests', 'createdAt', 'currentLocationId', 'gameTime', 'id', 'knownNpcs', 'narrativeFlags', 'sessionId', 'startDate', 'updatedAt'] as const
   $columns = WorldStateSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare activeQuests: Record<string, unknown>[]
@@ -420,6 +420,8 @@ export class WorldStateSchema extends BaseModel {
   declare gameTime: number
   @column({ isPrimary: true })
   declare id: string
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare knownNpcs: string[]
   @column()
   declare narrativeFlags: Record<string, unknown>
   @column()

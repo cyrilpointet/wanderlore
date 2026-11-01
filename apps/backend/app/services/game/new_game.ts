@@ -131,6 +131,8 @@ export async function startGame(user: User, scenarioId: string): Promise<Session
           currentLocationId: start.id,
           activeQuests: initialState.quests,
           narrativeFlags: {},
+          /** Whose names the character knows before meeting anyone. */
+          knownNpcs: initialState.knownNpcs ?? [],
           /** The clock opens at the scenario's time on its first day, and runs from there. */
           gameTime: secondsOfTime(scenario.startTime),
           startDate: scenario.startDate,

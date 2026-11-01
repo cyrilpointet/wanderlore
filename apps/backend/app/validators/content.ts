@@ -196,6 +196,7 @@ const initialState = () =>
         summary: sentence(500),
       })
     ),
+    knownNpcs: vine.array(reference()).optional(),
   })
 
 const scenarioFields = {

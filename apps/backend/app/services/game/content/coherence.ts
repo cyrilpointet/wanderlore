@@ -31,6 +31,7 @@ export type CoherenceIssueCode =
   | 'unknown_location'
   | 'unknown_item'
   | 'unknown_holder'
+  | 'unknown_npc'
   | 'unknown_chapter'
   | 'unknown_quest'
   | 'no_action_type'
@@ -193,7 +194,7 @@ export function checkScenario(
   }
 
   checkCharacter(scenario, { skills, resources, itemsByReference }, report)
-  checkInitialState(scenario, uniqueLocations, report)
+  checkInitialState(scenario, { uniqueLocations, uniqueNpcs }, report)
   checkNetworks(locations, scenario, report)
 
   return issues
@@ -270,9 +271,10 @@ function checkCharacter(
 
 function checkInitialState(
   scenario: ScenarioContent,
-  uniqueLocations: Set<string>,
+  known: { uniqueLocations: Set<string>; uniqueNpcs: Set<string> },
   report: Report
 ) {
+  const { uniqueLocations, uniqueNpcs } = known
   const state = scenario.initialState
 
   if (state === null) {
@@ -293,6 +295,13 @@ function checkInitialState(
       report('unknown_quest', `initialState.quests.${index}`, quest.reference)
     }
   })
+
+  /** Only a named person has a name to know: an archetype's people are anonymous. */
+  for (const [index, reference] of (state.knownNpcs ?? []).entries()) {
+    if (!uniqueNpcs.has(reference)) {
+      report('unknown_npc', `initialState.knownNpcs.${index}`, reference)
+    }
+  }
 }
 
 /**

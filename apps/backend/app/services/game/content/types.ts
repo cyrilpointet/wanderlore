@@ -277,6 +277,12 @@ export type InitialState = {
   location: string
   chapter: string | null
   quests: ActiveQuest[]
+  /**
+   * The unique people whose names the character knows from the start: a
+   * relative, the person a letter is for. Anyone else is named only once they
+   * give their name in play. Absent from a state written before it existed.
+   */
+  knownNpcs?: string[]
 }
 
 export const SCENARIO_STATUSES = ['draft', 'published'] as const

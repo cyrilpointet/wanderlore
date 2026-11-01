@@ -20,6 +20,7 @@ export function ScenarioForm({
   onChange,
   errors,
   uniqueLocations,
+  uniqueNpcs,
 }: {
   reference: string
   draft: ScenarioDraft
@@ -27,6 +28,8 @@ export function ScenarioForm({
   errors: FieldErrors
   /** The named places of the world and the scenario: where a game may start. */
   uniqueLocations: string[]
+  /** The named people of the world and the scenario: whose names the character may know. */
+  uniqueNpcs: string[]
 }) {
   const { t } = useTranslation('scenarios')
   const set =
@@ -43,11 +46,13 @@ export function ScenarioForm({
     startLocation: set('startLocation'),
     startChapter: set('startChapter'),
     startQuests: set('startQuests'),
+    startKnownNpcs: set('startKnownNpcs'),
     startTime: set('startTime'),
     startDate: set('startDate'),
   }
   const labelsError = errorUnder(errors, 'labels')
   const characterError = errorUnder(errors, 'pregeneratedCharacter')
+  const knownNpcsError = errorUnder(errors, 'initialState.knownNpcs')
   const chapters = draft.chapters.map(({ reference: chapter }) => chapter).filter(Boolean)
   const quests = draft.quests.map(({ reference: quest }) => quest).filter(Boolean)
 
@@ -290,9 +295,42 @@ export function ScenarioForm({
             </div>
           </fieldset>
         )}
+
+        {draft.startLocation !== '' && (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-label font-medium text-muted">
+              {t('form.knownNpcs')}
+            </legend>
+            <p className="text-label text-subtle">{t('form.knownNpcsHint')}</p>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {withCurrentAll(uniqueNpcs, draft.startKnownNpcs).map((npc) => (
+                <label key={npc} className="flex items-center gap-2 text-body text-text">
+                  <input
+                    type="checkbox"
+                    checked={draft.startKnownNpcs.includes(npc)}
+                    onChange={(event) =>
+                      on.startKnownNpcs(
+                        event.target.checked
+                          ? [...draft.startKnownNpcs, npc]
+                          : draft.startKnownNpcs.filter((known) => known !== npc)
+                      )
+                    }
+                  />
+                  <span className="font-mono">{npc}</span>
+                </label>
+              ))}
+            </div>
+            {knownNpcsError && <p className="text-label text-danger">{knownNpcsError}</p>}
+          </fieldset>
+        )}
       </Section>
     </div>
   )
+}
+
+/** The choices, plus the values chosen that are not among them anymore. */
+function withCurrentAll(choices: string[], current: string[]): string[] {
+  return [...current.filter((value) => !choices.includes(value)), ...choices]
 }
 
 /** The choices, plus the current value when it is not among them anymore. */

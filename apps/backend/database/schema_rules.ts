@@ -208,6 +208,8 @@ export default {
          */
         narrative_flags: jsonObject,
         start_date: calendarDate,
+        /** References of the unique people whose names the character knows. */
+        known_npcs: { tsType: 'string[]', decorators: arrayColumn },
       },
     },
 

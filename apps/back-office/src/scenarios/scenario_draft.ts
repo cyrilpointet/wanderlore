@@ -23,6 +23,8 @@ export type ScenarioDraft = {
   startLocation: string
   startChapter: string
   startQuests: QuestDraft[]
+  /** The named people the character knows by name from the start. */
+  startKnownNpcs: string[]
   /** `HH:MM`, always: a story opens at some time of day. */
   startTime: string
   /** `YYYY-MM-DD`; empty for a story with no date. */
@@ -59,6 +61,7 @@ export function scenarioDraftOf(scenario: Scenario): ScenarioDraft {
       step: String(quest.step),
       summary: quest.summary,
     })),
+    startKnownNpcs: state?.knownNpcs ?? [],
     startTime: scenario.startTime,
     startDate: scenario.startDate ?? '',
   }
@@ -103,6 +106,7 @@ export function scenarioUpdateOf(draft: ScenarioDraft): ScenarioUpdate {
                 step: Number(quest.step),
                 summary: quest.summary.trim(),
               })),
+              knownNpcs: draft.startKnownNpcs,
             },
       startTime: draft.startTime,
       startDate: draft.startDate === '' ? null : draft.startDate,

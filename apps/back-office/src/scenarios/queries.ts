@@ -11,6 +11,8 @@ export type InitialState = {
   location: string
   chapter: string | null
   quests: ActiveQuest[]
+  /** The named people the character knows by name from the start; absent on an older state. */
+  knownNpcs?: string[]
 }
 
 export type ScenarioStatus = 'draft' | 'published'
