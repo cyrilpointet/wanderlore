@@ -20,6 +20,7 @@ Les invariants non négociables sont dans `CLAUDE.md` (déjà chargé). Ce skill
 | Vue d'ensemble, décisions actées, points ouverts, budget, cible | `doc/synthese-passation-mj-virtuel-llm.md` | 7 (actées), 8 (ouverts) |
 | Organigramme complet d'un tour, de la soumission à la réponse (état cible) | `doc/flux-backend-tour-de-jeu-mj-virtuel.md` | tout |
 | Étapes du pipeline, ce qui est injecté à chaque étape | `doc/architecture-mj-virtuel-llm.md` | 3, 4 |
+| Lore : fragments (`kind`, `secret`, tags), sélection par la scène, plafond, traçabilité | `doc/architecture-mj-virtuel-llm.md` ; `doc/roadmap-mj-virtuel-llm.md` | 4 ; Phase 8, décisions de cadrage |
 | Multi-langue : quelle étape voit quelle langue, glossaire, résumé | `doc/architecture-mj-virtuel-llm.md` | 4bis |
 | Inventaire dans le pipeline, détenteurs (personnage, PNJ, lieu), références vs noms affichés | `doc/architecture-mj-virtuel-llm.md` | 6bis |
 | PNJ uniques, archétypes, improvisés : définitions et instances | `doc/architecture-mj-virtuel-llm.md` | 6ter |
@@ -50,7 +51,7 @@ avant de rouvrir un arbitrage déjà motivé.
 POST action joueur → accusé de réception + job BullMQ en file
 Front s'abonne au flux SSE (Transmit) pour ce tour
 
-0. Backend    : state (SQL déterministe) + lore filtré par tags + résumé + buffer récent
+0. Backend    : state (SQL déterministe) + lore tagué par la scène + résumé + buffer récent
 1. LLM A+B+C  : intent / validity / resolution / alert          → JSON strict
 2. Backend    : calcul du jet si requis                          → result + margin
 3. LLM D      : narration                                        → texte libre
@@ -60,11 +61,16 @@ Front s'abonne au flux SSE (Transmit) pour ce tour
 ```
 
 **Trois natures de contexte, trois mécanismes de sélection** — ne jamais les confondre :
-lore = filtrage par tags (RAG plus tard, seulement si le volume le justifie) ;
+lore = filtrage par tags tirés de la scène, jamais du texte du joueur (RAG plus tard,
+seulement si le volume le justifie) ;
 state = requête SQL déterministe ; mémoire = dernier résumé + N derniers tours.
 
-Le lore n'est jamais injecté en bloc : **règles** pour l'arbitrage (A+B+C), **ambiance**
-pour la narration (D), **rien** pour l'extraction (E).
+Le lore n'est jamais injecté en bloc. Chaque fragment (`lore_fragments`) a un `kind` qui
+dit où il part : `rule` à l'arbitrage (A+B+C), `ambiance` à la narration (D), `fact` aux
+deux ; un fragment `secret` ne part qu'à l'arbitrage, qui ne l'énonce jamais. **Rien** pour
+l'extraction (E). Les fragments sans tag partent toujours ; les tagués quand la scène tient
+un de leurs tags (lieu et parents, PNJ présents, objets en scène), du plus spécifique au moins
+spécifique, sous un plafond par étape. `turn_log.lore_sent` dit ce qui est parti.
 
 ---
 
@@ -137,7 +143,7 @@ jamais de valeur numérique de règle — uniquement des labels qualitatifs.
 | 5bis | Gestion des comptes | `superadmin` |
 | 6 | Bascule sur le système BRP (Chaosium, licence ORC) | — |
 | 7 | Gestion du temps et des lieux : horloge de jeu, jour/nuit, sorties entre lieux | — |
-| 8 | `lore_fragments`, filtrage par tags | — |
+| 8 | `lore_fragments`, filtrage par tags tirés de la scène, import JSON complet | — |
 | 9 | `narrative_summaries`, mémoire long terme | — |
 | 10 | Combat : boucle de rounds, dégâts branchés, matrice attaque / défense | — |
 | 11 | Échéances et événements déclenchés par le temps, emplois du temps des PNJ | — |

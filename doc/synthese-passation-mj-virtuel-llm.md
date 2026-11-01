@@ -143,7 +143,7 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - Pipeline découpé en étapes à responsabilité unique plutôt qu'un appel LLM unique global.
 - Séparation systématique : le LLM propose (interprétation, plausibilité, narration, extraction), le backend décide et calcule tout ce qui touche à l'intégrité de la partie.
 - Système prompt statique par étape (rôle, contraintes, schéma de sortie) ; le contenu dynamique (contexte de jeu) passe uniquement en message utilisateur, toujours introduit comme donnée et non comme instruction (défense anti prompt-injection).
-- Le lore, le state et la mémoire narrative suivent trois mécanismes de sélection distincts : filtrage par tags/RAG pour le lore, requête déterministe pour le state, résumé + buffer récent pour la mémoire.
+- Le lore, le state et la mémoire narrative suivent trois mécanismes de sélection distincts : filtrage par tags tirés de la scène pour le lore (Phase 8 ; recherche par similarité seulement si le volume l'exige), requête déterministe pour le state, résumé + buffer récent pour la mémoire.
 - **Exécution asynchrone et contrat d'API** : le pipeline d'un tour s'exécute en tâche de fond via une file de jobs ; le front reçoit un accusé de réception puis un flux d'événements progressifs via AdonisJS Transmit (SSE), introduit dès la Phase 2 de la roadmap.
 - **Contrat SSE de la Phase 2** : un canal par partie, abonné avant toute soumission ; événements limités aux jalons (`step_started`, `roll_resolved`, `turn_completed`, `turn_failed`), sans streaming de la narration tant qu'elle sort en JSON avec les effets (réintroduit en Phase 3) ; rattrapage par lecture du tour. Voir document d'architecture, section 8bis.
 - **Narration en streaming dès la Phase 3** : événement `narration_chunk`, narration provisoire jusqu'à `turn_completed`, retirée par le front si le tour échoue ensuite. Voir architecture, section 8bis.
@@ -231,7 +231,7 @@ L'inventaire se scinde exactement sur la ligne « le LLM propose, le backend dé
 
 ### Base de données et infrastructure
 - PostgreSQL choisi comme moteur de base de données.
-- RAG choisi pour la recherche de lore, avec pgvector comme option native envisageable.
+- Lore en fragments (`lore_fragments`, Phase 8) : `kind` `rule` / `ambiance` / `fact` pour l'étape qui les reçoit, `secret` pour l'arbitrage seul, tags = références de lieux, PNJ ou objets tirées de la scène, plafond de fragments tagués par étape. Pas d'embeddings : pgvector reste l'option native si le volume de lore venait à l'exiger.
 - JSONB utilisé pour toute structure variable par univers ou par scénario (compétences, prétirés, profils, conditions spécifiques, state).
 - `turn_log` isolé dès la conception pour ne jamais alourdir les tables d'état courant.
 - **Convention de langue** : documentation et échanges de conception en français ; nommage technique (tables, colonnes, enums, clés JSON, code) exclusivement en anglais, appliqué directement dans tous les documents techniques ; langue par défaut de l'application (interface et narration) en anglais, support multi-langue en complément (modalités non tranchées).
@@ -287,7 +287,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 - Observabilité et évaluation de la qualité LLM (détection de dérive de prompt, evals automatisés) — non abordée en détail.
 - Modération de contenu au-delà du prompt injection (thèmes sensibles, classification d'âge).
 - Versionning des prompts et des règles de résolution en cas de modification en cours de vie du produit.
-- Outillage de création de contenu au-delà d'un back-office CRUD basique (assistance LLM au tagging, import de fichiers structurés).
+- Outillage de création de contenu au-delà d'un back-office CRUD basique (assistance LLM au tagging). L'import JSON d'un univers clé en main ou d'un scénario complet existe depuis la Phase 8.
 - Cycle de vie détaillé du personnage et de la partie (création guidée, conditions de fin, reprise après pause longue).
 - Rythme de travail indicatif à se fixer (jalon par mois, volume d'heures hebdomadaire) — évoqué en section 2 mais non encore formalisé concrètement.
 - Hébergement et canal de distribution définitifs (au-delà des solutions légères envisagées pour la phase de test — voir section 4) — non abordés pour une éventuelle montée en charge.
@@ -304,9 +304,9 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 **Phases 0 à 5bis terminées.** Le socle technique est en place ; un joueur connecté joue un tour depuis l'interface web, avec retour progressif par SSE et narration streamée ; le pipeline est séparé en étapes (arbitrage, jet, narration, extraction, application), avec PNJ et lieux en définitions et instances, et le coût réel par tour est mesurable. Depuis la Phase 4, les objets sont des instances détenues par le personnage, un PNJ ou un lieu, les jets comptent circonstances (labels) et objets, chacun tracé avec son origine, et l'inventaire du personnage s'affiche au front. Depuis la Phase 5, le contenu de jeu est en base (univers, scénarios, catalogues de PNJ, lieux et objets, avec surcharge par scénario et noms par langue) ; le joueur lance une partie depuis un catalogue de scénarios publiés, avec le personnage prétiré du scénario ; un `game_master` crée, teste et publie univers et scénarios depuis le back-office. Depuis la Phase 5bis, un superadmin gère les comptes depuis le back-office : il les crée avec un rôle, les suspend et les réactive.
 
-Depuis la Phase 6, le Basic Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les univers. Depuis la Phase 7, le backend tient l'horloge de jeu et la topologie des lieux (sorties, passages, réseaux), puis, avec les lots qui la suivent, le placement initial des PNJ et ce que le personnage sait.
+Depuis la Phase 6, le Basic Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les univers. Depuis la Phase 7, le backend tient l'horloge de jeu et la topologie des lieux (sorties, passages, réseaux), puis, avec les lots qui la suivent, le placement initial des PNJ et ce que le personnage sait. Depuis la Phase 8, le lore vit en fragments, au niveau de l'univers ou du scénario, et chaque étape ne reçoit que ceux que la scène appelle, tracés dans `turn_log` ; un univers s'importe clé en main, un scénario avec ses catalogues.
 
-**Phase actuelle : Phase 8 (lore étendu)** : fragments de lore filtrés par des tags tirés de la scène. Voir la roadmap, Phase 8, et ses décisions de cadrage.
+**Phase suivante : Phase 9 (mémoire long terme)** : résumé narratif hiérarchique, régénéré hors du chemin critique. Voir la roadmap, Phase 9.
 
 ---
 

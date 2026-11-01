@@ -121,7 +121,7 @@ Pertinent seulement pour des lores massifs (corpus de type encyclopédie) où le
 | E | Aucun | Handles présents, objets en scène, destinations permises, sorties cachées et verrouillées du lieu, schéma des champs modifiables (pas les valeurs actuelles) — jamais la description du lieu ni le temps | Aucun (le texte narré suffit) |
 | Job résumé (async) | Aucun | Aucun | Résumé précédent + tours bruts à compresser |
 
-**Point clé** : le lore n'est jamais injecté en bloc. Il est filtré différemment selon l'usage — règles pour l'arbitrage (A+B+C), ambiance pour la narration (D), faits pour les deux — même s'il provient de la même table source (`lore_fragments`, colonne `kind`). Les fragments sans tag d'abord, puis du plus spécifique au moins spécifique (lieu exact, parents, PNJ présents, objets), sous un plafond par étape ; `turn_log` enregistre les références envoyées.
+**Point clé** : le lore n'est jamais injecté en bloc. Il est filtré différemment selon l'usage — règles pour l'arbitrage (A+B+C), ambiance pour la narration (D), faits pour les deux — même s'il provient de la même table source (`lore_fragments`, colonne `kind`). Les fragments sans tag d'abord, puis du plus spécifique au moins spécifique (lieu exact, parents, PNJ présents, objets), sous un plafond de 12 fragments tagués par étape (`TAGGED_LORE_CAP`) ; `turn_log.lore_sent` enregistre les références envoyées à chaque étape. La sélection est un service pur (`#services/game/lore`), sur la `WorldDefinition` chargée une fois par tour. À l'arbitrage, les fragments secrets arrivent dans un champ à part (`secret_lore`) : ils pèsent sur le jugement sans être énoncés dans `validity.justification` ni `intent.summary`, que lit la narration. La narration d'un déplacement reçoit en plus le lore de la destination et des PNJ qui y attendent.
 
 ---
 
@@ -1112,7 +1112,7 @@ Tour de jeu
 ├─ Étape 0 (backend, dans le job) : récupération state + lore taggué + mémoire
 │
 ├─ Étape 1 (LLM, A+B+C) → event: step_completed (arbitration)
-│   IN  : lore filtré (règles) + state scène (lieu décrit, sorties, lieux atteignables, période) + perso + résumé + buffer court (2 tours) + input joueur + language
+│   IN  : lore filtré (règles et faits, secrets à part) + state scène (lieu décrit, sorties, lieux atteignables, période) + perso + résumé + buffer court (2 tours) + input joueur + language
 │   OUT : intent (+ destination dans un réseau) + validity + resolution + duration + alert
 │
 ├─ Backend : avancée de l'horloge (durée convertie + trajet vers la destination, aparté = 0)
@@ -1122,7 +1122,7 @@ Tour de jeu
 │   OUT : résultat déterministe (d100, chance, success/failure + degré)
 │
 ├─ Étape 3 (LLM, D — narration) → event: narration_chunk (streaming)
-│   IN  : lore filtré (ambiance) + state scène (lieu, sorties, chemin, PNJ à la destination) + temps du tour + resolution + résumé + buffer + language
+│   IN  : lore filtré (ambiance et faits non secrets, destination comprise) + state scène (lieu, sorties, chemin, PNJ à la destination) + temps du tour + resolution + résumé + buffer + language
 │   OUT : narration (texte, dans la langue demandée) + ambiance_flags (en anglais)
 │
 ├─ Étape 4 (LLM, E — extraction)

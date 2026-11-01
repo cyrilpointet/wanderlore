@@ -99,6 +99,37 @@ vider ces clés dans les outils de développement. La réduction des animations 
 
 ---
 
+## Contenu de test : importer un univers ou un scénario
+
+Le contenu écrit pour les tests manuels vit dans **`test-worlds/`**, à la racine, ignoré par
+git : des fichiers JSON à la forme du contenu en code (`database/content/`), importés par le
+back-office avec le compte `gm@wanderlore.test`. Les seeders, eux, n'écrivent que ce dont les
+tests automatisés ont besoin.
+
+- **Un univers clé en main** : *Worlds* → **New world** → **Fill in from a JSON file**. Le
+  fichier remplit le formulaire ; ses catégories d'action (`actionTypes`), lieux (`locations`),
+  PNJ (`npcs`), objets (`items`) et fragments de lore (`lore`) sont résumés sous le formulaire
+  (*Created with it*) et créés avec l'univers. Ses scénarios s'importent à part.
+- **Un scénario complet** : ouvrir l'univers → onglet *Scenarios* → **New scenario** → **Fill
+  in from a JSON file**. Mêmes catalogues, sans `actionTypes`. Les scénarios de
+  `test-worlds/` (*The Grain Road*, *The Drowned Anchor*) s'importent dans **Les Trois
+  Mousquetaires**.
+- **Tout ou rien** : le serveur vérifie chaque entrée, et la première fautive refuse tout le
+  fichier ; l'erreur s'affiche sous l'entrée concernée (chemin du type `lore.2.tags`). Un tag
+  peut nommer une définition du même fichier.
+- Le scénario arrive en **brouillon** : **Try it in the game** le lance pour le `game_master`
+  dans le front joueur, **Publish** l'ouvre aux joueurs après la vérification de cohérence.
+
+**Quel lore a reçu un tour** : `turn_log.lore_sent` donne, par étape, les références des
+fragments envoyés.
+
+```sql
+SELECT turn_number, player_input, lore_sent
+FROM turn_log WHERE session_id = '<id de la partie>' ORDER BY created_at;
+```
+
+---
+
 ## LLM : vérifier et mesurer
 
 ```bash

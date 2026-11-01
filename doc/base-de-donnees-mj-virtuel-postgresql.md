@@ -39,8 +39,8 @@ en `jsonb`, lues et écrites avec l'univers ; les catalogues ont leurs tables.
 | `created_at` / `updated_at` | timestamptz | — |
 
 - `rules` et `ambiance` (listes de phrases anglaises, de la Phase 5 à la Phase 7) deviennent
-  en Phase 8 des fragments de lore sans tag, de `kind` `rule` et `ambiance` : voir
-  `lore_fragments`.
+  en Phase 8 des fragments de lore sans tag, de `kind` `rule` et `ambiance`, de référence
+  `rule_01`, `ambiance_01`… dans l'ordre d'écriture : voir `lore_fragments`.
 - `general_rules` n'existe pas : il est éclaté en colonnes distinctes. `content_boundaries`
   (tabous) est différé à la modération de la Phase 14.
 - **Les catégories d'action** vivent dans `resolution_rules` ; **les PNJ, lieux et objets**
@@ -69,6 +69,11 @@ l'univers de même référence. Filtrées par tags tirés de la scène (architec
   `embedding vector(n)` (pgvector) s'ajouterait ici plutôt qu'une référence vers un store
   externe.
 - Suppression toujours permise : aucune partie ne référence un fragment.
+- Contrôles du backend, au formulaire comme à l'import : un tag doit désigner un lieu, un
+  PNJ ou un objet de l'univers — ou du scénario, pour un fragment de scénario — sinon
+  `unknown_tag` ; une `ambiance` secrète est refusée (`secret_ambiance`), en plus de la
+  contrainte `CHECK` de la table. `checkScenario` signale aussi un tag orphelin à la
+  publication (`unknown_tag`).
 
 ### `scenarios`
 
@@ -452,6 +457,7 @@ Log complet de chaque tour, table à plus forte volumétrie du système. Indispe
 | `language` | text | langue de la partie pour ce tour |
 | `game_time_before` / `game_time_after` | int, nullable | horloge de jeu de part et d'autre du tour (Phase 7) ; null avant la Phase 7 ou pour un tour mort avant l'arbitrage |
 | `duration` | jsonb, nullable | durée proposée par l'arbitrage : label, avec `count` ou `period` (Phase 7) |
+| `lore_sent` | jsonb, nullable | références des fragments de lore envoyés, par étape : `{ arbitration, narration }`, une étape non atteinte valant `null` (Phase 8) ; null pour un tour mort avant l'arbitrage ou joué avant la Phase 8 |
 | `created_at` | timestamp | — |
 
 **Pourquoi tracer `language` à côté de `llm_usage`** : le coût réel d'un tour varie

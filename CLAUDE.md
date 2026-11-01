@@ -313,7 +313,35 @@ Phase 7 » ; architecture §6ter et §6quater), sur le modèle du détenteur ini
   ni de l'autre ; une description ne nomme ni une pièce voisine ni un unique pas encore
   rencontré — vérifié par `giveaways` (`#tests/helpers/knowledge`) sur les réseaux du contenu.
 
-Phase suivante : **Phase 8 (lore étendu et RAG)**.
+**Phase 8 (lore étendu) terminée** — epic Jira `KAN-120`. Ses choix restent en vigueur
+(détail : roadmap Phase 8, « Décisions de cadrage » ; architecture §4 ; base de données,
+`lore_fragments`) :
+- **lore en fragments** (`lore_fragments`), au niveau de l'univers ou d'un scénario qui
+  **surcharge** le fragment de même référence, comme les catalogues ; `kind` dit où il part —
+  `rule` à l'arbitrage, `ambiance` à la narration, `fact` aux deux — et `secret` le réserve à
+  l'arbitrage (jamais sur une `ambiance`), qui le reçoit à part (`secret_lore`) et ne l'énonce
+  ni dans `validity.justification` ni dans `intent.summary` ; l'extraction ne reçoit rien ;
+- **`worlds.rules` et `worlds.ambiance` disparus**, repris en fragments sans tag
+  (`rule_01`, `ambiance_01`…) ; une seule source de lore, éditée au back-office (onglet *Lore*) ;
+- **sélection par la scène, jamais par le texte du joueur** : tags = références de lieux, de
+  PNJ ou d'objets, vérifiées (`unknown_tag`) ; un fragment sans tag part toujours, un fragment
+  tagué quand la scène tient un de ses tags (lieu et parents, PNJ présents, objets en scène ;
+  pour la narration d'un déplacement, la destination et ceux qui y attendent), du plus
+  spécifique au moins spécifique, **12 fragments tagués au plus par étape** ;
+- **traçabilité** : `turn_log.lore_sent`, les références envoyées à chaque étape ;
+- **pas d'embeddings** : la recherche par similarité attend un volume de lore qui l'exige ;
+- **import JSON complet** : un univers **clé en main** (catégories d'action, lieux, PNJ, objets,
+  lore ; ses scénarios à part) ou un scénario avec ses catalogues, en une transaction, la
+  première entrée fautive refusant tout le fichier ;
+- **démonstration** : deux scénarios de test des Trois Mousquetaires, *The Grain Road* (un
+  village des environs de La Rochelle, 1627) et *The Drowned Anchor* (une auberge bretonne),
+  en JSON dans `test-worlds/`, hors dépôt.
+
+**Hors roadmap : suppression d'une partie par le joueur**, depuis *My games*, avec
+confirmation. Suppression douce (`sessions.deleted_at`) : la partie et ses tours restent en
+base, mais toute route de jeu y répond comme à une partie inexistante.
+
+Phase suivante : **Phase 9 (mémoire long terme)**.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
@@ -360,6 +388,14 @@ serverless pour le backend).
   colonne (`22P02`). Le `prepare` doit laisser passer `null` intact, sinon un NULL SQL
   devient un `null` JSON. Il se déclare dans `schema_rules.ts` (clé `args`), comme le
   typage.
+- **Le contenu de test manuel vit dans `test-worlds/`** (racine, ignoré par git) : des JSON à
+  la forme du contenu en code, importés par le back-office. Les seeders n'écrivent que ce dont
+  les tests automatisés ont besoin, plus le contenu de `database/content/` et la partie de
+  démo.
+- **Ce que les validateurs ne voient pas d'une définition ou d'un fragment** (champ réservé à
+  un `kind`, tag qui ne désigne rien, ambiance secrète, catégorie d'action sans résolution
+  unique) se refuse dans `app/controllers/admin/catalogue_checks.ts`, partagé par le formulaire
+  et l'import, sur le chemin du champ fautif — avant les contraintes de la base.
 - **Le contenu de jeu écrit en code vit dans `database/content/`** (forme `WorldContent`,
   `#services/game/content/types`) et s'écrit en base par `storeWorldContent`
   (`#services/game/content/store`), idempotent par référence — jamais par des insertions à la
@@ -420,7 +456,18 @@ serverless pour le backend).
 - **La narration ne reçoit un nom de PNJ que marqué `known`**, et le lieu où mène une sortie
   que s'il a été visité : ce que le personnage sait se lit dans l'état (`known_npcs`, lieux
   visités), jamais dans le récit. Un scénario nouveau déclare `initialState.knownNpcs`, et un
-  réseau de lieux du contenu en code passe le test `giveaways`.
+  réseau de lieux du contenu en code passe le test `giveaways`. De même, un fragment de lore
+  qui part à la narration ne nomme ni un PNJ unique ni ce qu'il y a derrière un passage :
+  vérifié par `loreGiveaways` (`#tests/helpers/knowledge`) sur le contenu en code.
+- **Le lore d'un tour se choisit par `#services/game/lore`** (`loreSceneOf`, `loreFor`), pur,
+  sur la `WorldDefinition` du tour : la scène donne les tags, jamais le texte du joueur, et
+  chaque étape ne reçoit que les `kind` qui la servent — un `secret` jamais la narration. Toute
+  étape qui reçoit du lore inscrit ses références dans `turn_log.lore_sent`. Le plafond
+  (`TAGGED_LORE_CAP`) est dans le code, pas par univers.
+- **Une partie se lit par le scope `listed`** (`Session.query().withScopes((scopes) =>
+  scopes.listed())`) dans toute route de jeu et à la soumission d'un tour : une partie
+  supprimée par le joueur (`deleted_at`) répond comme une partie inexistante. Seul le worker
+  la relit sans le scope, pour finir un tour déjà en cours.
 - **Seule la narration reçoit des noms traduits** (`names`, `items_in_scene`), dans la seule
   langue du tour, et le glossaire réduit à ses entrées traduites dans cette langue. Arbitrage
   et extraction ne lisent que l'anglais (`label`) — jamais `labels` ni le glossaire.
