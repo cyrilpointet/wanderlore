@@ -15,7 +15,8 @@
     "story": "Story",
     "npcs": "People",
     "locations": "Places",
-    "items": "Items"
+    "items": "Items",
+    "lore": "Lore"
   },
   "deleteScenario": "Delete this scenario",
   "deleteScenarioHint": "Only a scenario no game was started from can be deleted, with its own definitions.",
@@ -77,6 +78,7 @@
     "unknown_npc": "“{{reference}}” is no named person of this world.",
     "unknown_chapter": "“{{reference}}” is no chapter of this scenario.",
     "unknown_quest": "“{{reference}}” is no quest of this scenario.",
+    "unknown_tag": "The tag “{{reference}}” is no place, person or item of this world: the fragment would never be sent.",
     "no_action_type": "The world has no category of action: no action could be rolled.",
     "missing_generic_npc": "No generic person to improvise passers-by from.",
     "missing_location_archetype": "No place archetype to improvise places from.",

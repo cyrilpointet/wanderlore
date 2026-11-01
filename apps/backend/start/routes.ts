@@ -90,7 +90,7 @@ router
         router.post('scenarios/:scenarioId/publish', [controllers.admin.Scenarios, 'publish'])
         router.post('scenarios/:scenarioId/unpublish', [controllers.admin.Scenarios, 'unpublish'])
 
-        /** The three catalogues, at world level or at a scenario's. */
+        /** The catalogues and the lore, at world level or at a scenario's. */
         router
           .get('worlds/:worldId/:catalogue', [controllers.admin.Definitions, 'index'])
           .as('definitions.world.index')
@@ -110,7 +110,7 @@ router
       .where('scenarioId', router.matchers.uuid())
       .where('definitionId', router.matchers.uuid())
       .where('id', router.matchers.uuid())
-      .where('catalogue', { match: /^(npcs|locations|items)$/ })
+      .where('catalogue', { match: /^(npcs|locations|items|lore)$/ })
       .prefix('admin')
       .as('admin')
       .use([middleware.auth(), middleware.role({ roles: ['game_master'] })])

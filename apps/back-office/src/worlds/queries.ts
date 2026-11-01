@@ -36,7 +36,7 @@ export type BaseChance = number | { characteristic: Characteristic; multiplier: 
 
 export type Skill = Entry & { category: SkillCategory; baseChance: BaseChance }
 
-/** Everything a world holds itself; its scenarios and catalogues have routes of their own. */
+/** Everything a world holds itself; its scenarios, catalogues and lore have routes of their own. */
 export type WorldDetail = {
   id: string
   reference: string

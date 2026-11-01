@@ -6,6 +6,7 @@ import {
   DAMAGE_MODIFIER_USES,
   DEFINITION_KINDS,
   ITEM_CONDITIONS,
+  LORE_FRAGMENT_KINDS,
   NPC_DISPOSITIONS,
   SKILL_CATEGORIES,
   SPECIAL_EFFECTS,
@@ -305,7 +306,19 @@ const catalogueFields = {
   },
 }
 
-export const CATALOGUES = ['npcs', 'locations', 'items'] as const
+/**
+ * A lore fragment: no names, no description — the content is the text. Its
+ * tags are references; whether they name something is checked against the
+ * catalogues by the controller.
+ */
+const loreFields = {
+  kind: vine.enum(LORE_FRAGMENT_KINDS),
+  content: sentence(2000),
+  tags: vine.array(reference()).distinct(),
+  secret: vine.boolean(),
+}
+
+export const CATALOGUES = ['npcs', 'locations', 'items', 'lore'] as const
 
 export type Catalogue = (typeof CATALOGUES)[number]
 
@@ -329,6 +342,16 @@ export const definitionValidators = {
   items: {
     create: vine.create({ reference: reference(), ...definitionBase, ...catalogueFields.items }),
     update: vine.create(optional({ ...definitionBase, ...catalogueFields.items })),
+  },
+  /** Tags and secrecy may be left out: a fragment sent with every turn, to every step its kind serves. */
+  lore: {
+    create: vine.create({
+      reference: reference(),
+      ...loreFields,
+      tags: loreFields.tags.optional(),
+      secret: loreFields.secret.optional(),
+    }),
+    update: vine.create(optional(loreFields)),
   },
 }
 

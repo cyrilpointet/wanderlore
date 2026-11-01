@@ -30,6 +30,8 @@
   "invalid_json": "This is not valid JSON.",
   "content_in_use_detail": "Games are played with: {{references}}.",
   "kind_mismatch": "This only belongs to the other kind of definition.",
+  "unknown_tag": "A tag names no place, person or item of this world.",
+  "secret_ambiance": "An ambiance goes to the narrator only: it cannot be secret.",
   "account_suspended": "This account is suspended.",
   "cannot_suspend_self": "You cannot suspend your own account.",
   "last_superadmin": "The last active superadmin cannot be suspended.",

@@ -59,7 +59,8 @@ export type ItemDefinition = DefinitionBase & {
 
 export type Definition = NpcDefinition | LocationDefinition | ItemDefinition
 
-function pathOf(level: Level): string {
+/** Where a level's catalogues are read and created. */
+export function pathOf(level: Level): string {
   return 'scenarioId' in level ? `/admin/scenarios/${level.scenarioId}` : `/admin/worlds/${level.worldId}`
 }
 

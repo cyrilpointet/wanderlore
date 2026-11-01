@@ -17,6 +17,7 @@
     "npcs": "People",
     "locations": "Places",
     "items": "Items",
+    "lore": "Lore",
     "scenarios": "Scenarios"
   },
   "form": {

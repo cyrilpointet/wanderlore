@@ -1,0 +1,32 @@
+{
+  "intro": "What the model does not know of this world: a few sentences each, sent only to the steps they serve, and only when the scene holds what they are tagged with. Never shown to the player, never translated.",
+  "scenarioIntro": "The scenario's own lore, added to the world's; a fragment sharing the reference of a world one replaces it.",
+  "add": "Add a fragment",
+  "empty": "No lore yet.",
+  "reference": "Reference",
+  "kind": "Sent to",
+  "kinds": {
+    "rule": "Rule",
+    "ambiance": "Ambiance",
+    "fact": "Fact"
+  },
+  "kindHints": {
+    "rule": "Arbitration only: what is possible, what is forbidden, how the world reacts.",
+    "ambiance": "The narrator only: what is seen, heard and smelt.",
+    "fact": "Arbitration and the narrator: who holds sway, what happened, what people believe."
+  },
+  "content": "Content",
+  "contentHint": "A few sentences of English. A fragment the narrator reads names no unique person — say \"the pastor\", not his name — and nothing behind a passage.",
+  "tags": "Sent when the scene holds",
+  "tagsHint": "The place the character stands in or any place around it, a person present, an item in sight or in hand. Nothing ticked: sent with every turn.",
+  "places": "Places",
+  "people": "People",
+  "items": "Items",
+  "secret": "Secret: arbitration weighs it, the narrator never reads it",
+  "secretAmbiance": "An ambiance goes to the narrator only: it cannot be secret.",
+  "always": "Every turn",
+  "taggedWith_one": "{{count}} tag",
+  "taggedWith_other": "{{count}} tags",
+  "secretBadge": "Secret",
+  "overrides": "Overrides the world's"
+}

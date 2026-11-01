@@ -2,20 +2,32 @@ import { BaseTransformer } from '@adonisjs/core/transformers'
 
 import type NpcDefinition from '#models/npc_definition'
 import type ItemDefinition from '#models/item_definition'
+import type LoreFragment from '#models/lore_fragment'
 import type LocationDefinition from '#models/location_definition'
 
-type Definition = NpcDefinition | LocationDefinition | ItemDefinition
+type Definition = NpcDefinition | LocationDefinition | ItemDefinition | LoreFragment
 
 /** Columns every catalogue shares, then each catalogue's own. */
-const SHARED = ['id', 'worldId', 'scenarioId', 'reference', 'labels', 'description', 'kind']
+const SHARED = ['id', 'worldId', 'scenarioId', 'reference']
+
+/** What the three catalogues of definitions share beyond. */
+const DEFINED = ['labels', 'description', 'kind']
 
 const OWN: Record<string, string[]> = {
-  npc_definitions: ['generic', 'defaultDisposition', 'combat', 'initialLocation'],
-  location_definitions: ['parent', 'exits', 'entrance'],
-  item_definitions: ['generic', 'stackable', 'equippable', 'modifiers', 'initialHolder'],
+  npc_definitions: [...DEFINED, 'generic', 'defaultDisposition', 'combat', 'initialLocation'],
+  location_definitions: [...DEFINED, 'parent', 'exits', 'entrance'],
+  item_definitions: [
+    ...DEFINED,
+    'generic',
+    'stackable',
+    'equippable',
+    'modifiers',
+    'initialHolder',
+  ],
+  lore_fragments: ['kind', 'content', 'tags', 'secret'],
 }
 
-/** A definition of one of the three catalogues, as the back-office edits it. */
+/** A definition of one of the catalogues, or a lore fragment, as the back-office edits it. */
 export default class DefinitionTransformer extends BaseTransformer<Definition> {
   toObject() {
     const definition = this.resource

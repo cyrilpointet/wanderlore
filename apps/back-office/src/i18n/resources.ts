@@ -4,6 +4,7 @@ import catalogues from './locales/en/catalogues.json'
 import common from './locales/en/common.json'
 import content from './locales/en/content.json'
 import errors from './locales/en/errors.json'
+import lore from './locales/en/lore.json'
 import scenarios from './locales/en/scenarios.json'
 import worlds from './locales/en/worlds.json'
 
@@ -13,4 +14,14 @@ import worlds from './locales/en/worlds.json'
  */
 export const defaultNS = 'common'
 
-export const en = { common, errors, auth, accounts, content, worlds, catalogues, scenarios }
+export const en = {
+  common,
+  errors,
+  auth,
+  accounts,
+  content,
+  worlds,
+  catalogues,
+  lore,
+  scenarios,
+}

@@ -92,6 +92,14 @@ function ScenarioLayout() {
           >
             {t('tabs.items')}
           </Link>
+          <Link
+            to="/scenarios/$scenarioId/lore"
+            params={{ scenarioId }}
+            activeProps={ACTIVE_TAB}
+            className={TAB}
+          >
+            {t('tabs.lore')}
+          </Link>
         </nav>
 
         <Outlet />

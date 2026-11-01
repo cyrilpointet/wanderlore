@@ -77,6 +77,9 @@ function WorldLayout() {
           <Link to="/worlds/$worldId/items" params={{ worldId }} activeProps={ACTIVE_TAB} className={TAB}>
             {t('tabs.items')}
           </Link>
+          <Link to="/worlds/$worldId/lore" params={{ worldId }} activeProps={ACTIVE_TAB} className={TAB}>
+            {t('tabs.lore')}
+          </Link>
           <Link
             to="/worlds/$worldId/scenarios"
             params={{ worldId }}

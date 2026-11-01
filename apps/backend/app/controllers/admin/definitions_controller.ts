@@ -2,28 +2,41 @@ import World from '#models/world'
 import Scenario from '#models/scenario'
 import NpcDefinition from '#models/npc_definition'
 import ItemDefinition from '#models/item_definition'
+import LoreFragment from '#models/lore_fragment'
 import LocationDefinition from '#models/location_definition'
 import { type Catalogue, definitionValidators } from '#validators/content'
-import { Refusal } from '#exceptions/refusal'
 import { refuseUsedDefinition } from '#services/game/content/usage'
 import DefinitionTransformer from '#transformers/admin/definition_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 
 import { referenceTaken, refuseReferenceChange } from './content.js'
+import {
+  type LorePayload,
+  refuseKindMismatch,
+  refuseSecretAmbiance,
+  refuseUnknownTags,
+} from './catalogue_checks.js'
 
-/** The model of each catalogue — the three share one shape. */
+/**
+ * The model of each catalogue: the three of definitions share one shape, and
+ * the lore its levels and references.
+ */
 const MODELS = {
   npcs: NpcDefinition,
   locations: LocationDefinition,
   items: ItemDefinition,
+  lore: LoreFragment,
 } as const
 
-/** What a definition of each catalogue is, for a refused deletion. */
-const KINDS = { npcs: 'npc', locations: 'location', items: 'item' } as const
+/**
+ * What a definition of each catalogue is, for a refused deletion. The lore
+ * has none: no game names a fragment, so one can always be deleted.
+ */
+const KINDS = { npcs: 'npc', locations: 'location', items: 'item', lore: null } as const
 
 /**
- * Typed loosely on purpose: the three catalogues are handled by one code path,
- * and the validators already pinned what each one accepts.
+ * Typed loosely on purpose: the catalogues are handled by one code path, and
+ * the validators already pinned what each one accepts.
  */
 type AnyDefinitionModel = typeof NpcDefinition
 
@@ -32,8 +45,9 @@ function modelOf(catalogue: Catalogue): AnyDefinitionModel {
 }
 
 /**
- * The people, places and items of a world or of one of its scenarios. A
- * scenario definition sharing the reference of a world one overrides it.
+ * The people, places and items of a world or of one of its scenarios, and its
+ * lore. A scenario definition sharing the reference of a world one overrides
+ * it.
  */
 export default class DefinitionsController {
   /** World definitions (`/worlds/:worldId/…`) or a scenario's (`/scenarios/:scenarioId/…`). */
@@ -74,7 +88,12 @@ export default class DefinitionsController {
       throw referenceTaken(payload.reference)
     }
 
-    refuseKindMismatch(payload)
+    if (catalogue === 'lore') {
+      await refuseUnknownTags(payload as unknown as LorePayload, level)
+      refuseSecretAmbiance(payload as unknown as LorePayload)
+    } else {
+      refuseKindMismatch(payload)
+    }
 
     const definition = await Model.create({ ...payload, ...level } as never)
 
@@ -90,7 +109,15 @@ export default class DefinitionsController {
 
     const payload = await request.validateUsing(definitionValidators[catalogue].update as never)
     definition.merge(payload as never)
-    refuseKindMismatch(definition.$attributes)
+
+    if (catalogue === 'lore') {
+      const fragment = definition.$attributes as LorePayload
+      await refuseUnknownTags(fragment, definition)
+      refuseSecretAmbiance(fragment)
+    } else {
+      refuseKindMismatch(definition.$attributes)
+    }
+
     await definition.save()
 
     return serialize(DefinitionTransformer.transform(definition))
@@ -103,58 +130,21 @@ export default class DefinitionsController {
   async destroy({ params, response }: HttpContext) {
     const catalogue: Catalogue = params.catalogue
     const definition = await modelOf(catalogue).findOrFail(params.definitionId)
+    const kind = KINDS[catalogue]
 
-    await refuseUsedDefinition(
-      KINDS[catalogue],
-      definition.scenarioId === null
-        ? { worldId: definition.worldId }
-        : { scenarioId: definition.scenarioId },
-      definition.reference
-    )
+    if (kind !== null) {
+      await refuseUsedDefinition(
+        kind,
+        definition.scenarioId === null
+          ? { worldId: definition.worldId }
+          : { scenarioId: definition.scenarioId },
+        definition.reference
+      )
+    }
     await definition.delete()
 
     return response.noContent()
   }
-}
-
-/**
- * What only one kind of definition may have: a unique is neither generic nor
- * stackable, an archetype has no parent, initial holder or place, exit nor
- * entrance. Refused on the field at fault rather than left to the database
- * constraints.
- */
-function refuseKindMismatch(definition: Record<string, unknown>) {
-  const unique = definition.kind === 'unique'
-  const mismatch = unique
-    ? (['generic', 'stackable'] as const).find((field) => definition[field] === true)
-    : (['parent', 'initialHolder', 'initialLocation', 'exits', 'entrance'] as const).find(
-        (field) => {
-          const value = definition[field]
-
-          return Array.isArray(value)
-            ? value.length > 0
-            : value !== null && value !== undefined && value !== false
-        }
-      )
-
-  if (mismatch) {
-    throw new Refusal(
-      422,
-      'kind_mismatch',
-      unique
-        ? `A unique definition cannot be ${mismatch}.`
-        : `An archetype has no ${ARCHETYPE_LACKS[mismatch as keyof typeof ARCHETYPE_LACKS]}.`,
-      { field: mismatch }
-    )
-  }
-}
-
-const ARCHETYPE_LACKS = {
-  parent: 'parent',
-  initialHolder: 'initial holder',
-  initialLocation: 'initial place',
-  exits: 'exit',
-  entrance: 'entrance',
 }
 
 /** The level a definition belongs to, from the route: the world's, or a scenario's. */

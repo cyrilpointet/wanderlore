@@ -20,11 +20,13 @@ import { Route as AuthenticatedWorldsNewRouteImport } from './routes/_authentica
 import { Route as AuthenticatedScenariosScenarioIdIndexRouteImport } from './routes/_authenticated/scenarios/$scenarioId/index'
 import { Route as AuthenticatedScenariosScenarioIdItemsRouteImport } from './routes/_authenticated/scenarios/$scenarioId/items'
 import { Route as AuthenticatedScenariosScenarioIdLocationsRouteImport } from './routes/_authenticated/scenarios/$scenarioId/locations'
+import { Route as AuthenticatedScenariosScenarioIdLoreRouteImport } from './routes/_authenticated/scenarios/$scenarioId/lore'
 import { Route as AuthenticatedScenariosScenarioIdNpcsRouteImport } from './routes/_authenticated/scenarios/$scenarioId/npcs'
 import { Route as AuthenticatedWorldsWorldIdIndexRouteImport } from './routes/_authenticated/worlds/$worldId/index'
 import { Route as AuthenticatedWorldsWorldIdActionTypesRouteImport } from './routes/_authenticated/worlds/$worldId/action-types'
 import { Route as AuthenticatedWorldsWorldIdItemsRouteImport } from './routes/_authenticated/worlds/$worldId/items'
 import { Route as AuthenticatedWorldsWorldIdLocationsRouteImport } from './routes/_authenticated/worlds/$worldId/locations'
+import { Route as AuthenticatedWorldsWorldIdLoreRouteImport } from './routes/_authenticated/worlds/$worldId/lore'
 import { Route as AuthenticatedWorldsWorldIdNpcsRouteImport } from './routes/_authenticated/worlds/$worldId/npcs'
 import { Route as AuthenticatedWorldsWorldIdScenariosRouteImport } from './routes/_authenticated/worlds/$worldId/scenarios'
 
@@ -89,6 +91,12 @@ const AuthenticatedScenariosScenarioIdLocationsRoute =
     path: '/locations',
     getParentRoute: () => AuthenticatedScenariosScenarioIdRoute,
   } as any)
+const AuthenticatedScenariosScenarioIdLoreRoute =
+  AuthenticatedScenariosScenarioIdLoreRouteImport.update({
+    id: '/lore',
+    path: '/lore',
+    getParentRoute: () => AuthenticatedScenariosScenarioIdRoute,
+  } as any)
 const AuthenticatedScenariosScenarioIdNpcsRoute =
   AuthenticatedScenariosScenarioIdNpcsRouteImport.update({
     id: '/npcs',
@@ -119,6 +127,12 @@ const AuthenticatedWorldsWorldIdLocationsRoute =
     path: '/locations',
     getParentRoute: () => AuthenticatedWorldsWorldIdRoute,
   } as any)
+const AuthenticatedWorldsWorldIdLoreRoute =
+  AuthenticatedWorldsWorldIdLoreRouteImport.update({
+    id: '/lore',
+    path: '/lore',
+    getParentRoute: () => AuthenticatedWorldsWorldIdRoute,
+  } as any)
 const AuthenticatedWorldsWorldIdNpcsRoute =
   AuthenticatedWorldsWorldIdNpcsRouteImport.update({
     id: '/npcs',
@@ -142,10 +156,12 @@ export interface FileRoutesByFullPath {
   '/worlds/': typeof AuthenticatedWorldsIndexRoute
   '/scenarios/$scenarioId/items': typeof AuthenticatedScenariosScenarioIdItemsRoute
   '/scenarios/$scenarioId/locations': typeof AuthenticatedScenariosScenarioIdLocationsRoute
+  '/scenarios/$scenarioId/lore': typeof AuthenticatedScenariosScenarioIdLoreRoute
   '/scenarios/$scenarioId/npcs': typeof AuthenticatedScenariosScenarioIdNpcsRoute
   '/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
   '/worlds/$worldId/items': typeof AuthenticatedWorldsWorldIdItemsRoute
   '/worlds/$worldId/locations': typeof AuthenticatedWorldsWorldIdLocationsRoute
+  '/worlds/$worldId/lore': typeof AuthenticatedWorldsWorldIdLoreRoute
   '/worlds/$worldId/npcs': typeof AuthenticatedWorldsWorldIdNpcsRoute
   '/worlds/$worldId/scenarios': typeof AuthenticatedWorldsWorldIdScenariosRoute
   '/scenarios/$scenarioId/': typeof AuthenticatedScenariosScenarioIdIndexRoute
@@ -159,10 +175,12 @@ export interface FileRoutesByTo {
   '/worlds': typeof AuthenticatedWorldsIndexRoute
   '/scenarios/$scenarioId/items': typeof AuthenticatedScenariosScenarioIdItemsRoute
   '/scenarios/$scenarioId/locations': typeof AuthenticatedScenariosScenarioIdLocationsRoute
+  '/scenarios/$scenarioId/lore': typeof AuthenticatedScenariosScenarioIdLoreRoute
   '/scenarios/$scenarioId/npcs': typeof AuthenticatedScenariosScenarioIdNpcsRoute
   '/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
   '/worlds/$worldId/items': typeof AuthenticatedWorldsWorldIdItemsRoute
   '/worlds/$worldId/locations': typeof AuthenticatedWorldsWorldIdLocationsRoute
+  '/worlds/$worldId/lore': typeof AuthenticatedWorldsWorldIdLoreRoute
   '/worlds/$worldId/npcs': typeof AuthenticatedWorldsWorldIdNpcsRoute
   '/worlds/$worldId/scenarios': typeof AuthenticatedWorldsWorldIdScenariosRoute
   '/scenarios/$scenarioId': typeof AuthenticatedScenariosScenarioIdIndexRoute
@@ -180,10 +198,12 @@ export interface FileRoutesById {
   '/_authenticated/worlds/': typeof AuthenticatedWorldsIndexRoute
   '/_authenticated/scenarios/$scenarioId/items': typeof AuthenticatedScenariosScenarioIdItemsRoute
   '/_authenticated/scenarios/$scenarioId/locations': typeof AuthenticatedScenariosScenarioIdLocationsRoute
+  '/_authenticated/scenarios/$scenarioId/lore': typeof AuthenticatedScenariosScenarioIdLoreRoute
   '/_authenticated/scenarios/$scenarioId/npcs': typeof AuthenticatedScenariosScenarioIdNpcsRoute
   '/_authenticated/worlds/$worldId/action-types': typeof AuthenticatedWorldsWorldIdActionTypesRoute
   '/_authenticated/worlds/$worldId/items': typeof AuthenticatedWorldsWorldIdItemsRoute
   '/_authenticated/worlds/$worldId/locations': typeof AuthenticatedWorldsWorldIdLocationsRoute
+  '/_authenticated/worlds/$worldId/lore': typeof AuthenticatedWorldsWorldIdLoreRoute
   '/_authenticated/worlds/$worldId/npcs': typeof AuthenticatedWorldsWorldIdNpcsRoute
   '/_authenticated/worlds/$worldId/scenarios': typeof AuthenticatedWorldsWorldIdScenariosRoute
   '/_authenticated/scenarios/$scenarioId/': typeof AuthenticatedScenariosScenarioIdIndexRoute
@@ -201,10 +221,12 @@ export interface FileRouteTypes {
     | '/worlds/'
     | '/scenarios/$scenarioId/items'
     | '/scenarios/$scenarioId/locations'
+    | '/scenarios/$scenarioId/lore'
     | '/scenarios/$scenarioId/npcs'
     | '/worlds/$worldId/action-types'
     | '/worlds/$worldId/items'
     | '/worlds/$worldId/locations'
+    | '/worlds/$worldId/lore'
     | '/worlds/$worldId/npcs'
     | '/worlds/$worldId/scenarios'
     | '/scenarios/$scenarioId/'
@@ -218,10 +240,12 @@ export interface FileRouteTypes {
     | '/worlds'
     | '/scenarios/$scenarioId/items'
     | '/scenarios/$scenarioId/locations'
+    | '/scenarios/$scenarioId/lore'
     | '/scenarios/$scenarioId/npcs'
     | '/worlds/$worldId/action-types'
     | '/worlds/$worldId/items'
     | '/worlds/$worldId/locations'
+    | '/worlds/$worldId/lore'
     | '/worlds/$worldId/npcs'
     | '/worlds/$worldId/scenarios'
     | '/scenarios/$scenarioId'
@@ -238,10 +262,12 @@ export interface FileRouteTypes {
     | '/_authenticated/worlds/'
     | '/_authenticated/scenarios/$scenarioId/items'
     | '/_authenticated/scenarios/$scenarioId/locations'
+    | '/_authenticated/scenarios/$scenarioId/lore'
     | '/_authenticated/scenarios/$scenarioId/npcs'
     | '/_authenticated/worlds/$worldId/action-types'
     | '/_authenticated/worlds/$worldId/items'
     | '/_authenticated/worlds/$worldId/locations'
+    | '/_authenticated/worlds/$worldId/lore'
     | '/_authenticated/worlds/$worldId/npcs'
     | '/_authenticated/worlds/$worldId/scenarios'
     | '/_authenticated/scenarios/$scenarioId/'
@@ -333,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedScenariosScenarioIdLocationsRouteImport
       parentRoute: typeof AuthenticatedScenariosScenarioIdRoute
     }
+    '/_authenticated/scenarios/$scenarioId/lore': {
+      id: '/_authenticated/scenarios/$scenarioId/lore'
+      path: '/lore'
+      fullPath: '/scenarios/$scenarioId/lore'
+      preLoaderRoute: typeof AuthenticatedScenariosScenarioIdLoreRouteImport
+      parentRoute: typeof AuthenticatedScenariosScenarioIdRoute
+    }
     '/_authenticated/scenarios/$scenarioId/npcs': {
       id: '/_authenticated/scenarios/$scenarioId/npcs'
       path: '/npcs'
@@ -368,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorldsWorldIdLocationsRouteImport
       parentRoute: typeof AuthenticatedWorldsWorldIdRoute
     }
+    '/_authenticated/worlds/$worldId/lore': {
+      id: '/_authenticated/worlds/$worldId/lore'
+      path: '/lore'
+      fullPath: '/worlds/$worldId/lore'
+      preLoaderRoute: typeof AuthenticatedWorldsWorldIdLoreRouteImport
+      parentRoute: typeof AuthenticatedWorldsWorldIdRoute
+    }
     '/_authenticated/worlds/$worldId/npcs': {
       id: '/_authenticated/worlds/$worldId/npcs'
       path: '/npcs'
@@ -388,6 +428,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedScenariosScenarioIdRouteChildren {
   AuthenticatedScenariosScenarioIdItemsRoute: typeof AuthenticatedScenariosScenarioIdItemsRoute
   AuthenticatedScenariosScenarioIdLocationsRoute: typeof AuthenticatedScenariosScenarioIdLocationsRoute
+  AuthenticatedScenariosScenarioIdLoreRoute: typeof AuthenticatedScenariosScenarioIdLoreRoute
   AuthenticatedScenariosScenarioIdNpcsRoute: typeof AuthenticatedScenariosScenarioIdNpcsRoute
   AuthenticatedScenariosScenarioIdIndexRoute: typeof AuthenticatedScenariosScenarioIdIndexRoute
 }
@@ -398,6 +439,8 @@ const AuthenticatedScenariosScenarioIdRouteChildren: AuthenticatedScenariosScena
       AuthenticatedScenariosScenarioIdItemsRoute,
     AuthenticatedScenariosScenarioIdLocationsRoute:
       AuthenticatedScenariosScenarioIdLocationsRoute,
+    AuthenticatedScenariosScenarioIdLoreRoute:
+      AuthenticatedScenariosScenarioIdLoreRoute,
     AuthenticatedScenariosScenarioIdNpcsRoute:
       AuthenticatedScenariosScenarioIdNpcsRoute,
     AuthenticatedScenariosScenarioIdIndexRoute:
@@ -413,6 +456,7 @@ interface AuthenticatedWorldsWorldIdRouteChildren {
   AuthenticatedWorldsWorldIdActionTypesRoute: typeof AuthenticatedWorldsWorldIdActionTypesRoute
   AuthenticatedWorldsWorldIdItemsRoute: typeof AuthenticatedWorldsWorldIdItemsRoute
   AuthenticatedWorldsWorldIdLocationsRoute: typeof AuthenticatedWorldsWorldIdLocationsRoute
+  AuthenticatedWorldsWorldIdLoreRoute: typeof AuthenticatedWorldsWorldIdLoreRoute
   AuthenticatedWorldsWorldIdNpcsRoute: typeof AuthenticatedWorldsWorldIdNpcsRoute
   AuthenticatedWorldsWorldIdScenariosRoute: typeof AuthenticatedWorldsWorldIdScenariosRoute
   AuthenticatedWorldsWorldIdIndexRoute: typeof AuthenticatedWorldsWorldIdIndexRoute
@@ -425,6 +469,7 @@ const AuthenticatedWorldsWorldIdRouteChildren: AuthenticatedWorldsWorldIdRouteCh
     AuthenticatedWorldsWorldIdItemsRoute: AuthenticatedWorldsWorldIdItemsRoute,
     AuthenticatedWorldsWorldIdLocationsRoute:
       AuthenticatedWorldsWorldIdLocationsRoute,
+    AuthenticatedWorldsWorldIdLoreRoute: AuthenticatedWorldsWorldIdLoreRoute,
     AuthenticatedWorldsWorldIdNpcsRoute: AuthenticatedWorldsWorldIdNpcsRoute,
     AuthenticatedWorldsWorldIdScenariosRoute:
       AuthenticatedWorldsWorldIdScenariosRoute,

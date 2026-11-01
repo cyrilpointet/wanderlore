@@ -461,13 +461,137 @@ test.group('Content API | catalogues', (group) => {
     accepted.assertStatus(204)
   })
 
-  test('only knows the three catalogues', async ({ client }) => {
+  test('only knows its catalogues', async ({ client }) => {
     const user = await gameMaster()
     const worldId = await createWorld()
 
     const response6 = await as(client, user).get(`/worlds/${worldId}/factions`)
 
     response6.assertStatus(404)
+  })
+})
+
+/** A fact about a place of the world, for the arbiter and the narrator alike. */
+const RUMOUR = {
+  reference: 'fog_of_whitechapel',
+  kind: 'fact',
+  content: 'Nobody in Whitechapel talks to a constable after dark.',
+  tags: ['whitechapel'],
+  secret: false,
+}
+
+const WHITECHAPEL = {
+  reference: 'whitechapel',
+  labels: { en: 'Whitechapel' },
+  description: 'A crowded East End parish of lodging houses and pubs.',
+  kind: 'unique',
+  parent: null,
+}
+
+test.group('Content API | lore', (group) => {
+  useTransaction(group)
+
+  test('creates, edits and deletes a fragment', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+    await as(client, user).post(`/worlds/${worldId}/locations`, WHITECHAPEL)
+
+    const created = await as(client, user).post(`/worlds/${worldId}/lore`, RUMOUR)
+    created.assertStatus(201)
+    const fragment = bodyOf(created).data
+    assert.containsSubset(fragment, { ...RUMOUR, scenarioId: null })
+    assert.notProperty(fragment, 'labels')
+
+    const edited = await as(client, user).patch(`/lore/${fragment.id}`, { secret: true })
+    assert.isTrue(bodyOf(edited).data.secret)
+
+    const listed = await as(client, user).get(`/worlds/${worldId}/lore`)
+    assert.lengthOf(bodyOf(listed).data, 1)
+
+    /** No game names a fragment: deleting one never breaks a game. */
+    const deleted = await as(client, user).delete(`/lore/${fragment.id}`)
+    deleted.assertStatus(204)
+  })
+
+  test('takes a fragment sent with every turn from its kind and content alone', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/lore`, {
+      reference: 'gaslight',
+      kind: 'ambiance',
+      content: 'Gas lamps hiss in the fog.',
+    })
+
+    response.assertStatus(201)
+    assert.containsSubset(bodyOf(response).data, { tags: [], secret: false })
+  })
+
+  test('refuses a tag that names nothing of the world', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/lore`, RUMOUR)
+
+    response.assertStatus(422)
+    assert.deepEqual(bodyOf(response).error, {
+      code: 'unknown_tag',
+      message: '"whitechapel" is no place, person or item of this world.',
+      details: { field: 'tags', references: ['whitechapel'] },
+    })
+  })
+
+  test('lets a scenario fragment be tagged with what the scenario defines', async ({ client }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+    const { data: scenario } = bodyOf(
+      await as(client, user).post(`/worlds/${worldId}/scenarios`, {
+        reference: 'the_speckled_band',
+        labels: { en: 'The Speckled Band' },
+      })
+    )
+    await as(client, user).post(`/scenarios/${scenario.id}/locations`, WHITECHAPEL)
+
+    const atWorldLevel = await as(client, user).post(`/worlds/${worldId}/lore`, RUMOUR)
+    const inScenario = await as(client, user).post(`/scenarios/${scenario.id}/lore`, RUMOUR)
+
+    atWorldLevel.assertStatus(422)
+    inScenario.assertStatus(201)
+  })
+
+  test('refuses a secret ambiance, created or edited', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+    const ambiance = { reference: 'gaslight', kind: 'ambiance', content: 'Gas lamps hiss.' }
+
+    const created = await as(client, user).post(`/worlds/${worldId}/lore`, {
+      ...ambiance,
+      secret: true,
+    })
+    const { data: fragment } = bodyOf(
+      await as(client, user).post(`/worlds/${worldId}/lore`, ambiance)
+    )
+    const edited = await as(client, user).patch(`/lore/${fragment.id}`, { secret: true })
+
+    created.assertStatus(422)
+    assert.equal(bodyOf(created).error.code, 'secret_ambiance')
+    edited.assertStatus(422)
+  })
+
+  test('refuses a fragment to a player', async ({ client }) => {
+    const player = await User.findOrFail(await createUser())
+    const worldId = await createWorld()
+
+    const response = await as(client, player).post(`/worlds/${worldId}/lore`, {
+      reference: 'gaslight',
+      kind: 'ambiance',
+      content: 'Gas lamps hiss.',
+    })
+
+    response.assertStatus(403)
   })
 })
 
