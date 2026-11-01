@@ -54,9 +54,10 @@ export const scenarioQuery = (scenarioId: string) =>
     queryFn: async () => (await api<{ data: Scenario }>(`/admin/scenarios/${scenarioId}`)).data,
   })
 
+/** A reference and a title at least; the rest of a scenario may come with them, from a file. */
 export async function createScenario(
   worldId: string,
-  payload: Pick<ScenarioPayload, 'reference' | 'labels'>
+  payload: Pick<ScenarioPayload, 'reference' | 'labels'> & Partial<ScenarioPayload>
 ): Promise<Scenario> {
   return (
     await api<{ data: Scenario }>(`/admin/worlds/${worldId}/scenarios`, {

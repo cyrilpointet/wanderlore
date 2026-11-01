@@ -7,22 +7,28 @@ import { useTranslation } from 'react-i18next'
 import { AppHeader } from '@/components/app_header'
 import { FormAlert } from '@/content/field'
 import { formFailureOf, type FormFailure } from '@/content/form_errors'
+import { JsonImport } from '@/content/json_import'
 import { PRIMARY } from '@/content/ui'
 import { createWorld, worldQuery, worldsQuery } from '@/worlds/queries'
-import { emptyWorldDraft, worldPayloadOf } from '@/worlds/world_draft'
+import { emptyWorldDraft, worldDraftFromJson, worldPayloadOf } from '@/worlds/world_draft'
 import { WorldForm } from '@/worlds/world_form'
 
 export const Route = createFileRoute('/_authenticated/worlds/new')({
   component: NewWorld,
 })
 
-/** A new world: its reference, names and tone first; everything else in its editor. */
+/**
+ * A new world: its reference, names and tone first; everything else in its
+ * editor. A world filled in from a file shows everything at once, to be
+ * checked before it is created.
+ */
 function NewWorld() {
   const { t } = useTranslation('worlds')
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [draft, setDraft] = useState(emptyWorldDraft)
   const [failure, setFailure] = useState<FormFailure | null>(null)
+  const [imported, setImported] = useState(false)
 
   const create = useMutation({
     mutationFn: () => createWorld(worldPayloadOf(draft)),
@@ -55,8 +61,25 @@ function NewWorld() {
           {t('newWorld')}
         </h1>
         <form onSubmit={submit} className="flex flex-col gap-6">
-          <WorldForm draft={draft} onChange={setDraft} errors={failure?.fields ?? {}} creating />
+          <JsonImport
+            hint={t('importHint')}
+            onImport={(world) => {
+              setDraft(worldDraftFromJson(world))
+              setImported(true)
+              setFailure(null)
+            }}
+          />
+          <WorldForm
+            draft={draft}
+            onChange={setDraft}
+            errors={failure?.fields ?? {}}
+            creating
+            full={imported}
+          />
           {failure?.general && <FormAlert message={failure.general} />}
+          {failure && !failure.general && Object.keys(failure.fields).length > 0 && (
+            <FormAlert message={t('fixErrors')} />
+          )}
           <div>
             <button type="submit" disabled={create.isPending} className={PRIMARY}>
               {create.isPending ? t('creating') : t('create')}

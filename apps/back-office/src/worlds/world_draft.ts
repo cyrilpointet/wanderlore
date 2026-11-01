@@ -1,6 +1,23 @@
 import { entryDraftOf, entryPayloadOf, newEntryDraft, type EntryDraft } from '@/content/drafts'
+import {
+  type Imported,
+  importedEntryOf,
+  isImported,
+  labelRowsOf,
+  listOf,
+  phrasesOf,
+  textOf,
+} from '@/content/imports'
 import { labelsOf, rowsOf, type LabelRow } from '@/content/labels'
-import type { Characteristic, Skill, SkillCategory, WorldDetail, WorldPayload } from './queries'
+import {
+  CHARACTERISTICS,
+  type Characteristic,
+  type Skill,
+  SKILL_CATEGORIES,
+  type SkillCategory,
+  type WorldDetail,
+  type WorldPayload,
+} from './queries'
 
 /**
  * A skill being edited. Its base chance is held as typed: a fixed chance, or
@@ -66,6 +83,42 @@ export function worldDraftOf(world: WorldDetail): WorldDraft {
     resources: world.resources.map(entryDraftOf),
     glossary: world.glossary.map(entryDraftOf),
   }
+}
+
+/**
+ * A world read from a JSON file, as a new world: every reference may still
+ * be changed. A skill of an unknown category or base chance keeps the
+ * default of a new one.
+ */
+export function worldDraftFromJson(world: Imported): WorldDraft {
+  return {
+    reference: textOf(world.reference),
+    labels: labelRowsOf(world.labels),
+    narrativeTone: textOf(world.narrativeTone),
+    rules: phrasesOf(world.rules),
+    ambiance: phrasesOf(world.ambiance),
+    skills: listOf(world.skills, importedSkillOf),
+    resources: listOf(world.resources, importedEntryOf),
+    glossary: listOf(world.glossary, importedEntryOf),
+  }
+}
+
+function importedSkillOf(skill: Imported): SkillDraft {
+  const base = skill.baseChance
+  const category = SKILL_CATEGORIES.find((known) => known === skill.category)
+  const characteristic = isImported(base)
+    ? CHARACTERISTICS.find((known) => known === base.characteristic)
+    : undefined
+  const draft: SkillDraft = { ...newSkillDraft(), ...importedEntryOf(skill) }
+
+  if (category) draft.category = category
+  if (typeof base === 'number') draft.baseValue = String(base)
+  if (characteristic && isImported(base) && typeof base.multiplier === 'number') {
+    draft.baseCharacteristic = characteristic
+    draft.baseValue = String(base.multiplier)
+  }
+
+  return draft
 }
 
 /**

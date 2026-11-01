@@ -71,3 +71,24 @@ describe('ScenarioForm', () => {
     expect(html).toMatch(/<input type="checkbox"\/><span class="font-mono">martha_pike/)
   })
 })
+
+describe('ScenarioForm | creation', () => {
+  test('the reference is written only before the scenario is created', () => {
+    const saved = render(SCENARIO)
+    const created = renderToStaticMarkup(
+      <ScenarioForm
+        reference=""
+        onReferenceChange={() => {}}
+        draft={scenarioDraftOf(SCENARIO)}
+        onChange={() => {}}
+        errors={{ reference: 'This reference is already taken.' }}
+        uniqueLocations={[]}
+        uniqueNpcs={[]}
+      />
+    )
+
+    expect(saved).toMatch(/id="scenario-reference"[^>]*disabled=""/)
+    expect(created).not.toMatch(/id="scenario-reference"[^>]*disabled=""/)
+    expect(created).toContain('This reference is already taken.')
+  })
+})

@@ -92,5 +92,6 @@
     "entrance_without_exits": "“{{reference}}” is an entrance, but has no exit: it is part of no network.",
     "unreachable_network": "Nothing leads into the network of “{{reference}}”: mark one of its places as an entrance, or start the story in it.",
     "start_contains_network": "“{{reference}}” only contains a network: start the story in one of its places."
-  }
+  },
+  "importHint": "A scenario as the server sends it, or as written in the game content. Its catalogues are left out: they are added in its editor."
 }

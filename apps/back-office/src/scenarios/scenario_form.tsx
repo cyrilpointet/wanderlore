@@ -16,6 +16,7 @@ import { CHARACTER_TEMPLATE, type QuestDraft, type ScenarioDraft } from './scena
  */
 export function ScenarioForm({
   reference,
+  onReferenceChange,
   draft,
   onChange,
   errors,
@@ -23,6 +24,8 @@ export function ScenarioForm({
   uniqueNpcs,
 }: {
   reference: string
+  /** Only for a scenario not created yet: the reference never changes afterwards. */
+  onReferenceChange?: (reference: string) => void
   draft: ScenarioDraft
   onChange: (draft: ScenarioDraft) => void
   errors: FieldErrors
@@ -64,11 +67,17 @@ export function ScenarioForm({
   return (
     <div className="flex flex-col gap-6">
       <Section title={t('form.identity')}>
-        <Field id="scenario-reference" label={t('form.reference')}>
+        <Field
+          id="scenario-reference"
+          label={t('form.reference')}
+          hint={onReferenceChange && t('referenceHint', { ns: 'content' })}
+          error={errors.reference}
+        >
           <input
             id="scenario-reference"
             value={reference}
-            disabled
+            disabled={!onReferenceChange}
+            onChange={(event) => onReferenceChange?.(event.target.value)}
             className={`${INPUT} font-mono`}
           />
         </Field>

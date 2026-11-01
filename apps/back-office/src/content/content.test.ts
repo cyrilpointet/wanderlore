@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import '@/i18n'
 import { ApiError } from '@/api/client'
 import { errorUnder, formFailureOf } from './form_errors'
+import { readImport } from './imports'
 import { labelsOf, rowsOf } from './labels'
 import { isReference, suggestReference } from './references'
 
@@ -87,5 +88,21 @@ describe('formFailureOf', () => {
   test('finds an error nested under a path', () => {
     expect(errorUnder({ 'skills.0.category': 'Bad' }, 'skills.0')).toBe('Bad')
     expect(errorUnder({ 'skills.0.category': 'Bad' }, 'skills.1')).toBeUndefined()
+  })
+})
+
+describe('JSON import', () => {
+  const file = (text: string) => new File([text], 'world.json', { type: 'application/json' })
+
+  test('reads a single object', async () => {
+    expect(await readImport(file('{ "reference": "three_musketeers" }'))).toEqual({
+      value: { reference: 'three_musketeers' },
+    })
+  })
+
+  test('says when the file is not JSON, or holds no single object', async () => {
+    expect(await readImport(file('{ reference: '))).toEqual({ error: 'invalid_json' })
+    expect(await readImport(file('[{ "reference": "a" }]'))).toEqual({ error: 'not_an_object' })
+    expect(await readImport(file('null'))).toEqual({ error: 'not_an_object' })
   })
 })

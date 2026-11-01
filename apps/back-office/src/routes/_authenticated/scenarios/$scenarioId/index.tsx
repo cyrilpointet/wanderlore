@@ -1,10 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { CircleCheck, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { catalogueQuery } from '@/catalogues/queries'
 import { FormAlert } from '@/content/field'
 import { formFailureOf, type FormFailure } from '@/content/form_errors'
 import { DANGER, PRIMARY, SECTION } from '@/content/ui'
@@ -18,6 +17,7 @@ import {
 } from '@/scenarios/queries'
 import { scenarioDraftOf, scenarioUpdateOf } from '@/scenarios/scenario_draft'
 import { ScenarioForm } from '@/scenarios/scenario_form'
+import { useUniques } from '@/scenarios/uniques'
 import { worldsQuery } from '@/worlds/queries'
 
 export const Route = createFileRoute('/_authenticated/scenarios/$scenarioId/')({
@@ -44,8 +44,9 @@ function ScenarioEditorForm({ scenario }: { scenario: Scenario }) {
   const [draft, setDraft] = useState(() => scenarioDraftOf(scenario))
   const [failure, setFailure] = useState<FormFailure | null>(null)
   const [saved, setSaved] = useState(false)
-  const uniqueLocations = useUniques(scenario, 'locations')
-  const uniqueNpcs = useUniques(scenario, 'npcs')
+  const level = { worldId: scenario.worldId, scenarioId: scenario.id }
+  const uniqueLocations = useUniques(level, 'locations')
+  const uniqueNpcs = useUniques(level, 'npcs')
 
   const save = useMutation({
     mutationFn: () => {
@@ -106,21 +107,6 @@ function ScenarioEditorForm({ scenario }: { scenario: Scenario }) {
       </div>
     </form>
   )
-}
-
-/** The named places a game of this scenario may start in: the world's and its own. */
-/** The named places, or people, of the world and the scenario. */
-function useUniques(scenario: Scenario, catalogue: 'locations' | 'npcs'): string[] {
-  const world = useQuery(catalogueQuery({ worldId: scenario.worldId }, catalogue))
-  const own = useQuery(catalogueQuery({ scenarioId: scenario.id }, catalogue))
-
-  return [
-    ...new Set(
-      [...(world.data ?? []), ...(own.data ?? [])]
-        .filter(({ kind }) => kind === 'unique')
-        .map(({ reference }) => reference)
-    ),
-  ]
 }
 
 /** Only a scenario no game was started from: the backend refuses the others. */
