@@ -206,6 +206,8 @@ export type SceneState = {
   place: PlacedLocation | null
   /** Definition of each person present, by handle, for naming them. */
   npc_definitions: Record<string, string>
+  /** The unique people whose names the character knows. Anyone else unique is named once they give their name. */
+  known_npcs: string[]
   /**
    * What the character, the people present and the place hold. Each step is
    * handed its own view of it, never the modifiers.

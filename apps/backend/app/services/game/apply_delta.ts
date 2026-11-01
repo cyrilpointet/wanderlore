@@ -78,7 +78,7 @@ export async function applyDelta(
 
   const left = await leave(target.sessionId, effects.npcs_left, trx)
   const entered = await enter(target, effects.npcs_entered, trx)
-  await learn(target.sessionId, effects, trx)
+  await learn(target, effects, trx)
   const items = await applyItems(target, effects, startedIn, trx)
 
   applyFlags(target.worldState, effects.scenario_flags)
@@ -448,16 +448,37 @@ async function enter(
   return handles
 }
 
+/**
+ * A name given in play: a unique person becomes known — their name stays the
+ * one their definition gives, whatever extraction wrote — and anyone else
+ * keeps the name they gave on their instance.
+ */
 async function learn(
-  sessionId: string,
+  target: DeltaTarget,
   effects: Pick<TurnEffects, 'npc_names' | 'npc_relations'>,
   trx: TransactionClientContract
 ): Promise<void> {
+  const { sessionId, world, worldState } = target
+
   for (const { handle, name } of effects.npc_names) {
-    await NpcInstance.query({ client: trx })
+    const npc = await NpcInstance.query({ client: trx })
       .where('sessionId', sessionId)
       .where('handle', handle)
-      .update({ name })
+      .first()
+    const definition = world.npcs.find(({ reference }) => reference === npc?.definitionReference)
+
+    if (npc === null || definition === undefined) {
+      continue
+    }
+
+    if (definition.kind === 'unique') {
+      if (!worldState.knownNpcs.includes(definition.reference)) {
+        worldState.knownNpcs = [...worldState.knownNpcs, definition.reference]
+      }
+    } else {
+      npc.name = name
+      await npc.useTransaction(trx).save()
+    }
   }
 
   /** The disposition proposed is the new one itself: set, never adjusted. */

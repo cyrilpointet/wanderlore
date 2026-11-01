@@ -811,6 +811,7 @@ function buildContext(
       visited_locations: scene.session.locations.map((location) => location.handle),
       place: scene.worldState.currentLocation ?? null,
       npc_definitions: scene.npcDefinitions,
+      known_npcs: scene.worldState.knownNpcs,
       items: scene.items,
       game_time: scene.worldState.gameTime,
       start_date: scene.worldState.startDate,

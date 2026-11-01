@@ -297,6 +297,27 @@ test.group('Applying a delta | people', (group) => {
     /** The disposition proposed is the new one, set as is. */
     assert.equal(guard.disposition, 'friendly')
   })
+
+  test('a unique person who gives their name becomes known, under their own name', async ({
+    assert,
+  }) => {
+    const scene = await arrangeScene()
+    await enterScene(THREE_MUSKETEERS, scene.sessionId, {
+      definition: 'treville',
+      descriptor: null,
+    })
+
+    await apply(scene, delta({ npc_names: [{ handle: 'treville', name: 'Captain Tréville' }] }))
+    await apply(scene, delta({ npc_names: [{ handle: 'treville', name: 'Tréville' }] }))
+
+    const treville = await NpcInstance.query()
+      .where({ sessionId: scene.sessionId, handle: 'treville' })
+      .firstOrFail()
+    const state = await WorldState.findByOrFail('sessionId', scene.sessionId)
+    /** Known once, whatever extraction wrote: the name is the definition's. */
+    assert.deepEqual(state.knownNpcs, ['treville'])
+    assert.isNull(treville.name)
+  })
 })
 
 test.group('Applying a delta | the character', (group) => {

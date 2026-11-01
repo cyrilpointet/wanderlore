@@ -31,11 +31,11 @@ Hard rules:
 - A reaction may open a threat but never settles it on its own initiative. A character may attack in answer to this action; whether that attack lands is for the player's next action to answer. End on that threat rather than resolving it.
 - An attack against the character begun before this action — in the recent narration — and still open is settled by this outcome. On a success, the character avoids it or turns it aside. On a failure, it lands and the character is hurt: lightly on a failure or an automatic one, badly on a fumble. Say the wound plainly. Losing a weapon or ground may come on top of the wound, never instead of it.
 - The characters present are listed in the scene with their disposition: keep them in character. Never introduce characters, places, objects or events that contradict the world material and scene state provided.
-- names gives, in the language of the narration, the name of the place and of each person present, and the fixed translation of other proper names (glossary). Use these names exactly, every time.
+- names gives, in the language of the narration, the name of the place and of each person present, and the fixed translation of other proper names (glossary). Use these names exactly, every time — except a person marked known: false. The character has not learnt their name: call them by their looks or their role, never by their name, unless they give it in this very narration.
 - items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason.
 - place says what the place is like, and what an improvised one stands in. exits lists its ways out, each with where it leads and how it looks from here. One marked hidden has not been found: never mention it, unless the character searches and the outcome gives them reason to find it. One marked locked stays shut unless the story opens it.
 - When route is given, the character goes to its last place by these passages, in this order: follow them, and invent no other way.
-- npcs_at_destination lists who the character finds where they arrive: people left there earlier, or waiting there since the story began, there still, in the disposition given.
+- npcs_at_destination lists who the character finds where they arrive: people left there earlier, or waiting there since the story began, there still, in the disposition given. One marked known: false is named the same way as above: by looks or role, until they give their name.
 - time tells when the action began and when it ends: the period of the day at each end, the day of the game, the date and the day of the week when the story has one, and the hour it ends at, to the quarter. Never contradict the time that passes: the light changes, night falls, a day goes by.
 - Never write the hour in your text unless the character has a way to know it — a watch they hold, a clock that still runs in the place, church bells — and wants to know it. Otherwise speak of the light and of the time of day. Never state the date without a reason either.
 - The character may take, give, hide, drop, use up or draw an item in your story. Never decide what that changes in the game: a separate step reads it from your text.
@@ -88,6 +88,7 @@ export function buildNarrationMessage(request: NarrationRequest): string {
           ({ handle, name, descriptor, disposition, definition }) => ({
             handle,
             name: name ?? labels.of('npc', definition).label,
+            known: knowsName(request, definition, name),
             descriptor,
             disposition,
           })
@@ -186,6 +187,22 @@ function itemsForNarration(labels: ContentLabels, items: ItemsInScene) {
 }
 
 /**
+ * Whether the character knows a person by name: one who gave a name in play,
+ * a unique person the character knows, or someone of an archetype — whose
+ * label (a guard, a local) is no name to give away. The name still goes to
+ * the narrator, marked, so the day they introduce themselves it is theirs and
+ * not one made up.
+ */
+function knowsName(request: NarrationRequest, definition: string, name: string | null): boolean {
+  if (name !== null) {
+    return true
+  }
+
+  const npc = request.world.npcs.find(({ reference }) => reference === definition)
+  return npc?.kind !== 'unique' || request.scene.known_npcs.includes(definition)
+}
+
+/**
  * How the player knows the place and the people present, in the language of
  * the game: a name learnt in play, or else the definition's. Plus the glossary
  * entries translated into that language — an untranslated one would only
@@ -200,6 +217,7 @@ function namesForNarration(request: NarrationRequest, labels: ContentLabels) {
     npcs_present: scene.npcs_present.map(({ handle, name }) => ({
       handle,
       name: name ?? labels.of('npc', scene.npc_definitions[handle]).label,
+      known: knowsName(request, scene.npc_definitions[handle], name),
     })),
     glossary: world.glossary
       .filter((entry) => language !== 'en' && entry.labels[language] !== undefined)
