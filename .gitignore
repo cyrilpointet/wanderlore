@@ -36,3 +36,6 @@ public/assets
 
 # Claude Code (local, non partagé)
 .claude/settings.local.json
+
+# Test worlds and scenarios (local, non partagé)
+test-worlds
