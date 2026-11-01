@@ -135,6 +135,14 @@ export const gameQuery = (gameId: string) =>
     queryFn: async () => (await api<{ data: Game }>(`/sessions/${gameId}`)).data,
   })
 
+/**
+ * Takes a game off the player's list. The backend keeps it, but answers for it
+ * as for a game that does not exist from then on.
+ */
+export async function deleteGame(gameId: string): Promise<void> {
+  await api<undefined>(`/sessions/${gameId}`, { method: 'DELETE' })
+}
+
 /** The story so far: completed turns only, oldest first. */
 export const turnsQuery = (gameId: string) =>
   queryOptions({

@@ -115,6 +115,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['show']>>>
     }
   }
+  'game.sessions.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/sessions/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['destroy']>>>
+    }
+  }
   'game.turns.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/sessions/:id/turns'

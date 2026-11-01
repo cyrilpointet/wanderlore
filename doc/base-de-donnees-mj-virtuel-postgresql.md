@@ -206,7 +206,13 @@ Une partie jouée par un joueur donné.
 | `status` | enum `session_status` | `in_progress` / `paused` / `completed` |
 | `current_chapter` | varchar, nullable | référence du chapitre courant, parmi `scenarios.chapters` |
 | `created_at` / `last_activity_at` | timestamptz | — |
+| `deleted_at` | timestamptz, nullable | moment où le joueur a retiré la partie de sa liste ; null tant qu'elle y figure |
 
+- **Suppression douce** : une partie supprimée par le joueur reste en base avec ses tours
+  (coût des jetons compris), mais toute route de jeu — liste, lecture, tours, soumission,
+  canal SSE — y répond comme à une partie inexistante (scope `listed` du modèle). Un tour déjà
+  en cours se joue jusqu'au bout sans être vu. Elle continue d'empêcher la suppression du
+  contenu avec lequel elle a été jouée.
 - `world_id` et `scenario_id` sont arrivés `NOT NULL` **sans reprise de données** : la
   migration refuse de passer tant que des parties existent (`node ace game:reset --no-seed`).
 - Le contenu avec lequel une partie a été jouée ne se supprime pas (restrict).

@@ -75,7 +75,11 @@ export default class TurnsController {
  * exist.
  */
 function findOwnSession(sessionId: string, userId: string) {
-  return Session.query().where('id', sessionId).where('userId', userId).firstOrFail()
+  return Session.query()
+    .where('id', sessionId)
+    .where('userId', userId)
+    .withScopes((scopes) => scopes.listed())
+    .firstOrFail()
 }
 
 /** The labels of the world the game is played in, as it stands now. */

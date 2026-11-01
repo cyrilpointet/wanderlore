@@ -1,12 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { CircleAlert, Plus } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AppHeader } from '@/components/app_header'
 import { RulesCredit } from '@/components/rules_credit'
+import { DeleteGameDialog } from '@/games/delete_game_dialog'
 import { GameCard } from '@/games/game_card'
-import { gamesQuery } from '@/games/queries'
+import { deleteGame, gameQuery, gamesQuery, type GameSummary } from '@/games/queries'
 import { failureMessage } from '@/i18n/errors'
 
 export const Route = createFileRoute('/_authenticated/games/')({
@@ -42,6 +44,25 @@ function Games() {
 function GameList() {
   const { t } = useTranslation('games')
   const games = useQuery(gamesQuery)
+  const queryClient = useQueryClient()
+  /** The game the player asked to delete, until they confirm or change their mind. */
+  const [target, setTarget] = useState<GameSummary | null>(null)
+
+  const remove = useMutation({
+    mutationFn: deleteGame,
+    onSuccess: (_, gameId) => {
+      queryClient.setQueryData(gamesQuery.queryKey, (list) =>
+        list?.filter((game) => game.id !== gameId)
+      )
+      queryClient.removeQueries({ queryKey: gameQuery(gameId).queryKey })
+      setTarget(null)
+    },
+  })
+
+  const ask = (game: GameSummary) => {
+    remove.reset()
+    setTarget(game)
+  }
 
   if (games.isPending) {
     return (
@@ -84,13 +105,23 @@ function GameList() {
   }
 
   return (
-    <ul className="flex flex-col gap-4">
-      {games.data.map((game) => (
-        <li key={game.id}>
-          <GameCard game={game} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="flex flex-col gap-4">
+        {games.data.map((game) => (
+          <li key={game.id}>
+            <GameCard game={game} onDelete={() => ask(game)} />
+          </li>
+        ))}
+      </ul>
+      <DeleteGameDialog
+        characterName={target?.character.name ?? ''}
+        open={target !== null}
+        deleting={remove.isPending}
+        error={remove.isError ? failureMessage(remove.error) : null}
+        onConfirm={() => target && remove.mutate(target.id)}
+        onClose={() => setTarget(null)}
+      />
+    </>
   )
 }
 

@@ -119,7 +119,7 @@ const NO_CHANGE: TurnEffects = {
  * hardcoded downstream: the architecture document requires the language to
  * never be assumed fixed.
  */
-export const DEFAULT_LANGUAGE: GameLanguage = 'fr'
+export const DEFAULT_LANGUAGE: GameLanguage = 'en'
 
 /** The queue turns are played from, one job per turn. */
 export const PLAY_TURN_QUEUE = 'play-turn'
@@ -255,6 +255,7 @@ export class TurnService {
     const session = await Session.query()
       .where('id', submission.sessionId)
       .where('userId', submission.userId)
+      .withScopes((scopes) => scopes.listed())
       .firstOrFail()
 
     /**

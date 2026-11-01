@@ -52,6 +52,7 @@ router
         router.get('sessions', [controllers.Sessions, 'index'])
         router.post('sessions', [controllers.Sessions, 'store'])
         router.get('sessions/:id', [controllers.Sessions, 'show'])
+        router.delete('sessions/:id', [controllers.Sessions, 'destroy'])
         router.get('sessions/:id/turns', [controllers.Turns, 'index'])
         router.get('sessions/:id/turns/:turnId', [controllers.Turns, 'show'])
         router.post('sessions/:id/turns', [controllers.Turns, 'store'])

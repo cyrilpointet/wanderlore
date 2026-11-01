@@ -6,6 +6,14 @@
   "lastActivity": "{{value, relativetime}}",
   "newGame": "New game",
   "emptyHint": "Start one from a scenario.",
+  "deleteGame": "Delete the game of {{name}}",
+  "deleteDialog": {
+    "title": "Delete this game?",
+    "body": "The game of {{name}} leaves your list for good: it cannot be resumed.",
+    "cancel": "Keep it",
+    "confirm": "Delete",
+    "deleting": "Deleting…"
+  },
   "newGamePage": {
     "title": "New game",
     "intro": "Pick a story. You play its character from the first scene.",

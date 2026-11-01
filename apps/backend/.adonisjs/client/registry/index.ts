@@ -60,6 +60,12 @@ const routes = {
     tokens: [{"old":"/api/v1/sessions/:id","type":0,"val":"api","end":""},{"old":"/api/v1/sessions/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/sessions/:id","type":0,"val":"sessions","end":""},{"old":"/api/v1/sessions/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['game.sessions.show']['types'],
   },
+  'game.sessions.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/sessions/:id',
+    tokens: [{"old":"/api/v1/sessions/:id","type":0,"val":"api","end":""},{"old":"/api/v1/sessions/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/sessions/:id","type":0,"val":"sessions","end":""},{"old":"/api/v1/sessions/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['game.sessions.destroy']['types'],
+  },
   'game.turns.index': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/sessions/:id/turns',

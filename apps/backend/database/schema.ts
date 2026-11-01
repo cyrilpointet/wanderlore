@@ -347,12 +347,14 @@ export class ScenarioSchema extends BaseModel {
 }
 
 export class SessionSchema extends BaseModel {
-  static $columns = ['createdAt', 'currentChapter', 'id', 'lastActivityAt', 'scenarioId', 'status', 'userId', 'worldId'] as const
+  static $columns = ['createdAt', 'currentChapter', 'deletedAt', 'id', 'lastActivityAt', 'scenarioId', 'status', 'userId', 'worldId'] as const
   $columns = SessionSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
   declare currentChapter: string | null
+  @column.dateTime()
+  declare deletedAt: DateTime | null
   @column({ isPrimary: true })
   declare id: string
   @column.dateTime()

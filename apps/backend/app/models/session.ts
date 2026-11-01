@@ -9,7 +9,7 @@ import NpcInstance from '#models/npc_instance'
 import InventoryItem from '#models/inventory_item'
 import PassageState from '#models/passage_state'
 import { SessionSchema } from '#database/schema'
-import { belongsTo, hasMany, hasOne } from '@adonisjs/lucid/orm'
+import { belongsTo, hasMany, hasOne, scope } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, HasOne } from '@adonisjs/lucid/types/relations'
 
 export default class Session extends SessionSchema {
@@ -19,6 +19,14 @@ export default class Session extends SessionSchema {
    * mapping never depends on the pluralizer.
    */
   static table = 'sessions'
+
+  /**
+   * The games still in the player's list. A deleted one stays in the base,
+   * but reads everywhere as a game that does not exist.
+   */
+  static listed = scope((query) => {
+    query.whereNull('deletedAt')
+  })
 
   @belongsTo(() => User)
   declare user: BelongsTo<typeof User>

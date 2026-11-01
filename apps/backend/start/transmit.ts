@@ -37,7 +37,11 @@ transmit.authorize<{ id: string }>('sessions/:id', async (ctx, { id }) => {
     return false
   }
 
-  const session = await Session.query().where('id', id).where('userId', user.id).first()
+  const session = await Session.query()
+    .where('id', id)
+    .where('userId', user.id)
+    .withScopes((scopes) => scopes.listed())
+    .first()
 
   return session !== null
 })

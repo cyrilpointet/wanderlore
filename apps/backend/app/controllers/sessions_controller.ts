@@ -1,3 +1,5 @@
+import { DateTime } from 'luxon'
+
 import Session from '#models/session'
 import { ContentLabels } from '#services/game/content_labels'
 import { loadWorld, loadWorlds } from '#services/game/content/load'
@@ -8,12 +10,14 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 /**
  * The player's games. Every lookup is scoped to the player asking, so someone
- * else's game is indistinguishable from one that does not exist.
+ * else's game is indistinguishable from one that does not exist — as is a game
+ * the player deleted.
  */
 export default class SessionsController {
   async index({ auth, serialize }: HttpContext) {
     const sessions = await Session.query()
       .where('userId', auth.getUserOrFail().id)
+      .withScopes((scopes) => scopes.listed())
       .preload('characters')
       .orderBy('lastActivityAt', 'desc')
 
@@ -54,6 +58,23 @@ export default class SessionsController {
 
     return serialize(SessionTransformer.transform(session, () => labels))
   }
+
+  /**
+   * Removes a game from the player's list. Soft: the game and its turns stay
+   * in the base, and a turn already under way plays out unseen.
+   */
+  async destroy({ params, auth, response }: HttpContext) {
+    const session = await Session.query()
+      .where('id', params.id)
+      .where('userId', auth.getUserOrFail().id)
+      .withScopes((scopes) => scopes.listed())
+      .firstOrFail()
+
+    session.deletedAt = DateTime.now()
+    await session.save()
+
+    return response.noContent()
+  }
 }
 
 /** A game with everything its screen shows, scoped to its owner. */
@@ -61,6 +82,7 @@ function findGame(sessionId: string, userId: string) {
   return Session.query()
     .where('id', sessionId)
     .where('userId', userId)
+    .withScopes((scopes) => scopes.listed())
     .preload('characters', (characters) =>
       characters.preload('items', (items) =>
         items

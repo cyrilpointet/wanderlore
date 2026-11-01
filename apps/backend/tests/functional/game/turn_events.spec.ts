@@ -364,6 +364,14 @@ test.group('Turn events | channel access', (group) => {
     assert.isFalse(await canSubscribe(undefined, sessionId))
   })
 
+  test('closes it to its own player once the game is deleted', async ({ assert }) => {
+    const player = await User.findOrFail(await createUser())
+    const sessionId = await createSession(player.id)
+    await db.from('sessions').where('id', sessionId).update({ deleted_at: new Date() })
+
+    assert.isFalse(await canSubscribe(player, sessionId))
+  })
+
   test('refuses an anonymous subscription outright', async ({ client }) => {
     const sessionId = await createSession(await createUser())
 

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Clock } from 'lucide-react'
+import { Clock, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import type { GameStatus } from '@/api/enums'
@@ -14,19 +14,25 @@ const STATUS_TONE: Record<GameStatus, string> = {
   completed: 'border-border-strong bg-surface-2 text-muted',
 }
 
-export function GameCard({ game }: { game: GameSummary }) {
+/**
+ * The whole card opens the game, through a link stretched over it; the delete
+ * button sits above that link, since a button cannot live inside one.
+ */
+export function GameCard({ game, onDelete }: { game: GameSummary; onDelete: () => void }) {
   const { t } = useTranslation('games')
   const { value, unit } = relativeTime(new Date(game.lastActivityAt))
 
   return (
-    <Link
-      to="/games/$gameId"
-      params={{ gameId: game.id }}
-      className="group block rounded-lg border border-border-strong bg-surface-1 p-5 transition-colors hover:border-accent/60 sm:p-6"
-    >
+    <article className="group relative rounded-lg border border-border-strong bg-surface-1 p-5 transition-colors hover:border-accent/60 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <h2 className="font-serif text-[1.375rem] leading-tight text-text transition-colors group-hover:text-accent">
-          {game.character.name}
+          <Link
+            to="/games/$gameId"
+            params={{ gameId: game.id }}
+            className="after:absolute after:inset-0 after:rounded-lg"
+          >
+            {game.character.name}
+          </Link>
         </h2>
         <span
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-sm border px-2 py-0.5 text-meta uppercase ${STATUS_TONE[game.status]}`}
@@ -42,18 +48,29 @@ export function GameCard({ game }: { game: GameSummary }) {
           : game.world.label}
       </p>
 
-      <div className="mt-5 flex items-center justify-between">
+      <div className="mt-5 flex items-center justify-between gap-3">
         <HitPoints current={game.character.hitPoints} max={game.character.hitPointsMax} />
-        <span className="flex items-center gap-1.5 text-label text-subtle">
-          <Clock aria-hidden className="size-4" />
-          <time dateTime={game.lastActivityAt}>
-            {t('lastActivity', {
-              value,
-              formatParams: { value: { range: unit, numeric: 'auto' } },
-            })}
-          </time>
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 text-label text-subtle">
+            <Clock aria-hidden className="size-4" />
+            <time dateTime={game.lastActivityAt}>
+              {t('lastActivity', {
+                value,
+                formatParams: { value: { range: unit, numeric: 'auto' } },
+              })}
+            </time>
+          </span>
+          <button
+            type="button"
+            onClick={onDelete}
+            aria-label={t('deleteGame', { name: game.character.name })}
+            title={t('deleteGame', { name: game.character.name })}
+            className="relative z-10 -my-1 -mr-1.5 grid size-8 place-items-center rounded-full text-subtle transition-colors hover:bg-danger/10 hover:text-danger"
+          >
+            <Trash2 aria-hidden className="size-4" />
+          </button>
+        </div>
       </div>
-    </Link>
+    </article>
   )
 }

@@ -13,6 +13,7 @@ export type ScannedRoutes = {
     'game.sessions.index': { paramsTuple?: []; params?: {} }
     'game.sessions.store': { paramsTuple?: []; params?: {} }
     'game.sessions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'game.sessions.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'game.turns.show': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'turnId': ParamValue} }
     'game.turns.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -101,17 +102,18 @@ export type ScannedRoutes = {
     'subscribe': { paramsTuple?: []; params?: {} }
     'unsubscribe': { paramsTuple?: []; params?: {} }
   }
+  DELETE: {
+    'game.sessions.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.worlds.destroy': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
+    'admin.action_types.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.scenarios.destroy': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
+    'admin.definitions.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'catalogue': ParamValue,'definitionId': ParamValue} }
+  }
   PATCH: {
     'admin.worlds.update': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
     'admin.action_types.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.scenarios.update': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
     'admin.definitions.update': { paramsTuple: [ParamValue,ParamValue]; params: {'catalogue': ParamValue,'definitionId': ParamValue} }
-  }
-  DELETE: {
-    'admin.worlds.destroy': { paramsTuple: [ParamValue]; params: {'worldId': ParamValue} }
-    'admin.action_types.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'admin.scenarios.destroy': { paramsTuple: [ParamValue]; params: {'scenarioId': ParamValue} }
-    'admin.definitions.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'catalogue': ParamValue,'definitionId': ParamValue} }
   }
 }
 declare module '@adonisjs/core/types/http' {

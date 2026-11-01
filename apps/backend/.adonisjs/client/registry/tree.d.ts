@@ -27,6 +27,7 @@ export interface ApiDefinition {
       index: typeof routes['game.sessions.index']
       store: typeof routes['game.sessions.store']
       show: typeof routes['game.sessions.show']
+      destroy: typeof routes['game.sessions.destroy']
     }
     turns: {
       index: typeof routes['game.turns.index']

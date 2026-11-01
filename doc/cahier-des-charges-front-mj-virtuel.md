@@ -160,7 +160,12 @@ Une carte par partie, triées par dernière activité :
 - dernière activité en relatif (*« 2 hours ago »*) ;
 - points de vie actuels, en petit (repère visuel rapide).
 
-Toute la carte est cliquable → `/games/:gameId`.
+Toute la carte est cliquable → `/games/:gameId`, sauf son bouton de suppression (icône de
+corbeille, à droite de la dernière activité). Celui-ci ouvre une **modale de confirmation**
+(*« Delete this game? »*, nom du personnage, partie impossible à reprendre) : **Keep it**, qui
+reçoit le focus, ou **Delete** (`DELETE /sessions/:id`). Pendant la requête, les boutons et
+Échap attendent ; en cas d'échec, l'erreur s'affiche dans la modale ; en cas de succès, la
+carte quitte la liste. La suppression est douce côté backend, mais définitive pour le joueur.
 
 **États** : chargement (squelettes de cartes) ; aucune partie (*« No game yet. »* — pas de
 bouton de création en Phase 2) ; erreur de chargement avec **Try again**.

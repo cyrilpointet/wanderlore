@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
 
@@ -610,5 +611,75 @@ test.group('GET /sessions/:id/turns/:turnId', (group) => {
       .loginAs(player)
 
     response.assertStatus(404)
+  })
+})
+
+test.group('DELETE /sessions/:id', (group) => {
+  useTransaction(group)
+
+  test("takes the game off the player's list, and keeps it in the base", async ({
+    client,
+    assert,
+  }) => {
+    const player = await User.findOrFail(await createUser())
+    const deleted = await arrangeGame(player.id)
+    const kept = await arrangeGame(player.id)
+    await completedTurn(deleted.id, 1)
+
+    const response = await client
+      .delete(`/api/v1/sessions/${deleted.id}`)
+      .loginAs(player)
+      .withCsrfToken()
+
+    response.assertStatus(204)
+    const list = await client.get('/api/v1/sessions').loginAs(player)
+    assert.deepEqual(
+      dataOf(list).map((game: { id: string }) => game.id),
+      [kept.id]
+    )
+
+    /** Soft: the game and its turns stay, with what they cost. */
+    await deleted.refresh()
+    assert.isNotNull(deleted.deletedAt)
+    assert.lengthOf(await TurnLog.query().where('sessionId', deleted.id), 1)
+  })
+
+  test('makes the game read as one that does not exist', async ({ client }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(player.id)
+    const turn = await completedTurn(session.id, 1)
+
+    await client.delete(`/api/v1/sessions/${session.id}`).loginAs(player).withCsrfToken()
+
+    const responses = [
+      await client.get(`/api/v1/sessions/${session.id}`).loginAs(player),
+      await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player),
+      await client.get(`/api/v1/sessions/${session.id}/turns/${turn.id}`).loginAs(player),
+      await client
+        .post(`/api/v1/sessions/${session.id}/turns`)
+        .json({ playerInput: 'I look around.' })
+        .header('Idempotency-Key', randomUUID())
+        .loginAs(player)
+        .withCsrfToken(),
+      await client.delete(`/api/v1/sessions/${session.id}`).loginAs(player).withCsrfToken(),
+    ]
+
+    for (const response of responses) {
+      response.assertStatus(404)
+    }
+  })
+
+  test("answers 404 for someone else's game, and leaves it be", async ({ client, assert }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(await createUser())
+
+    const response = await client
+      .delete(`/api/v1/sessions/${session.id}`)
+      .loginAs(player)
+      .withCsrfToken()
+
+    response.assertStatus(404)
+    await session.refresh()
+    assert.isNull(session.deletedAt)
   })
 })
