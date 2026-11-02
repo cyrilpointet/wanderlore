@@ -370,10 +370,7 @@ test.group('Networks | people where they were left', (group) => {
 
     assert.deepEqual(await placeOf(sessionId, treville), { status: 'present', place: 'house_hall' })
     const narration = provider.requests.find(({ step }) => step === 'narration')!
-    assert.include(
-      narration.userMessage,
-      '"npcs_at_destination":[{"handle":"treville"'
-    )
+    assert.include(narration.userMessage, '"npcs_at_destination":[{"handle":"treville"')
   })
 
   test('the dead stay dead', async ({ assert }) => {
@@ -452,10 +449,7 @@ test.group('Networks | people waiting from the start', (group) => {
 
     assert.deepEqual(await placeOf(sessionId, STEWARD), { status: 'present', place: 'house_attic' })
     const narration = provider.requests.find(({ step }) => step === 'narration')!
-    assert.include(
-      narration.userMessage,
-      '"npcs_at_destination":[{"handle":"house_steward"'
-    )
+    assert.include(narration.userMessage, '"npcs_at_destination":[{"handle":"house_steward"')
   })
 
   test('within reach of their room, extraction may bring them in', async ({ assert }) => {
