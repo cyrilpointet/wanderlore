@@ -190,8 +190,15 @@ function toAlerts(arbitration: ArbitrationOutput | null): Record<string, unknown
   return raised.length > 0 ? raised : null
 }
 
-/** Step and attempt on every row, so cost can be read per step and per retry. */
 function toUsageRow({ metadata, attempt }: TracedCall): Record<string, unknown> {
+  return usageRow(metadata, attempt)
+}
+
+/**
+ * Step and attempt on every row, so cost can be read per step and per retry.
+ * The same shape wherever a call is paid for: a turn's, a summary's.
+ */
+export function usageRow(metadata: LlmCallMetadata, attempt = 1): Record<string, unknown> {
   return {
     step: metadata.step,
     attempt,
