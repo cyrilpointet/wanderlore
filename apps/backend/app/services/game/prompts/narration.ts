@@ -3,11 +3,12 @@ import type { HeldItem, ItemsInScene } from '#services/game/inventory'
 import { dateOf, dayOf, periodAt, quarterHourOf, weekdayOf } from '#services/game/game_time'
 
 import type { NarrationRequest } from './types.js'
-import { lastTurns } from './arbitration.js'
 
 /**
- * How many past turns the narrator is given — more than arbitration, which
- * only rules: staging the scene needs a little more of what led to it.
+ * How many past turns the narrator always reads verbatim — more than
+ * arbitration, which only rules: staging the scene needs a little more of what
+ * led to it. A summary never takes them; the narrator is handed them and
+ * every older turn no summary covers yet.
  */
 export const NARRATION_RECENT_TURNS = 4
 
@@ -32,6 +33,7 @@ Hard rules:
 - An attack against the character begun before this action — in the recent narration — and still open is settled by this outcome. On a success, the character avoids it or turns it aside. On a failure, it lands and the character is hurt: lightly on a failure or an automatic one, badly on a fumble. Say the wound plainly. Losing a weapon or ground may come on top of the wound, never instead of it.
 - The characters present are listed in the scene with their disposition: keep them in character. Never introduce characters, places, objects or events that contradict the world lore and scene state provided.
 - world_context.lore is what this world and this scene are like: what is seen, heard and smelt here, what people say and believe. Draw on it for colour and never contradict it. It is background, not a script: never recite it, and bring a fact into the story only when the scene gives the character reason to see or learn it.
+- memory.story_so_far summarises, in English and oldest first, what happened before memory.recent_buffer, which gives the last exchanges word for word. Stay consistent with both: who the character met, what was said, promised or given. Never retell them, and never copy the summary's English into your text.
 - names gives, in the language of the narration, the name of the place and of each person present, and the fixed translation of other proper names (glossary). Use these names exactly, every time — except a person marked known: false. The character has not learnt their name: call them by their looks or their role, never by their name, unless they give it in this very narration.
 - items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason.
 - place says what the place is like, and what an improvised one stands in. exits lists its ways out, each with how it looks from here, and where it leads when the character has been there. An exit with no "to" leads somewhere the character has never been: describe the way, never name or guess what lies beyond it. One marked hidden has not been found: never mention it, unless the character searches and the outcome gives them reason to find it. One marked locked stays shut unless the story opens it.
@@ -117,7 +119,9 @@ export function buildNarrationMessage(request: NarrationRequest): string {
       aside: request.aside,
     },
     memory: {
-      recent_buffer: lastTurns(request.recent_buffer, NARRATION_RECENT_TURNS),
+      story_so_far: request.story_so_far,
+      /** Whole: the turns no summary covers, the last few at least. */
+      recent_buffer: request.recent_buffer,
     },
     player_input: request.player_input,
     language: request.language,

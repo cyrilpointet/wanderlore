@@ -12,6 +12,7 @@ import { DiceService } from '#services/dice'
 import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
 import { PLAY_TURN_QUEUE, TurnService } from '#services/game/turn_service'
+import { SUMMARISE_QUEUE } from '#services/game/summary_service'
 import { TURN_BUDGET_MS } from '#services/game/turn_budget'
 import type { TurnEvent, TurnRef } from '#services/game/turn_events'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
@@ -32,7 +33,13 @@ import { FakeRandomSource } from '#tests/helpers/fake_random_source'
 import { FakeClock } from '#tests/helpers/fake_clock'
 import { RecordingTurnEvents } from '#tests/helpers/recording_turn_events'
 import { seedMusketeers } from '#tests/helpers/content'
-import { countRows, createSession, createUser, useTransaction } from '#tests/helpers/database'
+import {
+  countRows,
+  createSession,
+  createSummary,
+  createUser,
+  useTransaction,
+} from '#tests/helpers/database'
 import { CHARACTER, extracted, playerOf } from '#tests/helpers/turns'
 
 /**
@@ -238,6 +245,107 @@ test.group('TurnService | lore', (group) => {
     assert.includeMembers(turn.loreSent!.arbitration!, ['courtyard_drills', 'treville_debts'])
     assert.include(turn.loreSent!.narration!, 'courtyard_drills')
     assert.notInclude(turn.loreSent!.narration!, 'treville_debts')
+  })
+})
+
+/** Completed turns 1 to `count`, as if played before: the story a new turn follows on from. */
+async function playedBefore(sessionId: string, count: number) {
+  for (let number = 1; number <= count; number++) {
+    await db.table('turn_log').insert({
+      session_id: sessionId,
+      turn_number: number,
+      status: 'completed',
+      player_input: `Action ${number}`,
+      narrated_text: `Narration ${number}`,
+      created_at: new Date(),
+    })
+  }
+}
+
+test.group('TurnService | memory', (group) => {
+  useTransaction(group)
+
+  test('sends the summaries, then every turn they leave out', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    await playedBefore(sessionId, 14)
+    await createSummary(sessionId, { start: 1, end: 8 }, 'global', 'He reached Paris.')
+    await createSummary(sessionId, { start: 9, end: 9 }, 'scene', 'He met Tréville.')
+    const { provider, play } = buildService(SETTLED_TURN)
+
+    await play({ sessionId, userId, playerInput: 'I look around.' })
+
+    const [arbitration, narration, extraction] = provider.requests.map(
+      ({ userMessage }) => userMessage
+    )
+    const memory = JSON.parse(
+      narration.slice(narration.indexOf('{'), narration.lastIndexOf('}') + 1)
+    ).memory
+
+    assert.deepEqual(memory.story_so_far, ['He reached Paris.', 'He met Tréville.'])
+    /** From the first turn no summary covers to the last: none twice, none missing. */
+    assert.deepEqual(
+      memory.recent_buffer
+        .filter(({ role }: { role: string }) => role === 'player')
+        .map(({ text }: { text: string }) => text),
+      ['Action 10', 'Action 11', 'Action 12', 'Action 13', 'Action 14']
+    )
+
+    assert.include(arbitration, 'He met Tréville.')
+    /** Arbitration reads the last two exchanges verbatim, the rest through the summaries. */
+    assert.include(arbitration, 'Action 13')
+    assert.notInclude(arbitration, 'Action 12')
+
+    assert.notInclude(extraction, 'He met Tréville.')
+    assert.notInclude(extraction, 'Action 14')
+  })
+
+  test('sends every turn so far while no summary exists', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    await playedBefore(sessionId, 6)
+    const { provider, play } = buildService(SETTLED_TURN)
+
+    await play({ sessionId, userId, playerInput: 'I look around.' })
+
+    assert.include(provider.requests[1].userMessage, 'Action 1"')
+    assert.include(provider.requests[1].userMessage, '"story_so_far":[]')
+  })
+
+  test('asks for a summary once enough turns go uncovered', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    await playedBefore(sessionId, 11)
+    const queue = new MemoryQueue()
+    const { play } = buildService(SETTLED_TURN, [30], queue)
+
+    /** Turn 12: eight turns older than the last four. */
+    await play({ sessionId, userId, playerInput: 'I look around.' })
+
+    assert.deepEqual(queue.jobs, [{ queue: SUMMARISE_QUEUE, payload: { sessionId } }])
+  })
+
+  test('asks for nothing below the threshold', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    await playedBefore(sessionId, 10)
+    const queue = new MemoryQueue()
+    const { play } = buildService(SETTLED_TURN, [30], queue)
+
+    await play({ sessionId, userId, playerInput: 'I look around.' })
+
+    assert.lengthOf(queue.jobs, 0)
+  })
+
+  test('completes the turn even when the summary cannot be queued', async ({ assert }) => {
+    const { sessionId, userId } = await arrangeScene()
+    await playedBefore(sessionId, 11)
+    const broken = new MemoryQueue()
+    broken.enqueue = async () => {
+      throw new Error('queue down')
+    }
+    const { play } = buildService(SETTLED_TURN, [30], broken)
+
+    const turn = await play({ sessionId, userId, playerInput: 'I look around.' })
+
+    assert.equal(turn.status, 'completed')
+    assert.equal(turn.turnNumber, 12)
   })
 })
 

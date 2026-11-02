@@ -241,6 +241,12 @@ export type TurnContext = {
   world: WorldDefinition
   character: CharacterContext
   scene: SceneState
+  /**
+   * What happened before the turns below, in English, oldest first: the
+   * latest global summary, then the scene summaries that followed it.
+   */
+  story_so_far: string[]
+  /** Every turn no summary covers yet, oldest first, in the language they were played in. */
   recent_buffer: RecentTurn[]
   player_input: string
   language: GameLanguage

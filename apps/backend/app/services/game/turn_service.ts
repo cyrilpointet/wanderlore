@@ -55,6 +55,8 @@ import { TurnBudget } from './turn_budget.js'
 import { callStructured } from './structured_call.js'
 import { loadWorld } from './content/load.js'
 import { loreFor, loreReferences, loreSceneOf } from './lore.js'
+import { type Memory, coveredUpTo, sceneToSummarise, storySoFar } from './narrative_memory.js'
+import { SUMMARISE_QUEUE, type SummariseJob, loadMemory } from './summary_service.js'
 import {
   type WorldDefinition,
   locationArchetypeReferences,
@@ -66,11 +68,7 @@ import {
   ARBITRATION_SYSTEM_PROMPT,
   buildArbitrationMessage,
 } from './prompts/arbitration.js'
-import {
-  NARRATION_RECENT_TURNS,
-  NARRATION_SYSTEM_PROMPT,
-  buildNarrationMessage,
-} from './prompts/narration.js'
+import { NARRATION_SYSTEM_PROMPT, buildNarrationMessage } from './prompts/narration.js'
 import {
   EXTRACTION_SCHEMA,
   EXTRACTION_SYSTEM_PROMPT,
@@ -168,8 +166,8 @@ export type SubmittedTurn = {
  * One turn, end to end.
  *
  * Split in two on purpose: `submit` records the turn and queues it, answering
- * the player at once; `run` plays it, in a job. Regenerating the narrative
- * summary is Phase 9.
+ * the player at once; `run` plays it, in a job. A turn that leaves enough of
+ * the story uncovered asks for a summary, written by a job of its own.
  */
 export class TurnService {
   #llm: LlmGateway
@@ -340,7 +338,24 @@ export class TurnService {
       labels: new ContentLabels(scene.world, turn.language),
     })
 
+    await this.#requestSummary(scene, turn.turnNumber!)
+
     return turn
+  }
+
+  /**
+   * Queues a summary once enough turns go uncovered: written off this turn's
+   * path, in a queue of its own, so it never delays anyone's next turn.
+   * Failing to queue it never fails the turn — the next one asks again.
+   */
+  async #requestSummary(scene: LoadedScene, lastTurn: number): Promise<void> {
+    if (sceneToSummarise(scene.memory, lastTurn) === null) {
+      return
+    }
+
+    await this.#queue
+      .enqueue<SummariseJob>(SUMMARISE_QUEUE, { sessionId: scene.session.id })
+      .catch(() => {})
   }
 
   /**
@@ -668,15 +683,20 @@ export class TurnService {
       guarded: await guardedPlaces(sessionId),
     }
 
+    const memory = await loadMemory(sessionId)
+
     /**
-     * Completed turns only: a failed turn is not part of the story, and handing
-     * the model an action that never happened would have it narrate around it.
+     * Every turn after the last one a summary covers, so none is ever missing
+     * from both — at least the last few, since a summary never takes them.
+     * Completed turns only: a failed turn is not part of the story, and
+     * handing the model an action that never happened would have it narrate
+     * around it.
      */
     const turns = await TurnLog.query()
       .where('sessionId', sessionId)
       .withScopes((scopes) => scopes.completed())
-      .orderBy('turnNumber', 'desc')
-      .limit(NARRATION_RECENT_TURNS)
+      .where('turnNumber', '>', coveredUpTo(memory))
+      .orderBy('turnNumber', 'asc')
 
     /** Only completed turns hold a number, so the highest one is the last of the story. */
     const last = await TurnLog.query()
@@ -699,8 +719,9 @@ export class TurnService {
       ...describePlace(world, place),
       exits: here === null ? [] : exitsOf(world.locations, here, travel),
       routes: here === null ? [] : [...routesFrom(world.locations, here, travel).values()],
+      memory,
       /** Oldest first, so the model reads the exchange in the order it happened. */
-      recentTurns: turns.reverse(),
+      recentTurns: turns,
       lastTurnNumber: Number(last?.$extras.max ?? 0),
     }
   }
@@ -804,8 +825,10 @@ type LoadedScene = {
   exits: SceneExit[]
   /** The places those ways reach, each by its quickest way. */
   routes: Route[]
+  /** The summaries the game has, which the turns below follow on from. */
+  memory: Memory
   /**
-   * As many as the narrator reads, the longer of the two buffers; arbitration
+   * Every turn no summary covers, as the narrator reads them; arbitration
    * keeps only the last of them.
    */
   recentTurns: TurnLog[]
@@ -840,6 +863,7 @@ function buildContext(
       exits: scene.exits,
       routes: scene.routes,
     },
+    story_so_far: storySoFar(scene.memory),
     recent_buffer: toRecentBuffer(scene.recentTurns),
     player_input: playerInput,
     language,

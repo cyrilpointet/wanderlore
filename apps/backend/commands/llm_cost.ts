@@ -2,8 +2,9 @@ import { BaseCommand, flags } from '@adonisjs/core/ace'
 import type { CommandOptions } from '@adonisjs/core/types/ace'
 
 /**
- * The real cost of play, read from `turn_log`: tokens per turn, per game and
- * per step, the share spent on refused attempts, and the split by language.
+ * The real cost of play, read from `turn_log` and `narrative_summaries`:
+ * tokens per turn, per game and per step, the share spent on refused
+ * attempts, the split by language, and what the summaries cost.
  *
  * Read-only. Prices are never written in code: they change with the provider,
  * the model and the contract, so they come in as options, per million tokens.
@@ -31,6 +32,9 @@ export default class LlmCost extends BaseCommand {
     const rows = await db
       .from('turn_log')
       .select('session_id', 'language', 'status', 'llm_usage', 'rejected_attempts')
+    const summaries = await db
+      .from('narrative_summaries')
+      .select('session_id', 'level', 'llm_usage')
 
     const pricing =
       this.inputPerMillion === undefined || this.outputPerMillion === undefined
@@ -46,7 +50,12 @@ export default class LlmCost extends BaseCommand {
         rejectedAttempts: row.rejected_attempts,
       })),
       pricing,
-      this.model ?? null
+      this.model ?? null,
+      summaries.map((row) => ({
+        sessionId: row.session_id,
+        level: row.level,
+        llmUsage: row.llm_usage,
+      }))
     )
 
     this.logger.info(`Models in the log: ${report.models.join(', ') || 'none'}`)
@@ -71,6 +80,7 @@ export default class LlmCost extends BaseCommand {
     this.logger.info(
       `${report.turns.total} turn(s) played (${report.turns.completed} completed, ${report.turns.failed} failed) across ${report.games} game(s)`
     )
+    this.logger.info(`${report.summaries.total} summary(ies) written, counted in the figures below`)
 
     const tableOf = (title: string, head: string[], lines: string[][]) => {
       this.logger.log('')
@@ -108,6 +118,16 @@ export default class LlmCost extends BaseCommand {
         language.language,
         String(language.turns),
         ...figures(language.perTurn),
+      ])
+    )
+
+    tableOf(
+      'Summaries, per level',
+      ['level', 'summaries', 'calls', 'input', 'output', 'reasoning', 'total', 'cost'],
+      report.summaries.perLevel.map((level) => [
+        level.level,
+        String(level.summaries),
+        ...figures(level),
       ])
     )
   }

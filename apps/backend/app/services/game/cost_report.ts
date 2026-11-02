@@ -1,6 +1,7 @@
 /**
- * The real cost of play, read from `turn_log`: what the first step of the
- * budget and pricing work needs (synthesis document, budget section).
+ * The real cost of play, read from `turn_log` and `narrative_summaries`: what
+ * the first step of the budget and pricing work needs (synthesis document,
+ * budget section).
  *
  * Pure, so it can be checked on rows built by hand. Read-only by
  * construction: it takes rows, it returns numbers.
@@ -13,6 +14,16 @@ export type LoggedTurn = {
   status: 'pending' | 'completed' | 'failed'
   llmUsage: Record<string, unknown>[] | null
   rejectedAttempts: Record<string, unknown>[] | null
+}
+
+/**
+ * A `narrative_summaries` row, reduced to what the report reads. A summary
+ * belongs to no turn, but every game that plays long enough pays for it.
+ */
+export type LoggedSummary = {
+  sessionId: string
+  level: string
+  llmUsage: Record<string, unknown>[] | null
 }
 
 /**
@@ -54,7 +65,10 @@ export type CostReport = {
   perTurn: Totals
   perGame: Totals
   perStep: StepReport[]
+  /** Turns only: a summary is written in English, whatever the language of the game. */
   perLanguage: (Totals & { language: string; turns: number; perTurn: Totals })[]
+  /** What the summaries cost, by level. Already counted in the figures above. */
+  summaries: { total: number; perLevel: (Totals & { level: string; summaries: number })[] }
 }
 
 type Call = {
@@ -70,21 +84,26 @@ type Call = {
 /**
  * With a `model`, only that model's calls count, and only the turns that made
  * one: comparing two models means comparing the turns each one played.
+ *
+ * The summaries count in the overall figures, per turn and per game: they are
+ * part of what a game really costs.
  */
 export function costReport(
   rows: LoggedTurn[],
   pricing: Pricing | null = null,
-  model: string | null = null
+  model: string | null = null,
+  summaries: LoggedSummary[] = []
 ): CostReport {
   /** Turns still being played have not finished spending. */
   const finished = rows.filter((row) => row.status !== 'pending')
   const settled = model === null ? finished : finished.flatMap((row) => onlyModel(row, model))
-  const calls = settled.flatMap(callsOf)
+  const written = model === null ? summaries : summaries.flatMap((row) => onlyModel(row, model))
+  const calls = [...settled.flatMap(callsOf), ...written.flatMap(callsOf)]
   const games = new Set(settled.map((row) => row.sessionId)).size
   const overall = totalsOf(calls, pricing)
 
   return {
-    models: modelsOf(finished),
+    models: modelsOf([...finished, ...summaries]),
     turns: {
       total: settled.length,
       completed: settled.filter((row) => row.status === 'completed').length,
@@ -96,27 +115,35 @@ export function costReport(
     perGame: divide(overall, games),
     perStep: stepsOf(calls, pricing),
     perLanguage: languagesOf(settled, pricing),
+    summaries: { total: written.length, perLevel: levelsOf(written, pricing) },
   }
 }
 
-/** The turn with only the calls of `model`, or nothing if it made none. */
-function onlyModel(row: LoggedTurn, model: string): LoggedTurn[] {
+/** The row with only the calls of `model`, or nothing if it made none. */
+function onlyModel<Row extends { llmUsage: Record<string, unknown>[] | null }>(
+  row: Row,
+  model: string
+): Row[] {
   const usage = (row.llmUsage ?? []).filter((call) => call.model === model)
 
   return usage.length === 0 ? [] : [{ ...row, llmUsage: usage }]
 }
 
-function modelsOf(rows: LoggedTurn[]): string[] {
+function modelsOf(rows: { llmUsage: Record<string, unknown>[] | null }[]): string[] {
   const models = rows.flatMap((row) => (row.llmUsage ?? []).map((call) => call.model))
 
   return [...new Set(models.filter((model): model is string => typeof model === 'string'))].sort()
 }
 
 /**
- * The calls of a turn, each tagged with whether validation refused it.
- * Rows logged before attempts were numbered count as first attempts.
+ * The calls of a turn or a summary, each tagged with whether validation
+ * refused it — a summary is free text, never refused. Rows logged before
+ * attempts were numbered count as first attempts.
  */
-function callsOf(row: LoggedTurn): Call[] {
+function callsOf(row: {
+  llmUsage: Record<string, unknown>[] | null
+  rejectedAttempts?: Record<string, unknown>[] | null
+}): Call[] {
   const refused = new Set(
     (row.rejectedAttempts ?? []).map((attempt) => `${attempt.step}:${attempt.attempt}`)
   )
@@ -189,7 +216,7 @@ function divide(totals: Totals, count: number): Totals {
 }
 
 /** In pipeline order, then any other step the log holds. */
-const STEP_ORDER = ['arbitration', 'narration', 'extraction']
+const STEP_ORDER = ['arbitration', 'narration', 'extraction', 'summary']
 
 function stepsOf(calls: Call[], pricing: Pricing | null): StepReport[] {
   const steps = [...new Set(calls.map((call) => call.step))].sort(
@@ -231,5 +258,18 @@ function languagesOf(rows: LoggedTurn[], pricing: Pricing | null): CostReport['p
     const totals = totalsOf(turns.flatMap(callsOf), pricing)
 
     return { language, turns: turns.length, ...totals, perTurn: divide(totals, turns.length) }
+  })
+}
+
+function levelsOf(
+  rows: LoggedSummary[],
+  pricing: Pricing | null
+): CostReport['summaries']['perLevel'] {
+  const levels = [...new Set(rows.map((row) => row.level))].sort()
+
+  return levels.map((level) => {
+    const ofLevel = rows.filter((row) => row.level === level)
+
+    return { level, summaries: ofLevel.length, ...totalsOf(ofLevel.flatMap(callsOf), pricing) }
   })
 }

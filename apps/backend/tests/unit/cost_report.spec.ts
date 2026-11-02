@@ -192,3 +192,60 @@ test.group('Cost report | per model', () => {
     assert.equal(report.perTurn.totalTokens, 0)
   })
 })
+
+test.group('Cost report | summaries', () => {
+  const summary = (level: string, input: number, output: number, model = 'flash') => ({
+    sessionId: 'game-1',
+    level,
+    llmUsage: [{ ...call('summary', 1, input, output), model }],
+  })
+
+  test('counts what the summaries cost in what a game costs', ({ assert }) => {
+    const report = costReport([turn(), turn()], null, null, [summary('scene', 1000, 200)])
+
+    assert.equal(report.overall.totalTokens, 2 * 3800 + 1200)
+    assert.equal(report.perTurn.totalTokens, (2 * 3800 + 1200) / 2)
+    assert.equal(report.perGame.totalTokens, 2 * 3800 + 1200)
+    assert.deepEqual(
+      report.perStep.map(({ step }) => step),
+      ['arbitration', 'narration', 'extraction', 'summary']
+    )
+  })
+
+  test('reports them by level', ({ assert }) => {
+    const report = costReport([turn()], FLAT, null, [
+      summary('scene', 1000, 200),
+      summary('scene', 1000, 200),
+      summary('global', 2000, 400),
+    ])
+
+    assert.equal(report.summaries.total, 3)
+    assert.deepInclude(report.summaries.perLevel, {
+      level: 'scene',
+      summaries: 2,
+      calls: 2,
+      inputTokens: 2000,
+      outputTokens: 400,
+      reasoningTokens: 0,
+      totalTokens: 2400,
+      cost: 0.0024,
+    })
+    assert.equal(report.summaries.perLevel.find(({ level }) => level === 'global')!.calls, 1)
+  })
+
+  test('leaves them out of the split by language', ({ assert }) => {
+    const report = costReport([turn()], null, null, [summary('scene', 1000, 200)])
+
+    assert.equal(report.perLanguage[0].totalTokens, 3800)
+  })
+
+  test('keeps only the model asked for', ({ assert }) => {
+    const report = costReport([], null, 'flash', [
+      summary('scene', 1000, 200, 'flash'),
+      summary('scene', 5000, 900, 'pro'),
+    ])
+
+    assert.equal(report.summaries.total, 1)
+    assert.deepEqual(report.models, ['flash', 'pro'])
+  })
+})
