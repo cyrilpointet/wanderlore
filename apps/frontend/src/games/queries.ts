@@ -143,11 +143,30 @@ export async function deleteGame(gameId: string): Promise<void> {
   await api<undefined>(`/sessions/${gameId}`, { method: 'DELETE' })
 }
 
-/** The story so far: completed turns only, oldest first. */
+/**
+ * The story as far as it is loaded: completed turns only, oldest first, and
+ * whether earlier ones remain to be loaded.
+ */
+export type JournalPages = {
+  turns: Turn[]
+  hasEarlier: boolean
+}
+
+type TurnsPage = { data: Turn[]; metadata: { hasEarlier: boolean } }
+
+/** A page of the story: the last turns, or those before a turn number. */
+export async function turnsPage(gameId: string, before?: number): Promise<JournalPages> {
+  const query = before === undefined ? '' : `?before=${before}`
+  const page = await api<TurnsPage>(`/sessions/${gameId}/turns${query}`)
+
+  return { turns: page.data, hasEarlier: page.metadata.hasEarlier }
+}
+
+/** The story so far, its last page first; earlier pages join it on demand. */
 export const turnsQuery = (gameId: string) =>
   queryOptions({
     queryKey: ['games', gameId, 'turns'],
-    queryFn: async () => (await api<{ data: Turn[] }>(`/sessions/${gameId}/turns`)).data,
+    queryFn: () => turnsPage(gameId),
   })
 
 /** A scenario a game can be started from, as the New game catalogue shows it. */

@@ -9,6 +9,7 @@ import Character from '#models/character'
 import WorldState from '#models/world_state'
 import { THREE_MUSKETEERS, GASCON } from '#tests/helpers/worlds'
 import { improviseLocation, visitUniqueLocation } from '#services/game/locations'
+import { TURNS_PAGE_SIZE } from '#controllers/turns_controller'
 import { createUser, useTransaction } from '#tests/helpers/database'
 import { seedMusketeers } from '#tests/helpers/content'
 import { createItem, destroyItem, equipItem } from '#services/game/inventory'
@@ -25,6 +26,10 @@ import { enterScene } from '#services/game/npcs'
  */
 function dataOf(response: { body(): unknown }): any {
   return (response.body() as { data: unknown }).data
+}
+
+function metadataOf(response: { body(): unknown }): unknown {
+  return (response.body() as { metadata: unknown }).metadata
 }
 
 async function arrangeGame(userId: string, lastActivityAt = DateTime.now()) {
@@ -545,6 +550,60 @@ test.group('GET /sessions/:id/turns', (group) => {
     const response = await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player)
 
     response.assertStatus(404)
+  })
+  test('reads the last page first, and says whether earlier turns remain', async ({
+    client,
+    assert,
+  }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(player.id)
+    for (let number = 1; number <= TURNS_PAGE_SIZE + 5; number++) {
+      await completedTurn(session.id, number)
+    }
+
+    const response = await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player)
+    const numbers = dataOf(response).map((turn: { turnNumber: number }) => turn.turnNumber)
+
+    assert.equal(TURNS_PAGE_SIZE, 20)
+    assert.deepEqual(
+      numbers,
+      Array.from({ length: 20 }, (_, index) => index + 6)
+    )
+    assert.deepEqual(metadataOf(response), { hasEarlier: true })
+  })
+
+  test('reads the page before a turn, without a gap or a turn twice', async ({
+    client,
+    assert,
+  }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(player.id)
+    for (let number = 1; number <= TURNS_PAGE_SIZE + 5; number++) {
+      await completedTurn(session.id, number)
+    }
+
+    const response = await client
+      .get(`/api/v1/sessions/${session.id}/turns`)
+      .qs({ before: 6 })
+      .loginAs(player)
+
+    assert.deepEqual(
+      dataOf(response).map((turn: { turnNumber: number }) => turn.turnNumber),
+      [1, 2, 3, 4, 5]
+    )
+    assert.deepEqual(metadataOf(response), { hasEarlier: false })
+  })
+
+  test('refuses a page that starts nowhere', async ({ client }) => {
+    const player = await User.findOrFail(await createUser())
+    const session = await arrangeGame(player.id)
+
+    const response = await client
+      .get(`/api/v1/sessions/${session.id}/turns`)
+      .qs({ before: 'yesterday' })
+      .loginAs(player)
+
+    response.assertStatus(422)
   })
 })
 

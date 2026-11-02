@@ -1,27 +1,40 @@
-import { ArrowDown, Heart, MapPin, Package } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { ArrowDown, ArrowUp, CircleAlert, Heart, MapPin, Package } from 'lucide-react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { D10Icon } from '@/components/d10_icon'
+import { failureMessage } from '@/i18n/errors'
 import { useAnimates } from '@/preferences'
 import { paragraphs } from './presentation'
 import type { Game, ItemChangeEffect, Roll, Turn } from './queries'
 import { DEGREE_EMPHASIS, ROLL_TONE, rollLine, rollText } from './roll_text'
 import { useStickToBottom } from './use_stick_to_bottom'
 
+/** Loading the page of the story before the turns shown. */
+export type EarlierTurns = {
+  /** Earlier turns remain to be loaded. */
+  remain: boolean
+  load: () => void
+  loading: boolean
+  error: unknown
+}
+
 /**
  * The story, oldest first, read like a book rather than a chat: no bubbles,
- * the narration full width in the reading serif.
+ * the narration full width in the reading serif. A long story opens on its
+ * last turns; earlier ones are loaded on demand, above.
  */
 export function Journal({
   game,
   turns,
+  earlier,
   inFlight,
   progress,
   revealedTurnId,
 }: {
   game: Game
   turns: Turn[]
+  earlier?: EarlierTurns
   /** The turn being played, if any, after the story so far. */
   inFlight?: ReactNode
   /** Changes whenever the turn in flight moves on, so the journal follows it. */
@@ -34,9 +47,28 @@ export function Journal({
 }) {
   const { t } = useTranslation('game')
   const fades = useAnimates('narration')
+  // Keyed on the last turn: a page put in front is not news.
   const { ref, hasNew, scrollToBottom } = useStickToBottom<HTMLDivElement>(
-    `${turns.length}:${progress ?? ''}`
+    `${turns.at(-1)?.id ?? ''}:${progress ?? ''}`
   )
+  // How far the reader stood from the end when they asked for earlier turns.
+  const fromBottom = useRef<number | null>(null)
+  const firstId = turns[0]?.id
+
+  // Before paint, so the page put in front does not move what is being read.
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element || fromBottom.current === null) return
+
+    element.scrollTop = element.scrollHeight - fromBottom.current
+    fromBottom.current = null
+  }, [ref, firstId])
+
+  function loadEarlier() {
+    const element = ref.current
+    if (element) fromBottom.current = element.scrollHeight - element.scrollTop
+    earlier?.load()
+  }
 
   return (
     <div className="relative min-h-0 flex-1">
@@ -45,14 +77,19 @@ export function Journal({
           {turns.length === 0 && !inFlight ? (
             <Welcome game={game} />
           ) : (
-            <ol aria-label={t('journal.label')} className="flex flex-col gap-12">
-              {turns.map((turn) => (
-                <li key={turn.id}>
-                  <TurnEntry turn={turn} fadeIn={fades && turn.id === revealedTurnId} />
-                </li>
-              ))}
-              {inFlight && <li>{inFlight}</li>}
-            </ol>
+            <>
+              {earlier?.remain && (
+                <LoadEarlier onLoad={loadEarlier} loading={earlier.loading} error={earlier.error} />
+              )}
+              <ol aria-label={t('journal.label')} className="flex flex-col gap-12">
+                {turns.map((turn) => (
+                  <li key={turn.id}>
+                    <TurnEntry turn={turn} fadeIn={fades && turn.id === revealedTurnId} />
+                  </li>
+                ))}
+                {inFlight && <li>{inFlight}</li>}
+              </ol>
+            </>
           )}
         </div>
       </div>
@@ -66,6 +103,40 @@ export function Journal({
           {t('journal.newMessage')}
           <ArrowDown aria-hidden className="size-4" />
         </button>
+      )}
+    </div>
+  )
+}
+
+/** Above the story when earlier turns remain: loads the page before. */
+export function LoadEarlier({
+  onLoad,
+  loading,
+  error,
+}: {
+  onLoad: () => void
+  loading: boolean
+  error: unknown
+}) {
+  const { t } = useTranslation('game')
+
+  return (
+    <div className="mb-12 flex flex-col items-center gap-2">
+      <button
+        type="button"
+        onClick={onLoad}
+        disabled={loading}
+        aria-busy={loading || undefined}
+        className="flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface-3 px-3 py-1.5 text-label text-text transition-colors hover:border-accent disabled:opacity-70"
+      >
+        <ArrowUp aria-hidden className="size-4" />
+        {loading ? t('journal.loadingEarlier') : t('journal.loadEarlier')}
+      </button>
+      {error != null && !loading && (
+        <p role="alert" className="flex items-center gap-1.5 text-label text-danger">
+          <CircleAlert aria-hidden className="size-4 shrink-0" />
+          {failureMessage(error)}
+        </p>
       )}
     </div>
   )

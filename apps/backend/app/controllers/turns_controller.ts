@@ -3,7 +3,7 @@ import Session from '#models/session'
 import TurnLog from '#models/turn_log'
 import { ContentLabels } from '#services/game/content_labels'
 import { loadWorld } from '#services/game/content/load'
-import { playTurnValidator } from '#validators/turn'
+import { playTurnValidator, turnsPageValidator } from '#validators/turn'
 import TurnTransformer from '#transformers/turn_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 
@@ -12,17 +12,36 @@ import type { HttpContext } from '@adonisjs/core/http'
  * delegates. It computes nothing — no dice, no state, no error shaping. Failures
  * travel up to the exception handler, which owns the mapping.
  */
+/** How many turns the journal reads at a time. */
+export const TURNS_PAGE_SIZE = 20
+
 export default class TurnsController {
-  /** The story so far: completed turns only, oldest first. */
-  async index({ params, auth, serialize }: HttpContext) {
+  /**
+   * The story so far, a page at a time: the last turns, or those before a
+   * turn number — completed turns only, oldest first, and whether earlier
+   * ones remain.
+   */
+  async index({ params, request, auth, serialize }: HttpContext) {
+    const { before } = await turnsPageValidator.validate(request.qs())
     const session = await findOwnSession(params.id, auth.getUserOrFail().id)
 
-    const history = await TurnLog.query()
+    /** One more than a page: whether it comes back says if earlier turns remain. */
+    const newestFirst = await TurnLog.query()
       .where('sessionId', session.id)
       .withScopes((scopes) => scopes.completed())
-      .orderBy('turnNumber', 'asc')
+      .if(before !== undefined, (query) => query.where('turnNumber', '<', before!))
+      .orderBy('turnNumber', 'desc')
+      .limit(TURNS_PAGE_SIZE + 1)
+    const page = newestFirst.slice(0, TURNS_PAGE_SIZE).reverse()
 
-    return serialize(TurnTransformer.transform(history, await labelsOf(session)))
+    /**
+     * Beside `data` rather than through `paginate()`: the serializer only takes
+     * Lucid's page counts, which a journal read by cursor has no use for.
+     */
+    return {
+      ...(await serialize(TurnTransformer.transform(page, await labelsOf(session)))),
+      metadata: { hasEarlier: newestFirst.length > TURNS_PAGE_SIZE },
+    }
   }
 
   /**

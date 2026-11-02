@@ -6,6 +6,7 @@ import { animates, preferences, systemReducesMotion } from '@/preferences'
 import { gameQuery, gamesQuery, turnsQuery, type Game, type Turn } from './queries'
 import { channelOf, readTurn, submitTurn } from './turn_api'
 import { withCompletedTurn } from './game_cache'
+import { withTurn } from './journal_pages'
 import { waitsForDice, type Completion } from './held_turn'
 import {
   holdsNarration,
@@ -84,8 +85,9 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
    */
   const record = useCallback(
     ({ turn, character, location, period }: Completion) => {
-      queryClient.setQueryData(turnsQuery(gameId).queryKey, (turns) =>
-        !turns || turns.some((known) => known.id === turn.id) ? turns : [...turns, turn]
+      queryClient.setQueryData(
+        turnsQuery(gameId).queryKey,
+        (journal) => journal && withTurn(journal, turn)
       )
 
       if (character) {

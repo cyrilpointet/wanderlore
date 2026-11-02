@@ -7,6 +7,14 @@ import vine from '@vinejs/vine'
  * unbounded input is an unbounded bill. Its content is never inspected or
  * sanitised — flagging a manipulation attempt is the arbitration step's job.
  */
+/**
+ * A page of the journal: the turns before `before`, a turn number, or the
+ * last ones without it.
+ */
+export const turnsPageValidator = vine.create({
+  before: vine.number().withoutDecimals().min(1).optional(),
+})
+
 export const playTurnValidator = vine.create({
   playerInput: vine.string().trim().minLength(1).maxLength(1000),
   headers: vine.object({

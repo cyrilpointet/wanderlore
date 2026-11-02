@@ -20,6 +20,7 @@ import { TurnInFlight } from '@/games/turn_in_flight'
 import { isBusy, progressKey } from '@/games/turn_machine'
 import { waitingText } from '@/games/waiting'
 import { useDraft } from '@/games/use_draft'
+import { useEarlierTurns } from '@/games/use_earlier_turns'
 import { useNarrationVoice } from '@/games/use_narration_voice'
 import { useTurn } from '@/games/use_turn'
 
@@ -43,7 +44,8 @@ export const Route = createFileRoute('/_authenticated/games/$gameId')({
 function GameScreen() {
   const { gameId } = Route.useParams()
   const { data: game } = useSuspenseQuery(gameQuery(gameId))
-  const { data: turns } = useSuspenseQuery(turnsQuery(gameId))
+  const { data: journal } = useSuspenseQuery(turnsQuery(gameId))
+  const earlier = useEarlierTurns(gameId)
   const [sheetOpen, setSheetOpen] = useState(false)
   const closeSheet = useCallback(() => setSheetOpen(false), [])
   const [draft, setDraft] = useDraft(gameId)
@@ -72,7 +74,13 @@ function GameScreen() {
           <SceneBar game={game} />
           <Journal
             game={game}
-            turns={turns}
+            turns={journal.turns}
+            earlier={{
+              remain: journal.hasEarlier,
+              load: earlier.loadEarlier,
+              loading: earlier.loading,
+              error: earlier.error,
+            }}
             progress={`${progressKey(shown ?? state)}:${reveal.status}`}
             revealedTurnId={turn.released}
             inFlight={

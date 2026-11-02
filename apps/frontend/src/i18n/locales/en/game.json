@@ -19,6 +19,8 @@
       "throw": "Roll the dice"
     },
     "newMessage": "New message",
+    "loadEarlier": "Load earlier",
+    "loadingEarlier": "Loading earlier turns…",
     "welcome": "Your story begins. What do you do?",
     "sending": "Sending…",
     "considering": "The game master considers your action"
