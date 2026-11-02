@@ -5,7 +5,7 @@ import type { ContentLabels, PlacedLocation } from '#services/game/content_label
 import type { HeldItem } from '#services/game/inventory'
 import type { Period } from '#services/game/game_time'
 import CharacterTransformer from '#transformers/character_transformer'
-import TurnTransformer, { presentRoll } from '#transformers/turn_transformer'
+import TurnTransformer, { type RollCombat, presentRoll } from '#transformers/turn_transformer'
 
 /**
  * What the player is told about a turn while it plays: its milestones, and
@@ -18,12 +18,16 @@ import TurnTransformer, { presentRoll } from '#transformers/turn_transformer'
 export type TurnEvent =
   | { type: 'step_started'; step: 'arbitration' | 'narration' }
   /**
-   * The roll in full: the player sees its detail, as at the table. Only the
-   * narrator is kept from the numbers.
+   * A roll of the character in full: the player sees its detail, as at the
+   * table — one event per roll, the attack then the defence in a round of
+   * combat. The people's rolls are never sent; only the narrator is kept from
+   * the numbers of the character's.
    */
   | {
       type: 'roll_resolved'
       resolution: RollResolution
+      /** What it did in its round; null outside combat. */
+      combat: RollCombat | null
       /** The labels of the world the turn is played in, for the wire. */
       labels: ContentLabels
     }
@@ -88,7 +92,7 @@ export function toMessage(ref: TurnRef, event: TurnEvent) {
       return { ...header, step: event.step }
 
     case 'roll_resolved':
-      return { ...header, ...presentRoll(event.resolution, event.labels) }
+      return { ...header, ...presentRoll(event.resolution, event.labels, event.combat) }
 
     case 'narration_chunk':
       return { ...header, text: event.text }

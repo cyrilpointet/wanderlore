@@ -19,6 +19,7 @@ const META: ValidationMeta = {
   locations: ['paris', 'louvre', 'france'],
   locationArchetypes: ['tavern', 'town'],
   npcDefinitions: ['treville', 'royal_guard', 'commoner'],
+  npcArchetypes: ['royal_guard', 'commoner'],
   itemsInScene: ['letter_to_treville', 'rapier', 'rapier_1'],
   /** The character's letter, sword and shot, the guard's dagger, a rope in the room. */
   sceneItems: [
@@ -997,5 +998,124 @@ test.group('Turn validator | exits and the ways they open', () => {
 
     assert.deepEqual(output.passages_discovered, [])
     assert.deepEqual(output.passages_unlocked, [])
+  })
+})
+
+test.group('Turn validator | combat', () => {
+  const ATTACK = {
+    resolution: { mode: 'roll_required', action_type: 'melee_combat', difficulty: 'average' },
+  }
+  const engagement = (overrides: Record<string, unknown> = {}) => ({
+    opponent: 'royal_guard_1',
+    character_attacks: true,
+    parry_possible: true,
+    dodge_possible: true,
+    defense_modifiers: [],
+    ...overrides,
+  })
+
+  test('no opponent is no round of combat, and leaving it out is none either', async ({
+    assert,
+  }) => {
+    const none = await validateArbitration(
+      arbitration({ combat: engagement({ opponent: null }) }),
+      META
+    )
+    const leftOut = await validateArbitration(arbitration(), META)
+
+    assert.isNull(none.combat)
+    assert.isNull(leftOut.combat)
+  })
+
+  test('the character attacks someone present, with a roll on an attacking category', async ({
+    assert,
+  }) => {
+    const output = await validateArbitration(arbitration({ ...ATTACK, combat: engagement() }), META)
+
+    assert.equal(output.combat?.opponent, 'royal_guard_1')
+    assert.deepEqual(output.combat?.defense_modifiers, [])
+  })
+
+  test('an attack is a roll on melee_combat or ranged_combat', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(arbitration({ combat: engagement() }), META)
+    )
+
+    assert.include(fields(error), 'resolution.action_type')
+  })
+
+  test('an archetype is attacked first, never attacking first', async ({ assert }) => {
+    const output = await validateArbitration(
+      arbitration({ ...ATTACK, combat: engagement({ opponent: 'commoner' }) }),
+      META
+    )
+    assert.equal(output.combat?.opponent, 'commoner')
+
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({ combat: engagement({ opponent: 'commoner', character_attacks: false }) }),
+        META
+      )
+    )
+    assert.include(fields(error), 'combat.opponent')
+  })
+
+  test('nobody fights someone who is not there', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({ ...ATTACK, combat: engagement({ opponent: 'buckingham' }) }),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'combat.opponent')
+  })
+
+  test('no first aid in the thick of a fight', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({
+          resolution: { mode: 'roll_required', action_type: 'first_aid', difficulty: 'average' },
+          combat: engagement({ character_attacks: false }),
+        }),
+        { ...META, actionTypes: [...META.actionTypes, 'first_aid'] }
+      )
+    )
+
+    assert.include(fields(error), 'resolution.action_type')
+  })
+
+  test('an aside fights no one, whatever it was sent with', async ({ assert }) => {
+    const output = await validateArbitration(
+      settled({
+        intent: { type: 'out_of_character', target: null, summary: 'A question' },
+        combat: engagement(),
+      }),
+      META
+    )
+
+    assert.isNull(output.combat)
+  })
+
+  test('an item never passes for a circumstance of the defence', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({
+          ...ATTACK,
+          combat: engagement({
+            defense_modifiers: [{ source: 'rapier', effect: 'major_bonus' }],
+          }),
+        }),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'combat.defense_modifiers')
+  })
+
+  test('extraction never heals', async ({ assert }) => {
+    const error = await reject(() => validateExtraction(extraction({ hit_points_delta: 3 }), META))
+
+    assert.include(fields(error), 'hit_points_delta')
   })
 })

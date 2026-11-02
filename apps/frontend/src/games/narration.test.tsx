@@ -23,7 +23,7 @@ describe('Narration | fading in', () => {
           status: 'in_progress',
           submission: { playerInput: 'I open the door.', idempotencyKey: 'key', turnId: 'turn' },
           step: 'narration',
-          roll: null,
+          rolls: [],
           narration: 'The door creaks.',
         }}
         reveal={initialRevealState}

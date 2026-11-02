@@ -76,15 +76,24 @@ test.group('Coherence | references', () => {
       issuesAfter((world) => {
         world.actionTypes = []
       }),
-      [['no_action_type', 'actionTypes', undefined]]
+      [
+        ['no_action_type', 'actionTypes', undefined],
+        ['missing_system_reference', 'actionTypes', 'melee_combat'],
+        ['missing_system_reference', 'actionTypes', 'ranged_combat'],
+        ['missing_system_reference', 'actionTypes', 'first_aid'],
+      ]
     )
   })
 
   test('a category of action may resolve with a characteristic of BRP instead', ({ assert }) => {
+    /** Not an attacking one: the parry and the riposte read a skill. */
+    const perception = (world: { actionTypes: { actionType: string }[] }) =>
+      world.actionTypes.findIndex(({ actionType }) => actionType === 'perception')
+
     assert.deepEqual(
       issuesAfter((world) => {
-        world.actionTypes[0] = {
-          ...world.actionTypes[0],
+        world.actionTypes[perception(world)] = {
+          ...world.actionTypes[perception(world)],
           associatedSkill: null,
           associatedCharacteristic: 'DEX',
         }
@@ -93,26 +102,62 @@ test.group('Coherence | references', () => {
     )
     assert.deepEqual(
       issuesAfter((world) => {
-        world.actionTypes[0] = {
-          ...world.actionTypes[0],
+        world.actionTypes[perception(world)] = {
+          ...world.actionTypes[perception(world)],
           associatedSkill: null,
           associatedCharacteristic: 'LUCK' as never,
         }
       }),
-      [['unknown_characteristic', 'actionTypes.melee_combat.associatedCharacteristic', 'LUCK']]
+      [['unknown_characteristic', 'actionTypes.perception.associatedCharacteristic', 'LUCK']]
     )
   })
 
-  test('a weapon is wielded with a skill of the world, and deals dice', ({ assert }) => {
+  test('a weapon deals dice', ({ assert }) => {
     assert.deepEqual(
       issuesAfter((world) => {
         const rapier = world.items.find((item) => item.reference === 'rapier')!
-        rapier.weapon = { ...rapier.weapon!, skill: 'fencing', damage: 'a lot' }
+        rapier.weapon = { ...rapier.weapon!, damage: 'a lot' }
+      }),
+      [['invalid_dice', 'items.rapier.weapon.damage', 'a lot']]
+    )
+  })
+
+  test('the ordinary weapon of a person is a weapon, their damage modifier dice', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((world) => {
+        const athos = world.npcs.find((npc) => npc.reference === 'athos')!
+        athos.combat = { ...athos.combat, weapon: 'buff_coat', damageModifier: 'plenty' }
       }),
       [
-        ['unknown_skill', 'items.rapier.weapon.skill', 'fencing'],
-        ['invalid_dice', 'items.rapier.weapon.damage', 'a lot'],
+        ['not_a_weapon', 'npcs.athos.combat.weapon', 'buff_coat'],
+        ['invalid_dice', 'npcs.athos.combat.damageModifier', 'plenty'],
       ]
+    )
+  })
+
+  test('a world declares what the system reads for itself', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((world) => {
+        world.actionTypes = world.actionTypes.filter(({ actionType }) => actionType !== 'first_aid')
+        world.skills = world.skills.filter(({ reference }) => reference !== 'dodge')
+      }),
+      [
+        ['missing_system_reference', 'actionTypes', 'first_aid'],
+        ['missing_system_reference', 'skills', 'dodge'],
+      ]
+    )
+  })
+
+  test('both attacking categories are resolved by a skill', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((world) => {
+        world.actionTypes = world.actionTypes.map((rule) =>
+          rule.actionType === 'melee_combat'
+            ? { ...rule, associatedSkill: null, associatedCharacteristic: 'STR' }
+            : rule
+        )
+      }),
+      [['combat_needs_skill', 'actionTypes.melee_combat.associatedSkill', 'melee_combat']]
     )
   })
 

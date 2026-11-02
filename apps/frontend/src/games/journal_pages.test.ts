@@ -9,7 +9,7 @@ function turn(turnNumber: number): Turn {
     turnNumber,
     status: 'completed',
     playerInput: `Action ${turnNumber}`,
-    roll: null,
+    rolls: [],
     narration: `Narration ${turnNumber}`,
     effects: null,
     failure: null,

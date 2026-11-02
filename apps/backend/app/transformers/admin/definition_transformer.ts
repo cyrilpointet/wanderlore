@@ -22,6 +22,8 @@ const OWN: Record<string, string[]> = {
     'stackable',
     'equippable',
     'modifiers',
+    'weapon',
+    'armor',
     'initialHolder',
   ],
   lore_fragments: ['kind', 'content', 'tags', 'secret'],

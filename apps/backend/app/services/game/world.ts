@@ -137,6 +137,8 @@ export type ItemDefinition = DescribedEntry & {
   equippable: boolean
   modifiers: ItemModifier[]
   weapon: WeaponProfile | null
+  /** Stopped of every blow while worn; 0 for anything that is no armour. */
+  armor: number
 } & (
     | { kind: 'unique'; initialHolder: ItemHolderReference | null }
     | { kind: 'archetype'; generic: boolean; stackable: boolean }

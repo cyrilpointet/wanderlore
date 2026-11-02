@@ -133,9 +133,9 @@ test.group('New game | starting', (group) => {
       ['deliver_the_letter']
     )
     assert.equal(game.character.name, PREGENERATED.name)
-    /** Derived from the sheet: CON 14 and SIZ 12 make 13. */
-    assert.equal(game.character.hitPoints, 13)
-    assert.equal(game.character.hitPointsMax, 13)
+    /** Derived from the sheet, the book's total hit points: CON 14 and SIZ 12 make 26. */
+    assert.equal(game.character.hitPoints, 26)
+    assert.equal(game.character.hitPointsMax, 26)
     assert.isNull(game.pendingTurn)
 
     const items = await InventoryItem.query()
@@ -190,7 +190,7 @@ test.group('New game | starting', (group) => {
       kind: 'unique',
       generic: false,
       defaultDisposition: 'neutral',
-      combat: { skills: {}, hitPointsMax: 10, weapon: null },
+      combat: { skills: {}, hitPointsMax: 10, weapon: null, damageModifier: null, armor: 0 },
       initialLocation: 'meung_sur_loire',
     })
 

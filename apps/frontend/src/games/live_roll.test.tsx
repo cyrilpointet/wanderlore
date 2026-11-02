@@ -28,13 +28,34 @@ const ROLL: Roll = {
   roll: 42,
   result: 'success',
   degree: 'success',
+  combat: null,
+}
+
+/** A round of combat: a sword thrust that hits for 7, then a parry that fails. */
+const ATTACK: Roll = {
+  ...ROLL,
+  skill: { reference: 'swordsmanship', label: 'Swordsmanship' },
+  roll: 23,
+  combat: {
+    role: 'attack',
+    outcome: 'hit',
+    damage: { weapon: 5, modifier: 2, armor: 0, total: 7, effect: null },
+  },
+}
+const PARRY: Roll = {
+  ...ROLL,
+  skill: { reference: 'swordsmanship', label: 'Swordsmanship' },
+  roll: 88,
+  result: 'failure',
+  degree: 'failure',
+  combat: { role: 'defense', defense: 'parry', outcome: 'struck' },
 }
 
 const TOLD: Extract<TurnState, { status: 'in_progress' }> = {
   status: 'in_progress',
   submission: { playerInput: 'I hand him the letter.', idempotencyKey: 'key', turnId: TURN_ID },
   step: 'narration',
-  roll: ROLL,
+  rolls: [ROLL],
   narration: NARRATION,
 }
 
@@ -43,7 +64,7 @@ const COMPLETED: Turn = {
   turnNumber: 3,
   status: 'completed',
   playerInput: 'I hand him the letter.',
-  roll: ROLL,
+  rolls: [ROLL],
   narration: NARRATION,
   effects: { hitPointsDelta: 0, movement: null, items: [] },
   failure: null,
@@ -53,13 +74,14 @@ function reveal(...actions: RevealAction[]): RevealState {
   return actions.reduce(revealReducer, initialRevealState)
 }
 
-const received = (turnId = TURN_ID): RevealAction => ({
+const received = (turnId = TURN_ID, rolls: Roll[] = [ROLL]): RevealAction => ({
   type: 'roll_received',
   turnId,
-  roll: ROLL,
+  rolls,
   autoRoll: false,
   animated: true,
 })
+const thrown: RevealAction[] = [{ type: 'throw' }, { type: 'dice_stopped' }, { type: 'folded' }]
 const STAGED = reveal(received())
 const REVEALED = reveal(received(), { type: 'throw' }, { type: 'dice_stopped' }, { type: 'folded' })
 
@@ -116,7 +138,7 @@ describe('live roll | the turn in flight', () => {
       {
         status: 'failed',
         submission: TOLD.submission,
-        roll: ROLL,
+        rolls: [ROLL],
         failure: { code: 'llm_timeout', message: '' },
       },
       failed
@@ -149,10 +171,54 @@ describe('live roll | a turn over before its dice', () => {
     expect(held).toMatchObject({
       status: 'in_progress',
       submission: { turnId: TURN_ID, playerInput: 'I hand him the letter.' },
-      roll: ROLL,
+      rolls: [ROLL],
       narration: NARRATION,
     })
     expect(render(held, STAGED)).toContain('Roll the dice')
     expect(render(held, STAGED)).not.toContain(NARRATION)
+  })
+})
+
+describe('live roll | a round of combat', () => {
+  const FOUGHT: Extract<TurnState, { status: 'in_progress' }> = {
+    ...TOLD,
+    rolls: [ATTACK, PARRY],
+  }
+  const BOTH = received(TURN_ID, [ATTACK, PARRY])
+
+  test('the attack on its card first, the defence out of sight', () => {
+    const markup = render(FOUGHT, reveal(received(TURN_ID, [ATTACK]), BOTH))
+
+    expect(markup).toContain('Roll the dice')
+    expect(markup).not.toContain('rolled 88')
+    expect(markup).not.toContain('Parry')
+    expect(markup).not.toContain(NARRATION)
+  })
+
+  test('the attack thrown, it folds into its chip with its damage, and the parry is set out', () => {
+    const markup = render(FOUGHT, reveal(BOTH, ...thrown))
+
+    expect(markup).toContain('Swordsmanship 60% · rolled 23 · Success · Hit')
+    expect(markup).toContain('Damage 5 · Damage modifier +2 · → 7 dealt')
+    expect(markup).toContain('Parry')
+    expect(markup).toContain('Roll the dice')
+    expect(markup).not.toContain('rolled 88')
+    expect(markup).not.toContain(NARRATION)
+  })
+
+  test('both thrown, both chips in order, then the narration', () => {
+    const markup = render(FOUGHT, reveal(BOTH, ...thrown, ...thrown))
+
+    expect(markup).not.toContain('Roll the dice')
+    expect(markup.indexOf('rolled 23')).toBeLessThan(markup.indexOf('rolled 88'))
+    expect(markup).toContain('Parry · Swordsmanship 60% · rolled 88 · Failure · Blow taken')
+    expect(markup).toContain(NARRATION)
+  })
+
+  test('a turn over before its second roll waits for it', () => {
+    const completion: Completion = { turn: { ...COMPLETED, rolls: [ATTACK, PARRY] } }
+
+    expect(waitsForDice(reveal(BOTH, ...thrown), completion)).toBe(true)
+    expect(waitsForDice(reveal(BOTH, ...thrown, ...thrown), completion)).toBe(false)
   })
 })

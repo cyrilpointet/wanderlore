@@ -8,12 +8,14 @@ import Session from '#models/session'
 import type Character from '#models/character'
 import type WorldState from '#models/world_state'
 import LocationInstance from '#models/location_instance'
+import NpcInstance from '#models/npc_instance'
 import type { LlmGateway } from '#services/llm/gateway'
 import type { RulesEngine } from '#services/rules/engine'
 import type { Clock } from '#services/clock'
 import type { JobQueue } from '#services/queue/types'
 import type { TurnEvents, TurnRef } from '#services/game/turn_events'
 import { toNarrationOutcome } from '#services/rules/engine'
+import type { RollResolution } from '#services/rules/types'
 
 import {
   ConcurrentTurnError,
@@ -25,6 +27,7 @@ import { applyDelta } from './apply_delta.js'
 import {
   type PresentNpc,
   enterableNpcs,
+  nextHandleOf,
   guardedPlaces,
   metNpcs,
   npcsPlacedIn,
@@ -54,6 +57,17 @@ import {
   withExitsOpened,
 } from './travel.js'
 import { TurnBudget } from './turn_budget.js'
+import {
+  DOWN_SECONDS,
+  ROUND_SECONDS,
+  type Opponent,
+  type Round,
+  narratedRound,
+  playRound,
+} from './combat.js'
+import { applyFirstAid, applyRound, heal, letTheDyingDie, stopBleeding } from './apply_combat.js'
+import { FIRST_AID } from './system_references.js'
+import { characterRolls } from '#transformers/turn_transformer'
 import { callStructured } from './structured_call.js'
 import { loadWorld } from './content/load.js'
 import { loreFor, loreReferences, loreSceneOf } from './lore.js'
@@ -78,7 +92,9 @@ import {
 } from './prompts/extraction.js'
 import type {
   ArbitrationOutput,
+  CombatEngagement,
   GameLanguage,
+  NarratedFirstAid,
   OutcomeToNarrate,
   RecentTurn,
   TurnContext,
@@ -87,6 +103,8 @@ import type {
 import { type ValidationMeta, validateArbitration, validateExtraction } from './turn_validator.js'
 import {
   type StoredFailure,
+  type TracedFirstAid,
+  type TracedRound,
   type TracedTime,
   type TurnTrace,
   emptyTrace,
@@ -413,6 +431,9 @@ export class TurnService {
       lockedExits: scene.exits.filter(({ locked }) => locked).map(({ to }) => to),
       destinationsAfter: movement.after,
       npcDefinitions,
+      npcArchetypes: world.npcs
+        .filter(({ kind }) => kind === 'archetype')
+        .map(({ reference }) => reference),
       itemsInScene: itemReferencesOf(scene.items),
       sceneItems: sceneItemsOf(scene.items),
       creatableItems: scene.creatableItems,
@@ -438,11 +459,17 @@ export class TurnService {
       meta,
       step
     )
-    const outcome = await this.#settle(turn, scene, decision, trace)
+    const { outcome, resolution } = this.#settle(scene, decision, trace)
     const aside = decision.intent.type === OUT_OF_CHARACTER
-    const route = aside ? null : routeTo(scene, decision.intent.destination)
-    const time = timeOf(scene.worldState.gameTime, decision, aside, route)
+    const round = await this.#fight(scene, decision, resolution, trace)
+    trace.firstAid = this.#tend(scene, decision, outcome)
+    this.#announceRolls(turn, scene, resolution, trace.combat)
+    /** A round of combat is fought where it stands: nobody walks away mid-blow. */
+    const route = aside || round !== null ? null : routeTo(scene, decision.intent.destination)
+    const time = timeOf(scene.worldState.gameTime, decision, aside, route, round)
     trace.time = time
+    /** The opponent the round brought in counts as present from here on: narrated, then read. */
+    const present = withOpponent(context, trace.combat, world)
     /** Whoever was left where the character goes, or waits there from the start, is there to meet them. */
     const waiting =
       route === null
@@ -467,9 +494,12 @@ export class TurnService {
     const narration = await this.#narrate(
       turn,
       buildNarrationMessage({
-        ...context,
+        ...present,
         /** A verdict and a qualitative degree. Never the dice or the chance. */
         outcome,
+        /** The round in labels: landed or not, how it was met, how badly it wounded. */
+        combat: round === null ? null : narratedRound(round),
+        first_aid: narratedFirstAid(trace.firstAid),
         game_time_after: time.after,
         route,
         npcs_at_destination: waiting,
@@ -489,9 +519,13 @@ export class TurnService {
       return NO_CHANGE
     }
 
+    if (trace.combat?.provisional) {
+      meta.npcHandles = [...meta.npcHandles, trace.combat.opponent]
+    }
+
     return this.#extract(
       buildExtractionMessage({
-        ...context,
+        ...present,
         narration,
         creatable_items: scene.creatableItems,
         enterable_npcs: npcDefinitions,
@@ -604,22 +638,25 @@ export class TurnService {
    * chosen action type — a skill never trained at its base chance —
    * with the circumstances arbitration labelled and the modifiers of the
    * items the character holds; without a roll, the outcome was certain from
-   * the start.
+   * the start. Announced once the round, if any, has been fought: the
+   * player sees what their attack dealt with the roll itself.
    */
-  async #settle(
-    turn: TurnLog,
+  #settle(
     scene: LoadedScene,
     decision: ArbitrationOutput,
     trace: TurnTrace
-  ): Promise<OutcomeToNarrate> {
+  ): { outcome: OutcomeToNarrate; resolution: RollResolution | null } {
     const { mode, action_type: actionType, difficulty } = decision.resolution
 
     if (mode !== 'roll_required') {
       return {
-        mode,
-        result: mode === 'automatic_success' ? 'success' : 'failure',
-        degree: null,
-        reason: mode === 'narrative_automatic_failure' ? decision.validity.justification : null,
+        outcome: {
+          mode,
+          result: mode === 'automatic_success' ? 'success' : 'failure',
+          degree: null,
+          reason: mode === 'narrative_automatic_failure' ? decision.validity.justification : null,
+        },
+        resolution: null,
       }
     }
 
@@ -633,13 +670,146 @@ export class TurnService {
     /** Every modifier with its origin, contextual and item side by side, for the log. */
     trace.roll = { actionType: actionType!, ...resolution }
 
-    this.#events.emit(refOf(turn), {
-      type: 'roll_resolved',
-      resolution,
-      labels: new ContentLabels(scene.world, turn.language),
-    })
+    return { outcome: { mode, ...toNarrationOutcome(resolution), reason: null }, resolution }
+  }
 
-    return { mode, ...toNarrationOutcome(resolution), reason: null }
+  /**
+   * A round of combat, when arbitration declared one: the character's blow
+   * — the roll just made, on an attacking category — then the riposte, both
+   * worked out by the backend. An archetype attacked before anyone wrote them
+   * in is fought under the handle the turn will bring them in with.
+   */
+  async #fight(
+    scene: LoadedScene,
+    decision: ArbitrationOutput,
+    resolution: RollResolution | null,
+    trace: TurnTrace
+  ): Promise<Round | null> {
+    const engagement = decision.combat
+
+    if (engagement === null) {
+      return null
+    }
+
+    const { opponent, provisional } = await this.#opponentOf(scene, engagement)
+    const round = playRound(this.#rules, {
+      world: scene.world,
+      character: scene.character,
+      characterItems: scene.items.character,
+      opponent,
+      engagement,
+      attack:
+        engagement.character_attacks && resolution !== null
+          ? { actionType: decision.resolution.action_type!, resolution }
+          : null,
+    })
+    trace.combat = { ...round, provisional }
+
+    return round
+  }
+
+  async #opponentOf(
+    scene: LoadedScene,
+    engagement: CombatEngagement
+  ): Promise<{ opponent: Opponent; provisional: { definition: string } | null }> {
+    const { world } = scene
+    const definitionOf = (reference: string) => {
+      const definition = world.npcs.find((npc) => npc.reference === reference)
+
+      if (definition === undefined) {
+        throw new Error(`"${reference}" is not a person of the ${world.reference} world.`)
+      }
+
+      return definition
+    }
+
+    if (scene.npcs.some(({ handle }) => handle === engagement.opponent)) {
+      const instance = await NpcInstance.query()
+        .where('sessionId', scene.session.id)
+        .where('handle', engagement.opponent)
+        .firstOrFail()
+      const definition = definitionOf(instance.definitionReference)
+
+      return {
+        opponent: {
+          handle: instance.handle,
+          definition,
+          hitPoints: instance.hitPoints ?? definition.combat.hitPointsMax,
+          bleeding: instance.bleeding,
+          dying: instance.status === 'dying',
+          items: scene.items.npcs.find(({ handle }) => handle === instance.handle)?.items ?? [],
+        },
+        provisional: null,
+      }
+    }
+
+    const definition = definitionOf(engagement.opponent)
+
+    return {
+      opponent: {
+        handle: await nextHandleOf(scene.session.id, definition.reference),
+        definition,
+        hitPoints: definition.combat.hitPointsMax,
+        bleeding: false,
+        dying: false,
+        items: [],
+      },
+      provisional: { definition: definition.reference },
+    }
+  }
+
+  /**
+   * First aid, when the action is one: on the character, or on the person it
+   * is aimed at. Its effect is the backend's, by the degree — or by the
+   * outcome when no roll was needed; a wound already tended gets nothing
+   * more.
+   */
+  #tend(
+    scene: LoadedScene,
+    decision: ArbitrationOutput,
+    outcome: OutcomeToNarrate
+  ): TracedFirstAid | null {
+    if (
+      decision.resolution.action_type !== FIRST_AID ||
+      decision.intent.type === OUT_OF_CHARACTER
+    ) {
+      return null
+    }
+
+    const target = decision.intent.target
+    const available =
+      target === null
+        ? scene.character.firstAidAvailable
+        : scene.npcs.find(({ handle }) => handle === target) !== undefined &&
+          scene.tendable.has(target)
+    const degree = outcome.degree ?? (outcome.result === 'success' ? 'success' : 'failure')
+    const healed = available ? this.#rules.firstAid(degree) : 0
+
+    return {
+      target,
+      degree,
+      available,
+      healed,
+      saved: available && (degree === 'success' || degree === 'special' || degree === 'critical'),
+    }
+  }
+
+  /**
+   * The character's rolls, one event each, in the order they were made: their
+   * action or attack — with what it dealt — then their defence. The people's
+   * rolls are never sent.
+   */
+  #announceRolls(
+    turn: TurnLog,
+    scene: LoadedScene,
+    action: RollResolution | null,
+    round: TracedRound | null
+  ): void {
+    const labels = new ContentLabels(scene.world, turn.language)
+
+    for (const { resolution, combat } of characterRolls(action, round)) {
+      this.#events.emit(refOf(turn), { type: 'roll_resolved', resolution, combat, labels })
+    }
   }
 
   /** The place the game stands in once the turn is applied, for the badge the front shows. */
@@ -687,6 +857,11 @@ export class TurnService {
     }
 
     const memory = await loadMemory(sessionId)
+    /** Who in the scene has a wound first aid can still see to. */
+    const tendable = await NpcInstance.query()
+      .where('sessionId', sessionId)
+      .whereIn('status', ['present', 'dying'])
+      .where('firstAidAvailable', true)
 
     /**
      * Every turn after the last one a summary covers, so none is ever missing
@@ -715,6 +890,7 @@ export class TurnService {
       npcs: await presentNpcs(sessionId),
       npcDefinitions: await presentNpcDefinitions(sessionId),
       metNpcs: await metNpcs(sessionId),
+      tendable: new Set(tendable.map(({ handle }) => handle)),
       items,
       creatableItems: await creatableItems(world, sessionId),
       here,
@@ -765,6 +941,30 @@ export class TurnService {
           scene.worldState.gameTime = trace.time.after
         }
 
+        const hitPointsBefore = scene.character.hitPoints
+        const aside = trace.arbitration?.intent.type === OUT_OF_CHARACTER
+        const combat = {
+          world: scene.world,
+          sessionId: scene.session.id,
+          character: scene.character,
+          placeId: scene.worldState.currentLocationId,
+        }
+
+        /**
+         * Those who fell dying in an earlier turn die now, unless tended in
+         * this one; then the round, then first aid — before the delta, whose
+         * extraction already saw the opponent the round brought in.
+         */
+        if (!aside) {
+          await letTheDyingDie(combat, trace.firstAid?.saved ? trace.firstAid.target : null, trx)
+        }
+        if (trace.combat !== null) {
+          await applyRound(combat, trace.combat, trx)
+        }
+        if (trace.firstAid !== null) {
+          await applyFirstAid(combat, trace.firstAid, trx)
+        }
+
         const applied = await applyDelta(
           {
             world: scene.world,
@@ -774,9 +974,23 @@ export class TurnService {
             here: scene.here,
             travel: scene.travel,
           },
-          effects,
+          /** In a round, the blows are the backend's: what extraction reads of them counts for nothing. */
+          trace.combat === null ? effects : { ...effects, hit_points_delta: 0 },
           trx
         )
+
+        if (!aside) {
+          if (trace.combat === null) {
+            await stopBleeding(combat, trx)
+          }
+          await heal(
+            this.#rules,
+            scene.character,
+            { after: scene.worldState.gameTime },
+            applied.hit_points_delta < 0,
+            trx
+          )
+        }
 
         scene.session.lastActivityAt = DateTime.now()
         await scene.session.useTransaction(trx).save()
@@ -785,8 +999,14 @@ export class TurnService {
           ...traceColumns(trace),
           status: 'completed',
           turnNumber,
-          /** As applied, which is what the player is shown — not as proposed. */
-          appliedEffects: applied,
+          /**
+           * As applied, which is what the player is shown — not as proposed:
+           * the hit points the turn moved in all, blows, care and time included.
+           */
+          appliedEffects: {
+            ...applied,
+            hit_points_delta: scene.character.hitPoints - hitPointsBefore,
+          },
         })
 
         await turn.useTransaction(trx).save()
@@ -816,6 +1036,8 @@ type LoadedScene = {
   npcDefinitions: Record<string, string>
   /** The definitions of everyone the game has met: who may come back from anywhere. */
   metNpcs: Set<string>
+  /** Handles of the people of the scene with a wound not tended yet. */
+  tendable: Set<string>
   items: ItemsInScene
   creatableItems: string[]
   /** The named place the scene stands in; null for an improvised one. */
@@ -895,12 +1117,79 @@ function timeOf(
   before: number,
   decision: ArbitrationOutput,
   aside: boolean,
-  route: Route | null
+  route: Route | null,
+  round: Round | null
 ): TracedTime {
+  if (round !== null) {
+    /** A round lasts its twelve seconds; a character brought down is out for an hour. */
+    const seconds = ROUND_SECONDS + (round.character.down ? DOWN_SECONDS : 0)
+
+    return { before, after: before + seconds, duration: decision.duration }
+  }
+
   const walk = route?.seconds ?? 0
   const seconds = aside ? 0 : walk + secondsOf(decision.duration, before + walk)
 
   return { before, after: before + seconds, duration: decision.duration }
+}
+
+/**
+ * The context with the archetype a round brought in, present under the
+ * handle the turn will give them — the narration names them, extraction
+ * may move them, before they exist.
+ */
+function withOpponent(
+  context: TurnContext,
+  round: TracedRound | null,
+  world: WorldDefinition
+): TurnContext {
+  if (round === null || round.provisional === null) {
+    return context
+  }
+
+  const definition = world.npcs.find(({ reference }) => reference === round.provisional!.definition)
+  const opponent: PresentNpc = {
+    handle: round.opponent,
+    name: null,
+    descriptor: null,
+    disposition: definition?.defaultDisposition ?? 'neutral',
+    condition:
+      round.opponentAfter.state === 'fighting'
+        ? 'standing'
+        : round.opponentAfter.state === 'down'
+          ? 'down'
+          : 'dying',
+  }
+
+  return {
+    ...context,
+    scene: {
+      ...context.scene,
+      npcs_present: [...context.scene.npcs_present, opponent],
+      npc_definitions: {
+        ...context.scene.npc_definitions,
+        [round.opponent]: round.provisional.definition,
+      },
+    },
+  }
+}
+
+function narratedFirstAid(aid: TracedFirstAid | null): NarratedFirstAid | null {
+  if (aid === null) {
+    return null
+  }
+
+  return {
+    target: aid.target,
+    effect: !aid.available
+      ? 'already_tended'
+      : aid.healed > 0
+        ? 'healed'
+        : aid.healed < 0
+          ? 'worsened'
+          : 'no_effect',
+    saved: aid.saved,
+  }
 }
 
 /**

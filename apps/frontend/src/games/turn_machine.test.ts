@@ -29,6 +29,7 @@ const ROLL: Omit<Roll, 'result' | 'degree'> = {
   modifiers: [],
   chance: 60,
   roll: 42,
+  combat: null,
 }
 const CHARACTER = {} as Character
 
@@ -38,7 +39,7 @@ function turn(overrides: Partial<Turn> = {}): Turn {
     turnNumber: null,
     status: 'pending',
     playerInput: INPUT,
-    roll: null,
+    rolls: [],
     narration: null,
     effects: null,
     failure: null,
@@ -79,7 +80,7 @@ describe('turn machine — a turn played to the end', () => {
       status: 'in_progress',
       submission: { turnId: TURN_ID },
       step: null,
-      roll: null,
+      rolls: [],
     })
   })
 
@@ -126,8 +127,37 @@ describe('turn machine — a turn played to the end', () => {
     expect(state).toMatchObject({
       status: 'in_progress',
       step: 'narration',
-      roll: { ...ROLL, result: 'success', degree: 'success' },
+      rolls: [{ ...ROLL, result: 'success', degree: 'success' }],
     })
+  })
+
+  test('a round of combat: the attack, then the defence, in the order they were made', () => {
+    const attack = {
+      ...ROLL,
+      result: 'success',
+      degree: 'success',
+      combat: {
+        role: 'attack',
+        outcome: 'hit',
+        damage: { weapon: 6, modifier: 2, armor: 1, total: 7, effect: null },
+      },
+    } as const
+    const defense = {
+      ...ROLL,
+      roll: 71,
+      result: 'failure',
+      degree: 'failure',
+      combat: { role: 'defense', defense: 'parry', outcome: 'struck' },
+    } as const
+
+    const state = run(
+      submit,
+      accepted,
+      on(message({ event: 'roll_resolved', ...attack })),
+      on(message({ event: 'roll_resolved', ...defense }))
+    )
+
+    expect(state).toMatchObject({ status: 'in_progress', rolls: [attack, defense] })
   })
 
   test('an event arriving before the 202 is matched by the key', () => {
@@ -170,7 +200,7 @@ describe('turn machine — failures', () => {
     expect(state).toMatchObject({
       status: 'failed',
       failure,
-      roll: { skill: SKILL },
+      rolls: [{ skill: SKILL }],
       submission: { playerInput: INPUT },
     })
     expect(isBusy(state)).toBe(false)
@@ -252,7 +282,7 @@ describe('turn machine — refusals of the submission', () => {
       status: 'in_progress',
       submission: { playerInput: 'Someone else’s action.', idempotencyKey: null, turnId: 'turn-7' },
       step: null,
-      roll: null,
+      rolls: [],
       // Picked up halfway: its narration is not followed live.
       narration: null,
     })

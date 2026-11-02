@@ -390,7 +390,7 @@ export async function itemsInScene(
 ): Promise<ItemsInScene> {
   const present = await NpcInstance.query({ client })
     .where('sessionId', sessionId)
-    .where('status', 'present')
+    .whereIn('status', ['present', 'dying'])
     .orderBy('createdAt', 'asc')
     .orderBy('handle', 'asc')
   const presentIds = present.map((npc) => npc.id)

@@ -51,8 +51,8 @@ Items:
 
 Other changes:
 - scenario_flags are short English references in snake_case for notable story events (for example letter_delivered). Never a sentence, never a display name.
-- hit_points_delta is the change to the character's hit points the narration describes: negative for harm, positive for healing, 0 when nothing happened to them.
-- A wound the narration states is never 0: -1 or -2 for a light wound, -3 to -5 for a serious one, more only when the narration makes it plainly worse. A lost weapon or a fall without injury is no hit point change.
+- hit_points_delta is the harm the narration describes the character taking from something other than a blow in a fight — a fall, a fire, a poison: negative, or 0 when nothing of the kind happened. Never positive: healing is the game's own. Blows dealt or taken in a fight are the game's too, already counted: they are 0 here.
+- Such a harm the narration states is never 0: -1 or -2 when it is light, -3 to -5 when it is serious, more only when the narration makes it plainly worse. A lost weapon or a fall without injury is no hit point change.
 
 Answer only with the given JSON schema, with no text outside it.`
 

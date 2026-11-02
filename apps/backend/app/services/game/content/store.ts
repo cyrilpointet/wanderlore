@@ -269,6 +269,7 @@ export async function readCatalogues(
       equippable: item.equippable,
       modifiers: item.modifiers,
       weapon: item.weapon,
+      armor: item.armor,
       initialHolder: item.initialHolder,
     })),
     lore: lore.map(loreFragmentOf),

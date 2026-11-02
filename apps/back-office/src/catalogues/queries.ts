@@ -54,6 +54,8 @@ export type ItemDefinition = DefinitionBase & {
   modifiers: unknown
   /** Null for anything that is no weapon. */
   weapon: unknown
+  /** Stopped of every blow while worn; 0 for anything that is no armour. */
+  armor: number
   initialHolder: ItemHolder | null
 }
 
@@ -61,14 +63,15 @@ export type Definition = NpcDefinition | LocationDefinition | ItemDefinition
 
 /** Where a level's catalogues are read and created. */
 export function pathOf(level: Level): string {
-  return 'scenarioId' in level ? `/admin/scenarios/${level.scenarioId}` : `/admin/worlds/${level.worldId}`
+  return 'scenarioId' in level
+    ? `/admin/scenarios/${level.scenarioId}`
+    : `/admin/worlds/${level.worldId}`
 }
 
 export const catalogueQuery = (level: Level, catalogue: Catalogue) =>
   queryOptions({
     queryKey: ['catalogue', pathOf(level), catalogue],
-    queryFn: async () =>
-      (await api<{ data: Definition[] }>(`${pathOf(level)}/${catalogue}`)).data,
+    queryFn: async () => (await api<{ data: Definition[] }>(`${pathOf(level)}/${catalogue}`)).data,
   })
 
 export async function createDefinition(

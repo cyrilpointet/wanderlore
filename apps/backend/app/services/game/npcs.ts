@@ -1,6 +1,7 @@
 import type { QueryClientContract } from '@adonisjs/lucid/types/database'
 
 import NpcInstance from '#models/npc_instance'
+import { DOWN_AT } from '#services/rules/engine'
 
 import { placeInitialItems } from './inventory.js'
 
@@ -29,6 +30,23 @@ export type PresentNpc = {
   name: string | null
   descriptor: string | null
   disposition: NpcDisposition
+  /**
+   * How they stand, qualitatively: on their feet, down — out of the fight at
+   * 2 hit points or fewer — or dying, which they do at the end of the next
+   * turn unless tended. Never a number.
+   */
+  condition: NpcCondition
+}
+
+export type NpcCondition = 'standing' | 'down' | 'dying'
+
+/** In the scene: present, or dying where they fell — for one turn, to be tended or finished. */
+export const IN_SCENE: string[] = ['present', 'dying']
+
+export function conditionOf(npc: { status: string; hitPoints: number | null }): NpcCondition {
+  if (npc.status === 'dying') return 'dying'
+
+  return npc.hitPoints !== null && npc.hitPoints <= DOWN_AT ? 'down' : 'standing'
 }
 
 /**
@@ -267,16 +285,17 @@ export async function presentNpcs(
 ): Promise<PresentNpc[]> {
   const npcs = await NpcInstance.query({ client })
     .where('sessionId', sessionId)
-    .where('status', 'present')
+    .whereIn('status', IN_SCENE)
     .orderBy('createdAt', 'asc')
     /** Two entries in the same millisecond still come out in a stable order. */
     .orderBy('handle', 'asc')
 
-  return npcs.map(({ handle, name, descriptor, disposition }) => ({
-    handle,
-    name,
-    descriptor,
-    disposition,
+  return npcs.map((npc) => ({
+    handle: npc.handle,
+    name: npc.name,
+    descriptor: npc.descriptor,
+    disposition: npc.disposition,
+    condition: conditionOf(npc),
   }))
 }
 
@@ -287,11 +306,24 @@ export async function presentNpcDefinitions(
 ): Promise<Record<string, string>> {
   const npcs = await NpcInstance.query({ client })
     .where('sessionId', sessionId)
-    .where('status', 'present')
+    .whereIn('status', IN_SCENE)
 
   return Object.fromEntries(
     npcs.map(({ handle, definitionReference }) => [handle, definitionReference])
   )
+}
+
+/**
+ * The handle the next instance of an archetype will get: what the round
+ * calls an improvised opponent before the turn brings them in, under the
+ * same number — turns of a game are played one at a time.
+ */
+export async function nextHandleOf(
+  sessionId: string,
+  definition: string,
+  client?: QueryClientContract
+): Promise<string> {
+  return `${definition}_${(await countOf(sessionId, definition, client)) + 1}`
 }
 
 async function countOf(
@@ -326,12 +358,13 @@ export async function npcsWaitingIn(
     .orderBy('createdAt', 'asc')
     .orderBy('handle', 'asc')
 
-  return npcs.map(({ handle, name, descriptor, disposition, definitionReference }) => ({
-    handle,
-    name,
-    descriptor,
-    disposition,
-    definition: definitionReference,
+  return npcs.map((npc) => ({
+    handle: npc.handle,
+    name: npc.name,
+    descriptor: npc.descriptor,
+    disposition: npc.disposition,
+    condition: conditionOf(npc),
+    definition: npc.definitionReference,
   }))
 }
 
@@ -371,6 +404,7 @@ export async function npcsPlacedIn(
     name: null,
     descriptor: null,
     disposition: npc.defaultDisposition,
+    condition: 'standing' as const,
     definition: npc.reference,
   }))
 }

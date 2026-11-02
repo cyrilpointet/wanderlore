@@ -109,6 +109,7 @@ export const IRON_KEY: ItemDefinitionContent = {
   equippable: false,
   modifiers: [],
   weapon: null,
+  armor: 0,
   initialHolder: null,
 }
 
@@ -120,7 +121,13 @@ export const STEWARD: NpcDefinitionContent = {
   kind: 'unique',
   generic: false,
   defaultDisposition: 'unfriendly',
-  combat: { skills: { observation: 50 }, hitPointsMax: 10, weapon: null },
+  combat: {
+    skills: { observation: 50 },
+    hitPointsMax: 10,
+    weapon: null,
+    damageModifier: null,
+    armor: 0,
+  },
   initialLocation: 'house_attic',
 }
 

@@ -16,7 +16,7 @@ function npc(reference: string, description = 'Someone.'): NpcDefinitionContent 
     kind: 'unique',
     generic: false,
     defaultDisposition: 'neutral',
-    combat: { skills: {}, hitPointsMax: 5, weapon: null },
+    combat: { skills: {}, hitPointsMax: 5, weapon: null, damageModifier: null, armor: 0 },
     initialLocation: null,
   }
 }
@@ -102,10 +102,13 @@ test.group('Content | seeded worlds', () => {
     })
 
     test(`every ${world.reference} skill resolves at least one category`, ({ assert }) => {
-      /** A skill no category leads to could never be rolled. */
+      /**
+       * A skill no category leads to could never be rolled — but for the
+       * dodge, which the round rolls for itself.
+       */
       const resolved = world.actionTypes.map((rule) => rule.associatedSkill)
 
-      for (const skill of skills) {
+      for (const skill of skills.filter((reference) => reference !== 'dodge')) {
         assert.include(resolved, skill)
       }
     })

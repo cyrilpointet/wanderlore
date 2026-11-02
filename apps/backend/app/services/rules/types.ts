@@ -157,8 +157,8 @@ export const DAMAGE_MODIFIER_USES = ['full', 'half', 'none'] as const
 export type DamageModifierUse = (typeof DAMAGE_MODIFIER_USES)[number]
 
 /**
- * The effect a special success with the weapon has. Recorded on the weapon
- * profile from now on; its mechanics come with the combat loop (Phase 10).
+ * The effect a special success with the weapon has (rules, section 8): only
+ * what settles within the round, and the bleeding that goes on until tended.
  */
 export const SPECIAL_EFFECTS = [
   'bleeding',
@@ -169,6 +169,52 @@ export const SPECIAL_EFFECTS = [
 ] as const
 
 export type SpecialEffect = (typeof SPECIAL_EFFECTS)[number]
+
+/**
+ * What a weapon is, for the round: wielded in hand, thrown, or a projectile
+ * too fast to parry — and dodged only with difficulty. A riposte is a melee
+ * attack with a `melee` weapon, a ranged one otherwise.
+ */
+export const WEAPON_KINDS = ['melee', 'thrown', 'projectile'] as const
+
+export type WeaponKind = (typeof WEAPON_KINDS)[number]
+
+/** A weapon as the round reads it: an item's weapon profile, or bare hands. */
+export type Weapon = {
+  /** The item definition it comes from; null for bare hands. */
+  reference: string | null
+  kind: WeaponKind
+  damage: string
+  damageModifier: DamageModifierUse
+  special: SpecialEffect | null
+}
+
+/** The two ways to meet a blow, both known to the system (rules, section 8). */
+export const DEFENSES = ['parry', 'dodge'] as const
+
+export type Defense = (typeof DEFENSES)[number]
+
+/** The degree a blow lands with, once the defence has had its say. */
+export type HitDegree = Extract<Degree, 'critical' | 'special' | 'success'>
+
+/** How badly a blow hurts, as the narration is told it: never a number. */
+export const WOUNDS = ['none', 'light', 'serious', 'mortal'] as const
+
+export type Wound = (typeof WOUNDS)[number]
+
+/**
+ * The reduced fumble table of Wanderlore (rules, section 8): what settles
+ * within the round, or nothing more than a failure.
+ */
+export const FUMBLES = [
+  'nothing',
+  'fall',
+  'weapon_dropped',
+  'self_injury',
+  'weapon_broken',
+] as const
+
+export type Fumble = (typeof FUMBLES)[number]
 
 /** A hit as the damage formula needs it. */
 export type DamageRequest = {
@@ -189,4 +235,26 @@ export type DamageResolution = {
   /** What the armour actually stopped: nothing on a critical. */
   armor: number
   total: number
+}
+
+/** A blow that landed, as the round needs it. */
+export type HitRequest = {
+  weapon: Weapon
+  /** The attacker's damage modifier; null when they have none. */
+  damageModifier: string | null
+  degree: HitDegree
+  armor: number
+}
+
+/**
+ * The damage of a blow that landed, and what its special effect did: the
+ * target bleeding, or kept from striking back this round.
+ */
+export type HitResolution = DamageResolution & {
+  degree: HitDegree
+  /** The weapon's special effect, when the blow was a special success. */
+  effect: SpecialEffect | null
+  bleeding: boolean
+  /** Stunned, entangled or knocked back: no riposte this round. */
+  stopped: boolean
 }

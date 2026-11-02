@@ -2,8 +2,11 @@ import { queryOptions } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
 import type {
+  AttackOutcome,
   Characteristic,
   ContextualEffect,
+  Defense,
+  DefenseOutcome,
   Degree,
   Difficulty,
   GameStatus,
@@ -12,6 +15,7 @@ import type {
   Result,
   ScenarioStatus,
   SkillCategory,
+  SpecialEffect,
   TurnStatus,
 } from '@/api/enums'
 import type { ContentLabel } from '@/api/types'
@@ -79,9 +83,32 @@ export type RollModifier =
   | { source: 'item'; item: ContentLabel; value: number }
 
 /**
+ * The damage the character's blow dealt, in full: the weapon's dice, the
+ * damage modifier, what the armour stopped, the total and the special effect.
+ * Computed by the backend. The damage the character takes is never detailed:
+ * it comes from a roll of the people, which the player does not see.
+ */
+export type Damage = {
+  weapon: number
+  modifier: number
+  armor: number
+  total: number
+  effect: SpecialEffect | null
+}
+
+/**
+ * What a roll of the character did in its round: an attack, how it ended and
+ * what it dealt — only when it hit; or a defence against the riposte, which
+ * one and whether it held.
+ */
+export type RollCombat =
+  | { role: 'attack'; outcome: AttackOutcome; damage: Damage | null }
+  | { role: 'defense'; defense: Defense; outcome: DefenseOutcome }
+
+/**
  * A roll in full, as at the table: what was rolled and at how much, the
- * difficulty, the modifiers, the chance, the d100 and the degree. Everything
- * comes computed from the backend.
+ * difficulty, the modifiers, the chance, the d100 and the degree — and, in
+ * combat, what it did in the round. Everything comes computed from the backend.
  */
 export type Roll = {
   /** The skill rolled, or null for a characteristic roll. */
@@ -97,6 +124,8 @@ export type Roll = {
   roll: number
   result: Result
   degree: Degree
+  /** Null outside combat. */
+  combat: RollCombat | null
 }
 
 /** What happened to one of the character's items, with whom when someone was involved. */
@@ -113,7 +142,8 @@ export type Turn = {
   turnNumber: number | null
   status: TurnStatus
   playerInput: string
-  roll: Roll | null
+  /** The character's rolls, in the order they were made: the action or attack, then the defence. */
+  rolls: Roll[]
   narration: string | null
   effects: {
     hitPointsDelta: number

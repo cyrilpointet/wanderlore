@@ -25,7 +25,7 @@
     "allied": "Allied"
   },
   "combat": "Fighting profile",
-  "combatHint": "JSON: skills in percent by reference, hitPointsMax, and the item reference of the ordinary weapon (or null).",
+  "combatHint": "JSON: skills in percent by reference, hitPointsMax, the item reference of the ordinary weapon (or null), the damage modifier as the book gives it (+1D4, or null for none) and the ordinary armour (0 for none).",
   "parent": "Inside",
   "parentHint": "The named place that contains this one, if any.",
   "exits": "Exits",
@@ -43,7 +43,9 @@
   "modifiers": "Modifiers",
   "modifiersHint": "JSON list: each with target \"skill\", the skill, a value in percent (±20 for a tool of quality), condition (owned or equipped) and description.",
   "weapon": "Weapon profile",
-  "weaponHint": "JSON, empty for anything that is no weapon: the skill it is wielded with, its damage dice (1D6+1), how much of the wielder's damage modifier it adds (full, half or none) and its special effect (bleeding, crushing, entangling, impaling, knockback, or null).",
+  "weaponHint": "JSON, empty for anything that is no weapon: what it is (melee, thrown or projectile — the attack's category names the skill), its damage dice (1D6+1), how much of the wielder's damage modifier it adds (full, half or none) and its special effect (bleeding, crushing, entangling, impaling, knockback, or null).",
+  "armor": "Armour",
+  "armorHint": "What it stops of every blow while worn: 1 for a buff coat, 0 for anything that is no armour.",
   "overrides": "Overrides the world's",
   "empty": "Nothing here yet.",
   "intro": {

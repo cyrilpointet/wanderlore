@@ -35,6 +35,26 @@
     "minor_penalty": "Hindrance",
     "major_penalty": "Strong hindrance"
   },
+  "defense": {
+    "parry": "Parry",
+    "dodge": "Dodge"
+  },
+  "attackOutcome": {
+    "hit": "Hit",
+    "blocked": "Blocked",
+    "missed": "Missed"
+  },
+  "defenseOutcome": {
+    "avoided": "Blow avoided",
+    "struck": "Blow taken"
+  },
+  "specialEffect": {
+    "bleeding": "Bleeding",
+    "crushing": "Crushing",
+    "entangling": "Entangling",
+    "impaling": "Impaling",
+    "knockback": "Knockback"
+  },
   "characteristic": {
     "STR": "Strength",
     "CON": "Constitution",

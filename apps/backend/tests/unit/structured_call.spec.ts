@@ -26,6 +26,7 @@ const META = {
   locations: ['louvre', 'paris'],
   locationArchetypes: ['tavern'],
   npcDefinitions: ['commoner'],
+  npcArchetypes: ['royal_guard', 'commoner'],
   itemsInScene: [],
   sceneItems: [],
   creatableItems: [],

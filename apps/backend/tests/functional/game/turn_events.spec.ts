@@ -294,6 +294,8 @@ test.group('Turn events | what goes over the wire', (group) => {
       result: 'success',
       /** A 4 against a persuasion of 60: within a fifth of it. */
       degree: 'special',
+      /** Outside a fight. */
+      combat: null,
     })
   })
 

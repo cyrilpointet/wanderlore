@@ -20,13 +20,55 @@ const ROLL: Roll = {
   roll: 45,
   result: 'failure',
   degree: 'failure',
+  combat: null,
+}
+
+/** A sword thrust at 60%, a 12: a hit, an impaling one, for 6 + 2 − 1 armor. */
+const ATTACK: Roll = {
+  skill: { reference: 'swordsmanship', label: 'Swordsmanship' },
+  characteristic: null,
+  value: 60,
+  baseChance: 60,
+  difficulty: 'average',
+  modifiers: [],
+  chance: 60,
+  roll: 12,
+  result: 'success',
+  degree: 'special',
+  combat: {
+    role: 'attack',
+    outcome: 'hit',
+    damage: { weapon: 6, modifier: 2, armor: 1, total: 7, effect: 'impaling' },
+  },
+}
+
+/** The dodge against the riposte, at 40%: a 30, the blow avoided. */
+const DODGE: Roll = {
+  ...ATTACK,
+  skill: { reference: 'dodge', label: 'Dodge' },
+  value: 40,
+  baseChance: 40,
+  chance: 40,
+  roll: 30,
+  result: 'success',
+  degree: 'success',
+  combat: { role: 'defense', defense: 'dodge', outcome: 'avoided' },
 }
 
 function live(
   status: LiveRoll['status'],
   overrides: Partial<Omit<LiveRoll, 'status'>> = {}
 ): LiveRoll {
-  return { status, turnId: 'turn-1', roll: ROLL, autoRoll: false, animated: true, ...overrides }
+  return {
+    status,
+    turnId: 'turn-1',
+    roll: ROLL,
+    done: [],
+    queued: [],
+    autoRoll: false,
+    animated: true,
+    ...overrides,
+  } as LiveRoll
 }
 
 function render(state: LiveRoll): string {
@@ -120,5 +162,46 @@ describe('RollCard | landed', () => {
     expect(critical).toContain('font-semibold')
     expect(fumble).toContain('animate-shake')
     expect(fumble).toContain('font-semibold')
+  })
+})
+
+describe('RollCard | in combat', () => {
+  test('an attack shows no damage before its dice have stopped', () => {
+    for (const status of ['staged', 'rolling'] as const) {
+      const text = textOf(render(live(status, { roll: ATTACK })))
+
+      expect(text).not.toContain('Hit')
+      expect(text).not.toContain('dealt')
+    }
+  })
+
+  test('landed, an attack tells its outcome and the damage it dealt, in full', () => {
+    const text = textOf(render(live('landed', { roll: ATTACK })))
+
+    expect(text).toContain('rolled 12 · Special success · Hit')
+    expect(text).toContain('Damage 6 · Damage modifier +2 · Armor −1 · → 7 dealt · Impaling')
+  })
+
+  test('an attack that missed deals nothing', () => {
+    const missed: Roll = {
+      ...ATTACK,
+      roll: 80,
+      result: 'failure',
+      degree: 'failure',
+      combat: { role: 'attack', outcome: 'missed', damage: null },
+    }
+    const text = textOf(render(live('landed', { roll: missed })))
+
+    expect(text).toContain('rolled 80 · Failure · Missed')
+    expect(text).not.toContain('dealt')
+  })
+
+  test('a defence says which one from the start, and whether it held once landed', () => {
+    const staged = textOf(render(live('staged', { roll: DODGE })))
+    const landed = textOf(render(live('landed', { roll: DODGE })))
+
+    expect(staged).toMatch(/^Dodge Dodge 40%/)
+    expect(staged).not.toContain('Blow avoided')
+    expect(landed).toContain('rolled 30 · Success · Blow avoided')
   })
 })

@@ -375,19 +375,22 @@ test.group('GET /sessions/:id/turns', (group) => {
 
     assert.equal(turn.playerInput, 'Action 1')
     assert.equal(turn.narration, 'Narration 1')
-    /** The roll in full, as at the table: no modifier weighed. */
-    assert.deepEqual(turn.roll, {
-      skill: { reference: 'persuasion', label: 'Persuasion' },
-      characteristic: null,
-      value: 45,
-      baseChance: 45,
-      difficulty: 'average',
-      modifiers: [],
-      chance: 45,
-      roll: 8,
-      result: 'success',
-      degree: 'special',
-    })
+    /** The roll in full, as at the table: no modifier weighed — and no fight. */
+    assert.deepEqual(turn.rolls, [
+      {
+        skill: { reference: 'persuasion', label: 'Persuasion' },
+        characteristic: null,
+        value: 45,
+        baseChance: 45,
+        difficulty: 'average',
+        modifiers: [],
+        chance: 45,
+        roll: 8,
+        result: 'success',
+        degree: 'special',
+        combat: null,
+      },
+    ])
     assert.deepEqual(turn.effects, {
       hitPointsDelta: -2,
       movement: { reference: 'hotel_de_treville', label: 'Hôtel de Tréville' },
@@ -419,7 +422,7 @@ test.group('GET /sessions/:id/turns', (group) => {
     const response = await client.get(`/api/v1/sessions/${session.id}/turns`).loginAs(player)
     const [read] = dataOf(response)
 
-    assert.deepEqual(read.roll.modifiers, [
+    assert.deepEqual(read.rolls[0].modifiers, [
       { source: 'contextual', effect: 'minor_bonus', value: 10 },
       {
         source: 'item',

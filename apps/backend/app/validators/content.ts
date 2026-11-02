@@ -10,6 +10,7 @@ import {
   NPC_DISPOSITIONS,
   SKILL_CATEGORIES,
   SPECIAL_EFFECTS,
+  WEAPON_KINDS,
 } from '#services/game/content/types'
 import { isDiceExpression } from '#services/rules/dice_expression'
 import { FIXED_DURATIONS } from '#services/game/game_time'
@@ -83,11 +84,17 @@ const characteristics = () =>
     ) as Record<(typeof CHARACTERISTICS)[number], ReturnType<typeof vine.number>>
   )
 
+/** What stops a blow: a buff coat 1, a breastplate 6 — past 20 is a fortress. */
+const armor = () => vine.number().withoutDecimals().min(0).max(20)
+
 const combat = () =>
   vine.object({
     skills: percentages(),
     hitPointsMax: vine.number().withoutDecimals().min(1).max(999),
     weapon: reference().nullable(),
+    /** As the book's creature sheets give it: `+1D4`, `-1D6`; null for none. */
+    damageModifier: vine.string().trim().maxLength(40).use(isDice()).nullable(),
+    armor: armor(),
   })
 
 /** In percent, as BRP prices equipment: ±20 for a tool of quality, up to ±50 for the exceptional. */
@@ -102,7 +109,7 @@ const modifier = () =>
 
 const weapon = () =>
   vine.object({
-    skill: reference(),
+    kind: vine.enum(WEAPON_KINDS),
     damage: vine.string().trim().maxLength(40).use(isDice()),
     damageModifier: vine.enum(DAMAGE_MODIFIER_USES),
     special: vine.enum(SPECIAL_EFFECTS).nullable(),
@@ -152,6 +159,7 @@ const catalogueFields = {
     equippable: vine.boolean(),
     modifiers: vine.array(modifier()),
     weapon: weapon().nullable(),
+    armor: armor(),
     initialHolder: initialHolder().nullable(),
   },
 }

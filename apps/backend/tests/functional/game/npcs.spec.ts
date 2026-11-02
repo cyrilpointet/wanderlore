@@ -142,8 +142,15 @@ test.group('NPCs | who is present', (group) => {
         name: null,
         descriptor: GUARD.descriptor,
         disposition: 'unfriendly',
+        condition: 'standing',
       },
-      { handle: 'treville', name: 'Jean-Armand', descriptor: null, disposition: 'neutral' },
+      {
+        handle: 'treville',
+        name: 'Jean-Armand',
+        descriptor: null,
+        disposition: 'neutral',
+        condition: 'standing',
+      },
     ])
   })
 

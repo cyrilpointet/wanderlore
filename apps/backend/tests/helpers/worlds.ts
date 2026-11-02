@@ -15,7 +15,7 @@ export const THREE_MUSKETEERS: WorldDefinition = resolveWorld(
 
 /**
  * The characteristics of a sheet a spec writes by hand: d'Artagnan's, as the
- * scenario gives them. CON 14 and SIZ 12 make 13 hit points.
+ * scenario gives them. CON 14 and SIZ 12 make 26 hit points.
  */
 export const GASCON: Characteristics = {
   STR: 13,

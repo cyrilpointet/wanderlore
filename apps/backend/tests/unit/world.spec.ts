@@ -238,11 +238,16 @@ test.group('World definition | items', () => {
     }
   })
 
-  test('a weapon is wielded with a skill of the world, and deals dice', ({ assert }) => {
+  test('a weapon is equippable, and deals dice', ({ assert }) => {
     for (const item of items.filter((entry) => entry.weapon !== null)) {
       assert.isTrue(item.equippable, item.reference)
-      assert.include(skills, item.weapon!.skill, item.reference)
       assert.isTrue(isDiceExpression(item.weapon!.damage), item.reference)
+    }
+  })
+
+  test('an armour is equippable', ({ assert }) => {
+    for (const item of items.filter((entry) => entry.armor > 0)) {
+      assert.isTrue(item.equippable, item.reference)
     }
   })
 

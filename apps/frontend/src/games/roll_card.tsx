@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { D10Icon } from '@/components/d10_icon'
 import { percentileDice } from './presentation'
 import type { LiveRoll } from './roll_reveal'
-import { DEGREE_EMPHASIS, ROLL_TONE, rollText } from './roll_text'
+import { DEGREE_EMPHASIS, ROLL_TONE, damageLine, rollText } from './roll_text'
 
 /** Between two parts of the roll as it is set out. */
 const STEP_MS = 250
@@ -25,6 +25,10 @@ const TURNS = 2
  * thrown — by the player, or on its own — and read on two d10. The d100 was
  * drawn by the backend before the card ever showed: the throw reveals it,
  * nothing the player does changes it.
+ *
+ * In combat, a defence says which one it is from the start; once the dice
+ * have stopped, the outcome shows with the degree — and the damage a blow
+ * dealt, in full, never thrown by hand.
  *
  * Its timing is its own: it tells the reveal machine when the dice stop and
  * when it has folded. The dice are hidden from screen readers;
@@ -76,6 +80,7 @@ export function RollCard({
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-border-strong bg-surface-2 px-5 py-4">
+      {text.defense && <p className="-mb-2 text-meta text-subtle uppercase">{text.defense}</p>}
       <p className="flex flex-wrap justify-center gap-x-2 text-center text-label text-text">
         {parts.map((part, index) => (
           <span
@@ -122,8 +127,12 @@ export function RollCard({
         <p
           className={`rounded-sm border px-3 py-1 text-label ${ROLL_TONE[roll.result]} ${DEGREE_EMPHASIS[roll.degree]} ${LANDING[roll.degree]}`}
         >
-          {`${text.rolled} · ${text.degree}`}
+          {[text.rolled, text.degree, ...(text.outcome ? [text.outcome] : [])].join(' · ')}
         </p>
+      )}
+
+      {status === 'landed' && text.damage.length > 0 && (
+        <p className="-mt-2 animate-fade-in text-center text-label text-text">{damageLine(text)}</p>
       )}
     </div>
   )

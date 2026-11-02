@@ -312,9 +312,9 @@ test.group('RulesEngine | modifiers', () => {
 })
 
 test.group('Rules | derived values', () => {
-  test('hit points are half of CON + SIZ, rounded up', ({ assert }) => {
-    assert.equal(hitPointsFor(AVERAGE_ADULT), 13)
-    assert.equal(hitPointsFor({ ...AVERAGE_ADULT, CON: 14 }), 13)
+  test('hit points are CON + SIZ, the total hit points of the book', ({ assert }) => {
+    assert.equal(hitPointsFor(AVERAGE_ADULT), 25)
+    assert.equal(hitPointsFor({ ...AVERAGE_ADULT, CON: 14 }), 26)
   })
 
   test('a base chance is fixed, or a multiple of a characteristic', ({ assert }) => {

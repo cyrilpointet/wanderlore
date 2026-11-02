@@ -57,6 +57,7 @@ export function DefinitionForm({
     equippable: set('equippable'),
     modifiers: set('modifiers'),
     weapon: set('weapon'),
+    armor: set('armor'),
     initialHolder: set('initialHolder'),
   }
   const id = (field: string) => `${idPrefix}-${field}`
@@ -87,7 +88,12 @@ export function DefinitionForm({
             className={`${INPUT} font-mono`}
           />
         </Field>
-        <Field id={id('kind')} label={t('kind')} hint={t(`kindHint.${catalogue}`)} error={errors.kind}>
+        <Field
+          id={id('kind')}
+          label={t('kind')}
+          hint={t(`kindHint.${catalogue}`)}
+          error={errors.kind}
+        >
           <select
             id={id('kind')}
             value={draft.kind}
@@ -246,6 +252,17 @@ export function DefinitionForm({
             onChange={on.equippable}
             error={errors.equippable}
           />
+          <Field id={id('armor')} label={t('armor')} hint={t('armorHint')} error={errors.armor}>
+            <input
+              id={id('armor')}
+              type="number"
+              min={0}
+              max={20}
+              value={draft.armor}
+              onChange={(event) => on.armor(event.target.value)}
+              className={INPUT}
+            />
+          </Field>
           {unique && (
             <Field
               id={id('holder')}
@@ -326,7 +343,7 @@ const EXITS_EXAMPLE = JSON.stringify(
 
 /** What a weapon profile looks like: a rapier, as the book gives it. Data, not interface text. */
 const WEAPON_EXAMPLE = JSON.stringify(
-  { skill: 'sword', damage: '1D6+1', damageModifier: 'full', special: 'impaling' },
+  { kind: 'melee', damage: '1D6+1', damageModifier: 'full', special: 'impaling' },
   null,
   2
 )

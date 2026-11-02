@@ -3,8 +3,11 @@ import { describe, expect, test } from 'vitest'
 import i18n from './index'
 import { errorMessage } from './errors'
 import {
+  ATTACK_OUTCOMES,
   CHARACTERISTICS,
   CONTEXTUAL_EFFECTS,
+  DEFENSE_OUTCOMES,
+  DEFENSES,
   DEGREES,
   DIFFICULTIES,
   GAME_STATUSES,
@@ -13,6 +16,7 @@ import {
   RESULTS,
   SKILL_CATEGORIES,
   SCENARIO_STATUSES,
+  SPECIAL_EFFECTS,
   STEPS,
   TURN_STATUSES,
 } from '@/api/enums'
@@ -26,6 +30,10 @@ describe('i18n', () => {
     ['degree', DEGREES],
     ['difficulty', DIFFICULTIES],
     ['contextualEffect', CONTEXTUAL_EFFECTS],
+    ['defense', DEFENSES],
+    ['attackOutcome', ATTACK_OUTCOMES],
+    ['defenseOutcome', DEFENSE_OUTCOMES],
+    ['specialEffect', SPECIAL_EFFECTS],
     ['characteristic', CHARACTERISTICS],
     ['skillCategory', SKILL_CATEGORIES],
     ['itemChange', ITEM_CHANGES],

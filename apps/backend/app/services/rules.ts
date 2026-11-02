@@ -19,20 +19,35 @@ const rules = new RulesEngine(dice)
 export default rules
 
 export {
+  DOWN_AT,
+  HEALING_PERIOD,
   MAX_CONTEXTUAL_MODIFIERS,
   applyDifficulty,
+  bestDefense,
+  chanceOf,
   contextualValue,
+  defenseOptions,
   degreeOf,
+  fumbleOf,
+  healingWeeks,
+  hitDegreeOf,
+  isDown,
   outcomeOf,
   toNarrationOutcome,
+  woundOf,
 } from './rules/engine.js'
+export type { DefenseOption } from './rules/engine.js'
 export {
   CHARACTERISTICS,
   CONTEXTUAL_EFFECTS,
   DAMAGE_MODIFIER_USES,
+  DEFENSES,
   DEGREES,
   DIFFICULTIES,
+  FUMBLES,
   SPECIAL_EFFECTS,
+  WEAPON_KINDS,
+  WOUNDS,
 } from './rules/types.js'
 export { itemModifiers } from './rules/modifiers.js'
 export { baseChanceOf, damageModifierFor, hitPointsFor } from './rules/derived.js'
@@ -47,8 +62,13 @@ export type {
   DamageModifierUse,
   DamageRequest,
   DamageResolution,
+  Defense,
   Degree,
   Difficulty,
+  Fumble,
+  HitDegree,
+  HitRequest,
+  HitResolution,
   ModifierSource,
   ModifierTarget,
   NarrationOutcome,
@@ -57,4 +77,7 @@ export type {
   RollOutcome,
   RollResolution,
   SpecialEffect,
+  Weapon,
+  WeaponKind,
+  Wound,
 } from './rules/types.js'

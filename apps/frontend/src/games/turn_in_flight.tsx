@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import { errorMessage } from '@/i18n/errors'
 import { useAnimates } from '@/preferences'
-import { Narration, PlayerAction, RollChip } from './journal'
+import { Narration, PlayerAction, RollChips } from './journal'
 import { RollCard } from './roll_card'
 import { liveRollOf, type RevealState } from './roll_reveal'
 import { emphasisOf } from './turn_errors'
@@ -16,7 +16,8 @@ import { waitingText } from './waiting'
  * provisional narration withdrawn. Gone once the turn joins the journal.
  *
  * A roll received live is played out on its card, the narration kept back
- * until the dice are thrown (front spec, section 5.3.7).
+ * until the dice are thrown — those of every roll of the turn, one after the
+ * other (front spec, section 5.3.7).
  */
 export function TurnInFlight({
   state,
@@ -49,15 +50,20 @@ export function TurnInFlight({
       </div>
 
       {liveRoll ? (
-        <RollCard
-          live={liveRoll}
-          onThrow={onThrow}
-          onDiceStopped={onDiceStopped}
-          onFolded={onFolded}
-        />
+        // The rolls already thrown, then the one on its card: those still to come stay hidden.
+        <RollChips rolls={liveRoll.done}>
+          <RollCard
+            key={liveRoll.done.length}
+            live={liveRoll}
+            onThrow={onThrow}
+            onDiceStopped={onDiceStopped}
+            onFolded={onFolded}
+          />
+        </RollChips>
       ) : (
-        (state.status === 'in_progress' || state.status === 'failed') &&
-        state.roll && <RollChip roll={state.roll} />
+        (state.status === 'in_progress' || state.status === 'failed') && (
+          <RollChips rolls={state.rolls} />
+        )
       )}
 
       {state.status === 'in_progress' &&

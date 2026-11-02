@@ -108,6 +108,7 @@ function turnContext(overrides: Partial<TurnContext> = {}): TurnContext {
           name: null,
           descriptor: 'a young guard, visibly bored',
           disposition: 'neutral',
+          condition: 'standing',
         },
       ],
       narrative_flags: {},
@@ -163,6 +164,8 @@ function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationR
     intent_summary: 'Persuading the guard with a letter of recommendation',
     aside: false,
     lore: [AMBIANCE],
+    combat: null,
+    first_aid: null,
     ...overrides,
   }
 }
@@ -228,6 +231,7 @@ test.group('Arbitration | output schema', () => {
       'validity',
       'resolution',
       'duration',
+      'combat',
       'alert',
     ])
     assert.notProperty(ARBITRATION_SCHEMA.properties, 'narration')
@@ -293,7 +297,10 @@ test.group('Arbitration | context sent', () => {
      * The skill behind each category is the backend's to read, and a model
      * that sees "persuasion: 3" ends up weighing it into the difficulty.
      */
-    for (const skill of skillReferences(THREE_MUSKETEERS)) {
+    /** A category of action named like its skill is sent, as every category is. */
+    const actionTypes = new Set(THREE_MUSKETEERS.actionTypes.map(({ actionType }) => actionType))
+
+    for (const skill of skillReferences(THREE_MUSKETEERS).filter((s) => !actionTypes.has(s))) {
       assert.notMatch(message, new RegExp(`"${skill}"`))
     }
     assert.notProperty(payloadOf(message).character, 'skills')
@@ -324,7 +331,7 @@ test.group('Arbitration | context sent', () => {
     const message = buildArbitrationMessage(arbitrationContext())
 
     /** Nothing the model could price, nor the narrator's descriptor. */
-    for (const leak of ['modifiers', 'condition', 'quantity', 'equipped', 'three-legged stool']) {
+    for (const leak of ['modifiers', 'owned', 'quantity', 'equipped', 'three-legged stool']) {
       assert.notInclude(message, leak)
     }
   })
@@ -430,10 +437,11 @@ test.group('Narration | degrees', () => {
     }
   })
 
-  test('settles an open attack: light wound on a failure, bad one on a fumble', ({ assert }) => {
+  test('stages a round exactly as the game settled it', ({ assert }) => {
+    assert.include(NARRATION_SYSTEM_PROMPT, 'Stage it in order')
     assert.include(
       NARRATION_SYSTEM_PROMPT,
-      'lightly on a failure or an automatic one, badly on a fumble'
+      'Never add a blow, a wound or an effect the round does not give'
     )
   })
 
@@ -459,7 +467,8 @@ test.group('Narration | context sent', () => {
      */
     assert.notInclude(message, 'threshold')
     assert.notInclude(message, 'dice')
-    for (const skill of skillReferences(THREE_MUSKETEERS)) {
+    /** First aid is a step of the story too, under the name of its category. */
+    for (const skill of skillReferences(THREE_MUSKETEERS).filter((s) => s !== 'first_aid')) {
       assert.notMatch(message, new RegExp(`"${skill}"`))
     }
   })
@@ -530,6 +539,8 @@ test.group('Narration | context sent', () => {
       degree: null,
       reason: 'Nothing crosses to London overnight.',
       aside: false,
+      combat: null,
+      first_aid: null,
     })
   })
 
@@ -686,22 +697,27 @@ test.group('Extraction | contract', () => {
 })
 
 test.group('Prompts | an attack left open', () => {
-  test('arbitration settles it with a roll, whatever the player declares', ({ assert }) => {
+  test('arbitration makes it a round against the attacker, whatever the player declares', ({
+    assert,
+  }) => {
     assert.include(
       ARBITRATION_SYSTEM_PROMPT,
-      'is settled by this action, whatever the player declares'
+      'makes this turn a round against that attacker, whatever the player declares'
     )
-    assert.include(ARBITRATION_SYSTEM_PROMPT, 'Such an action is always a roll')
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'never decide whether a blow lands')
   })
 
-  test('the narrator lets it land on a failure, never on an NPC’s initiative', ({ assert }) => {
+  test('the narrator never settles a threat alone, and never lets the character die', ({
+    assert,
+  }) => {
     assert.include(NARRATION_SYSTEM_PROMPT, 'never settles it on its own initiative')
-    assert.include(NARRATION_SYSTEM_PROMPT, 'On a failure, it lands and the character is hurt')
-    assert.include(NARRATION_SYSTEM_PROMPT, 'never instead of it')
+    assert.include(NARRATION_SYSTEM_PROMPT, 'never that they die')
   })
 
-  test('extraction never reads a stated wound as no damage', ({ assert }) => {
-    assert.include(EXTRACTION_SYSTEM_PROMPT, 'A wound the narration states is never 0')
+  test('extraction leaves blows and healing to the game, and still reads harm', ({ assert }) => {
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'Never positive: healing is the game')
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'Blows dealt or taken in a fight are the game')
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'Such a harm the narration states is never 0')
   })
 })
 
@@ -1089,6 +1105,7 @@ test.group('Prompts | people left behind', () => {
               name: null,
               descriptor: null,
               disposition: 'friendly',
+              condition: 'standing',
               definition: 'treville',
             },
           ],
@@ -1119,6 +1136,7 @@ test.group('Prompts | people left behind', () => {
               name: null,
               descriptor: null,
               disposition: 'friendly',
+              condition: 'standing',
               definition: 'treville',
             },
           ],
@@ -1139,7 +1157,13 @@ test.group('Prompts | what the character knows of names', () => {
         ...context.scene,
         npcs_present: [
           ...context.scene.npcs_present,
-          { handle: 'treville', name: null, descriptor: null, disposition: 'neutral' },
+          {
+            handle: 'treville',
+            name: null,
+            descriptor: null,
+            disposition: 'neutral',
+            condition: 'standing',
+          },
         ],
         npc_definitions: { ...context.scene.npc_definitions, treville: 'treville' },
         known_npcs: known,
@@ -1179,6 +1203,7 @@ test.group('Prompts | what the character knows of names', () => {
               name: null,
               descriptor: null,
               disposition: 'neutral',
+              condition: 'standing',
               definition: 'treville',
             },
           ],

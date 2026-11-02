@@ -18,6 +18,20 @@ export const CONTEXTUAL_EFFECTS = [
   'minor_penalty',
   'major_penalty',
 ] as const
+/** The two ways the character meets a blow; the backend picks the better one. */
+export const DEFENSES = ['parry', 'dodge'] as const
+/** How the character's attack ended: it landed, the opponent warded it off, or it missed. */
+export const ATTACK_OUTCOMES = ['hit', 'blocked', 'missed'] as const
+/** Whether the character's defence held against the riposte. */
+export const DEFENSE_OUTCOMES = ['avoided', 'struck'] as const
+/** The effect a special success with the weapon adds to the damage it deals. */
+export const SPECIAL_EFFECTS = [
+  'bleeding',
+  'crushing',
+  'entangling',
+  'impaling',
+  'knockback',
+] as const
 /** The seven characteristics of BRP, the same in every world. */
 export const CHARACTERISTICS = ['STR', 'CON', 'SIZ', 'INT', 'POW', 'DEX', 'CHA'] as const
 /** The six skill categories of BRP: how the sheet groups a world's skills. */
@@ -59,6 +73,10 @@ export type Result = (typeof RESULTS)[number]
 export type Degree = (typeof DEGREES)[number]
 export type Difficulty = (typeof DIFFICULTIES)[number]
 export type ContextualEffect = (typeof CONTEXTUAL_EFFECTS)[number]
+export type Defense = (typeof DEFENSES)[number]
+export type AttackOutcome = (typeof ATTACK_OUTCOMES)[number]
+export type DefenseOutcome = (typeof DEFENSE_OUTCOMES)[number]
+export type SpecialEffect = (typeof SPECIAL_EFFECTS)[number]
 export type Characteristic = (typeof CHARACTERISTICS)[number]
 export type SkillCategory = (typeof SKILL_CATEGORIES)[number]
 export type ItemChange = (typeof ITEM_CHANGES)[number]

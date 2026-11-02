@@ -16,7 +16,13 @@
       "modifier": "{{label}} {{value, number(signDisplay: always)}}",
       "chance": "→ {{chance, number}}%",
       "rolled": "rolled {{roll, number}}",
-      "throw": "Roll the dice"
+      "throw": "Roll the dice",
+      "damage": {
+        "weapon": "Damage {{value, number}}",
+        "modifier": "Damage modifier {{value, number(signDisplay: always)}}",
+        "armor": "Armor −{{value, number}}",
+        "total": "→ {{total, number}} dealt"
+      }
     },
     "newMessage": "New message",
     "loadEarlier": "Load earlier",

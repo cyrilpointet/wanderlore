@@ -8,9 +8,17 @@ import {
   type ContextualModifier,
   type DamageRequest,
   type DamageResolution,
+  type Defense,
   type Degree,
   type Difficulty,
+  type Fumble,
+  type HitDegree,
+  type HitRequest,
+  type HitResolution,
   type NarrationOutcome,
+  type Weapon,
+  type WeaponKind,
+  type Wound,
   type RollBase,
   type RollModifiers,
   type RollOutcome,
@@ -96,6 +104,33 @@ export function outcomeOf(degree: Degree): RollOutcome {
 const NO_MODIFIERS: RollModifiers = { contextual: [], items: [] }
 
 /**
+ * The chance of a roll before the dice: the base through difficulty, then
+ * every modifier — what the round compares to pick the better defence.
+ */
+export function chanceOf(
+  base: RollBase,
+  difficulty: Difficulty,
+  modifiers: RollModifiers = NO_MODIFIERS
+): { baseChance: number; appliedModifiers: AppliedModifier[]; chance: number } {
+  /** An item helps with a skill; a raw characteristic roll reads none. */
+  const appliedModifiers: AppliedModifier[] = [
+    ...modifiers.contextual.map(contextual),
+    ...(base.kind === 'skill'
+      ? itemModifiers(modifiers.items, { target: 'skill', skill: base.skill })
+      : []),
+  ]
+  const baseChance = baseChanceOf(base)
+
+  return {
+    baseChance,
+    appliedModifiers,
+    chance:
+      applyDifficulty(baseChance, difficulty) +
+      appliedModifiers.reduce((sum, { value }) => sum + value, 0),
+  }
+}
+
+/**
  * Deterministic resolution of a single roll, and of the damage of a hit.
  *
  * Everything the LLM is allowed to influence stops at the arbitration step: it
@@ -125,17 +160,7 @@ export class RulesEngine {
       )
     }
 
-    /** An item helps with a skill; a raw characteristic roll reads none. */
-    const appliedModifiers: AppliedModifier[] = [
-      ...modifiers.contextual.map(contextual),
-      ...(base.kind === 'skill'
-        ? itemModifiers(modifiers.items, { target: 'skill', skill: base.skill })
-        : []),
-    ]
-    const baseChance = baseChanceOf(base)
-    const chance =
-      applyDifficulty(baseChance, difficulty) +
-      appliedModifiers.reduce((sum, { value }) => sum + value, 0)
+    const { baseChance, appliedModifiers, chance } = chanceOf(base, difficulty, modifiers)
     const roll = this.#dice.rollD100()
     const degree = degreeOf(roll, chance)
 
@@ -157,8 +182,6 @@ export class RulesEngine {
    * a bonus, or none — minus the target's armour, never below zero. A critical
    * hit deals the most the weapon can, rolls the modifier as usual, and goes
    * through armour.
-   *
-   * Posed now and tested; wiring it into the turn comes with the combat loop.
    */
   resolveDamage(request: DamageRequest): DamageResolution {
     const weaponDice = parseDice(request.weaponDamage)
@@ -176,6 +199,251 @@ export class RulesEngine {
 
     return { weapon, modifier, armor, total: dealt - armor }
   }
+
+  /**
+   * The damage of a blow that landed, with its special effect (rules,
+   * section 8). A critical deals the weapon at its most through armour, and
+   * no effect. A special success brings the weapon's own: an impale doubles
+   * the weapon's dice, a crushing blow the damage modifier — none becomes
+   * `+1D4`, a malus none at all — and stuns; an entangling or knockback blow
+   * keeps the target from striking back; a bleeding one goes on bleeding.
+   */
+  resolveHit(request: HitRequest): HitResolution {
+    const { weapon, degree } = request
+    const effect = degree === 'special' ? weapon.special : null
+
+    if (effect === 'impaling' || effect === 'crushing') {
+      return {
+        ...this.#specialDamage(request, effect),
+        degree,
+        effect,
+        bleeding: false,
+        stopped: effect === 'crushing',
+      }
+    }
+
+    return {
+      ...this.resolveDamage({
+        weaponDamage: weapon.damage,
+        damageModifier: request.damageModifier,
+        damageModifierUse: weapon.damageModifier,
+        armor: request.armor,
+        critical: degree === 'critical',
+      }),
+      degree,
+      effect,
+      bleeding: effect === 'bleeding',
+      stopped: effect === 'entangling' || effect === 'knockback',
+    }
+  }
+
+  #specialDamage(request: HitRequest, effect: 'impaling' | 'crushing'): DamageResolution {
+    const { weapon } = request
+    const weaponDice = parseDice(weapon.damage)
+    const weaponRoll =
+      effect === 'impaling'
+        ? rollExpression(this.#dice, weaponDice) + rollExpression(this.#dice, weaponDice)
+        : rollExpression(this.#dice, weaponDice)
+
+    const modifierRoll = (): number => {
+      if (weapon.damageModifier === 'none') return 0
+      if (effect === 'impaling') {
+        return request.damageModifier === null ? 0 : this.#rollModifier(request.damageModifier)
+      }
+      if (request.damageModifier === null) return this.#rollModifier(CRUSHING_WITHOUT_MODIFIER)
+      if (request.damageModifier.startsWith('-')) return 0
+
+      return this.#rollModifier(request.damageModifier) + this.#rollModifier(request.damageModifier)
+    }
+    const rolled = modifierRoll()
+    const modifier = weapon.damageModifier === 'half' && rolled > 0 ? Math.ceil(rolled / 2) : rolled
+
+    const dealt = Math.max(0, weaponRoll + modifier)
+    const armor = Math.min(request.armor, dealt)
+
+    return { weapon: weaponRoll, modifier, armor, total: dealt - armor }
+  }
+
+  #rollModifier(expression: string): number {
+    return rollExpression(this.#dice, parseDice(expression))
+  }
+
+  /**
+   * What a fumble does, on the reduced table: an outcome that does not apply
+   * — no weapon to drop, one that cannot break — is nothing more than the
+   * failure itself.
+   */
+  rollFumble(weapon: { droppable: boolean; breakable: boolean }): Fumble {
+    const fumble = fumbleOf(this.#dice.rollD100())
+
+    if (fumble === 'weapon_dropped' && !weapon.droppable) return 'nothing'
+    if (fumble === 'weapon_broken' && !weapon.breakable) return 'nothing'
+
+    return fumble
+  }
+
+  /** A fumbler's own blow: the weapon's dice, without the modifier, less their armour. */
+  selfInjury(weapon: Weapon, armor: number): number {
+    return Math.max(0, this.#rollModifier(weapon.damage) - armor)
+  }
+
+  /**
+   * What first aid does, by its degree (rules, section 8bis): a fumble hurts
+   * by one point, a failure does nothing, a success heals 1D3, a special 2D3
+   * and a critical 3 + 1D3.
+   */
+  firstAid(degree: Degree): number {
+    switch (degree) {
+      case 'fumble':
+        return -1
+      case 'failure':
+        return 0
+      case 'success':
+        return this.#rollModifier('1D3')
+      case 'special':
+        return this.#rollModifier('2D3')
+      case 'critical':
+        return this.#rollModifier('1D3+3')
+    }
+  }
+
+  /** Natural healing: 1D3 hit points for each week of game time gone by. */
+  naturalHealing(weeks: number): number {
+    let healed = 0
+
+    for (let week = 0; week < weeks; week += 1) {
+      healed += this.#rollModifier('1D3')
+    }
+
+    return healed
+  }
+}
+
+/** What a crushing blow adds when the attacker has no damage modifier of their own. */
+const CRUSHING_WITHOUT_MODIFIER = '+1D4'
+
+/** The rank of a successful degree: how many degrees it stands above a failure. */
+const SUCCESS_RANK: Record<HitDegree, number> = { success: 1, special: 2, critical: 3 }
+
+function isSuccess(degree: Degree): degree is HitDegree {
+  return degree in SUCCESS_RANK
+}
+
+/**
+ * The attack and defence matrix of BRP (rules, section 8): a defence that
+ * fails leaves the attack as it was; one that succeeds takes a degree off it
+ * for each degree it stands above a failure, and stops it once nothing is
+ * left. A failed attack lands nothing — and is never defended against.
+ */
+export function hitDegreeOf(attack: Degree, defense: Degree | null): HitDegree | null {
+  if (!isSuccess(attack)) {
+    return null
+  }
+
+  if (defense === null || !isSuccess(defense)) {
+    return attack
+  }
+
+  const left = SUCCESS_RANK[attack] - SUCCESS_RANK[defense]
+  const degrees: HitDegree[] = ['success', 'special', 'critical']
+
+  return left <= 0 ? null : degrees[left - 1]
+}
+
+/** A defence the defender may attempt, as the round offers it. */
+export type DefenseOption = {
+  defense: Defense
+  base: RollBase
+  difficulty: Difficulty
+}
+
+/**
+ * The defences possible against a weapon (rules, section 8): parry and dodge
+ * against a blow or a thrown weapon; against a projectile, no parry — there
+ * is no shield in Wanderlore — and a difficult dodge. `parry` and `dodge`
+ * are null when the scene rules them out.
+ */
+export function defenseOptions(
+  against: WeaponKind,
+  bases: { parry: RollBase | null; dodge: RollBase | null }
+): DefenseOption[] {
+  const options: DefenseOption[] = []
+
+  if (bases.parry !== null && against !== 'projectile') {
+    options.push({ defense: 'parry', base: bases.parry, difficulty: 'average' })
+  }
+
+  if (bases.dodge !== null) {
+    options.push({
+      defense: 'dodge',
+      base: bases.dodge,
+      difficulty: against === 'projectile' ? 'difficult' : 'average',
+    })
+  }
+
+  return options
+}
+
+/**
+ * The defence the backend rolls: the better chance of those possible — the
+ * defender never declared one, and the advantage goes to them. A tie goes
+ * to the parry. Null when no defence is possible at all.
+ */
+export function bestDefense(
+  options: DefenseOption[],
+  modifiers: RollModifiers = NO_MODIFIERS
+): DefenseOption | null {
+  let best: { option: DefenseOption; chance: number } | null = null
+
+  for (const option of options) {
+    const { chance } = chanceOf(option.base, option.difficulty, modifiers)
+
+    if (best === null || chance > best.chance) {
+      best = { option, chance }
+    }
+  }
+
+  return best?.option ?? null
+}
+
+/**
+ * How badly a blow hurt, for the narration: mortal once it brings the target
+ * to 0 or below, serious when it takes half their hit points or more in one
+ * go — the major wound of the book — light otherwise.
+ */
+export function woundOf(damage: number, hitPointsMax: number, hitPointsAfter: number): Wound {
+  if (damage <= 0) return 'none'
+  if (hitPointsAfter <= 0) return 'mortal'
+
+  return damage >= Math.ceil(hitPointsMax / 2) ? 'serious' : 'light'
+}
+
+/**
+ * Down at 2 hit points or fewer: the shock of a serious wound, or light ones
+ * piling up — the book knocks both out. Whoever is down strikes no more.
+ */
+export const DOWN_AT = 2
+
+export function isDown(hitPoints: number): boolean {
+  return hitPoints <= DOWN_AT
+}
+
+/** The reduced fumble table, on a d100. */
+export function fumbleOf(roll: number): Fumble {
+  if (roll <= 30) return 'nothing'
+  if (roll <= 55) return 'fall'
+  if (roll <= 75) return 'weapon_dropped'
+  if (roll <= 90) return 'self_injury'
+
+  return 'weapon_broken'
+}
+
+/** A week of game time, in seconds: the step natural healing goes by. */
+export const HEALING_PERIOD = 7 * 24 * 60 * 60
+
+/** How many whole weeks went by between two readings of the game clock. */
+export function healingWeeks(since: number, now: number): number {
+  return Math.max(0, Math.floor((now - since) / HEALING_PERIOD))
 }
 
 function contextual({ source, effect }: ContextualModifier): AppliedModifier {

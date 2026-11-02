@@ -13,7 +13,7 @@ import { gameQuery, turnsQuery } from '@/games/queries'
 import { SheetDialog } from '@/games/sheet_dialog'
 import { Composer } from '@/games/composer'
 import { heldInFlight } from '@/games/held_turn'
-import { liveRollOf, locksInput } from '@/games/roll_reveal'
+import { lastRevealed, liveRollOf, locksInput } from '@/games/roll_reveal'
 import { rollLine, rollText } from '@/games/roll_text'
 import { SceneBar } from '@/games/scene_bar'
 import { TurnInFlight } from '@/games/turn_in_flight'
@@ -59,6 +59,7 @@ function GameScreen() {
   // A turn over before its dice were thrown stays where the turn in flight was.
   const shown = state.status !== 'idle' ? state : turn.held ? heldInFlight(turn.held) : null
   const liveRoll = liveRollOf(reveal, shown?.submission.turnId ?? null)
+  const announced = lastRevealed(reveal)
 
   function edit() {
     const text = turn.edit()
@@ -123,9 +124,9 @@ function GameScreen() {
                 ? waitingText(state, t)
                 : (turn.narrated ?? '')}
           </p>
-          {/* The roll in full, once its dice are thrown. */}
+          {/* Each roll in full, once its dice are thrown. */}
           <p aria-live="polite" className="sr-only">
-            {reveal.status === 'revealed' ? rollLine(rollText(reveal.roll, t)) : ''}
+            {announced ? rollLine(rollText(announced, t)) : ''}
           </p>
         </main>
 

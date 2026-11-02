@@ -165,7 +165,7 @@ export default {
           decorators: column,
         },
         status: {
-          tsType: "'present' | 'absent' | 'dead'",
+          tsType: "'present' | 'absent' | 'dying' | 'dead'",
           decorators: column,
         },
       },
@@ -238,6 +238,8 @@ export default {
           imports: [{ source: '#services/game/turn_trace', typeImports: ['TracedLore'] }],
         },
         rejected_attempts: jsonObjectList,
+        combat_result: jsonObject,
+        first_aid: jsonObject,
         duration: {
           tsType: 'Duration',
           decorators: column,

@@ -7,6 +7,7 @@ import type { ItemsInScene } from '#services/game/inventory'
 import type { Duration } from '#services/game/game_time'
 import type { Route, SceneExit } from '#services/game/travel'
 import type { PassageKey } from '#services/game/passages'
+import type { NarratedRound } from '#services/game/combat'
 
 /**
  * Shapes exchanged with the model.
@@ -180,13 +181,39 @@ export type ArbitrationOutput = {
   }
   /**
    * How long the turn takes, as a label the backend converts: the model never
-   * writes a time. Ignored for an aside, which takes none.
+   * writes a time. Ignored for an aside, which takes none — and for a round of
+   * combat, which the backend times.
    */
   duration: Duration
+  /** Whether the turn is a round of combat, and against whom; null when it is none. */
+  combat: CombatEngagement | null
   alert: {
     prompt_injection_suspected: boolean
     out_of_scope: boolean
   }
+}
+
+/**
+ * A round of combat as arbitration declares it (roadmap, Phase 10): who the
+ * character fights, and what the scene allows them against the riposte. The
+ * backend checks it, rolls the round and applies it — the model names, never
+ * numbers.
+ */
+export type CombatEngagement = {
+  /**
+   * Handle of someone present — or, when the character attacks first,
+   * reference of an archetype of the world: the improvised passer-by struck
+   * before anyone wrote them in.
+   */
+  opponent: string
+  /** The character attacks the opponent; false when they only meet an attack still open. */
+  character_attacks: boolean
+  /** Whether the character could parry the opponent's blow: a blade in hand, room to move. */
+  parry_possible: boolean
+  /** Whether they could dodge it: they see it coming and have room to move. */
+  dodge_possible: boolean
+  /** Circumstances weighing on the character's defence, as labels: three at most. */
+  defense_modifiers: ContextualModifier[]
 }
 
 export type RecentTurn = {
@@ -275,8 +302,23 @@ export type OutcomeToNarrate = {
   reason: string | null
 }
 
+/**
+ * First aid as the narration stages it: on whom — the character when null —
+ * and what it did, never by how much. `already_tended`: the wound had been
+ * seen to since it was dealt, and nothing more could be done.
+ */
+export type NarratedFirstAid = {
+  target: string | null
+  effect: 'healed' | 'no_effect' | 'worsened' | 'already_tended'
+  /** A dying person kept alive, a bleeding stopped, someone down brought round. */
+  saved: boolean
+}
+
 export type NarrationRequest = TurnContext & {
   outcome: OutcomeToNarrate
+  /** The round of combat this turn was, in labels; null when it was none. */
+  combat: NarratedRound | null
+  first_aid: NarratedFirstAid | null
   /** The game clock once the turn is over: the narration tells where it ends. */
   game_time_after: number
   /** The way to the destination arbitration named, passage by passage; null when it named none. */

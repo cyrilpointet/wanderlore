@@ -1,10 +1,11 @@
 import TurnLog from '#models/turn_log'
 import { describeTurnFailure } from '#exceptions/turn_failure'
 import type { LlmCallMetadata } from '#services/llm/types'
-import type { RollResolution } from '#services/rules/types'
+import type { Degree, RollResolution } from '#services/rules/types'
 import type { Duration } from '#services/game/game_time'
 
 import type { ArbitrationOutput } from './prompts/types.js'
+import type { Round } from './combat.js'
 import type { RejectionReason } from './turn_validator.js'
 
 /** The steps of a turn that call the model. */
@@ -57,9 +58,33 @@ export type TracedLore = {
   narration: string[] | null
 }
 
+/**
+ * The round of combat a turn played, every roll of it — the people's hidden
+ * ones included — and the archetype brought in for it, if the opponent was
+ * one: the backend creates them when the turn applies.
+ */
+export type TracedRound = Round & { provisional: { definition: string } | null }
+
+/**
+ * First aid given this turn: to whom — the character, or someone by handle —
+ * on what degree, and what it did. Nothing when the wound was already tended.
+ */
+export type TracedFirstAid = {
+  target: string | null
+  degree: Degree
+  /** Whether a wound was there to tend since the last attempt. */
+  available: boolean
+  /** Hit points it gave back: negative on a fumble, 0 on a failure. */
+  healed: number
+  /** A dying person kept alive, a bleeding stopped, someone down brought round. */
+  saved: boolean
+}
+
 export type TurnTrace = {
   arbitration: ArbitrationOutput | null
   roll: TracedRoll | null
+  combat: TracedRound | null
+  firstAid: TracedFirstAid | null
   time: TracedTime | null
   narration: string | null
   extraction: Record<string, unknown> | null
@@ -88,6 +113,8 @@ export function emptyTrace(): TurnTrace {
   return {
     arbitration: null,
     roll: null,
+    combat: null,
+    firstAid: null,
     time: null,
     narration: null,
     extraction: null,
@@ -111,6 +138,8 @@ export function traceColumns(trace: TurnTrace) {
   return {
     arbitrationOutput: trace.arbitration as Record<string, unknown> | null,
     rollResult: trace.roll as Record<string, unknown> | null,
+    combatResult: trace.combat as unknown as Record<string, unknown> | null,
+    firstAid: trace.firstAid as unknown as Record<string, unknown> | null,
     gameTimeBefore: trace.time?.before ?? null,
     gameTimeAfter: trace.time?.after ?? null,
     duration: trace.time?.duration ?? null,

@@ -21,6 +21,7 @@ import type {
   Characteristics,
   DamageModifierUse,
   SpecialEffect,
+  WeaponKind,
 } from '#services/rules/types'
 import type { FixedDuration } from '#services/game/game_time'
 
@@ -28,11 +29,13 @@ export {
   CHARACTERISTICS,
   DAMAGE_MODIFIER_USES,
   SPECIAL_EFFECTS,
+  WEAPON_KINDS,
   type BaseChance,
   type Characteristic,
   type Characteristics,
   type DamageModifierUse,
   type SpecialEffect,
+  type WeaponKind,
 } from '#services/rules/types'
 
 /**
@@ -107,10 +110,17 @@ export type CombatProfile = {
   hitPointsMax: number
   /**
    * The ordinary weapon they fight with: an item definition carrying a weapon
-   * profile, not an item they hold — it cannot be taken from them. A special
-   * weapon is held, as an item, and outranks it once fights are wired (Phase 10).
+   * profile, not an item they hold — it cannot be taken from them. A weapon
+   * they hold, as an item, outranks it.
    */
   weapon: string | null
+  /**
+   * Their damage modifier, as the book's creature sheets give it (`+1D4`);
+   * null for none. Entered, never derived: a person has no characteristics.
+   */
+  damageModifier: string | null
+  /** Their ordinary armour, subtracted from every blow; an armour they hold and wear outranks it. */
+  armor: number
 }
 
 export const ITEM_CONDITIONS = ['owned', 'equipped'] as const
@@ -137,16 +147,17 @@ export type ItemModifier = {
 
 /**
  * What a weapon deals when it hits, as BRP writes it. Read by the backend
- * only; wired into the turn with the combat loop (Phase 10).
+ * only. No skill: the category of action an attack is classed in names the
+ * skill it is made with (roadmap, Phase 10).
  */
 export type WeaponProfile = {
-  /** Reference of the world skill the weapon is wielded with. */
-  skill: string
+  /** Wielded in hand, thrown, or a projectile: what a riposte is, and how it is met. */
+  kind: WeaponKind
   /** A dice expression: `1D6+1` for a rapier. */
   damage: string
   /** How much of the wielder's damage modifier it adds: melee, thrown, firearm. */
   damageModifier: DamageModifierUse
-  /** What a special success with it does. Recorded, without effect before Phase 10. */
+  /** What a special success with it does. */
   special: SpecialEffect | null
 }
 
@@ -236,6 +247,11 @@ export type ItemDefinitionContent = DefinitionContent & {
   modifiers: ItemModifier[]
   /** Null for anything that is no weapon. */
   weapon: WeaponProfile | null
+  /**
+   * What it stops of every blow while its holder wears it — equippable items
+   * only; 0 for anything that is no armour. Several worn: the best counts.
+   */
+  armor: number
   initialHolder: ItemHolderReference | null
 }
 

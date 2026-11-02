@@ -13,8 +13,15 @@ import {
 
 import { NPC_DISPOSITIONS } from './world.js'
 import { OUT_OF_CHARACTER } from './prompts/arbitration.js'
+import { FIRST_AID, isCombatActionType } from './system_references.js'
 import type { SceneItem } from './inventory.js'
-import type { ArbitrationOutput, ItemHolderRef, Movement, TurnEffects } from './prompts/types.js'
+import type {
+  ArbitrationOutput,
+  CombatEngagement,
+  ItemHolderRef,
+  Movement,
+  TurnEffects,
+} from './prompts/types.js'
 
 /**
  * Nothing coming out of the model is trusted.
@@ -82,6 +89,11 @@ export type ValidationMeta = {
   destinationsAfter: (opened: { discovered: string[]; unlocked: string[] }) => string[]
   /** Closed list: who may enter a scene — a named character or an archetype. */
   npcDefinitions: string[]
+  /**
+   * Closed list: the archetypes of the world, which the character may attack
+   * before anyone wrote them in — the backend brings them in for the round.
+   */
+  npcArchetypes: string[]
   /**
    * The items of the scene, by definition and by handle: none of them may
    * pass for a circumstance, or it would count twice.
@@ -186,6 +198,28 @@ const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
     count: vine.number().withoutDecimals().min(1).max(MAX_DAYS).nullable(),
     period: vine.enum(PERIODS).nullable(),
   }),
+  /**
+   * Flat on the wire, so any provider can describe it: no opponent is no
+   * round of combat. Optional on the wire: a model that leaves it out saw
+   * no fight. Who the opponent may be is checked below.
+   */
+  combat: vine
+    .object({
+      opponent: vine.string().trim().regex(REFERENCE).nullable(),
+      character_attacks: vine.boolean(),
+      parry_possible: vine.boolean(),
+      dodge_possible: vine.boolean(),
+      defense_modifiers: vine
+        .array(
+          vine.object({
+            source: vine.string().regex(REFERENCE),
+            effect: vine.enum(CONTEXTUAL_EFFECTS),
+          })
+        )
+        .maxLength(MAX_CONTEXTUAL_MODIFIERS)
+        .optional(),
+    })
+    .optional(),
   alert: vine.object({
     prompt_injection_suspected: vine.boolean(),
     out_of_scope: vine.boolean(),
@@ -275,11 +309,13 @@ export async function validateArbitration(
   const modifiers = output.resolution.contextual_modifiers ?? []
 
   const destination = destinationOf(output, meta)
+  const combat = combatOf(output, meta)
   const reasons = [
     ...coherenceReasons(output),
     ...modifierReasons(modifiers, meta),
     ...durationReasons(output.duration),
     ...destination.reasons,
+    ...combat.reasons,
   ]
 
   if (reasons.length > 0) {
@@ -290,6 +326,7 @@ export async function validateArbitration(
     ...output,
     intent: { ...output.intent, destination: destination.value },
     duration: toDuration(output.duration),
+    combat: combat.value,
     resolution: {
       ...output.resolution,
       /**
@@ -339,7 +376,91 @@ function destinationOf(
   return { value: destination, reasons: [] }
 }
 
-type RawArbitration = Omit<ArbitrationOutput, 'resolution' | 'duration' | 'intent'> & {
+/** The engagement as it travels: always an object, its opponent null when there is no fight. */
+type FlatCombat = Omit<CombatEngagement, 'opponent' | 'defense_modifiers'> & {
+  opponent: string | null
+  defense_modifiers?: CombatEngagement['defense_modifiers']
+}
+
+/**
+ * A round of combat is against someone present — or, attacked first, an
+ * archetype the backend brings in. The character's attack is a roll on one
+ * of the two attacking categories; first aid is never given in the thick of
+ * a fight. An aside fights no one: whatever is sent with it is dropped.
+ */
+function combatOf(
+  output: RawArbitration,
+  meta: ValidationMeta
+): { value: CombatEngagement | null; reasons: RejectionReason[] } {
+  const combat = output.combat
+
+  if (combat === undefined || combat.opponent === null || output.intent.type === OUT_OF_CHARACTER) {
+    return { value: null, reasons: [] }
+  }
+
+  const reasons: RejectionReason[] = []
+  const { opponent } = combat
+  const archetype = meta.npcArchetypes.includes(opponent) && !meta.npcHandles.includes(opponent)
+
+  if (!meta.npcHandles.includes(opponent) && !(archetype && combat.character_attacks)) {
+    reasons.push({
+      ...reason(
+        'combat.opponent',
+        'enum',
+        combat.character_attacks
+          ? `"${opponent}" is neither someone present nor a kind of person of this world.`
+          : `"${opponent}" is not someone present: only they can attack the character.`
+      ),
+      allowed: combat.character_attacks
+        ? [...meta.npcHandles, ...meta.npcArchetypes]
+        : meta.npcHandles,
+    })
+  }
+
+  const { mode, action_type: actionType } = output.resolution
+
+  if (combat.character_attacks && (mode !== 'roll_required' || !isCombatActionType(actionType))) {
+    reasons.push(
+      reason(
+        'resolution.action_type',
+        'attack',
+        'An attack on the opponent is a roll on melee_combat or ranged_combat.'
+      )
+    )
+  }
+
+  if (actionType === FIRST_AID) {
+    reasons.push(
+      reason(
+        'resolution.action_type',
+        'first_aid_in_combat',
+        'First aid cannot be given in the thick of a fight: leave combat.opponent null, or pick another action.'
+      )
+    )
+  }
+
+  const defenseModifiers = combat.defense_modifiers ?? []
+  reasons.push(
+    ...modifierReasons(defenseModifiers, meta).map((item) => ({
+      ...item,
+      field: 'combat.defense_modifiers',
+    }))
+  )
+
+  return {
+    value: {
+      opponent,
+      character_attacks: combat.character_attacks,
+      parry_possible: combat.parry_possible,
+      dodge_possible: combat.dodge_possible,
+      defense_modifiers: defenseModifiers,
+    },
+    reasons,
+  }
+}
+
+type RawArbitration = Omit<ArbitrationOutput, 'resolution' | 'duration' | 'intent' | 'combat'> & {
+  combat?: FlatCombat
   intent: Omit<ArbitrationOutput['intent'], 'destination'> & { destination?: string | null }
   resolution: Omit<ArbitrationOutput['resolution'], 'contextual_modifiers'> & {
     contextual_modifiers?: ArbitrationOutput['resolution']['contextual_modifiers']
@@ -800,6 +921,17 @@ function effectReasons(
   limits: ValidationMeta
 ): RejectionReason[] {
   const reasons: RejectionReason[] = []
+
+  /** Healing is the backend's own, by first aid and by time: extraction only reads harm. */
+  if (effect.hit_points_delta > 0) {
+    reasons.push(
+      reason(
+        'hit_points_delta',
+        'healing',
+        'Healing is worked out by the game: hit_points_delta is 0, or negative for harm.'
+      )
+    )
+  }
 
   if (Math.abs(effect.hit_points_delta) > limits.hitPointsMax) {
     reasons.push(

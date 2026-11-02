@@ -2,6 +2,12 @@ import { isDiceExpression } from '#services/rules/dice_expression'
 import { FIXED_DURATIONS } from '#services/game/game_time'
 import { networkContainers, networksOf } from '#services/game/passages'
 
+import {
+  COMBAT_ACTION_TYPES,
+  SYSTEM_ACTION_TYPES,
+  SYSTEM_SKILLS,
+} from '#services/game/system_references'
+
 import { overlay, type WorldLevelContent } from './resolve.js'
 import {
   CHARACTERISTICS,
@@ -36,6 +42,9 @@ export type CoherenceIssueCode =
   | 'unknown_quest'
   | 'unknown_tag'
   | 'no_action_type'
+  | 'missing_system_reference'
+  | 'combat_needs_skill'
+  | 'not_a_weapon'
   | 'missing_generic_npc'
   | 'missing_location_archetype'
   | 'missing_generic_item'
@@ -60,6 +69,46 @@ export type CoherenceIssue = {
   code: CoherenceIssueCode
   location: string
   reference?: string
+}
+
+/**
+ * What the backend reads for itself (roadmap, Phase 10): the categories of
+ * action the round and first aid are worked out from, and the dodge skill.
+ * Both attacking categories are resolved by a skill — the parry and the
+ * riposte of a person, who has no characteristics, read it.
+ */
+export function systemReferenceIssues(
+  world: Pick<WorldLevelContent, 'actionTypes' | 'skills'>
+): CoherenceIssue[] {
+  const issues: CoherenceIssue[] = []
+  const declared = new Map(world.actionTypes.map((rule) => [rule.actionType, rule]))
+  const skills = referencesOf(world.skills)
+
+  for (const actionType of SYSTEM_ACTION_TYPES) {
+    if (!declared.has(actionType)) {
+      issues.push({
+        code: 'missing_system_reference',
+        location: 'actionTypes',
+        reference: actionType,
+      })
+    }
+  }
+  for (const actionType of COMBAT_ACTION_TYPES) {
+    if (declared.get(actionType)?.associatedSkill === null) {
+      issues.push({
+        code: 'combat_needs_skill',
+        location: `actionTypes.${actionType}.associatedSkill`,
+        reference: actionType,
+      })
+    }
+  }
+  for (const skill of SYSTEM_SKILLS) {
+    if (!skills.has(skill)) {
+      issues.push({ code: 'missing_system_reference', location: 'skills', reference: skill })
+    }
+  }
+
+  return issues
 }
 
 export function checkScenario(
@@ -117,6 +166,9 @@ export function checkScenario(
   if (world.actionTypes.length === 0) {
     report('no_action_type', 'actionTypes')
   }
+  for (const issue of systemReferenceIssues(world)) {
+    issues.push(issue)
+  }
   for (const rule of world.actionTypes) {
     if (rule.associatedSkill !== null && !skills.has(rule.associatedSkill)) {
       report(
@@ -143,6 +195,18 @@ export function checkScenario(
     }
     if (npc.combat.weapon !== null && !itemsByReference.has(npc.combat.weapon)) {
       report('unknown_item', `npcs.${npc.reference}.combat.weapon`, npc.combat.weapon)
+    } else if (
+      npc.combat.weapon !== null &&
+      itemsByReference.get(npc.combat.weapon)!.weapon === null
+    ) {
+      report('not_a_weapon', `npcs.${npc.reference}.combat.weapon`, npc.combat.weapon)
+    }
+    if (npc.combat.damageModifier !== null && !isDiceExpression(npc.combat.damageModifier)) {
+      report(
+        'invalid_dice',
+        `npcs.${npc.reference}.combat.damageModifier`,
+        npc.combat.damageModifier
+      )
     }
     /** Where a unique person waits from the start: a named place, like an item's holder. */
     if (npc.initialLocation !== null && !uniqueLocations.has(npc.initialLocation)) {
@@ -166,9 +230,6 @@ export function checkScenario(
     })
 
     if (item.weapon !== null) {
-      if (!skills.has(item.weapon.skill)) {
-        report('unknown_skill', `items.${item.reference}.weapon.skill`, item.weapon.skill)
-      }
       if (!isDiceExpression(item.weapon.damage)) {
         report('invalid_dice', `items.${item.reference}.weapon.damage`, item.weapon.damage)
       }

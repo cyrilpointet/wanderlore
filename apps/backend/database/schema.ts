@@ -36,12 +36,18 @@ export class AuthAccessTokenSchema extends BaseModel {
 }
 
 export class CharacterSchema extends BaseModel {
-  static $columns = ['characteristics', 'createdAt', 'hitPoints', 'hitPointsMax', 'id', 'name', 'progression', 'resources', 'sessionId', 'skills', 'updatedAt'] as const
+  static $columns = ['bleeding', 'characteristics', 'createdAt', 'firstAidAvailable', 'healingSince', 'hitPoints', 'hitPointsMax', 'id', 'name', 'progression', 'resources', 'sessionId', 'skills', 'updatedAt'] as const
   $columns = CharacterSchema.$columns
+  @column()
+  declare bleeding: boolean
   @column()
   declare characteristics: Characteristics
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column()
+  declare firstAidAvailable: boolean
+  @column()
+  declare healingSince: number | null
   @column()
   declare hitPoints: number
   @column()
@@ -92,8 +98,10 @@ export class InventoryItemSchema extends BaseModel {
 }
 
 export class ItemDefinitionSchema extends BaseModel {
-  static $columns = ['createdAt', 'description', 'equippable', 'generic', 'id', 'initialHolder', 'kind', 'labels', 'modifiers', 'reference', 'scenarioId', 'stackable', 'updatedAt', 'weapon', 'worldId'] as const
+  static $columns = ['armor', 'createdAt', 'description', 'equippable', 'generic', 'id', 'initialHolder', 'kind', 'labels', 'modifiers', 'reference', 'scenarioId', 'stackable', 'updatedAt', 'weapon', 'worldId'] as const
   $columns = ItemDefinitionSchema.$columns
+  @column()
+  declare armor: number
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -256,8 +264,10 @@ export class NpcDefinitionSchema extends BaseModel {
 }
 
 export class NpcInstanceSchema extends BaseModel {
-  static $columns = ['createdAt', 'definitionReference', 'descriptor', 'disposition', 'handle', 'hitPoints', 'id', 'locationInstanceId', 'name', 'sessionId', 'status', 'updatedAt'] as const
+  static $columns = ['bleeding', 'createdAt', 'definitionReference', 'descriptor', 'disposition', 'firstAidAvailable', 'handle', 'hitPoints', 'id', 'locationInstanceId', 'name', 'sessionId', 'status', 'updatedAt'] as const
   $columns = NpcInstanceSchema.$columns
+  @column()
+  declare bleeding: boolean
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -266,6 +276,8 @@ export class NpcInstanceSchema extends BaseModel {
   declare descriptor: string | null
   @column()
   declare disposition: 'hostile' | 'unfriendly' | 'neutral' | 'friendly' | 'allied'
+  @column()
+  declare firstAidAvailable: boolean
   @column()
   declare handle: string
   @column()
@@ -279,7 +291,7 @@ export class NpcInstanceSchema extends BaseModel {
   @column()
   declare sessionId: string
   @column()
-  declare status: 'present' | 'absent' | 'dead'
+  declare status: 'present' | 'absent' | 'dying' | 'dead'
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
@@ -391,7 +403,7 @@ export class SessionSchema extends BaseModel {
 }
 
 export class TurnLogSchema extends BaseModel {
-  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'createdAt', 'duration', 'extractionOutput', 'failure', 'gameTimeAfter', 'gameTimeBefore', 'id', 'idempotencyKey', 'language', 'llmUsage', 'loreSent', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
+  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'combatResult', 'createdAt', 'duration', 'extractionOutput', 'failure', 'firstAid', 'gameTimeAfter', 'gameTimeBefore', 'id', 'idempotencyKey', 'language', 'llmUsage', 'loreSent', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
   $columns = TurnLogSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare alerts: Record<string, unknown>[] | null
@@ -399,6 +411,8 @@ export class TurnLogSchema extends BaseModel {
   declare appliedEffects: Record<string, unknown> | null
   @column()
   declare arbitrationOutput: Record<string, unknown> | null
+  @column()
+  declare combatResult: Record<string, unknown> | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -407,6 +421,8 @@ export class TurnLogSchema extends BaseModel {
   declare extractionOutput: Record<string, unknown> | null
   @column()
   declare failure: Record<string, unknown> | null
+  @column()
+  declare firstAid: Record<string, unknown> | null
   @column()
   declare gameTimeAfter: number | null
   @column()

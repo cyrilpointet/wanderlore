@@ -6,9 +6,14 @@ import type { BaseChance, Characteristics } from './types.js'
  * hand — a pregenerated character has no hit points of its own to get wrong.
  */
 
-/** Hit points: half of CON + SIZ, rounded up — a dozen for an ordinary adult. */
+/**
+ * Hit points: CON + SIZ, the book's optional total hit points — two dozen
+ * for an ordinary adult. For every world since Phase 10, the advantage a solo
+ * game gives its one player; provisional, until each world's power level
+ * decides it (Phase 13).
+ */
 export function hitPointsFor(characteristics: Characteristics): number {
-  return Math.ceil((characteristics.CON + characteristics.SIZ) / 2)
+  return characteristics.CON + characteristics.SIZ
 }
 
 /**

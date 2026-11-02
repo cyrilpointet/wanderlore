@@ -101,6 +101,7 @@ function itemOf(item: ItemDefinitionContent): ItemDefinition {
     equippable: item.equippable,
     modifiers: item.modifiers,
     weapon: item.weapon,
+    armor: item.armor,
   }
 
   return item.kind === 'unique'

@@ -37,7 +37,8 @@ export type TurnState =
       status: 'in_progress'
       submission: Submission
       step: Step | null
-      roll: Roll | null
+      /** The character's rolls heard so far, in order: up to two in a round of combat. */
+      rolls: Roll[]
       /**
        * The narration as it is written, provisional until `turn_completed`
        * replaces it with the turn as persisted. `null` when it is not being
@@ -47,7 +48,7 @@ export type TurnState =
        */
       narration: string | null
     }
-  | { status: 'failed'; submission: Submission; roll: Roll | null; failure: Failure }
+  | { status: 'failed'; submission: Submission; rolls: Roll[]; failure: Failure }
   | {
       status: 'submit_failed'
       submission: Submission
@@ -63,6 +64,7 @@ export type TurnState =
 /** A turn event from the game's SSE channel (architecture, section 8bis). */
 export type TurnMessage = { turnId: string; idempotencyKey: string | null } & (
   | { event: 'step_started'; step: Step }
+  /** One of the character's rolls: the action or attack, then the defence against the riposte. */
   | ({ event: 'roll_resolved' } & Roll)
   /** A fragment of the narration as it is written, to append to what came before. */
   | { event: 'narration_chunk'; text: string }
@@ -112,7 +114,7 @@ export function isBusy(state: TurnState): boolean {
 /** Changes whenever the turn in flight shows something new: the journal follows it. */
 export function progressKey(state: TurnState): string {
   if (state.status !== 'in_progress') return state.status
-  return [state.status, state.step, state.roll?.degree, state.narration?.length].join(':')
+  return [state.status, state.step, state.rolls.length, state.narration?.length].join(':')
 }
 
 /**
@@ -169,7 +171,7 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
             status: 'in_progress',
             submission: { ...state.submission, turnId: action.turn.id },
             step: null,
-            roll: null,
+            rolls: [],
             narration: '',
           },
           action.turn
@@ -204,7 +206,7 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
           turnId: action.turn.id,
         },
         step: null,
-        roll: action.turn.roll,
+        rolls: action.turn.rolls,
         narration: null,
       }
 
@@ -224,7 +226,7 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
             turnId: action.turn.id,
           },
           step: null,
-          roll: action.turn.roll,
+          rolls: action.turn.rolls,
           narration: null,
         }
       }
@@ -253,7 +255,7 @@ function onMessage(state: TurnState, message: TurnMessage): TurnState {
           status: 'in_progress' as const,
           submission: { ...state.submission, turnId: message.turnId },
           step: null,
-          roll: null,
+          rolls: [],
           narration: '',
         }
 
@@ -261,20 +263,25 @@ function onMessage(state: TurnState, message: TurnMessage): TurnState {
     case 'step_started':
       return { ...current, step: message.step }
     case 'roll_resolved':
+      // Up to two in a turn, in the order they were made: each joins the ones before.
       return {
         ...current,
-        roll: {
-          skill: message.skill,
-          characteristic: message.characteristic,
-          value: message.value,
-          baseChance: message.baseChance,
-          difficulty: message.difficulty,
-          modifiers: message.modifiers,
-          chance: message.chance,
-          roll: message.roll,
-          result: message.result,
-          degree: message.degree,
-        },
+        rolls: [
+          ...current.rolls,
+          {
+            skill: message.skill,
+            characteristic: message.characteristic,
+            value: message.value,
+            baseChance: message.baseChance,
+            difficulty: message.difficulty,
+            modifiers: message.modifiers,
+            chance: message.chance,
+            roll: message.roll,
+            result: message.result,
+            degree: message.degree,
+            combat: message.combat,
+          },
+        ],
       }
     case 'narration_chunk':
       if (current.narration === null) return current
@@ -285,7 +292,7 @@ function onMessage(state: TurnState, message: TurnMessage): TurnState {
       return {
         status: 'failed',
         submission: current.submission,
-        roll: current.roll,
+        rolls: current.rolls,
         failure: message.failure,
       }
   }
@@ -299,10 +306,18 @@ function settle(state: Extract<TurnState, { status: 'in_progress' }>, turn: Turn
     return {
       status: 'failed',
       submission: state.submission,
-      roll: turn.roll ?? state.roll,
+      rolls: rollsOf(turn, state),
       failure: turn.failure ?? { code: 'unexpected', message: '' },
     }
   }
 
-  return { ...state, roll: turn.roll ?? state.roll }
+  return { ...state, rolls: rollsOf(turn, state) }
+}
+
+/**
+ * The rolls as the turn read back has them — none while it is pending, the
+ * backend logging them as it ends — or else those heard so far.
+ */
+function rollsOf(turn: Turn, state: { rolls: Roll[] }): Roll[] {
+  return turn.rolls.length > 0 ? turn.rolls : state.rolls
 }

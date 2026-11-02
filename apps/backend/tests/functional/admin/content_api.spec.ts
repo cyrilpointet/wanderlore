@@ -60,7 +60,13 @@ const GUARD = {
   kind: 'archetype',
   generic: false,
   defaultDisposition: 'neutral',
-  combat: { skills: { deduction: 30 }, hitPointsMax: 9, weapon: null },
+  combat: {
+    skills: { deduction: 30 },
+    hitPointsMax: 9,
+    weapon: null,
+    damageModifier: null,
+    armor: 0,
+  },
   initialLocation: null,
 }
 

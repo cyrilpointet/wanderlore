@@ -37,11 +37,13 @@ export type DefinitionDraft = {
   modifiers: string
   /** JSON text; empty for no weapon. */
   weapon: string
+  /** As typed: a whole number, 0 for anything that is no armour. */
+  armor: string
   /** `npc:athos`, `location:paris`, or empty for none. */
   initialHolder: string
 }
 
-const NEW_COMBAT = { skills: {}, hitPointsMax: 12, weapon: null }
+const NEW_COMBAT = { skills: {}, hitPointsMax: 12, weapon: null, damageModifier: null, armor: 0 }
 
 export function emptyDefinitionDraft(): DefinitionDraft {
   return {
@@ -60,6 +62,7 @@ export function emptyDefinitionDraft(): DefinitionDraft {
     equippable: false,
     modifiers: '[]',
     weapon: '',
+    armor: '0',
     initialHolder: '',
   }
 }
@@ -86,6 +89,7 @@ export function definitionDraftOf(definition: Definition): DefinitionDraft {
     equippable: item.equippable ?? false,
     modifiers: item.modifiers === undefined ? '[]' : json(item.modifiers),
     weapon: item.weapon === undefined || item.weapon === null ? '' : json(item.weapon),
+    armor: String(item.armor ?? 0),
     initialHolder: item.initialHolder
       ? `${item.initialHolder.holder}:${item.initialHolder.reference}`
       : '',
@@ -93,8 +97,7 @@ export function definitionDraftOf(definition: Definition): DefinitionDraft {
 }
 
 export type DefinitionPayload =
-  | { payload: Record<string, unknown>; errors?: never }
-  | { payload?: never; errors: FieldErrors }
+  { payload: Record<string, unknown>; errors?: never } | { payload?: never; errors: FieldErrors }
 
 /**
  * The definition as the backend takes it, its catalogue's fields only. What
@@ -145,6 +148,13 @@ export function definitionPayloadOf(
       equippable: draft.equippable,
       modifiers: parse('modifiers'),
       weapon: draft.weapon.trim() === '' ? null : parse('weapon'),
+      /** Sent as typed when it is no number: the backend names the field. */
+      armor:
+        draft.armor.trim() === ''
+          ? 0
+          : Number.isNaN(Number(draft.armor))
+            ? draft.armor
+            : Number(draft.armor),
       initialHolder: unique ? holderOf(draft.initialHolder) : null,
     })
   }

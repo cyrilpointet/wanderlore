@@ -32,6 +32,7 @@ const STUDS: ItemDefinition = {
   equippable: false,
   modifiers: [],
   weapon: null,
+  armor: 0,
   initialHolder: { holder: 'npc', reference: 'buckingham' },
 }
 
@@ -69,8 +70,9 @@ describe('definition draft', () => {
   })
 
   test('keeps an item’s initial holder through the draft', () => {
-    expect(definitionPayloadOf('items', definitionDraftOf(STUDS), { creating: false }).payload)
-      .toMatchObject({ initialHolder: { holder: 'npc', reference: 'buckingham' } })
+    expect(
+      definitionPayloadOf('items', definitionDraftOf(STUDS), { creating: false }).payload
+    ).toMatchObject({ initialHolder: { holder: 'npc', reference: 'buckingham' } })
   })
 
   test('leaves out what only the other kind may have', () => {
@@ -102,7 +104,7 @@ describe('definition draft', () => {
       kind: 'archetype',
       equippable: true,
       initialHolder: null,
-      weapon: { skill: 'swordsmanship', damage: '1D6+1', damageModifier: 'full', special: 'impaling' },
+      weapon: { kind: 'melee', damage: '1D6+1', damageModifier: 'full', special: 'impaling' },
     }
 
     expect(
@@ -112,10 +114,27 @@ describe('definition draft', () => {
       definitionPayloadOf('items', definitionDraftOf(STUDS), { creating: false }).payload
     ).toMatchObject({ weapon: null })
     expect(
-      definitionPayloadOf('items', { ...definitionDraftOf(STUDS), weapon: '{ skill' }, {
-        creating: false,
-      })
+      definitionPayloadOf(
+        'items',
+        { ...definitionDraftOf(STUDS), weapon: '{ skill' },
+        {
+          creating: false,
+        }
+      )
     ).toEqual({ errors: { weapon: 'This is not valid JSON.' } })
+  })
+
+  test('sends the armour as a number, 0 when left empty', () => {
+    const coat: ItemDefinition = { ...STUDS, reference: 'buff_coat', equippable: true, armor: 1 }
+
+    expect(definitionDraftOf(coat).armor).toBe('1')
+    expect(
+      definitionPayloadOf('items', definitionDraftOf(coat), { creating: false }).payload
+    ).toMatchObject({ armor: 1 })
+    expect(
+      definitionPayloadOf('items', { ...definitionDraftOf(coat), armor: '' }, { creating: false })
+        .payload
+    ).toMatchObject({ armor: 0 })
   })
 
   test('names JSON that does not parse, and sends nothing', () => {

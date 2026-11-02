@@ -4,7 +4,8 @@ import type TurnLog from '#models/turn_log'
 import type { ContentLabels } from '#services/game/content_labels'
 import type { Labelled } from '#services/game/content_labels'
 import type { AppliedEffects, AppliedHolder, AppliedItems } from '#services/game/prompts/types'
-import type { RollResolution } from '#services/rules/types'
+import type { TracedRound } from '#services/game/turn_trace'
+import type { Defense, RollResolution, SpecialEffect } from '#services/rules/types'
 
 /**
  * A logged turn, as the journal shows it — and as a client reads it back after
@@ -30,7 +31,7 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
       turnNumber: turn.turnNumber,
       status: turn.status,
       playerInput: turn.playerInput,
-      roll: this.#roll(),
+      rolls: this.#rolls(),
       narration: turn.status === 'completed' ? turn.narratedText : null,
       effects:
         turn.appliedEffects === null
@@ -45,23 +46,92 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
   }
 
   /**
-   * The roll carries what the backend derived from the action type: a skill
-   * or a characteristic. Every logged turn is on the BRP rules — the switch
-   * deleted the games played before it.
+   * The character's rolls, in the order they were made: their action or
+   * attack, then their defence against the riposte. Each carries what the
+   * backend derived from its category: a skill or a characteristic. The
+   * people's rolls stay in the log. Every logged turn is on the BRP rules —
+   * the switch deleted the games played before it.
    */
-  #roll() {
-    const { rollResult } = this.resource
+  #rolls() {
+    const { rollResult, combatResult } = this.resource
 
-    if (rollResult === null) {
-      return null
-    }
-
-    if (!('base' in rollResult)) {
+    if (rollResult !== null && !('base' in rollResult)) {
       throw new Error(`Turn ${this.resource.id} logged a roll without what it rolled.`)
     }
 
-    return presentRoll(rollResult as unknown as RollResolution, this.#labels)
+    return characterRolls(
+      rollResult as unknown as RollResolution | null,
+      combatResult as unknown as TracedRound | null
+    ).map(({ resolution, combat }) => presentRoll(resolution, this.#labels, combat))
   }
+}
+
+/**
+ * What a roll of the character did in a round: an attack, how it ended and
+ * what it dealt; or a defence, which one and whether it held. Never the
+ * people's own rolls.
+ */
+export type RollCombat =
+  | {
+      role: 'attack'
+      outcome: 'hit' | 'blocked' | 'missed'
+      damage: {
+        weapon: number
+        modifier: number
+        armor: number
+        total: number
+        effect: SpecialEffect | null
+      } | null
+    }
+  | { role: 'defense'; defense: Defense; outcome: 'avoided' | 'struck' }
+
+/** The rolls the character made in a turn, with what each did in its round. */
+export function characterRolls(
+  action: RollResolution | null,
+  round: TracedRound | null
+): { resolution: RollResolution; combat: RollCombat | null }[] {
+  const rolls: { resolution: RollResolution; combat: RollCombat | null }[] = []
+
+  if (action !== null) {
+    const blow = round?.characterBlow ?? null
+
+    rolls.push({
+      resolution: action,
+      combat:
+        blow === null
+          ? null
+          : {
+              role: 'attack',
+              outcome:
+                blow.landed !== null ? 'hit' : action.result === 'success' ? 'blocked' : 'missed',
+              damage:
+                blow.hit === null
+                  ? null
+                  : {
+                      weapon: blow.hit.weapon,
+                      modifier: blow.hit.modifier,
+                      armor: blow.hit.armor,
+                      total: blow.hit.total,
+                      effect: blow.hit.effect,
+                    },
+            },
+    })
+  }
+
+  const defense = round?.riposte?.defense ?? null
+
+  if (defense !== null) {
+    rolls.push({
+      resolution: defense.resolution,
+      combat: {
+        role: 'defense',
+        defense: defense.defense,
+        outcome: round!.riposte!.landed === null ? 'avoided' : 'struck',
+      },
+    })
+  }
+
+  return rolls
 }
 
 /**
@@ -71,7 +141,11 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
  * system, which the front labels. A circumstance leaves as its label of
  * effect, never as the words arbitration named it with.
  */
-export function presentRoll(roll: RollResolution, labels: ContentLabels) {
+export function presentRoll(
+  roll: RollResolution,
+  labels: ContentLabels,
+  combat: RollCombat | null = null
+) {
   return {
     skill: roll.base.kind === 'skill' ? labels.of('skill', roll.base.skill) : null,
     characteristic: roll.base.kind === 'characteristic' ? roll.base.characteristic : null,
@@ -91,6 +165,7 @@ export function presentRoll(roll: RollResolution, labels: ContentLabels) {
     roll: roll.roll,
     result: roll.result,
     degree: roll.degree,
+    combat,
   }
 }
 

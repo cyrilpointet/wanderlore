@@ -44,7 +44,9 @@ function character(inventory: InventoryItem[]): Character {
       { reference: 'DEX', value: 16 },
       { reference: 'CHA', value: 14 },
     ],
-    skills: [{ reference: 'persuasion', label: 'Persuasion', value: 45, category: 'communication' }],
+    skills: [
+      { reference: 'persuasion', label: 'Persuasion', value: 45, category: 'communication' },
+    ],
     resources: [],
     inventory,
   }
@@ -144,6 +146,7 @@ const PERSUASION: Roll = {
   roll: 42,
   result: 'success',
   degree: 'success',
+  combat: null,
 }
 
 describe('Journal | the roll in full', () => {
@@ -205,7 +208,6 @@ describe('Journal | the roll in full', () => {
 })
 
 describe('Journal | items', () => {
-
   test('tells what happened to the character’s items, and with whom', () => {
     const text = textOf(
       renderToStaticMarkup(

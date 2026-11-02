@@ -45,9 +45,10 @@ function revealOptions(): RevealOptions {
  * sent, drives the turn machine with what the API and the channel say, and
  * writes each finished turn into the journal and the sheet.
  *
- * A roll received live is played out by the reveal machine. A turn finished
- * before its dice were thrown is held — neither in the journal nor on the
- * sheet, nor read aloud — and recorded once they are.
+ * The rolls received live are played out by the reveal machine, one after
+ * the other. A turn finished before its dice were all thrown is held —
+ * neither in the journal nor on the sheet, nor read aloud — and recorded
+ * once they are.
  */
 export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) {
   const queryClient = useQueryClient()
@@ -164,11 +165,11 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
 
       // Only a roll heard live is played out: one read back is shown as it stands.
       const current = latest.current
-      if (message.event === 'roll_resolved' && current.status === 'in_progress' && current.roll) {
+      if (message.event === 'roll_resolved' && current.status === 'in_progress') {
         revealAct({
           type: 'roll_received',
           turnId: message.turnId,
-          roll: current.roll,
+          rolls: current.rolls,
           ...revealOptions(),
         })
       }

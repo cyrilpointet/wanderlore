@@ -7,7 +7,7 @@ import { failureMessage } from '@/i18n/errors'
 import { useAnimates } from '@/preferences'
 import { paragraphs } from './presentation'
 import type { Game, ItemChangeEffect, Roll, Turn } from './queries'
-import { DEGREE_EMPHASIS, ROLL_TONE, rollLine, rollText } from './roll_text'
+import { DEGREE_EMPHASIS, ROLL_TONE, damageLine, rollSummary, rollText } from './roll_text'
 import { useStickToBottom } from './use_stick_to_bottom'
 
 /** Loading the page of the story before the turns shown. */
@@ -146,7 +146,7 @@ function TurnEntry({ turn, fadeIn }: { turn: Turn; fadeIn: boolean }) {
   return (
     <article className="flex flex-col gap-6">
       <PlayerAction text={turn.playerInput} />
-      {turn.roll && <RollChip roll={turn.roll} />}
+      <RollChips rolls={turn.rolls} />
       {turn.narration && <Narration text={turn.narration} fadeIn={fadeIn} />}
       {turn.effects && <Effects effects={turn.effects} />}
     </article>
@@ -165,22 +165,40 @@ export function PlayerAction({ text }: { text: string }) {
   )
 }
 
+/** The rolls of a turn, one chip each, in the order they were made: nothing without a roll. */
+export function RollChips({ rolls, children }: { rolls: Roll[]; children?: ReactNode }) {
+  if (rolls.length === 0 && !children) return null
+
+  return (
+    <div className="flex flex-col gap-2">
+      {rolls.map((roll, index) => (
+        <RollChip key={index} roll={roll} />
+      ))}
+      {children}
+    </div>
+  )
+}
+
 /**
- * The roll in full, as at the table: what was rolled and at how much, the
- * difficulty when it is not average, each modifier with its value, the chance
- * when it moved, the d100 and the degree. Every number comes from the backend;
- * the colour only doubles the words, it never carries the outcome alone.
+ * The roll in full, as at the table: for a defence, which one; what was
+ * rolled and at how much, the difficulty when it is not average, each
+ * modifier with its value, the chance when it moved, the d100 and the degree;
+ * in combat, what it did, and the damage the blow dealt on a line of its own.
+ * Every number comes from the backend; the colour only doubles the words, it
+ * never carries the outcome alone.
  */
 export function RollChip({ roll }: { roll: Roll }) {
   const { t } = useTranslation('game')
+  const text = rollText(roll, t)
 
   return (
     <p className="flex justify-center">
       <span
-        className={`inline-flex flex-wrap items-center justify-center gap-x-2 rounded-sm border px-3 py-1 text-label ${ROLL_TONE[roll.result]} ${DEGREE_EMPHASIS[roll.degree]}`}
+        className={`inline-flex flex-wrap items-center justify-center gap-x-2 rounded-sm border px-3 py-1 text-center text-label ${ROLL_TONE[roll.result]} ${DEGREE_EMPHASIS[roll.degree]}`}
       >
         <D10Icon aria-hidden className="size-4 shrink-0" />
-        {rollLine(rollText(roll, t))}
+        {rollSummary(text)}
+        {text.damage.length > 0 && <span className="basis-full">{damageLine(text)}</span>}
       </span>
     </p>
   )

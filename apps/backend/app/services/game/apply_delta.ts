@@ -408,8 +408,10 @@ async function leave(
     return []
   }
 
+  /** The dying go nowhere: they die where they fell. */
   await NpcInstance.query({ client: trx })
     .where('sessionId', sessionId)
+    .whereNotIn('status', ['dying', 'dead'])
     .whereIn('handle', handles)
     .update({ status: 'absent', locationInstanceId: null })
 
