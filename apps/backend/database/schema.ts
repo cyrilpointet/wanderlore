@@ -203,6 +203,27 @@ export class LoreFragmentSchema extends BaseModel {
   declare worldId: string
 }
 
+export class NarrativeSummarySchema extends BaseModel {
+  static $columns = ['content', 'createdAt', 'id', 'level', 'llmUsage', 'sessionId', 'turnEnd', 'turnStart'] as const
+  $columns = NarrativeSummarySchema.$columns
+  @column()
+  declare content: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare level: 'scene' | 'global'
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare llmUsage: Record<string, unknown>[]
+  @column()
+  declare sessionId: string
+  @column()
+  declare turnEnd: number
+  @column()
+  declare turnStart: number
+}
+
 export class NpcDefinitionSchema extends BaseModel {
   static $columns = ['combat', 'createdAt', 'defaultDisposition', 'description', 'generic', 'id', 'initialLocation', 'kind', 'labels', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
   $columns = NpcDefinitionSchema.$columns

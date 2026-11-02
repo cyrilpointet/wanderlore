@@ -8,6 +8,7 @@ import {
   createLocationInstance,
   createNpcInstance,
   createSession,
+  createSummary,
   createTurn,
   createUser,
   createWorldState,
@@ -34,6 +35,7 @@ test.group('Cascading deletes', (group) => {
     await createWorldState(sessionId, locationInstanceId)
     const npcInstanceId = await createNpcInstance(sessionId)
     await createTurn(sessionId)
+    await createSummary(sessionId, { start: 1, end: 1 })
     /** Items under each kind of holder: every path to the session has to cascade. */
     await createInventoryItem(sessionId, { characterId })
     await createInventoryItem(sessionId, { npcInstanceId }, { handle: 'rapier_2' })
@@ -47,6 +49,7 @@ test.group('Cascading deletes', (group) => {
     assert.equal(await countRows('npc_instances', { session_id: sessionId }), 0)
     assert.equal(await countRows('turn_log', { session_id: sessionId }), 0)
     assert.equal(await countRows('inventory_items', { session_id: sessionId }), 0)
+    assert.equal(await countRows('narrative_summaries', { session_id: sessionId }), 0)
   })
 
   test('deleting a user removes their sessions and everything below', async ({ assert }) => {

@@ -284,6 +284,28 @@ export async function createTurn(
   return row.id
 }
 
+export async function createSummary(
+  sessionId: string,
+  range: { start: number; end: number },
+  level: 'scene' | 'global' = 'scene',
+  content = 'The character arrived in Paris.'
+): Promise<string> {
+  const [row] = await db
+    .table('narrative_summaries')
+    .insert({
+      session_id: sessionId,
+      level,
+      content,
+      turn_start: range.start,
+      turn_end: range.end,
+      llm_usage: JSON.stringify([]),
+      created_at: new Date(),
+    })
+    .returning('id')
+
+  return row.id
+}
+
 export async function createResolutionRule(
   worldId: string,
   actionType: string,

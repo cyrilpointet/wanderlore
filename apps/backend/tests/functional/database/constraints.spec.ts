@@ -11,6 +11,7 @@ import {
   createResolutionRule,
   createWorld,
   createSession,
+  createSummary,
   createTurn,
   createUser,
   createWorldState,
@@ -234,6 +235,38 @@ test.group('Schema constraints', (group) => {
 
     const error = await expectDbError(() =>
       createInventoryItem(sessionId, { characterId }, { state: 'broken' })
+    )
+
+    assert.equal(error.code, PG_INVALID_TEXT_REPRESENTATION)
+  })
+
+  test('a summary covers a range that runs forward from the first turn', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+
+    const inverted = await expectDbError(() => createSummary(sessionId, { start: 9, end: 4 }))
+    const beforeTheStory = await expectDbError(() => createSummary(sessionId, { start: 0, end: 4 }))
+
+    assert.equal(inverted.code, PG_CHECK_VIOLATION)
+    assert.equal(beforeTheStory.code, PG_CHECK_VIOLATION)
+  })
+
+  test('a range is summarised once per level', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    await createSummary(sessionId, { start: 1, end: 8 })
+
+    const error = await expectDbError(() => createSummary(sessionId, { start: 1, end: 8 }))
+
+    /** What keeps a job run twice from writing the same summary twice. */
+    assert.equal(error.code, PG_UNIQUE_VIOLATION)
+    /** The rolling summary may end where a scene does. */
+    assert.isString(await createSummary(sessionId, { start: 1, end: 8 }, 'global'))
+  })
+
+  test('a summary level is scene or global, nothing else', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+
+    const error = await expectDbError(() =>
+      createSummary(sessionId, { start: 1, end: 8 }, 'chapter' as 'scene')
     )
 
     assert.equal(error.code, PG_INVALID_TEXT_REPRESENTATION)

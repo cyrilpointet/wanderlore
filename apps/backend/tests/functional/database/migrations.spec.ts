@@ -20,6 +20,7 @@ const TABLES = [
   'item_definitions',
   'passage_states',
   'lore_fragments',
+  'narrative_summaries',
 ]
 
 const ENUM_TYPES = [
@@ -32,6 +33,7 @@ const ENUM_TYPES = [
   'scenario_status',
   'definition_kind',
   'lore_fragment_kind',
+  'narrative_summary_level',
 ]
 
 async function existingTables(): Promise<string[]> {

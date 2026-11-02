@@ -245,5 +245,12 @@ export default {
         },
       },
     },
+
+    narrative_summaries: {
+      columns: {
+        level: { tsType: "'scene' | 'global'", decorators: column },
+        llm_usage: jsonObjectList,
+      },
+    },
   },
 } satisfies SchemaRules
