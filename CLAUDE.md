@@ -150,7 +150,8 @@ fixe : déplacement, sorties, entrées, noms et dispositions, puis objets (créa
 transferts, destructions, équipement — « le lieu » étant celui où le tour a commencé). Trois
 appels au minimum par tour,
 sauf pour un **aparté au MJ** (`intent.type: out_of_character`) : narré en réponse brève,
-sans extraction ni changement d'état.
+sans extraction ni changement d'état. Hors du tour, un job de résumé (Phase 9) condense les
+tours anciens dans sa propre file.
 SSE : `step_started(arbitration)`, `roll_resolved` (avec les objets qui ont pesé, sans
 valeur), `step_started(narration)`, des `narration_chunk`, puis un seul `turn_completed` (avec
 le lieu courant libellé et l'inventaire à jour) ou `turn_failed` — pas de jalon pour
@@ -341,7 +342,32 @@ Phase 7 » ; architecture §6ter et §6quater), sur le modèle du détenteur ini
 confirmation. Suppression douce (`sessions.deleted_at`) : la partie et ses tours restent en
 base, mais toute route de jeu y répond comme à une partie inexistante.
 
-Phase suivante : **Phase 9 (mémoire long terme)**.
+**Phase 9 (mémoire long terme) terminée** — epic Jira `KAN-128`. Ses choix restent en vigueur
+(détail : roadmap Phase 9, « Décisions de cadrage » ; architecture
+§5 ; base de données, `narrative_summaries`) :
+- **deux niveaux de résumé, en anglais** (`narrative_summaries`) : un `scene` condense **tous**
+  les tours non couverts plus anciens que les 4 derniers dès qu'il y en a 8
+  (`SCENE_SUMMARY_THRESHOLD`, `TURNS_KEPT_VERBATIM`) ; un `global` glissant absorbe les `scene`
+  au-delà de 4 (`SCENES_BEFORE_FOLD`). Pas de niveau `chapter` (le chapitre ne change jamais) ;
+- **pas de trou de mémoire** : arbitrage et narration reçoivent `story_so_far` (dernier
+  `global`, puis les `scene` non repliés), puis **tous les tours qu'ils ne couvrent pas** — la
+  narration tous, l'arbitrage les 2 derniers, l'extraction rien ;
+- **le résumé ne lit que l'entrée du joueur et la narration**, jamais la sortie d'arbitrage
+  (que le `secret_lore` influence) ; son prompt écarte consignes et apartés ;
+- **file à part** (`narrative-summary`, `SummaryWorker`, `concurrency: 1`) : le tour réussi met
+  le job en file si le seuil est atteint, sans jamais échouer pour autant ; le job recalcule ce
+  qui est dû et ignore une partie supprimée ; ni nouvelle tentative ni SSE, un échec n'écrit
+  rien ;
+- **coût** dans `narrative_summaries.llm_usage` (étape `summary`), compté par `llm:cost` ;
+- **journal paginé** : `GET /sessions/:id/turns` par pages de 20 (`?before=`,
+  `metadata.hasEarlier`), *Load earlier* au front ;
+- hors périmètre : rappel des PNJ absents et retour dans un lieu improvisé (lot à part).
+
+**Langue de narration par défaut** : `DEFAULT_LANGUAGE` (backend, `config/game.ts`, `en` si
+absente, fixée à `en` dans `.env.test`) ; `VITE_DEFAULT_LANGUAGE` pour l'interface, qui retombe
+sur l'anglais faute de traductions.
+
+Phase suivante : **Phase 10 (combat)**.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
@@ -444,6 +470,14 @@ serverless pour le backend).
   l'intégrité d'un tour (idempotence, sérialisation, événements SSE) ne repose sur la file.
   Le pilote se choisit dans `config/queue.ts` (`QUEUE_DRIVER`), la suite de tests tourne sur
   le pilote mémoire, et le worker (`start/worker.ts`) ne démarre qu'avec le serveur web.
+- **La mémoire d'un tour se lit par `loadMemory`** (`#services/game/summary_service`) et se
+  calcule par `#services/game/narrative_memory`, pur : un tour envoie `story_so_far` puis
+  **tous** les tours après le dernier résumé (`coveredUpTo`) — jamais une limite fixe, qui
+  rouvrirait un trou entre résumés et tours. Le résumé ne lit jamais `arbitration_output`.
+- **Un résumé s'écrit dans la file `narrative-summary`** (`SUMMARISE_QUEUE`), jamais dans
+  celle des tours, et seulement par `SummaryService` : le job recalcule ce qui est dû, et la
+  contrainte d'unicité `(session_id, level, turn_end)` empêche un doublon. Son coût va dans
+  `narrative_summaries.llm_usage`, sous la forme de `usageRow()` (`turn_trace`).
 - **Tout événement de tour passe par le port `TurnEvents`** (`#services/turn_events` en
   application, `RecordingTurnEvents` en test), émis par le code du tour — jamais dérivé de la
   file. Un envoi raté ne fait jamais échouer un tour : le front rattrape en relisant le tour.

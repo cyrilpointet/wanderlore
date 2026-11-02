@@ -71,7 +71,7 @@ flowchart TD
     T -.-> F
 
     V --> J{Seuil de résumé<br/>atteint ?}
-    J -->|oui| Q2[(File : job résumé)]
+    J -->|oui| Q2[(File narrative-summary : job résumé)]
     Q2 --> SUM["§9 — Régénération du résumé<br/>(hors chemin critique)"]
 ```
 
@@ -152,18 +152,18 @@ flowchart LR
     subgraph sources [Sources]
         ST[(State — SQL déterministe<br/>characters, world_states,<br/>npc_instances present,<br/>location_instances courant,<br/>inventory_items)]
         LO[(Lore — filtrage par tags<br/>lore_fragments<br/>RAG seulement si le volume l'exige)]
-        ME[(Mémoire<br/>dernier narrative_summary<br/>+ N derniers tours)]
+        ME[(Mémoire<br/>dernier global + scene non repliés<br/>+ tours qu'ils ne couvrent pas)]
         CA[(Catalogues fermés<br/>resolution_rules,<br/>npc_definitions,<br/>location_definitions,<br/>définitions d'objets)]
     end
 
     ST --> K1[Contexte A+B+C]
     LO -->|règles| K1
-    ME -->|résumé anglais<br/>+ buffer court : 2 tours| K1
+    ME -->|résumés anglais<br/>+ buffer court : 2 tours| K1
     CA -->|action_types + descriptions,<br/>handles et références| K1
 
     ST --> K2[Contexte D]
     LO -->|ambiance du lieu| K2
-    ME -->|résumé<br/>+ buffer récent : 2 à 4 tours| K2
+    ME -->|résumés<br/>+ tous les tours non couverts : 4 au moins| K2
     CA -->|noms d'affichage<br/>langue de la partie<br/>+ glossaire| K2
 
     CA -->|listes fermées| K3[Contexte E]
@@ -171,9 +171,9 @@ flowchart LR
 
 | Étape | Lore | State | Mémoire | Catalogues |
 |---|---|---|---|---|
-| A+B+C | Règles ciblées par les tags | Scène : lieu courant et sa description, sorties du lieu avec leur état, lieux atteignables, période de la journée, PNJ présents, objets en scène par détenteur — personnage, PNJ présents, lieu (références et libellés anglais, **sans valeurs mécaniques ni valeurs de compétence**) | Résumé anglais + buffer court (2 derniers tours, langue du joueur) | `action_types` avec descriptions |
+| A+B+C | Règles ciblées par les tags | Scène : lieu courant et sa description, sorties du lieu avec leur état, lieux atteignables, période de la journée, PNJ présents, objets en scène par détenteur — personnage, PNJ présents, lieu (références et libellés anglais, **sans valeurs mécaniques ni valeurs de compétence**) | Résumés anglais (`story_so_far`) + buffer court (2 derniers tours, langue du joueur) | `action_types` avec descriptions |
 | Calcul du jet | — | Compétence du personnage, objets du personnage avec effets mécaniques | — | `resolution_rules`, définitions d'objets |
-| D | Ambiance liée au lieu | Scène complète, description et sorties du lieu, chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date), objets en scène par détenteur (libellé dans la langue de la partie, descripteur) | Résumé + buffer récent (2–4 tours, langue du joueur) | Noms d'affichage dans la langue de la partie, glossaire |
+| D | Ambiance liée au lieu | Scène complète, description et sorties du lieu, chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date), objets en scène par détenteur (libellé dans la langue de la partie, descripteur) | Résumés anglais + tous les tours qu'ils ne couvrent pas (4 au moins, langue du joueur) | Noms d'affichage dans la langue de la partie, glossaire |
 | E | Aucun | Handles présents, objets en scène par détenteur, sorties cachées et verrouillées du lieu, schéma des effets autorisés (pas les valeurs actuelles) | Aucune | Listes fermées de définitions (PNJ, objets, flags) et destinations permises depuis le lieu |
 
 Toutes les sélections sont déterministes : aucune n'est déléguée au LLM.
@@ -380,15 +380,25 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A([Tour complété]) --> B{Seuil de résumé atteint ?<br/>nombre de tours et/ou<br/>changement de scène<br/>à trancher}
+    A([Tour complété]) --> B{Au moins 8 tours non couverts<br/>plus anciens que les 4 derniers ?}
     B -->|non| Z([Rien])
-    B -->|oui| C[(File : job résumé<br/>identifiant de partie)]
-    C --> D[(Dernier narrative_summary<br/>+ tours bruts accumulés)]
-    D --> E{{LLM — résumé<br/>toujours en anglais}}
-    E --> F[(INSERT narrative_summaries)]
+    B -->|oui| C[(File narrative-summary<br/>identifiant de partie)]
+    C --> P{Partie supprimée ?}
+    P -->|oui| Z
+    P -->|non| R{Scène due ?<br/>recalculé au moment du job}
+    R -->|oui| D[(Résumés précédents<br/>+ entrées et narrations à condenser<br/>jamais l'arbitrage)]
+    D --> E{{LLM — résumé scene<br/>toujours en anglais}}
+    E --> F[(INSERT narrative_summaries<br/>scene + llm_usage)]
+    F --> G{Plus de 4 scene<br/>non repliées ?}
+    R -->|non| G
+    G -->|oui| H{{LLM — nouveau global<br/>global précédent + scene les plus anciennes}}
+    H --> I[(INSERT narrative_summaries<br/>global + llm_usage)]
+    G -->|non| Z
 ```
 
-Ce job ne bloque jamais la réponse au joueur, et il n'émet aucun événement SSE [archi §5].
+Ce job tourne dans **sa propre file**, pour ne jamais retarder le tour suivant d'un joueur ; il
+ne bloque jamais la réponse au joueur et n'émet aucun événement SSE. Ni nouvelle tentative : un
+échec ou une réponse vide n'écrit rien, et le tour suivant redemande [archi §5 et §8bis].
 
 ---
 
@@ -477,7 +487,6 @@ Repris des points ouverts des autres documents, sans les résoudre :
 
 - **Durabilité et charges des objets** — différées en Phase 4, consommables par la quantité.
 - **Branchement des dégâts dans le tour** (attaquant, cible) — Phase 10.
-- **Seuils de déclenchement du résumé narratif** — Phase 9.
 - **Jets opposés contre un PNJ improvisé** — Phase 10.
 - **Conditions de fin de partie** — Phase 12.
 - **Modération de contenu** au-delà du prompt injection — Phase 14.

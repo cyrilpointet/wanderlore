@@ -35,7 +35,7 @@ Le lore, le scénario, le state et les system prompts restent **exclusivement en
 | **Personnage** (`character`) | Évolutif | Stats, compétences, inventaire, état (PV, ressources) |
 | **État du monde** (`world_state`) | Évolutif, source de vérité | Quêtes actives, relations PNJ, lieux visités, flags narratifs, objets détenus par les PNJ et les lieux |
 | **Journal des tours** (`turn_log`) | Log complet | Input joueur, sorties intermédiaires du pipeline, narration finale — pour audit/debug/reprise |
-| **Résumés** (`narrative_summary`) | Hiérarchique, horodaté | Résumé de scène / chapitre / global |
+| **Résumés** (`narrative_summary`) | Hiérarchique, horodaté | Résumé de scène / global, en anglais (Phase 9 : pas de niveau chapitre) |
 | **Configuration de règles** (`resolution_rule`) | Paramétrable | Table type d'action → compétence, barèmes de difficulté, formules de jet — jamais codée en dur |
 
 **Règle absolue** : le *world state* et les stats du personnage sont la seule vérité. Le LLM ne modifie jamais directement ces données — il ne fait que proposer des changements, validés et appliqués par le backend.
@@ -98,7 +98,7 @@ Les identifiants manipulés à cette étape (objets, PNJ, flags) sont des **réf
 |---|---|---|---|
 | **Lore / univers** | Gros, statique | Indépendant de la partie | Filtrage par tags ou recherche par similarité (RAG) |
 | **State (scène, PNJ, inventaire)** | Petit, précis | Lié à la partie en cours | Requête déterministe (SQL), pas de filtrage flou nécessaire |
-| **Mémoire narrative** | Moyen, séquentiel | Compression progressive | Toujours "dernier résumé + N derniers tours", pas de filtrage par pertinence |
+| **Mémoire narrative** | Moyen, séquentiel | Compression progressive | Toujours "résumés + tours qu'ils ne couvrent pas", pas de filtrage par pertinence (Phase 9) |
 
 ### Filtrage du lore : deux approches
 
@@ -116,10 +116,10 @@ Pertinent seulement pour des lores massifs (corpus de type encyclopédie) où le
 
 | Étape | Lore | State | Mémoire narrative |
 |---|---|---|---|
-| A+B+C | Fragments `rule` et `fact`, secrets compris, sans tag ou tagués de la scène | Scène courante : PNJ présents, lieu et sa description, sorties du lieu avec leur état, lieux atteignables, période de la journée, objets en scène (personnage, PNJ présents, lieu) | Résumé + buffer court (2 derniers tours) |
-| D | Fragments `ambiance` et `fact` non secrets, sans tag ou tagués de la scène (pas les règles) | Scène complète + résultat de résolution, noms des PNJ marqués connus ou non du personnage (`known`), description et sorties du lieu (cachées comprises, marquées ; le lieu où mène une sortie, seulement s'il a été visité), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) | Résumé + buffer récent (2–4 tours), pour la continuité de ton |
+| A+B+C | Fragments `rule` et `fact`, secrets compris, sans tag ou tagués de la scène | Scène courante : PNJ présents, lieu et sa description, sorties du lieu avec leur état, lieux atteignables, période de la journée, objets en scène (personnage, PNJ présents, lieu) | Résumés (`story_so_far`) + buffer court (2 derniers tours) |
+| D | Fragments `ambiance` et `fact` non secrets, sans tag ou tagués de la scène (pas les règles) | Scène complète + résultat de résolution, noms des PNJ marqués connus ou non du personnage (`known`), description et sorties du lieu (cachées comprises, marquées ; le lieu où mène une sortie, seulement s'il a été visité), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) | Résumés (`story_so_far`) + tous les tours qu'ils ne couvrent pas (4 au moins), pour la continuité de ton |
 | E | Aucun | Handles présents, objets en scène, destinations permises, sorties cachées et verrouillées du lieu, schéma des champs modifiables (pas les valeurs actuelles) — jamais la description du lieu ni le temps | Aucun (le texte narré suffit) |
-| Job résumé (async) | Aucun | Aucun | Résumé précédent + tours bruts à compresser |
+| Job résumé (async) | Aucun | Aucun | Résumés précédents + entrées du joueur et narrations à condenser (jamais la sortie d'arbitrage) ; pour le repli, le `global` précédent + les `scene` à absorber |
 
 **Point clé** : le lore n'est jamais injecté en bloc. Il est filtré différemment selon l'usage — règles pour l'arbitrage (A+B+C), ambiance pour la narration (D), faits pour les deux — même s'il provient de la même table source (`lore_fragments`, colonne `kind`). Les fragments sans tag d'abord, puis du plus spécifique au moins spécifique (lieu exact, parents, PNJ présents, objets), sous un plafond de 12 fragments tagués par étape (`TAGGED_LORE_CAP`) ; `turn_log.lore_sent` enregistre les références envoyées à chaque étape. La sélection est un service pur (`#services/game/lore`), sur la `WorldDefinition` chargée une fois par tour. À l'arbitrage, les fragments secrets arrivent dans un champ à part (`secret_lore`) : ils pèsent sur le jugement sans être énoncés dans `validity.justification` ni `intent.summary`, que lit la narration. La narration d'un déplacement reçoit en plus le lore de la destination et des PNJ qui y attendent.
 
@@ -135,7 +135,7 @@ est un poste marginal. Le poste dominant est le contexte réinjecté **à chaque
 | Étape | Langue de l'entrée | Langue de la sortie |
 |---|---|---|
 | A+B+C (arbitrage) | Contexte anglais + buffer court et input joueur **bruts**, dans la langue du joueur | JSON anglais |
-| D (narration) | Contexte anglais + buffer récent (langue du joueur) + glossaire | Texte dans `language`, `ambiance_flags` en anglais |
+| D (narration) | Contexte anglais + résumés anglais + tours non couverts (langue du joueur) + glossaire | Texte dans `language`, `ambiance_flags` en anglais |
 | E (extraction) | Texte narré (langue du joueur) + schéma | JSON anglais, identifiants issus d'une liste fermée |
 | Job résumé | Tours bruts (langue du joueur) | **Résumé en anglais** |
 
@@ -147,9 +147,10 @@ asynchrone et hors du chemin critique, il peut condenser une narration français
 anglais sans pénaliser la latence perçue.
 
 **2. Le buffer récent reste dans la langue du joueur, et il est dosé par étape.** La
-narration (D) reçoit le buffer récent (2–4 tours) pour la continuité de ton et de dialogue ;
-l'arbitrage (A+B+C) reçoit un **buffer court** (les 2 derniers tours : entrée du joueur et
-narration), pour interpréter l'intention.
+narration (D) reçoit tous les tours qu'aucun résumé ne couvre encore (4 au moins, 12 environ
+au plus tant que le job suit), pour la continuité de ton et de dialogue ; l'arbitrage (A+B+C)
+reçoit un **buffer court** (les 2 derniers tours : entrée du joueur et narration), pour
+interpréter l'intention. Voir section 5.
 
 *Révisé avant la Phase 3.* Une version antérieure réservait le buffer à la narration, au motif
 que le résumé anglais et le state suffiraient à l'arbitrage. C'est faux : le résumé est
@@ -188,13 +189,37 @@ démarche de monétisation).
 
 ## 5. Gestion de la mémoire long terme
 
-Trois niveaux, pour éviter de charger l'historique complet à chaque appel :
+Trois niveaux, pour éviter de charger l'historique complet à chaque appel (Phase 9, roadmap
+« Décisions de cadrage ») :
 
 1. **Faits permanents structurés** (state) — toujours injecté, compact, jamais résumé (c'est déjà une donnée structurée).
-2. **Résumé narratif glissant** — condensé régénéré périodiquement (job asynchrone, après chaque scène ou tous les N tours) par un appel LLM dédié qui absorbe les tours anciens. **Toujours rédigé en anglais**, quelle que soit la langue de la partie (voir section 4bis).
-3. **Buffer récent** — derniers tours en clair, dans la langue de la partie. La narration en reçoit 2–4, pour la continuité immédiate de ton et de dialogue ; l'arbitrage en reçoit un buffer court (2 tours), pour interpréter l'intention du joueur quand elle renvoie à ce qui vient de se passer (voir section 4bis, règle 2).
+2. **Résumés narratifs** (`narrative_summaries`), **toujours rédigés en anglais**, quelle que soit la langue de la partie (voir section 4bis), sur deux niveaux :
+   - un résumé **`scene`** condense un bloc de tours. Il est dû dès qu'au moins 8 tours (`SCENE_SUMMARY_THRESHOLD`) ne sont couverts par aucun résumé et sont plus anciens que les 4 derniers, jamais résumés (`TURNS_KEPT_VERBATIM`) ; il les condense tous, si bien qu'un job en retard rattrape en un appel ;
+   - un résumé **`global`**, glissant, absorbe les `scene` les plus anciens au-delà de 4 (`SCENES_BEFORE_FOLD`), en reprenant le `global` précédent.
 
-Le résumé n'est jamais recalculé en synchrone dans le chemin critique de réponse au joueur : il tourne en tant que job différé de la file pour ne pas ajouter de latence perçue.
+   Une étape reçoit le dernier `global` puis les `scene` qu'il n'a pas absorbés, du plus ancien au plus récent (`story_so_far`). Un résumé remplacé reste en base, jamais dans le contexte.
+3. **Tours en clair** — tous les tours qui suivent le dernier résumé, dans la langue de la partie : jamais un nombre fixe, pour qu'aucun tour ne manque à la fois aux résumés et au contexte, aussi tard que tourne le job. La narration les reçoit tous (4 au moins), pour la continuité immédiate de ton et de dialogue ; l'arbitrage n'en garde que les 2 derniers, pour interpréter l'intention du joueur quand elle renvoie à ce qui vient de se passer (voir section 4bis, règle 2). L'extraction ne reçoit ni résumé ni tour.
+
+Le calcul (ce qu'un tour lit, quand une scène est due, quelles scènes replier) est pur
+(`#services/game/narrative_memory`) ; le service de résumé (`#services/game/summary_service`)
+lit, appelle le modèle et écrit.
+
+**Hors du chemin critique.** Le résumé n'est jamais recalculé en synchrone : le tour, une fois
+réussi, met un job dans une **file à part** (`narrative-summary`) si le seuil est atteint — le
+worker des tours tourne en `concurrency: 1`, et un résumé dans sa file retarderait le tour
+suivant de tous les joueurs. Le job ne porte que l'identifiant de la partie et recalcule ce qui
+est dû quand il tourne : deux jobs pour la même partie n'écrivent qu'une fois. Ni nouvelle
+tentative ni événement SSE : un échec n'écrit rien, et le tour suivant redemande.
+
+**Sécurité.** Le résumé est réinjecté à chaque tour, sur toute la partie : une consigne qu'il
+aurait recopiée d'un texte de joueur reviendrait avec lui. Il ne lit donc que l'entrée du joueur
+et la narration — jamais la sortie d'arbitrage, que le `secret_lore` influence —, son prompt
+condense des faits et écarte toute consigne trouvée dans les tours ainsi que les apartés au MJ,
+et il arrive aux étapes comme donnée de jeu, jamais comme instruction.
+
+**Coût.** Les jetons de chaque résumé sont enregistrés dans `narrative_summaries.llm_usage`
+(étape `summary`) : un résumé n'appartient à aucun tour. `llm:cost` les compte dans le coût
+d'une partie.
 
 ---
 
@@ -205,7 +230,7 @@ Le résumé n'est jamais recalculé en synchrone dans le chemin critique de rép
 *Note : les valeurs de champs JSON ci-dessous sont en anglais, conformément à la convention. Les valeurs de contenu narratif (texte libre) restent dans la langue de la partie jouée — français ici pour l'exemple, cohérent avec un joueur francophone.*
 
 ### Étape 0 — Préparation backend (aucun LLM)
-Récupération déterministe : état de la scène (PNJ présents, lieu), fragments de lore tagués des références de la scène, buffer récent + dernier résumé.
+Récupération déterministe : état de la scène (PNJ présents, lieu), fragments de lore tagués des références de la scène, résumés + tours qu'ils ne couvrent pas.
 
 ### Étape 1 — Appel LLM fusionné A+B+C
 
@@ -570,7 +595,7 @@ Le tour complet (input joueur, sorties des 3 appels, résultat du jet, texte fin
 
 ### Étape 6 — Job asynchrone (hors chemin critique)
 
-Si le nombre de tours depuis le dernier résumé dépasse un seuil défini, un job en file d'attente régénère le résumé narratif à partir du résumé précédent + tours bruts accumulés, sans bloquer la réponse déjà envoyée au joueur.
+Si au moins 8 tours plus anciens que les 4 derniers ne sont couverts par aucun résumé, le tour met un job dans la file des résumés : un résumé `scene` les condense, avec les résumés précédents pour contexte, sans bloquer la réponse déjà envoyée au joueur ; au-delà de 4 `scene`, les plus anciens sont repliés dans le `global` (section 5).
 
 ---
 
@@ -767,7 +792,7 @@ produit la langue du joueur.
   jamais supprimé. Seuls les PNJ `present` partent dans le contexte : le coût reste borné.
 - **Un PNJ absent n'est pas rappelé** en Phase 3 : revenu à l'auberge, le joueur peut
   croiser une nouvelle instance plutôt que la même servante. Le rappel des PNJ connus d'un
-  lieu relève de la mémoire long terme (Phase 9).
+  lieu relève de l'état structuré, pas du résumé : écarté de la Phase 9, lot à part à cadrer.
 - Le narrateur reste libre d'évoquer qui il veut. Seul un PNJ qui entre en scène — avec qui
   le joueur peut interagir — devient une instance.
 
@@ -923,8 +948,8 @@ L'extraction propose un déplacement vers :
   archétypes et `parent` de celle des lieux uniques.
 
 Revenir dans un lieu improvisé déjà visité (la même auberge) n'est pas pris en charge, pour la
-même raison que le rappel des PNJ partis on ne sait où : cela relève de la mémoire long terme
-(Phase 9). Un retour crée une nouvelle instance.
+même raison que le rappel des PNJ partis on ne sait où : cela relève de l'état structuré, pas
+du résumé — écarté de la Phase 9, lot à part à cadrer. Un retour crée une nouvelle instance.
 
 **Localisation des PNJ** (Phase 7, `npc_instances.location_instance_id`). La présence d'un PNJ
 est celle de la scène ; son lieu est celui où il se trouve quand la scène n'est plus avec lui :
@@ -1006,7 +1031,7 @@ garde l'horloge avant et après le tour, et la durée proposée.
 | **LLM Gateway (service)** | Encapsule les appels à l'API LLM externe, indépendant du provider, un template de system prompt + schéma de sortie par étape, suivi de coûts/tokens |
 | **Moteur de règles (service déterministe)** | Calcul des jets — aucune dépendance au LLM |
 | **Repositories / Models (Lucid)** | Persistance des entités (`world`, `scenario`, `session`, `character`, `world_state`, `turn_log`, `narrative_summary`) |
-| **File de jobs (pg-boss, puis BullMQ)** | Service substituable (port + adaptateur) : exécution du pipeline en tâche de fond pour un tour de jeu, jobs différés (génération de résumé narratif périodique). pg-boss (PostgreSQL) en instance unique, BullMQ (Redis) au passage à plusieurs instances |
+| **File de jobs (pg-boss, puis BullMQ)** | Service substituable (port + adaptateur) : exécution du pipeline en tâche de fond pour un tour de jeu, jobs différés (résumé narratif, dans sa propre file depuis la Phase 9). pg-boss (PostgreSQL) en instance unique, BullMQ (Redis) au passage à plusieurs instances |
 | **AdonisJS Transmit (SSE)** | Flux d'événements serveur→client pendant l'exécution du pipeline : progression par étape, chunks de narration en streaming, résultat final du tour |
 
 Cette séparation permet de :
@@ -1093,6 +1118,12 @@ La bascule n'est simple que si **rien de ce qui garantit l'intégrité d'un tour
 - **Le balayage reste à 5 minutes** : 3 minutes de budget au plus, 2 minutes de marge pour l'attente en file. Le balayage ne rattrape plus un tour vivant, par construction.
 - **Limite connue** : le balayage compte depuis `created_at`, attente en file comprise. Négligeable avec un seul testeur ; avec plusieurs joueurs sous `concurrency: 1`, il faudra un `started_at` et deux seuils (tour jamais démarré, tour démarré) — à reprendre avec le passage à plusieurs instances (Phase 14).
 
+**File des résumés (Phase 9).** Le résumé narratif a sa propre file (`narrative-summary`) et son
+worker (`SummaryWorker`, `concurrency: 1`, démarré après celui des tours, qui démarre la file) :
+dans la file des tours, un résumé retarderait le tour suivant de tous les joueurs. Le job ne
+porte que l'identifiant de la partie ; un échec est journalisé, sans nouvelle tentative ni
+événement SSE (section 5).
+
 **Schéma `pgboss`.** pg-boss crée ses tables dans son propre schéma, hors des migrations Lucid. La génération de `database/schema.ts`, `db:truncate` et `db:wipe` ne regardent que `public` : ce schéma leur est invisible. La suite de tests n'utilise jamais pg-boss (pilote mémoire, `QUEUE_DRIVER=memory`).
 
 **Ce qui ne change pas** : le contenu et l'ordre des étapes du pipeline (section 3) restent identiques — seule la façon dont le résultat de chaque étape est communiqué au front évolue, d'un unique retour final vers une séquence d'événements progressifs. Les principes de sécurité et de validation backend (section 7) s'appliquent de la même façon, quel que soit le canal de transport.
@@ -1112,7 +1143,7 @@ Tour de jeu
 ├─ Étape 0 (backend, dans le job) : récupération state + lore taggué + mémoire
 │
 ├─ Étape 1 (LLM, A+B+C) → event: step_completed (arbitration)
-│   IN  : lore filtré (règles et faits, secrets à part) + state scène (lieu décrit, sorties, lieux atteignables, période) + perso + résumé + buffer court (2 tours) + input joueur + language
+│   IN  : lore filtré (règles et faits, secrets à part) + state scène (lieu décrit, sorties, lieux atteignables, période) + perso + résumés + buffer court (2 tours) + input joueur + language
 │   OUT : intent (+ destination dans un réseau) + validity + resolution + duration + alert
 │
 ├─ Backend : avancée de l'horloge (durée convertie + trajet vers la destination, aparté = 0)
@@ -1122,7 +1153,7 @@ Tour de jeu
 │   OUT : résultat déterministe (d100, chance, success/failure + degré)
 │
 ├─ Étape 3 (LLM, D — narration) → event: narration_chunk (streaming)
-│   IN  : lore filtré (ambiance et faits non secrets, destination comprise) + state scène (lieu, sorties, chemin, PNJ à la destination) + temps du tour + resolution + résumé + buffer + language
+│   IN  : lore filtré (ambiance et faits non secrets, destination comprise) + state scène (lieu, sorties, chemin, PNJ à la destination) + temps du tour + resolution + résumés + tours non couverts + language
 │   OUT : narration (texte, dans la langue demandée) + ambiance_flags (en anglais)
 │
 ├─ Étape 4 (LLM, E — extraction)
@@ -1131,7 +1162,7 @@ Tour de jeu
 │
 ├─ Étape 5 (backend) : validation + application du delta + écriture turn_log → event: turn_completed
 │
-└─ Étape 6 (job asynchrone, périodique, hors chemin critique du tour) : régénération du résumé narratif
+└─ Étape 6 (job asynchrone, file à part, hors chemin critique du tour) : résumé de scène si le seuil est atteint, puis repli dans le résumé global
 ```
 
 ---
@@ -1140,7 +1171,7 @@ Tour de jeu
 
 - ~~Granularité de découpage et structure exacte des tags de lore~~ — tranché en Phase 8 : les tags sont des références de lieux, de PNJ et d'objets, tirées de la scène (section 4).
 - Gestion narrative des échecs (comment raconter un échec de façon crédible sans punir injustement le joueur).
-- Seuils de déclenchement du job de résumé (nombre de tours, changement de scène, ou les deux).
+- ~~Seuils de déclenchement du job de résumé~~ — tranché en Phase 9 : nombre de tours, sans changement de scène (section 5).
 - Choix définitif du provider LLM externe et impact sur le format exact du function calling / structured output utilisé par le LLM Gateway.
 - Liste des langues supportées (l'architecture multi-langue est actée en section 4bis, le périmètre linguistique ne l'est pas).
 - Granularité du glossaire de noms propres : par univers, par scénario, ou par scène — et son outillage de saisie dans le back-office.

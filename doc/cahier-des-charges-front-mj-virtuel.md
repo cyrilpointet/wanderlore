@@ -246,9 +246,11 @@ d'échec n'existe que pendant la visite où l'échec s'est produit.
 lieu de départ, quête en cours s'il y en a une, et l'invitation *« Your story begins. What do
 you do? »*.
 
-**Historique long** : chargé en entier en Phase 2. Une pagination vers le haut (**Load
-earlier**) sera à prévoir quand les parties s'allongeront (Phase 9) ; la structure du
-journal doit la permettre.
+**Historique long** (Phase 9, KAN-133) : une partie s'ouvre sur ses 20 derniers tours. Tant
+qu'il en reste de plus anciens, un bouton **Load earlier** en tête du journal charge la page
+précédente et la place devant, sans déplacer la lecture ; une page ajoutée devant n'est pas
+une nouveauté (pas de bouton *New message*). Un échec de chargement s'affiche sous le bouton,
+d'après son `code`.
 
 #### 5.3.3 Zone de saisie
 
@@ -458,7 +460,7 @@ disponible.
 | `GET` | `/account/profile` | Existe | Nom et initiales dans le menu du compte |
 | `GET` | `/sessions` | Existe (KAN-16) | Liste des parties (5.2) |
 | `GET` | `/sessions/:id` | Existe (KAN-16) | Partie : personnage, libellés, tour en cours éventuel |
-| `GET` | `/sessions/:id/turns` | Existe (KAN-16) | Historique des tours aboutis |
+| `GET` | `/sessions/:id/turns` | Existe (KAN-16), paginée en Phase 9 (KAN-133) | Historique des tours aboutis, par pages de 20 (`?before=` un numéro de tour), `metadata.hasEarlier` |
 | `GET` | `/sessions/:id/turns/:turnId` | Existe (KAN-16) | État et résultat d'un tour (rattrapage) |
 | `POST` | `/sessions/:id/turns` | Existe, **à passer en `202` + clé d'idempotence** | Soumission |
 | SSE | canal Transmit de la partie | **À créer** | Progression du tour (architecture, 8bis) |
@@ -713,8 +715,8 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   changement d'API : le jet se lance à la main et s'anime (5.3.7) ; un écran de préférences
   (5.5) réunit le thème, la lecture à voix haute, le lancer automatique et les animations, le
   tout en stockage local.
-- **Phase 9 — Mémoire long terme.** Pas d'impact visible ; la pagination du journal devient
-  probablement nécessaire.
+- **Phase 9 — Mémoire long terme.** Le résumé ne s'affiche pas ; le journal est paginé
+  (*Load earlier*, 5.3.2).
 - **Phase 10 — Combat.** Combat en rounds (même pipeline, donc même journal, avec un repère
   visuel de round et l'état de l'adversaire si le backend le transmet).
 - **Phase 11 — Échéances et événements déclenchés par le temps.** Pas d'impact visible : ce

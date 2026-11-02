@@ -89,7 +89,25 @@ node ace game:reset --no-seed     # supprime sans recréer (avant une migration 
 
 Refusé en production. Arrêter le serveur avant, ou au moins ne laisser aucun tour en cours :
 un job resté en file chercherait un tour qui n'existe plus. **`game:reset` efface aussi
-l'historique de consommation** (`turn_log`).
+l'historique de consommation** (`turn_log`, `narrative_summaries`).
+
+**Mémoire d'une partie** (Phase 9) : un résumé `scene` s'écrit dès qu'au moins 8 tours plus
+anciens que les 4 derniers ne sont couverts par aucun résumé — donc au 12ᵉ tour d'une partie
+neuve, puis tous les 8 tours —, par un job hors du tour, dans la file `narrative-summary`. Au-delà
+de 4 `scene`, les plus anciens sont repliés dans un `global`. Pour les lire, sur la base de dev :
+
+```sql
+select level, turn_start, turn_end, content
+from narrative_summaries
+where session_id = '<id de la partie>'
+order by turn_end, level;
+```
+
+Un résumé raté n'écrit rien et n'apparaît qu'aux logs du serveur (`summary failed`) ; le tour
+suivant le redemande.
+
+**Journal** : une partie s'ouvre sur ses 20 derniers tours ; *Load earlier*, en haut du
+journal, remonte page par page.
 
 **Préférences du front joueur** (menu du compte → *Preferences*) : thème, lecture à voix haute,
 lancer automatique des dés, animations une à une. Rangées dans le navigateur (clés
@@ -148,8 +166,11 @@ node ace llm:cost --input-per-million=<prix> --output-per-million=<prix>   # ave
 node ace llm:cost --model=gemini-3.8-flash --input-per-million=<prix> --output-per-million=<prix>
 ```
 
-- **Lecture seule**, sur `turn_log` : totaux, moyenne par tour et par partie, détail par
-  étape (arbitrage, narration, extraction, avec le taux de sorties rejetées) et par langue.
+- **Lecture seule**, sur `turn_log` et `narrative_summaries` : totaux, moyenne par tour et par
+  partie, détail par étape (arbitrage, narration, extraction, résumé, avec le taux de sorties
+  rejetées), par langue (tours seuls) et par niveau de résumé (`scene`, `global`).
+- **Les résumés comptent dans le coût d'une partie** : totaux, moyenne par tour et par partie
+  les incluent. La ligne `N summary(ies) written` dit combien.
 - **Tours comptés** : tous ceux du journal sauf ceux encore en cours — terminés et échoués,
   les seconds ayant aussi consommé. La ligne `N turn(s) played (… completed, … failed)` les
   donne.
@@ -159,7 +180,9 @@ node ace llm:cost --model=gemini-3.8-flash --input-per-million=<prix> --output-p
   mixed…`) et le coût affiché est alors faux. Lancer une fois par modèle avec `--model` et ses
   propres prix, puis additionner.
 - **Un tour fait trois appels au moins** (arbitrage, narration, extraction), deux pour un
-  aparté au MJ, jusqu'à cinq si des sorties structurées sont rejetées puis renvoyées.
+  aparté au MJ, jusqu'à cinq si des sorties structurées sont rejetées puis renvoyées. S'y
+  ajoute, hors du tour, un appel de résumé tous les 8 tours environ, deux quand un `global` est
+  réécrit.
 - Pour une mesure propre : `node ace game:reset`, puis une série d'une vingtaine de tours au
   moins.
 

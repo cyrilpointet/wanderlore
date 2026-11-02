@@ -143,7 +143,7 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - Pipeline découpé en étapes à responsabilité unique plutôt qu'un appel LLM unique global.
 - Séparation systématique : le LLM propose (interprétation, plausibilité, narration, extraction), le backend décide et calcule tout ce qui touche à l'intégrité de la partie.
 - Système prompt statique par étape (rôle, contraintes, schéma de sortie) ; le contenu dynamique (contexte de jeu) passe uniquement en message utilisateur, toujours introduit comme donnée et non comme instruction (défense anti prompt-injection).
-- Le lore, le state et la mémoire narrative suivent trois mécanismes de sélection distincts : filtrage par tags tirés de la scène pour le lore (Phase 8 ; recherche par similarité seulement si le volume l'exige), requête déterministe pour le state, résumé + buffer récent pour la mémoire.
+- Le lore, le state et la mémoire narrative suivent trois mécanismes de sélection distincts : filtrage par tags tirés de la scène pour le lore (Phase 8 ; recherche par similarité seulement si le volume l'exige), requête déterministe pour le state, résumés + tours qu'ils ne couvrent pas pour la mémoire (Phase 9).
 - **Exécution asynchrone et contrat d'API** : le pipeline d'un tour s'exécute en tâche de fond via une file de jobs ; le front reçoit un accusé de réception puis un flux d'événements progressifs via AdonisJS Transmit (SSE), introduit dès la Phase 2 de la roadmap.
 - **Contrat SSE de la Phase 2** : un canal par partie, abonné avant toute soumission ; événements limités aux jalons (`step_started`, `roll_resolved`, `turn_completed`, `turn_failed`), sans streaming de la narration tant qu'elle sort en JSON avec les effets (réintroduit en Phase 3) ; rattrapage par lecture du tour. Voir document d'architecture, section 8bis.
 - **Narration en streaming dès la Phase 3** : événement `narration_chunk`, narration provisoire jusqu'à `turn_completed`, retirée par le front si le tour échoue ensuite. Voir architecture, section 8bis.
@@ -155,6 +155,7 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 - **Budget de 3 minutes par tour** (Phase 3) : chaque appel LLM reçoit au plus le temps restant, un budget épuisé fait échouer le tour (`llm_timeout`) ; le balayage des tours `pending` reste à 5 minutes. Voir architecture, section 8bis.
 - **Un seul modèle LLM pour toutes les étapes** pendant les phases de test (`gemini-3.8-flash`, qui remplace en octobre 2026 `gemini-2.5-flash`, fermé aux nouvelles clés API). La différenciation par étape attend les mesures de coût réelles (Phase 14).
 - **Soumission d'un tour idempotente** : clé fournie par le client, une par soumission, enregistrée avant la mise en file. En Phase 2, worker unique dans le process HTTP, en `concurrency: 1` et sans retry — simplification à reprendre avant le beta test.
+- **Mémoire long terme en deux niveaux** (Phase 9) : un résumé `scene` condense, en anglais, tous les tours non couverts plus anciens que les 4 derniers dès qu'il y en a 8 ; un résumé `global`, glissant, absorbe les `scene` au-delà de 4. Une étape reçoit les résumés puis **tous les tours qu'ils ne couvrent pas** — jamais un nombre fixe, pour qu'aucun tour ne manque aux deux. Le résumé ne lit que l'entrée du joueur et la narration, jamais l'arbitrage ; il est écrit par un job dans **sa propre file**, sans nouvelle tentative, et son coût est dans `narrative_summaries.llm_usage`. Voir architecture, section 5.
 - **File de jobs substituable, pg-boss puis BullMQ** : port + adaptateur, pg-boss (PostgreSQL) tant qu'il n'y a qu'une instance — pas de Redis à héberger —, BullMQ au passage à plusieurs instances, qui ramène Redis pour Transmit. Condition de la bascule : idempotence, sérialisation des tours et événements SSE ne dépendent jamais de la file (voir architecture, section 8bis).
 
 ### Système de règles
@@ -189,9 +190,10 @@ en boucle sur toute la durée d'une partie.
   de résumé est asynchrone : il peut condenser une narration française en résumé anglais.
   C'est la décision qui produit la plus grosse économie, puisque le résumé est réinjecté à
   chaque tour.
-- **Le buffer récent reste dans la langue du joueur**, dosé par étape : 2–4 tours pour la
-  narration (continuité de ton), un buffer court de 2 tours pour l'arbitrage (interprétation
-  de l'intention). *Révisé avant la Phase 3* : l'arbitrage en était privé, alors que les
+- **Le buffer récent reste dans la langue du joueur**, dosé par étape : pour la narration,
+  tous les tours qu'aucun résumé ne couvre (4 au moins, depuis la Phase 9), pour la
+  continuité de ton ; un buffer court de 2 tours pour l'arbitrage (interprétation de
+  l'intention). *Révisé avant la Phase 3* : l'arbitrage en était privé, alors que les
   derniers tours ne figurent dans aucun résumé tant que le job ne l'a pas recalculé.
 - **Glossaire de noms propres par langue**, compact, limité aux entités présentes dans la
   scène, injecté à la seule étape de narration. Il règle le problème d'incohérence des noms
@@ -306,7 +308,9 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 
 Depuis la Phase 6, le Basic Roleplaying de Chaosium (édition 2023, licence ORC) remplace le moteur 2d6, pour tous les univers. Depuis la Phase 7, le backend tient l'horloge de jeu et la topologie des lieux (sorties, passages, réseaux), puis, avec les lots qui la suivent, le placement initial des PNJ et ce que le personnage sait. Depuis la Phase 8, le lore vit en fragments, au niveau de l'univers ou du scénario, et chaque étape ne reçoit que ceux que la scène appelle, tracés dans `turn_log` ; un univers s'importe clé en main, un scénario avec ses catalogues.
 
-**Phase suivante : Phase 9 (mémoire long terme)** : résumé narratif hiérarchique, régénéré hors du chemin critique. Voir la roadmap, Phase 9.
+**Phase 9 (mémoire long terme) terminée** (epic `KAN-128`) : un résumé narratif en anglais, sur deux niveaux, écrit hors du chemin critique dans sa propre file, s'ajoute aux tours que l'arbitrage et la narration reçoivent en clair ; son coût est compté par `llm:cost`, et le journal du front se charge par pages. La langue de narration par défaut se fixe par déploiement (`DEFAULT_LANGUAGE`).
+
+**Phase suivante : Phase 10 (combat).** Voir la roadmap.
 
 ---
 

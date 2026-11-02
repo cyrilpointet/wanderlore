@@ -433,7 +433,7 @@ Tranchées à l'ouverture de la phase (2026-10-26, epic `KAN-89`) :
 
 - Échéances de scénario, événements déclenchés par le temps et emplois du temps des PNJ : Phase 11.
 - Horaires d'ouverture des lieux, météo, calendrier propre à un univers : après la Phase 11 au plus tôt.
-- Retour dans un lieu improvisé : reste à la mémoire long terme (Phase 9).
+- Retour dans un lieu improvisé : écarté de la Phase 9 (état structuré, pas résumé) — lot à part, à cadrer.
 - Effets du temps sur le personnage : récupération des points de vie avec le combat (Phase 10), vivres avec le cycle de vie (Phase 12).
 
 ### Contenu
@@ -572,17 +572,42 @@ Tranchées à l'ouverture de la phase (2026-11-01, epic `KAN-120`) :
 
 **Objectif** : permettre à une partie de durer au-delà de ce qu'un buffer de tours bruts peut raisonnablement couvrir.
 
+### Décisions de cadrage
+
+Tranchées à l'ouverture de la phase (2026-11-02, epic `KAN-128`) :
+
+- **Point de départ** : l'arbitrage recevait les 2 derniers tours, la narration les 4 derniers — tout ce qui précédait était oublié. La phase est donc utile dès maintenant, sans attendre que les parties s'allongent.
+- **Déclenchement par nombre de tours** : un résumé de scène est dû dès qu'au moins 8 tours `completed` (`SCENE_SUMMARY_THRESHOLD`) ne sont couverts par aucun résumé et sont plus anciens que les 4 derniers (`TURNS_KEPT_VERBATIM`, jamais résumés). Il condense **tous** ces tours, pas seulement 8 : un job en retard rattrape en un appel. Pas de déclenchement par changement de lieu : le code n'a pas de notion de scène. Règle le point ouvert de l'architecture (§10) sur les seuils.
+- **Pas de trou de mémoire** : une étape reçoit les résumés, puis **tous les tours qui suivent le dernier résumé** — et non un nombre fixe. Un tour n'est jamais absent à la fois des résumés et des tours envoyés, aussi tard que tourne le job ; il y en a au moins 4, puisqu'un résumé ne les prend jamais, et au plus 4 + 8 tant que le job suit. L'arbitrage n'en garde que les 2 derniers ; l'extraction ne reçoit rien.
+- **Deux niveaux, pas trois** : un résumé `scene` condense un bloc de tours ; un résumé `global`, glissant, absorbe les `scene` les plus anciens au-delà de 4 (`SCENES_BEFORE_FOLD`), en reprenant le `global` précédent. Une étape reçoit le dernier `global` puis les `scene` qu'il n'a pas absorbés (`story_so_far`). Le niveau `chapter` attend que le chapitre change en cours de partie — il est aujourd'hui copié du scénario au lancement, et n'est jamais modifié.
+- **Résumé en anglais**, quelle que soit la langue de la partie, en prose courte (120 mots au plus pour une scène, 300 pour le global).
+- **Une file à part** (`narrative-summary`), avec son worker (`SummaryWorker`, `concurrency: 1`) : le worker des tours tourne en `concurrency: 1`, et un résumé dans sa file retarderait le tour suivant de tous les joueurs. Le tour met le job en file après sa réussite, si le seuil est atteint ; le job ne porte que l'identifiant de la partie et recalcule ce qui est dû quand il tourne, si bien que deux jobs pour la même partie n'écrivent qu'une fois. Une partie supprimée par le joueur est ignorée.
+- **Sécurité** : le résumé est construit **uniquement** depuis l'entrée du joueur et la narration — jamais depuis la sortie d'arbitrage, que le `secret_lore` influence. Son prompt condense des faits (personnes rencontrées, promesses, dettes, objets, ce qui reste ouvert), écarte les apartés au MJ et ne reprend aucune consigne trouvée dans les tours : une injection recopiée persisterait sur toute la partie. Il est réinjecté comme donnée de jeu, jamais comme instruction.
+- **Coût** : les jetons de chaque résumé sont enregistrés dans `narrative_summaries.llm_usage`, sous la forme des lignes de `turn_log.llm_usage` (étape `summary`) ; `llm:cost` les compte dans le total, par tour, par partie et par étape, avec un tableau par niveau. Le découpage par langue reste celui des tours.
+- **Échec** : ni nouvelle tentative ni événement SSE — c'est du texte libre, pas une sortie structurée. Une erreur ou une réponse vide n'écrit rien ; le seuil, toujours atteint, redéclenche le job au tour suivant. Le joueur ne voit rien.
+- **Journal paginé** : `GET /sessions/:id/turns` lit l'histoire par pages de 20 tours (`TURNS_PAGE_SIZE`), les dernières d'abord ou celles qui précèdent un numéro de tour (`?before=`), et dit dans `metadata.hasEarlier` s'il en reste. Le front ouvre une partie sur ses derniers tours ; un bouton *Load earlier* remonte page par page sans déplacer la lecture.
+
+### Hors périmètre
+
+- Rappel des PNJ absents d'un lieu et retour dans un lieu improvisé : de l'état structuré, pas du résumé — lot à part, à cadrer.
+- Recherche dans l'historique (embeddings) : le résumé suffit tant que le volume ne l'exige pas.
+- Affichage du résumé au joueur.
+- Niveau `chapter`, déclenchement par changement de lieu.
+- Plafond des tours envoyés quand le job échoue durablement : sans résumé, la narration reçoit tous les tours non couverts. À surveiller en usage.
+
 ### Contenu
 
-- Table `narrative_summaries`, avec granularité hiérarchique (scene / chapter / global) telle que définie dans le document de base de données.
-- Job asynchrone de régénération périodique du résumé, hors du chemin critique de réponse au joueur.
-- **Le résumé est rédigé en anglais**, quelle que soit la langue de la partie : le job étant asynchrone, il peut condenser une narration française en résumé anglais sans coût de latence perçu. C'est la principale économie de jetons du dispositif multi-langue, puisque le résumé est réinjecté à chaque tour (voir architecture, section 4bis).
-- **Différenciation de l'injection du buffer** : le buffer récent, dans la langue du joueur, est dosé par étape — 2–4 tours pour la narration, un buffer court de 2 tours pour l'arbitrage, qui reçoit aussi le résumé anglais et le state structuré. Le buffer court reste nécessaire à l'arbitrage : les derniers tours ne figurent dans aucun résumé tant que le job ne l'a pas recalculé (architecture, section 4bis).
-- Utile principalement lorsque les parties commencent à dépasser en pratique la fenêtre de contexte raisonnable en buffer brut — à activer selon l'usage observé, pas nécessairement dès l'ouverture de cette phase.
+- Table `narrative_summaries` (`scene` / `global`, plage de tours, `llm_usage`), voir le document de base de données.
+- Calcul de la mémoire, pur (`#services/game/narrative_memory`) : ce qu'un tour lit, quand une scène est due, quelles scènes replier.
+- Service et prompts de résumé (`#services/game/summary_service`, `prompts/summary`), job dans sa propre file.
+- `story_so_far` et tours non couverts dans l'arbitrage et la narration ; prompts système relus.
+- Coût du résumé dans `llm:cost` ; pagination du journal.
 
 ### Critère de sortie de phase
 
-- Une partie longue reste cohérente narrativement sans dépendre uniquement du buffer de tours récents.
+- Une partie longue (plus de 30 tours) reste cohérente narrativement sans dépendre uniquement du buffer de tours récents : arbitrage et narration se souviennent de faits sortis des derniers tours.
+- Aucun tour n'est absent à la fois des résumés et des tours envoyés.
+- Le job de résumé ne retarde aucun tour, et son coût se lit dans `llm:cost`.
 
 ---
 
@@ -837,6 +862,6 @@ finit toujours par être ignoré.
 - Carte des lieux visités dans le front joueur, si le besoin se confirme après la Phase 7 (qui n'affiche pas les sorties).
 - Choix définitif entre pgvector intégré et vector store externe si la Phase 8 est activée (dépend du volume de lore réellement atteint).
 - Réintroduction éventuelle d'un retry automatique limité (Phase 14), une fois le comportement réel des erreurs observé en usage — restreint aux erreurs transitoires (timeout, 5xx). Les sorties rejetées ont leur nouvelle tentative unique depuis la Phase 3 ; un taux de rejet élevé reste le signe d'un prompt à corriger plutôt qu'à retenter.
-- Support multi-langue : l'architecture est actée et répercutée dans les phases ci-dessus (paramètre `language` et colonne `turn_log.language` en Phase 1, séparation référence/affichage en Phase 4, catalogue et glossaire en Phase 5, résumé anglais en Phase 9). L'i18n du front est posée dès la Phase 2, avec l'anglais seul. **Restent ouverts** : la liste des langues cibles, et la phase à laquelle une seconde langue est effectivement activée — probablement pas avant que la Phase 5 rende le contenu paramétrable.
+- Support multi-langue : l'architecture est actée et répercutée dans les phases ci-dessus (paramètre `language` et colonne `turn_log.language` en Phase 1, séparation référence/affichage en Phase 4, catalogue et glossaire en Phase 5, résumé anglais en Phase 9). L'i18n du front est posée dès la Phase 2, avec l'anglais seul. Une langue par défaut se fixe par déploiement : `DEFAULT_LANGUAGE` pour la narration (backend), `VITE_DEFAULT_LANGUAGE` pour l'interface, qui retombe sur l'anglais faute de traductions. **Restent ouverts** : la liste des langues cibles, et la phase à laquelle une seconde langue est effectivement activée — probablement pas avant que la Phase 5 rende le contenu paramétrable.
 - Événements SSE : la granularité et le rattrapage par lecture du tour sont tranchés pour la Phase 2 (architecture, section 8bis). Le streaming de la narration est tranché pour la Phase 3 (voir ses décisions de cadrage). **Reste ouvert** le rejeu des événements manqués, jugé inutile tant que la lecture du tour suffit.
 - Passage à plusieurs instances : bascule de la file de pg-boss vers BullMQ, worker séparé (transport Redis de Transmit) et sérialisation par verrou PostgreSQL sur `session_id` plutôt que par `concurrency: 1` — à trancher avant le beta test de la Phase 14.

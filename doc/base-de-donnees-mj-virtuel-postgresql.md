@@ -491,20 +491,28 @@ n'a pas sa place parmi les sorties validées, et le taux de rejet se lit en un s
 Ses jetons restent dans `llm_usage`, sous le même couple étape / tentative : le coût d'un tour
 est la somme de `llm_usage`, sans double comptage.
 
-Index recommandé : `(session_id, turn_number)` pour la récupération rapide du buffer récent.
+Index recommandé : `(session_id, turn_number)` pour la récupération rapide des tours qu'aucun
+résumé ne couvre, lus à chaque tour.
 
 ### `narrative_summaries`
 
-Résumés hiérarchiques générés par le job asynchrone.
+Résumés hiérarchiques générés par le job asynchrone, dans sa propre file (Phase 9, roadmap
+« Décisions de cadrage » ; architecture, section 5). Écrits une fois, jamais modifiés : un
+nouveau résumé d'un niveau remplace le précédent dans le contexte, l'ancien reste en base.
 
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant |
-| `session_id` | FK → sessions | partie parente |
-| `level` | text | `scene` / `chapter` / `global` |
+| `session_id` | FK → sessions, `ON DELETE CASCADE` | partie parente |
+| `level` | enum natif `narrative_summary_level` | `scene` (un bloc de tours) / `global` (glissant, absorbe les `scene` les plus anciens). Pas de `chapter` : le chapitre ne change jamais en cours de partie |
 | `content` | text | résumé condensé, **toujours en anglais** quelle que soit la langue de la partie |
-| `turn_start` / `turn_end` | int | plage de tours couverte |
-| `created_at` | timestamp | — |
+| `turn_start` / `turn_end` | int | plage de `turn_log.turn_number` couverte, bornes comprises ; `1` pour un `global` |
+| `llm_usage` | jsonb | les appels qui l'ont écrit, sous la forme de `turn_log.llm_usage` (étape `summary`) : un résumé n'appartient à aucun tour, et `llm:cost` le compte dans le coût d'une partie |
+| `created_at` | timestamptz | — |
+
+Contraintes : `1 ≤ turn_start ≤ turn_end` ; unicité `(session_id, level, turn_end)` — une plage
+n'est résumée qu'une fois par niveau, même par un job lancé deux fois, et c'est aussi ce qui
+retrouve le dernier résumé d'un niveau.
 
 ---
 
@@ -570,7 +578,7 @@ users ──── usage_quotas (optionnel)
 - **Contrainte d'unicité** sur `world_states.session_id` pour garantir la relation 1:1 avec `sessions`.
 - **pgvector** comme option native si le RAG est hébergé directement dans PostgreSQL plutôt que dans un vector store externe dédié — évite une dépendance d'infrastructure supplémentaire pour un volume de lore raisonnable, à réévaluer si le corpus devient très volumineux.
 - **Partitionnement de `turn_log`** à envisager si le volume de parties/tours devient important (par exemple partition par `session_id` ou par plage temporelle), pour garder les performances de lecture sur les tours récents indépendantes du volume historique total.
-- **Séparation lecture chaude / lecture froide** : `world_states`, `characters`, `npc_instances` sont lus à chaque tour (chemin critique) — `turn_log` et `narrative_summaries` sont surtout écrits en continu et lus ponctuellement (debug, reprise, génération de résumé) : ce sont des profils d'accès différents à garder en tête pour le dimensionnement des index.
+- **Séparation lecture chaude / lecture froide** : `world_states`, `characters`, `npc_instances` sont lus à chaque tour (chemin critique) — `turn_log` et `narrative_summaries` sont surtout écrits en continu ; à chaque tour, on n'en lit que les quelques lignes de la mémoire (les résumés d'une partie, les tours qu'ils ne couvrent pas), le reste ponctuellement (debug, reprise, génération de résumé, pages du journal) : ce sont des profils d'accès différents à garder en tête pour le dimensionnement des index.
 
 ---
 

@@ -21,6 +21,7 @@ Les invariants non négociables sont dans `CLAUDE.md` (déjà chargé). Ce skill
 | Organigramme complet d'un tour, de la soumission à la réponse (état cible) | `doc/flux-backend-tour-de-jeu-mj-virtuel.md` | tout |
 | Étapes du pipeline, ce qui est injecté à chaque étape | `doc/architecture-mj-virtuel-llm.md` | 3, 4 |
 | Lore : fragments (`kind`, `secret`, tags), sélection par la scène, plafond, traçabilité | `doc/architecture-mj-virtuel-llm.md` ; `doc/roadmap-mj-virtuel-llm.md` | 4 ; Phase 8, décisions de cadrage |
+| Mémoire long terme : résumés `scene` / `global`, seuils, tours envoyés en clair, file du résumé | `doc/architecture-mj-virtuel-llm.md` ; `doc/roadmap-mj-virtuel-llm.md` | 5 ; Phase 9, décisions de cadrage |
 | Multi-langue : quelle étape voit quelle langue, glossaire, résumé | `doc/architecture-mj-virtuel-llm.md` | 4bis |
 | Inventaire dans le pipeline, détenteurs (personnage, PNJ, lieu), références vs noms affichés | `doc/architecture-mj-virtuel-llm.md` | 6bis |
 | PNJ uniques, archétypes, improvisés : définitions et instances | `doc/architecture-mj-virtuel-llm.md` | 6ter |
@@ -51,19 +52,22 @@ avant de rouvrir un arbitrage déjà motivé.
 POST action joueur → accusé de réception + job BullMQ en file
 Front s'abonne au flux SSE (Transmit) pour ce tour
 
-0. Backend    : state (SQL déterministe) + lore tagué par la scène + résumé + buffer récent
+0. Backend    : state (SQL déterministe) + lore tagué par la scène + résumés + tours non couverts
 1. LLM A+B+C  : intent / validity / resolution / alert          → JSON strict
 2. Backend    : calcul du jet si requis                          → result + margin
 3. LLM D      : narration                                        → texte libre
 4. LLM E      : extraction des effets                            → JSON strict
 5. Backend    : validation du delta, application au state, écriture turn_log
-6. Job async  : régénération périodique du résumé narratif (hors chemin critique)
+6. Job async  : résumé scene si 8 tours non couverts (hors les 4 derniers), repli
+               dans le global au-delà de 4 scene — file à part, hors chemin critique
 ```
 
 **Trois natures de contexte, trois mécanismes de sélection** — ne jamais les confondre :
 lore = filtrage par tags tirés de la scène, jamais du texte du joueur (RAG plus tard,
 seulement si le volume le justifie) ;
-state = requête SQL déterministe ; mémoire = dernier résumé + N derniers tours.
+state = requête SQL déterministe ; mémoire = dernier `global` + `scene` non repliés + **tous**
+les tours qu'ils ne couvrent pas (jamais un nombre fixe : aucun tour ne doit manquer aux deux).
+Le résumé ne lit que l'entrée du joueur et la narration, jamais la sortie d'arbitrage.
 
 Le lore n'est jamais injecté en bloc. Chaque fragment (`lore_fragments`) a un `kind` qui
 dit où il part : `rule` à l'arbitrage (A+B+C), `ambiance` à la narration (D), `fact` aux
@@ -166,7 +170,8 @@ sortie explicite dans le document de roadmap : le vérifier avant de déclarer u
   différent d'un tour à l'autre, ce qui casse la cohérence de jeu.
 - **Ne pas passer les chiffres du jet au narrateur** — il tenterait de les justifier ou de
   les contredire.
-- **Ne pas recalculer le résumé narratif en synchrone** dans le chemin de réponse au joueur.
+- **Ne pas recalculer le résumé narratif en synchrone** dans le chemin de réponse au joueur,
+  ni le mettre dans la file des tours (`concurrency: 1`) : il a sa propre file.
 - **Ne pas alourdir les tables d'état courant avec l'historique** : `turn_log` et
   `narrative_summaries` sont isolés dès la conception (profils d'accès différents).
 - **Ne pas faire passer une règle mécanique par une recherche sémantique.** Barèmes, seuils
