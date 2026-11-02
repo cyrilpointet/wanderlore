@@ -1,9 +1,12 @@
 import type { QueryClientContract } from '@adonisjs/lucid/types/database'
 
 import NpcInstance from '#models/npc_instance'
+import Scenario from '#models/scenario'
 import { DOWN_AT } from '#services/rules/engine'
 
+import type { ContentLabels } from './content_labels.js'
 import { placeInitialItems } from './inventory.js'
+import { Opponents } from './opponents.js'
 
 import type { NpcDefinition, NpcDisposition, WorldDefinition } from './world.js'
 
@@ -407,4 +410,24 @@ export async function npcsPlacedIn(
     condition: 'standing' as const,
     definition: npc.reference,
   }))
+}
+
+/** The people of a game, read where they stand, with what the character knows of them. */
+export async function loadOpponents(
+  session: { id: string; scenarioId: string },
+  world: WorldDefinition,
+  labels: ContentLabels,
+  knownNpcs: string[],
+  client?: QueryClientContract
+): Promise<Opponents> {
+  const people = await NpcInstance.query({ client })
+    .where('sessionId', session.id)
+    .orderBy('createdAt', 'asc')
+    .orderBy('handle', 'asc')
+  const scenario = await Scenario.findOrFail(session.scenarioId, { client })
+
+  return new Opponents(labels, world, people, {
+    initially: scenario.initialState?.knownNpcs ?? [],
+    now: knownNpcs,
+  })
 }

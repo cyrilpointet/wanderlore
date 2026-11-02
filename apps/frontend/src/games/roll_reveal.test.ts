@@ -30,6 +30,7 @@ const ROLL: Roll = {
   degree: 'success',
   combat: {
     role: 'attack',
+    opponent: { reference: 'jussac', label: 'Jussac', rank: null },
     outcome: 'hit',
     damage: { weapon: 6, modifier: 2, armor: 1, total: 7, effect: null },
   },
@@ -41,7 +42,12 @@ const DEFENSE: Roll = {
   roll: 71,
   result: 'failure',
   degree: 'failure',
-  combat: { role: 'defense', defense: 'parry', outcome: 'struck' },
+  combat: {
+    role: 'defense',
+    opponent: { reference: 'cahusac', label: null, rank: 2 },
+    defense: 'parry',
+    outcome: 'struck',
+  },
 }
 
 const BY_HAND: RevealOptions = { autoRoll: false, animated: true }

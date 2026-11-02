@@ -3,6 +3,7 @@ import { BaseTransformer } from '@adonisjs/core/transformers'
 import type TurnLog from '#models/turn_log'
 import type { ContentLabels } from '#services/game/content_labels'
 import type { Labelled } from '#services/game/content_labels'
+import type { NamedOpponent, Opponents } from '#services/game/opponents'
 import type { AppliedEffects, AppliedHolder, AppliedItems } from '#services/game/prompts/types'
 import type { TracedRound } from '#services/game/turn_trace'
 import type { Defense, RollResolution, SpecialEffect } from '#services/rules/types'
@@ -17,10 +18,12 @@ import type { Defense, RollResolution, SpecialEffect } from '#services/rules/typ
  */
 export default class TurnTransformer extends BaseTransformer<TurnLog> {
   #labels: ContentLabels
+  #opponents: Opponents
 
-  constructor(turn: TurnLog, labels: ContentLabels) {
+  constructor(turn: TurnLog, labels: ContentLabels, opponents: Opponents) {
     super(turn)
     this.#labels = labels
+    this.#opponents = opponents
   }
 
   toObject() {
@@ -61,19 +64,21 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
 
     return characterRolls(
       rollResult as unknown as RollResolution | null,
-      combatResult as unknown as TracedRound | null
+      combatResult as unknown as TracedRound | null,
+      this.#opponents
     ).map(({ resolution, combat }) => presentRoll(resolution, this.#labels, combat))
   }
 }
 
 /**
  * What a roll of the character did in a round: an attack, how it ended and
- * what it dealt; or a defence, which one and whether it held. Never the
- * people's own rolls.
+ * what it dealt; or a defence, which one and whether it held. Each says whom
+ * it was against. Never the people's own rolls.
  */
 export type RollCombat =
   | {
       role: 'attack'
+      opponent: NamedOpponent
       outcome: 'hit' | 'blocked' | 'missed'
       damage: {
         weapon: number
@@ -83,14 +88,17 @@ export type RollCombat =
         effect: SpecialEffect | null
       } | null
     }
-  | { role: 'defense'; defense: Defense; outcome: 'avoided' | 'struck' }
+  | { role: 'defense'; opponent: NamedOpponent; defense: Defense; outcome: 'avoided' | 'struck' }
 
 /** The rolls the character made in a turn, with what each did in its round. */
 export function characterRolls(
   action: RollResolution | null,
-  round: TracedRound | null
+  round: TracedRound | null,
+  opponents: Opponents
 ): { resolution: RollResolution; combat: RollCombat | null }[] {
   const rolls: { resolution: RollResolution; combat: RollCombat | null }[] = []
+  const opponent =
+    round === null ? null : opponents.of(round.opponent, round.provisional?.definition ?? null)
 
   if (action !== null) {
     const blow = round?.characterBlow ?? null
@@ -102,6 +110,7 @@ export function characterRolls(
           ? null
           : {
               role: 'attack',
+              opponent: opponent!,
               outcome:
                 blow.landed !== null ? 'hit' : action.result === 'success' ? 'blocked' : 'missed',
               damage:
@@ -125,6 +134,7 @@ export function characterRolls(
       resolution: defense.resolution,
       combat: {
         role: 'defense',
+        opponent: opponent!,
         defense: defense.defense,
         outcome: round!.riposte!.landed === null ? 'avoided' : 'struck',
       },

@@ -1011,6 +1011,9 @@ test.group('Turn validator | combat', () => {
     parry_possible: true,
     dodge_possible: true,
     defense_modifiers: [],
+    opponent_aware: true,
+    riposte_possible: true,
+    opponent_defense_modifiers: [],
     ...overrides,
   })
 
@@ -1111,6 +1114,54 @@ test.group('Turn validator | combat', () => {
     )
 
     assert.include(fields(error), 'combat.defense_modifiers')
+  })
+
+  test('only the character’s blow catches the opponent unaware', async ({ assert }) => {
+    const output = await validateArbitration(
+      arbitration({ ...ATTACK, combat: engagement({ opponent_aware: false }) }),
+      META
+    )
+    assert.isFalse(output.combat?.opponent_aware)
+
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({ combat: engagement({ character_attacks: false, opponent_aware: false }) }),
+        META
+      )
+    )
+    assert.include(fields(error), 'combat.opponent_aware')
+  })
+
+  test('a round where nobody can strike is no round', async ({ assert }) => {
+    const output = await validateArbitration(
+      arbitration({ ...ATTACK, combat: engagement({ riposte_possible: false }) }),
+      META
+    )
+    assert.isFalse(output.combat?.riposte_possible)
+
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({ combat: engagement({ character_attacks: false, riposte_possible: false }) }),
+        META
+      )
+    )
+    assert.include(fields(error), 'combat.riposte_possible')
+  })
+
+  test('an item never passes for a circumstance of the opponent’s defence', async ({ assert }) => {
+    const error = await reject(() =>
+      validateArbitration(
+        arbitration({
+          ...ATTACK,
+          combat: engagement({
+            opponent_defense_modifiers: [{ source: 'rapier', effect: 'major_penalty' }],
+          }),
+        }),
+        META
+      )
+    )
+
+    assert.include(fields(error), 'combat.opponent_defense_modifiers')
   })
 
   test('extraction never heals', async ({ assert }) => {

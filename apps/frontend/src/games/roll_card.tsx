@@ -26,9 +26,10 @@ const TURNS = 2
  * drawn by the backend before the card ever showed: the throw reveals it,
  * nothing the player does changes it.
  *
- * In combat, a defence says which one it is from the start; once the dice
- * have stopped, the outcome shows with the degree — and the damage a blow
- * dealt, in full, never thrown by hand.
+ * In combat, the roll says from the start what it is — the attack, or which
+ * defence — and against whom; once the dice have stopped, the outcome shows
+ * with the degree — and the damage a blow dealt, in full, never thrown by
+ * hand.
  *
  * Its timing is its own: it tells the reveal machine when the dice stop and
  * when it has folded. The dice are hidden from screen readers;
@@ -80,7 +81,7 @@ export function RollCard({
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-border-strong bg-surface-2 px-5 py-4">
-      {text.defense && <p className="-mb-2 text-meta text-subtle uppercase">{text.defense}</p>}
+      {text.heading && <p className="-mb-2 text-meta text-subtle uppercase">{text.heading}</p>}
       <p className="flex flex-wrap justify-center gap-x-2 text-center text-label text-text">
         {parts.map((part, index) => (
           <span

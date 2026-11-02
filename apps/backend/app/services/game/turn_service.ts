@@ -72,6 +72,7 @@ import { callStructured } from './structured_call.js'
 import { loadWorld } from './content/load.js'
 import { loreFor, loreReferences, loreSceneOf } from './lore.js'
 import { type Memory, coveredUpTo, sceneToSummarise, storySoFar } from './narrative_memory.js'
+import { loadOpponents } from './npcs.js'
 import { SUMMARISE_QUEUE, type SummariseJob, loadMemory } from './summary_service.js'
 import {
   type WorldDefinition,
@@ -349,6 +350,7 @@ export class TurnService {
     }
 
     /** After the commit: the player is never told of a turn that could still roll back. */
+    const labels = new ContentLabels(scene.world, turn.language)
     this.#events.emit(refOf(turn), {
       type: 'turn_completed',
       turn,
@@ -356,7 +358,13 @@ export class TurnService {
       inventory: await characterItems(scene.character.id),
       location: await this.#whereItStands(scene.worldState),
       period: periodAt(scene.worldState.gameTime),
-      labels: new ContentLabels(scene.world, turn.language),
+      labels,
+      opponents: await loadOpponents(
+        scene.session,
+        scene.world,
+        labels,
+        scene.worldState.knownNpcs
+      ),
     })
 
     await this.#requestSummary(scene, turn.turnNumber!)
@@ -463,7 +471,7 @@ export class TurnService {
     const aside = decision.intent.type === OUT_OF_CHARACTER
     const round = await this.#fight(scene, decision, resolution, trace)
     trace.firstAid = this.#tend(scene, decision, outcome)
-    this.#announceRolls(turn, scene, resolution, trace.combat)
+    await this.#announceRolls(turn, scene, resolution, trace.combat)
     /** A round of combat is fought where it stands: nobody walks away mid-blow. */
     const route = aside || round !== null ? null : routeTo(scene, decision.intent.destination)
     const time = timeOf(scene.worldState.gameTime, decision, aside, route, round)
@@ -799,15 +807,21 @@ export class TurnService {
    * action or attack — with what it dealt — then their defence. The people's
    * rolls are never sent.
    */
-  #announceRolls(
+  async #announceRolls(
     turn: TurnLog,
     scene: LoadedScene,
     action: RollResolution | null,
     round: TracedRound | null
-  ): void {
+  ): Promise<void> {
     const labels = new ContentLabels(scene.world, turn.language)
+    const opponents = await loadOpponents(
+      scene.session,
+      scene.world,
+      labels,
+      scene.worldState.knownNpcs
+    )
 
-    for (const { resolution, combat } of characterRolls(action, round)) {
+    for (const { resolution, combat } of characterRolls(action, round, opponents)) {
       this.#events.emit(refOf(turn), { type: 'roll_resolved', resolution, combat, labels })
     }
   }

@@ -394,7 +394,9 @@ Trois temps :
 un personnage attaqué pendant une action sûre n'a que sa défense. Chaque jet se lance à la
 main, l'un après l'autre, sur la même carte : le second attend, hors de vue, que le premier
 soit replié en pastille, puis se prépare à son tour. Les jets des PNJ ne sont jamais envoyés.
-La carte d'une défense porte en tête laquelle (*Parry*, *Dodge*), choisie par le backend ; à
+La carte porte en tête ce qu'est le jet et contre qui : *Attack on Jussac*, *Parry against
+Jussac* — la défense choisie par le backend. Un unique dont le personnage ignore le nom n'est
+jamais nommé : *Parry against unknown opponent 2*, d'un rang que le backend tient fixe ; à
 la révélation, le degré s'accompagne de l'issue (*Hit*, *Blocked*, *Missed* ; *Blow avoided*,
 *Blow taken*).
 

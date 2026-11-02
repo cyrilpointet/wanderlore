@@ -4,6 +4,7 @@ import type { RollResolution } from '#services/rules/types'
 import type { ContentLabels, PlacedLocation } from '#services/game/content_labels'
 import type { HeldItem } from '#services/game/inventory'
 import type { Period } from '#services/game/game_time'
+import type { Opponents } from '#services/game/opponents'
 import CharacterTransformer from '#transformers/character_transformer'
 import TurnTransformer, { type RollCombat, presentRoll } from '#transformers/turn_transformer'
 
@@ -53,6 +54,8 @@ export type TurnEvent =
       /** The period of the day the turn ended in: never the hour, which stays in the story. */
       period: Period
       labels: ContentLabels
+      /** Whom the character's rolls were against, as the player may name them. */
+      opponents: Opponents
     }
   | { type: 'turn_failed'; failure: { code: string; message: string } }
 
@@ -100,7 +103,7 @@ export function toMessage(ref: TurnRef, event: TurnEvent) {
     case 'turn_completed':
       return {
         ...header,
-        turn: new TurnTransformer(event.turn, event.labels).toObject(),
+        turn: new TurnTransformer(event.turn, event.labels, event.opponents).toObject(),
         character: new CharacterTransformer(
           event.character,
           event.labels,

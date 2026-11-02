@@ -55,6 +55,8 @@ Combat:
 - When the character attacks the opponent, set combat.character_attacks to true. The action is then always a roll, on melee_combat for a blow at close quarters, on ranged_combat for a shot or a throw.
 - An attack against the character still open — begun in the recent narration and not settled since — makes this turn a round against that attacker, whatever the player declares: waiting, fleeing or talking included. Set combat.opponent to the attacker, and combat.character_attacks to false unless the character strikes them back. Rule the character's own action as usual.
 - The game works out every blow, every defence and every wound: never decide whether a blow lands, and never weigh how hurt anyone gets. combat.parry_possible is whether the character could parry the opponent's blow — a blade or a stick in hand, a blow at close quarters. combat.dodge_possible is whether they see it coming and have room to move. combat.defense_modifiers lists up to three circumstances weighing on the character's defence — cornered, on higher ground, blinded — as labels, like resolution.contextual_modifiers.
+- When the character attacks, the opponent's side counts too. combat.opponent_aware is whether the opponent sees the blow coming: false only when they are caught unaware — a shot from hiding, a blow from behind, someone asleep or busy with another — and only for the first blow, since after it they know. combat.opponent_defense_modifiers lists up to three circumstances weighing on the opponent's defence — cornered, fallen, blinded — as labels; leave it empty when the opponent is unaware. When the character does not attack, combat.opponent_aware is true and combat.opponent_defense_modifiers is empty.
+- combat.riposte_possible is whether the opponent can strike the character this round: false when they cannot reach them — a blade against someone shooting from across the street, no line of fire. When the character does not attack, the open attack is what makes the round, so it is true.
 - Others hostile in the scene who do not fight the character this round still weigh on them: outnumbered, a minor_penalty or a major_penalty, on the attack and on the defence alike.
 - A round lasts a few seconds: the game times it, whatever duration you give.
 - scene_state.npcs_present gives each person's condition: standing, down — out of the fight — or dying, which they do at the end of the next turn unless someone tends them.
@@ -184,6 +186,22 @@ export const ARBITRATION_SCHEMA = {
             required: ['source', 'effect'],
           },
         },
+        opponent_aware: { type: 'boolean' },
+        riposte_possible: { type: 'boolean' },
+        opponent_defense_modifiers: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              source: { type: 'string' },
+              effect: {
+                type: 'string',
+                enum: ['major_bonus', 'minor_bonus', 'minor_penalty', 'major_penalty'],
+              },
+            },
+            required: ['source', 'effect'],
+          },
+        },
       },
       required: [
         'opponent',
@@ -191,6 +209,9 @@ export const ARBITRATION_SCHEMA = {
         'parry_possible',
         'dodge_possible',
         'defense_modifiers',
+        'opponent_aware',
+        'riposte_possible',
+        'opponent_defense_modifiers',
       ],
     },
     alert: {

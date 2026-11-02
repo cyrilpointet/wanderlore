@@ -38,6 +38,7 @@ const ATTACK: Roll = {
   roll: 23,
   combat: {
     role: 'attack',
+    opponent: { reference: 'jussac', label: 'Jussac', rank: null },
     outcome: 'hit',
     damage: { weapon: 5, modifier: 2, armor: 0, total: 7, effect: null },
   },
@@ -48,7 +49,12 @@ const PARRY: Roll = {
   roll: 88,
   result: 'failure',
   degree: 'failure',
-  combat: { role: 'defense', defense: 'parry', outcome: 'struck' },
+  combat: {
+    role: 'defense',
+    opponent: { reference: 'cahusac', label: null, rank: 2 },
+    defense: 'parry',
+    outcome: 'struck',
+  },
 }
 
 const TOLD: Extract<TurnState, { status: 'in_progress' }> = {
@@ -211,7 +217,7 @@ describe('live roll | a round of combat', () => {
 
     expect(markup).not.toContain('Roll the dice')
     expect(markup.indexOf('rolled 23')).toBeLessThan(markup.indexOf('rolled 88'))
-    expect(markup).toContain('Parry · Swordsmanship 60% · rolled 88 · Failure · Blow taken')
+    expect(markup).toContain('Parry against unknown opponent 2 · Swordsmanship 60% · rolled 88 · Failure · Blow taken')
     expect(markup).toContain(NARRATION)
   })
 

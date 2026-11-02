@@ -37,6 +37,7 @@ const ATTACK: Roll = {
   degree: 'special',
   combat: {
     role: 'attack',
+    opponent: { reference: 'jussac', label: 'Jussac', rank: null },
     outcome: 'hit',
     damage: { weapon: 6, modifier: 2, armor: 1, total: 7, effect: 'impaling' },
   },
@@ -52,7 +53,12 @@ const DODGE: Roll = {
   roll: 30,
   result: 'success',
   degree: 'success',
-  combat: { role: 'defense', defense: 'dodge', outcome: 'avoided' },
+  combat: {
+    role: 'defense',
+    opponent: { reference: 'cahusac', label: null, rank: 2 },
+    defense: 'dodge',
+    outcome: 'avoided',
+  },
 }
 
 function live(
@@ -188,19 +194,25 @@ describe('RollCard | in combat', () => {
       roll: 80,
       result: 'failure',
       degree: 'failure',
-      combat: { role: 'attack', outcome: 'missed', damage: null },
+      combat: {
+        role: 'attack',
+        opponent: { reference: 'jussac', label: 'Jussac', rank: null },
+        outcome: 'missed',
+        damage: null,
+      },
     }
     const text = textOf(render(live('landed', { roll: missed })))
 
+    expect(text).toMatch(/^Attack on Jussac /)
     expect(text).toContain('rolled 80 · Failure · Missed')
     expect(text).not.toContain('dealt')
   })
 
-  test('a defence says which one from the start, and whether it held once landed', () => {
+  test('a defence says which one and against whom from the start, and whether it held once landed', () => {
     const staged = textOf(render(live('staged', { roll: DODGE })))
     const landed = textOf(render(live('landed', { roll: DODGE })))
 
-    expect(staged).toMatch(/^Dodge Dodge 40%/)
+    expect(staged).toMatch(/^Dodge against unknown opponent 2 Dodge 40%/)
     expect(staged).not.toContain('Blow avoided')
     expect(landed).toContain('rolled 30 · Success · Blow avoided')
   })

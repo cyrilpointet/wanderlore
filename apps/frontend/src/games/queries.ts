@@ -97,13 +97,24 @@ export type Damage = {
 }
 
 /**
- * What a roll of the character did in its round: an attack, how it ended and
- * what it dealt — only when it hit; or a defence against the riposte, which
- * one and whether it held.
+ * Whom a roll was against: by name when the character knows it, or else the
+ * n-th unknown opponent of the game — a rank that never moves.
+ */
+export type Opponent = {
+  reference: string
+  label: string | null
+  /** Set when the label is not, from 1. */
+  rank: number | null
+}
+
+/**
+ * What a roll of the character did in its round, against whom: an attack, how
+ * it ended and what it dealt — only when it hit; or a defence against the
+ * riposte, which one and whether it held.
  */
 export type RollCombat =
-  | { role: 'attack'; outcome: AttackOutcome; damage: Damage | null }
-  | { role: 'defense'; defense: Defense; outcome: DefenseOutcome }
+  | { role: 'attack'; opponent: Opponent; outcome: AttackOutcome; damage: Damage | null }
+  | { role: 'defense'; opponent: Opponent; defense: Defense; outcome: DefenseOutcome }
 
 /**
  * A roll in full, as at the table: what was rolled and at how much, the

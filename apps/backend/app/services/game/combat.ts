@@ -128,6 +128,13 @@ export type Round = {
   characterBlow: Blow | null
   /** The riposte, rolled by the backend, never shown; null when the opponent could not strike. */
   riposte: (Blow & { attack: RollResolution }) | null
+  /** The opponent never saw the blow coming: no defence against it, and no riposte this round. */
+  opponentCaughtUnaware: boolean
+  /**
+   * Standing and aware, the opponent still could not reach the character this
+   * round, as arbitration judged: no riposte.
+   */
+  opponentOutOfReach: boolean
   character: {
     hitPoints: number
     /** Every point lost this round, a fumble's and a bleeding's included. */
@@ -149,10 +156,11 @@ export type Round = {
 
 /**
  * The round, end to end: the character's blow if they strike, the hidden
- * defence it meets, its damage; then, if the opponent still stands and was
- * not stopped, their hidden riposte and the character's defence — the better
- * of what the scene allows, rolled for them. Then the bleeding of earlier
- * rounds.
+ * defence it meets — none when the opponent never saw it coming — its
+ * damage; then, if the opponent still stands, was neither stopped nor caught
+ * unaware, and can reach the character, their hidden riposte and the
+ * character's defence — the better of what the scene allows, rolled for
+ * them. Then the bleeding of earlier rounds.
  */
 export function playRound(rules: RulesEngine, input: RoundInput): Round {
   const { world, opponent, engagement } = input
@@ -174,11 +182,13 @@ export function playRound(rules: RulesEngine, input: RoundInput): Round {
   let characterFell = false
 
   let characterBlow: Blow | null = null
+  /** Surprise is the character's to spring: a round they only defend in has none. */
+  const caughtUnaware = input.attack !== null && !engagement.opponent_aware
 
   if (input.attack !== null) {
     const weapon = characterWeaponOf(world, input.characterItems, input.attack.actionType)
     const attack = input.attack.resolution
-    const opponentCanDefend = !opponent.dying && opponentHp > DOWN_AT
+    const opponentCanDefend = !opponent.dying && opponentHp > DOWN_AT && !caughtUnaware
     const defense =
       attack.result === 'success' && opponentCanDefend
         ? rollDefense(
@@ -189,7 +199,10 @@ export function playRound(rules: RulesEngine, input: RoundInput): Round {
                 : null,
               dodge: npcBase(world, opponent.definition, DODGE),
             }),
-            { contextual: [], items: modifierSources(world, opponent.items) }
+            {
+              contextual: engagement.opponent_defense_modifiers,
+              items: modifierSources(world, opponent.items),
+            }
           )
         : null
     const landed = hitDegreeOf(attack.degree, defense?.resolution.degree ?? null)
@@ -238,7 +251,7 @@ export function playRound(rules: RulesEngine, input: RoundInput): Round {
   const opponentStands = !opponent.dying && opponentHp > DOWN_AT && !stopped
   let riposte: Round['riposte'] = null
 
-  if (opponentStands) {
+  if (opponentStands && !caughtUnaware && engagement.riposte_possible) {
     const category = opponentWeapon.weapon.kind === 'melee' ? MELEE_COMBAT : RANGED_COMBAT
     const attack = rules.resolve(
       npcBase(world, opponent.definition, skillOf(world, category)),
@@ -317,6 +330,8 @@ export function playRound(rules: RulesEngine, input: RoundInput): Round {
     opponent: opponent.handle,
     characterBlow,
     riposte,
+    opponentCaughtUnaware: caughtUnaware,
+    opponentOutOfReach: opponentStands && !caughtUnaware && !engagement.riposte_possible,
     character: {
       hitPoints: out ? 1 : characterHp,
       damage: input.character.hitPoints - characterHp,
@@ -531,8 +546,12 @@ export type NarratedBlow = {
 export type NarratedRound = {
   opponent: string
   character_blow: NarratedBlow | null
-  /** Null when the opponent could not strike back: down, stopped, or dying. */
+  /** Null when the opponent could not strike back: down, stopped, dying, unaware or out of reach. */
   opponent_blow: NarratedBlow | null
+  /** They never saw the character's blow coming: no defence, and no answer this round. */
+  opponent_caught_unaware: boolean
+  /** They could not reach the character this round: out of reach, or out of their line of fire. */
+  opponent_out_of_reach: boolean
   opponent_state: CombatantState
   /** `out`: brought down for good this round — captured, left for dead or helped, never killed. */
   character_state: 'fighting' | 'down' | 'out'
@@ -558,6 +577,8 @@ export function narratedRound(round: Round): NarratedRound {
     opponent: round.opponent,
     character_blow: blow(round.characterBlow),
     opponent_blow: blow(round.riposte),
+    opponent_caught_unaware: round.opponentCaughtUnaware,
+    opponent_out_of_reach: round.opponentOutOfReach,
     opponent_state: round.opponentAfter.state,
     character_state: round.character.out ? 'out' : round.character.down ? 'down' : 'fighting',
     character_bleeding: round.character.bleeding,

@@ -264,7 +264,8 @@ flowchart TD
   le maximum de l'arme et ignore l'armure [règles §7]. Branchés dans le round depuis la Phase 10.
 - **Combat** (Phase 10) : aucun sous-système dédié ; quand l'arbitrage engage un round, le
   backend le joue juste après le jet de l'action, avec le même moteur pour le joueur et les PNJ
-  [règles §8] : attaque du personnage, défense cachée, dégâts, puis riposte cachée et défense du
+  [règles §8] : attaque du personnage, défense cachée (aucune contre un adversaire surpris),
+  dégâts, puis riposte cachée — sauf adversaire surpris ou hors d'atteinte — et défense du
   personnage. Un `roll_resolved` part par jet du personnage, jamais pour un PNJ ; le round
   complet va dans `turn_log.combat_result`, et la narration n'en reçoit que des labels. Un
   archétype attaqué avant d'être introduit est instancié par le backend à l'application.

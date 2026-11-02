@@ -1,10 +1,11 @@
 import type { TFunction } from 'i18next'
 
 import type { Degree } from '@/api/enums'
-import type { Damage, Roll } from './queries'
+import type { Damage, Opponent, Roll } from './queries'
 
 /**
- * A roll in words, in the order of the table: for a defence, which one; what
+ * A roll in words, in the order of the table: in combat, the attack or the
+ * defence and against whom; what
  * is rolled and at how much, the difficulty when it is not average, each
  * modifier with its value; then the chance when it moved, the d100 and the
  * degree. In combat, what it did — an attack's outcome and, when it hit, the
@@ -12,7 +13,8 @@ import type { Damage, Roll } from './queries'
  * from the backend: nothing here is computed.
  */
 export type RollText = {
-  defense: string | null
+  /** In combat: "Attack on…", "Parry against…". */
+  heading: string | null
   setup: string[]
   chance: string | null
   rolled: string
@@ -26,7 +28,15 @@ export function rollText(roll: Roll, t: TFunction<'game'>): RollText {
   const { combat } = roll
 
   return {
-    defense: combat?.role === 'defense' ? t(`defense.${combat.defense}`, { ns: 'enums' }) : null,
+    heading:
+      combat === null
+        ? null
+        : combat.role === 'attack'
+          ? t('journal.roll.attackOn', { opponent: opponentName(combat.opponent, t) })
+          : t('journal.roll.defenseAgainst', {
+              defense: t(`defense.${combat.defense}`, { ns: 'enums' }),
+              opponent: opponentName(combat.opponent, t),
+            }),
     setup: [
       roll.skill !== null
         ? t('journal.roll.skill', { name: roll.skill.label, value: roll.value })
@@ -60,6 +70,11 @@ export function rollText(roll: Roll, t: TFunction<'game'>): RollText {
   }
 }
 
+/** By name when the character knows it, else the n-th unknown opponent. */
+function opponentName(opponent: Opponent, t: TFunction<'game'>): string {
+  return opponent.label ?? t('journal.roll.unknownOpponent', { rank: opponent.rank })
+}
+
 /**
  * The damage dealt, as it adds up: the weapon's dice, the damage modifier and
  * the armour when they weigh, the total and the special effect.
@@ -79,7 +94,7 @@ function damageText(damage: Damage, t: TFunction<'game'>): string[] {
 /** The roll itself on one line, up to what it did in combat — the damage aside. */
 export function rollSummary(text: RollText): string {
   return [
-    ...(text.defense ? [text.defense] : []),
+    ...(text.heading ? [text.heading] : []),
     ...text.setup,
     ...(text.chance ? [text.chance] : []),
     text.rolled,

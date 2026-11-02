@@ -11,6 +11,7 @@ import {
   characterWeaponOf,
   npcBase,
   opponentWeaponOf,
+  narratedRound,
   playRound,
   type RoundInput,
 } from '#services/game/combat'
@@ -65,6 +66,9 @@ function round(overrides: Partial<RoundInput> = {}): RoundInput {
       parry_possible: true,
       dodge_possible: true,
       defense_modifiers: [],
+      opponent_aware: true,
+      riposte_possible: true,
+      opponent_defense_modifiers: [],
     },
     attack: { actionType: 'melee_combat', resolution: LUNGE },
     ...overrides,
@@ -147,6 +151,51 @@ test.group('Combat | the round', () => {
 
     assert.equal(played.opponentAfter.state, 'down')
     assert.isNull(played.riposte)
+  })
+
+  test('an opponent caught unaware neither defends nor strikes back', ({ assert }) => {
+    /** No defence rolled: the rapier 4 + 1 and the modifier 2, less the coat. */
+    const played = playRound(
+      buildEngine([4, 2]),
+      round({ engagement: { ...round().engagement, opponent_aware: false } })
+    )
+
+    assert.isNull(played.characterBlow?.defense)
+    assert.equal(played.characterBlow?.landed, 'success')
+    assert.equal(played.opponentAfter.damage, 6)
+    assert.isNull(played.riposte)
+    assert.isTrue(played.opponentCaughtUnaware)
+    assert.isFalse(played.opponentOutOfReach)
+    assert.isTrue(narratedRound(played).opponent_caught_unaware)
+  })
+
+  test('an opponent out of reach defends, but does not strike back', ({ assert }) => {
+    /** The guard's parry 90, then the blow lands: no riposte from across the street. */
+    const played = playRound(
+      buildEngine([90, 4, 2]),
+      round({ engagement: { ...round().engagement, riposte_possible: false } })
+    )
+
+    assert.equal(played.characterBlow?.defense?.defense, 'parry')
+    assert.isNull(played.riposte)
+    assert.isTrue(played.opponentOutOfReach)
+    assert.isTrue(narratedRound(played).opponent_out_of_reach)
+  })
+
+  test('circumstances weigh on the opponent’s hidden defence', ({ assert }) => {
+    /** The guard's parry at 60 − 20: 50 fails it; the blow lands; the riposte misses on 95. */
+    const played = playRound(
+      buildEngine([50, 4, 2, 95]),
+      round({
+        engagement: {
+          ...round().engagement,
+          opponent_defense_modifiers: [{ source: 'cornered', effect: 'major_penalty' }],
+        },
+      })
+    )
+
+    assert.equal(played.characterBlow?.defense?.resolution.chance, 40)
+    assert.equal(played.characterBlow?.landed, 'success')
   })
 
   test('a wound from an earlier round bleeds on', ({ assert }) => {

@@ -8,6 +8,7 @@ import { DiceService } from '#services/dice'
 import { LlmGateway } from '#services/llm/gateway'
 import { RulesEngine } from '#services/rules/engine'
 import { TurnService } from '#services/game/turn_service'
+import { toMessage } from '#services/game/turn_events'
 import { MemoryQueue } from '#services/queue/drivers/memory_queue'
 import { FakeLlmProvider, streamed } from '#tests/helpers/fake_llm_provider'
 import { FakeRandomSource } from '#tests/helpers/fake_random_source'
@@ -41,6 +42,9 @@ const RULING = {
     parry_possible: true,
     dodge_possible: true,
     defense_modifiers: [],
+    opponent_aware: true,
+    riposte_possible: true,
+    opponent_defense_modifiers: [],
   },
   alert: { prompt_injection_suspected: false, out_of_scope: false },
 }
@@ -153,11 +157,13 @@ test.group('Combat | a round', (group) => {
     assert.lengthOf(sent, 2)
     assert.deepEqual(sent[0].type === 'roll_resolved' && sent[0].combat, {
       role: 'attack',
+      opponent: { reference: 'cardinal_guard_1', label: "Cardinal's Guard", rank: null },
       outcome: 'hit',
       damage: { weapon: 5, modifier: 2, armor: 1, total: 6, effect: null },
     })
     assert.deepEqual(sent[1].type === 'roll_resolved' && sent[1].combat, {
       role: 'defense',
+      opponent: { reference: 'cardinal_guard_1', label: "Cardinal's Guard", rank: null },
       defense: 'parry',
       outcome: 'avoided',
     })
@@ -218,9 +224,17 @@ test.group('Combat | a round', (group) => {
      * the rapier 4 and the modifier 2, no armour; then their riposte at their
      * untrained 15 misses on 50.
      */
-    const { play } = buildService([struck, ...STAGED], [20, 90, 4, 2, 50])
+    const { play, events } = buildService([struck, ...STAGED], [20, 90, 4, 2, 50])
 
     await play({ sessionId, userId, playerInput: 'I strike the passer-by.' })
+
+    /** Named by their archetype before the turn gives them an instance. */
+    const [attack] = rollsSent(events)
+    assert.deepEqual(attack.type === 'roll_resolved' && attack.combat?.opponent, {
+      reference: 'commoner_1',
+      label: 'Commoner',
+      rank: null,
+    })
 
     const commoner = await guardOf(sessionId, 'commoner_1')
     assert.equal(commoner.status, 'present')
@@ -287,6 +301,87 @@ test.group('Combat | a round', (group) => {
     assert.equal(character.hitPoints, 1)
     assert.isTrue(character.firstAidAvailable)
     assert.equal(turn.gameTimeAfter! - turn.gameTimeBefore!, 12 + 3600)
+  })
+
+  test('a shot at a guard who never sees it coming: no defence, no riposte', async ({ assert }) => {
+    const { userId, sessionId, characterId } = await arrangeDuel()
+    const now = new Date()
+    await db.table('inventory_items').insert({
+      session_id: sessionId,
+      character_id: characterId,
+      definition_reference: 'pistol',
+      handle: 'pistol_1',
+      quantity: 1,
+      state: 'carried',
+      created_at: now,
+      updated_at: now,
+    })
+    const ambush = {
+      ...RULING,
+      resolution: { mode: 'roll_required', action_type: 'ranged_combat', difficulty: 'average' },
+      combat: { ...RULING.combat, opponent_aware: false, riposte_possible: false },
+    }
+    /** The shot 5 — no dodge rolled — the pistol 4 + 1, less the guard's coat. */
+    const { play, events, provider } = buildService([ambush, ...STAGED], [5, 4])
+
+    await play({ sessionId, userId, playerInput: 'From the doorway, I fire at his back.' })
+
+    const guard = await guardOf(sessionId)
+    assert.equal(guard.hitPoints, 13 - 4)
+    /** One roll only: the character's shot. Nothing came back at them. */
+    assert.lengthOf(rollsSent(events), 1)
+    const character = await Character.findOrFail(characterId)
+    assert.equal(character.hitPoints, 26)
+
+    const narration = JSON.parse(provider.requests[1].userMessage.split('\n\n')[1])
+    const { combat } = narration.resolution_to_narrate
+    assert.isTrue(combat.opponent_caught_unaware)
+    assert.isNull(combat.character_blow.met_with)
+    assert.isNull(combat.opponent_blow)
+  })
+
+  test('a unique person whose name the character does not know is sent as a rank', async ({
+    assert,
+  }) => {
+    const { userId, sessionId } = await arrangeDuel()
+    const guard = await guardOf(sessionId)
+    await NpcInstance.create({
+      sessionId,
+      handle: 'rochefort',
+      definitionReference: 'rochefort',
+      descriptor: 'a gentleman with a scar on his temple',
+      disposition: 'hostile',
+      status: 'present',
+      hitPoints: 14,
+      locationInstanceId: guard.locationInstanceId,
+      firstAidAvailable: false,
+    })
+    const duel = {
+      ...RULING,
+      intent: { ...RULING.intent, target: 'rochefort' },
+      combat: { ...RULING.combat, opponent: 'rochefort' },
+    }
+    /** The attack 80 (failure); his riposte 20, the character's parry 50 holds. */
+    const { play, events } = buildService([duel, ...STAGED], [80, 20, 50])
+
+    await play({ sessionId, userId, playerInput: 'I lunge at the gentleman.' })
+
+    const unknown = { reference: 'rochefort', label: null, rank: 1 }
+    assert.deepEqual(
+      rollsSent(events).map((event) => event.type === 'roll_resolved' && event.combat?.opponent),
+      [unknown, unknown]
+    )
+
+    /** Read back with the turn, the same: the name never reaches the player. */
+    const completed = events.recorded.find(({ event }) => event.type === 'turn_completed')!
+    const message = toMessage(completed.ref, completed.event) as {
+      turn: { rolls: { combat: { opponent: unknown } }[] }
+    }
+    assert.deepEqual(
+      message.turn.rolls.map(({ combat }) => combat.opponent),
+      [unknown, unknown]
+    )
+    assert.notInclude(JSON.stringify(message), 'Rochefort')
   })
 })
 

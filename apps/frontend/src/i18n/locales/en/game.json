@@ -17,6 +17,9 @@
       "chance": "→ {{chance, number}}%",
       "rolled": "rolled {{roll, number}}",
       "throw": "Roll the dice",
+      "attackOn": "Attack on {{opponent}}",
+      "defenseAgainst": "{{defense}} against {{opponent}}",
+      "unknownOpponent": "unknown opponent {{rank, number}}",
       "damage": {
         "weapon": "Damage {{value, number}}",
         "modifier": "Damage modifier {{value, number(signDisplay: always)}}",

@@ -218,6 +218,17 @@ const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
         )
         .maxLength(MAX_CONTEXTUAL_MODIFIERS)
         .optional(),
+      opponent_aware: vine.boolean(),
+      riposte_possible: vine.boolean(),
+      opponent_defense_modifiers: vine
+        .array(
+          vine.object({
+            source: vine.string().regex(REFERENCE),
+            effect: vine.enum(CONTEXTUAL_EFFECTS),
+          })
+        )
+        .maxLength(MAX_CONTEXTUAL_MODIFIERS)
+        .optional(),
     })
     .optional(),
   alert: vine.object({
@@ -377,16 +388,22 @@ function destinationOf(
 }
 
 /** The engagement as it travels: always an object, its opponent null when there is no fight. */
-type FlatCombat = Omit<CombatEngagement, 'opponent' | 'defense_modifiers'> & {
+type FlatCombat = Omit<
+  CombatEngagement,
+  'opponent' | 'defense_modifiers' | 'opponent_defense_modifiers'
+> & {
   opponent: string | null
   defense_modifiers?: CombatEngagement['defense_modifiers']
+  opponent_defense_modifiers?: CombatEngagement['opponent_defense_modifiers']
 }
 
 /**
  * A round of combat is against someone present — or, attacked first, an
  * archetype the backend brings in. The character's attack is a roll on one
  * of the two attacking categories; first aid is never given in the thick of
- * a fight. An aside fights no one: whatever is sent with it is dropped.
+ * a fight. Only the character's blow can catch the opponent unaware, and a
+ * round where the character neither strikes nor can be struck holds nothing.
+ * An aside fights no one: whatever is sent with it is dropped.
  */
 function combatOf(
   output: RawArbitration,
@@ -439,13 +456,34 @@ function combatOf(
     )
   }
 
+  if (!combat.character_attacks && !combat.opponent_aware) {
+    reasons.push(
+      reason(
+        'combat.opponent_aware',
+        'unaware_without_attack',
+        'Only the character’s own blow can catch the opponent unaware: set opponent_aware to true when the character does not attack.'
+      )
+    )
+  }
+
+  if (!combat.character_attacks && !combat.riposte_possible) {
+    reasons.push(
+      reason(
+        'combat.riposte_possible',
+        'empty_round',
+        'A round where the character does not attack and the opponent cannot reach them is no round: leave combat.opponent null.'
+      )
+    )
+  }
+
   const defenseModifiers = combat.defense_modifiers ?? []
-  reasons.push(
-    ...modifierReasons(defenseModifiers, meta).map((item) => ({
-      ...item,
-      field: 'combat.defense_modifiers',
-    }))
-  )
+  const opponentDefenseModifiers = combat.opponent_defense_modifiers ?? []
+  for (const [field, modifiers] of [
+    ['combat.defense_modifiers', defenseModifiers],
+    ['combat.opponent_defense_modifiers', opponentDefenseModifiers],
+  ] as const) {
+    reasons.push(...modifierReasons(modifiers, meta).map((item) => ({ ...item, field })))
+  }
 
   return {
     value: {
@@ -454,6 +492,9 @@ function combatOf(
       parry_possible: combat.parry_possible,
       dodge_possible: combat.dodge_possible,
       defense_modifiers: defenseModifiers,
+      opponent_aware: combat.opponent_aware,
+      riposte_possible: combat.riposte_possible,
+      opponent_defense_modifiers: opponentDefenseModifiers,
     },
     reasons,
   }

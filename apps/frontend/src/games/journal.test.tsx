@@ -70,6 +70,7 @@ describe('Journal | a round of combat read back', () => {
     degree: 'success',
     combat: {
       role: 'attack',
+      opponent: { reference: 'jussac', label: 'Jussac', rank: null },
       outcome: 'hit',
       damage: { weapon: 5, modifier: 0, armor: 2, total: 3, effect: 'bleeding' },
     },
@@ -83,7 +84,12 @@ describe('Journal | a round of combat read back', () => {
     roll: 90,
     result: 'failure',
     degree: 'failure',
-    combat: { role: 'defense', defense: 'dodge', outcome: 'struck' },
+    combat: {
+      role: 'defense',
+      opponent: { reference: 'cahusac', label: null, rank: 2 },
+      defense: 'dodge',
+      outcome: 'struck',
+    },
   }
 
   test('every roll of the turn as a chip, in order, with what it did', () => {
@@ -98,7 +104,7 @@ describe('Journal | a round of combat read back', () => {
     expect(markup).toContain('Swordsmanship 60% · rolled 23 · Success · Hit')
     // The modifier left out when it is nought; the damage on a line of its own.
     expect(markup).toContain('>Damage 5 · Armor −2 · → 3 dealt · Bleeding<')
-    expect(markup).toContain('Dodge · Dodge 35% · rolled 90 · Failure · Blow taken')
+    expect(markup).toContain('Dodge against unknown opponent 2 · Dodge 35% · rolled 90 · Failure · Blow taken')
     expect(markup.indexOf('rolled 23')).toBeLessThan(markup.indexOf('rolled 90'))
     expect(markup).not.toContain('Roll the dice')
   })

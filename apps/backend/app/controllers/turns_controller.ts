@@ -3,6 +3,9 @@ import Session from '#models/session'
 import TurnLog from '#models/turn_log'
 import { ContentLabels } from '#services/game/content_labels'
 import { loadWorld } from '#services/game/content/load'
+import type { Opponents } from '#services/game/opponents'
+import { loadOpponents } from '#services/game/npcs'
+import WorldState from '#models/world_state'
 import { playTurnValidator, turnsPageValidator } from '#validators/turn'
 import TurnTransformer from '#transformers/turn_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -39,7 +42,7 @@ export default class TurnsController {
      * Lucid's page counts, which a journal read by cursor has no use for.
      */
     return {
-      ...(await serialize(TurnTransformer.transform(page, await labelsOf(session)))),
+      ...(await serialize(TurnTransformer.transform(page, ...(await namesOf(session))))),
       metadata: { hasEarlier: newestFirst.length > TURNS_PAGE_SIZE },
     }
   }
@@ -56,7 +59,7 @@ export default class TurnsController {
       .where('id', params.turnId)
       .firstOrFail()
 
-    return serialize(TurnTransformer.transform(turn, await labelsOf(session)))
+    return serialize(TurnTransformer.transform(turn, ...(await namesOf(session))))
   }
 
   /**
@@ -85,7 +88,7 @@ export default class TurnsController {
 
     response.status(202)
 
-    return serialize(TurnTransformer.transform(turn, await labelsOf(session)))
+    return serialize(TurnTransformer.transform(turn, ...(await namesOf(session))))
   }
 }
 
@@ -101,7 +104,14 @@ function findOwnSession(sessionId: string, userId: string) {
     .firstOrFail()
 }
 
-/** The labels of the world the game is played in, as it stands now. */
-async function labelsOf(session: Session): Promise<ContentLabels> {
-  return new ContentLabels(await loadWorld(session))
+/**
+ * The labels of the world the game is played in, and the names of its
+ * people as the character knows them — as they stand now.
+ */
+async function namesOf(session: Session): Promise<[ContentLabels, Opponents]> {
+  const world = await loadWorld(session)
+  const labels = new ContentLabels(world)
+  const worldState = await WorldState.findBy('sessionId', session.id)
+
+  return [labels, await loadOpponents(session, world, labels, worldState?.knownNpcs ?? [])]
 }

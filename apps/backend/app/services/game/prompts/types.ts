@@ -214,6 +214,16 @@ export type CombatEngagement = {
   dodge_possible: boolean
   /** Circumstances weighing on the character's defence, as labels: three at most. */
   defense_modifiers: ContextualModifier[]
+  /**
+   * Whether the opponent sees the character's blow coming. False — a shot
+   * from hiding, a blow from behind, someone asleep — leaves them no defence
+   * and no riposte this round. Always true when the character does not attack.
+   */
+  opponent_aware: boolean
+  /** Whether the opponent can reach the character this round: in reach of their weapon, in their line of fire. */
+  riposte_possible: boolean
+  /** Circumstances weighing on the opponent's hidden defence, as labels: three at most. */
+  opponent_defense_modifiers: ContextualModifier[]
 }
 
 export type RecentTurn = {
