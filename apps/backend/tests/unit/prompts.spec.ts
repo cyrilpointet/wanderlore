@@ -351,7 +351,7 @@ test.group('Arbitration | context sent', () => {
   test('carries the language explicitly', ({ assert }) => {
     assert.include(
       buildArbitrationMessage(arbitrationContext({ language: 'fr' })),
-      '"language": "fr"'
+      '"language":"fr"'
     )
   })
 
@@ -406,7 +406,7 @@ test.group('Narration | free text', () => {
 
   test('writes in the language of the game', ({ assert }) => {
     assert.include(NARRATION_SYSTEM_PROMPT, 'Write in the language given by the context')
-    assert.include(buildNarrationMessage(narrationRequest({ language: 'fr' })), '"language": "fr"')
+    assert.include(buildNarrationMessage(narrationRequest({ language: 'fr' })), '"language":"fr"')
   })
 
   test('forbids overriding the outcome', ({ assert }) => {
@@ -437,8 +437,8 @@ test.group('Narration | context sent', () => {
   test('sends the verdict and the qualitative degree only', ({ assert }) => {
     const message = buildNarrationMessage(narrationRequest())
 
-    assert.include(message, '"result": "success"')
-    assert.include(message, '"degree": "special"')
+    assert.include(message, '"result":"success"')
+    assert.include(message, '"degree":"special"')
   })
 
   test('never sends dice, thresholds or skill values', ({ assert }) => {

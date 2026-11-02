@@ -123,7 +123,7 @@ test.group('Networks | arbitration and narration', (group) => {
     assert.include(arbitration.userMessage, 'The house hall, for a spec.')
     assert.include(arbitration.userMessage, 'a locked oak door')
     assert.include(arbitration.userMessage, '"reachable_locations"')
-    assert.include(arbitration.userMessage, '"reference": "house_corridor"')
+    assert.include(arbitration.userMessage, '"reference":"house_corridor"')
   })
 
   test('the walk is timed on its way, then what is done on arrival', async ({ assert }) => {
@@ -158,8 +158,8 @@ test.group('Networks | arbitration and narration', (group) => {
     await play({ sessionId, userId, playerInput: 'I go down to the cellar.' })
 
     const narration = provider.requests.find(({ step }) => step === 'narration')!
-    assert.include(narration.userMessage, '"through": "a swing door"')
-    assert.include(narration.userMessage, '"through": "stairs going down"')
+    assert.include(narration.userMessage, '"through":"a swing door"')
+    assert.include(narration.userMessage, '"through":"stairs going down"')
   })
 
   test('a destination the exits do not reach is asked for again', async ({ assert }) => {
@@ -372,7 +372,7 @@ test.group('Networks | people where they were left', (group) => {
     const narration = provider.requests.find(({ step }) => step === 'narration')!
     assert.include(
       narration.userMessage,
-      '"npcs_at_destination": [\n    {\n      "handle": "treville"'
+      '"npcs_at_destination":[{"handle":"treville"'
     )
   })
 
@@ -406,9 +406,9 @@ test.group('Networks | people where they were left', (group) => {
     await play({ sessionId, userId, playerInput: 'I go to the hall.' })
 
     const arbitration = provider.requests.find(({ step }) => step === 'arbitration')!
-    assert.include(arbitration.userMessage, '"reference": "house_hall"')
+    assert.include(arbitration.userMessage, '"reference":"house_hall"')
     /** Up the stairs from the kitchen is through the hall: no longer a way. */
-    assert.notInclude(arbitration.userMessage, '"reference": "house_corridor"')
+    assert.notInclude(arbitration.userMessage, '"reference":"house_corridor"')
   })
 })
 
@@ -454,7 +454,7 @@ test.group('Networks | people waiting from the start', (group) => {
     const narration = provider.requests.find(({ step }) => step === 'narration')!
     assert.include(
       narration.userMessage,
-      '"npcs_at_destination": [\n    {\n      "handle": "house_steward"'
+      '"npcs_at_destination":[{"handle":"house_steward"'
     )
   })
 
@@ -469,7 +469,7 @@ test.group('Networks | people waiting from the start', (group) => {
     await play({ sessionId, userId, playerInput: 'I call up the ladder.' })
 
     const extraction = provider.requests.find(({ step }) => step === 'extraction')!
-    assert.include(extraction.userMessage, `"definition": "${STEWARD}"`)
+    assert.include(extraction.userMessage, `"definition":"${STEWARD}"`)
     assert.deepEqual(await placeOf(sessionId, STEWARD), {
       status: 'present',
       place: 'house_corridor',
@@ -489,7 +489,7 @@ test.group('Networks | people waiting from the start', (group) => {
     await assert.rejects(() => play({ sessionId, userId, playerInput: 'I wait in the hall.' }))
 
     const extraction = provider.requests.find(({ step }) => step === 'extraction')!
-    assert.notInclude(extraction.userMessage, `"definition": "${STEWARD}"`)
+    assert.notInclude(extraction.userMessage, `"definition":"${STEWARD}"`)
     assert.equal(await count(sessionId, STEWARD), 0)
   })
 

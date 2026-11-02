@@ -847,8 +847,8 @@ test.group('TurnService | items and circumstances', (group) => {
     await play({ sessionId, userId, playerInput: 'I look around.' })
 
     const arbitration = provider.requests[0].userMessage
-    assert.include(arbitration, '"reference": "letter_to_treville"')
-    assert.include(arbitration, '"label": "Rapier"')
+    assert.include(arbitration, '"reference":"letter_to_treville"')
+    assert.include(arbitration, '"label":"Rapier"')
   })
 
   test('an item passed off as a circumstance gets one more attempt', async ({ assert }) => {
@@ -897,10 +897,10 @@ test.group('TurnService | items and circumstances', (group) => {
     await play({ sessionId, userId, playerInput: 'I look around.' })
 
     const extraction = provider.requests[2].userMessage
-    assert.include(extraction, '"item": "rapier_1"')
-    assert.include(extraction, '"definition": "improvised_weapon"')
+    assert.include(extraction, '"item":"rapier_1"')
+    assert.include(extraction, '"definition":"improvised_weapon"')
     /** Held from the start by Buckingham: it comes with him, never from nowhere. */
-    assert.notInclude(extraction, '"definition": "queens_diamond_studs"')
+    assert.notInclude(extraction, '"definition":"queens_diamond_studs"')
   })
 
   test('refused twice, the turn fails and nothing moves', async ({ assert }) => {
@@ -1167,7 +1167,7 @@ test.group('TurnService | BRP rolls', (group) => {
 
     /** A 2 against 60: within a twentieth of it, a critical. */
     const narration = provider.requests[1].userMessage
-    assert.include(narration, '"degree": "critical"')
+    assert.include(narration, '"degree":"critical"')
     for (const leak of ['"roll"', '"chance"', 'baseChance', '"base"']) {
       assert.notInclude(narration, leak)
     }
@@ -1237,10 +1237,10 @@ test.group('TurnService | the game clock', (group) => {
     await play({ sessionId, userId, playerInput: 'I sleep until dawn.' })
 
     const narration = provider.requests.find(({ step }) => step === 'narration')!
-    assert.include(narration.userMessage, '"began": "afternoon"')
-    assert.include(narration.userMessage, '"ends": "dawn"')
-    assert.include(narration.userMessage, '"ends_at": "05:00"')
-    assert.include(narration.userMessage, '"date": "1625-04-08"')
+    assert.include(narration.userMessage, '"began":"afternoon"')
+    assert.include(narration.userMessage, '"ends":"dawn"')
+    assert.include(narration.userMessage, '"ends_at":"05:00"')
+    assert.include(narration.userMessage, '"date":"1625-04-08"')
   })
 
   test('an aside takes no time, whatever the model proposed', async ({ assert }) => {

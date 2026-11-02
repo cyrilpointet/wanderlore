@@ -123,7 +123,7 @@ export function buildNarrationMessage(request: NarrationRequest): string {
     language: request.language,
   }
 
-  return `${FRAMING}\n\n${JSON.stringify(payload, null, 2)}\n\nWrite the narration for this outcome.`
+  return `${FRAMING}\n\n${JSON.stringify(payload)}\n\nWrite the narration for this outcome.`
 }
 
 /**

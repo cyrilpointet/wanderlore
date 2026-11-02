@@ -227,4 +227,5 @@ commit que la route. Le front et le back-office régénèrent eux-mêmes leur ar
 | `CORS_ORIGINS` | backend, hors local | origines du front et du back-office, séparées par des virgules |
 | `COOKIE_DOMAIN` | backend, hors local | domaine parent des cookies de session et CSRF |
 | `BACKEND_URL` | front, back-office | cible du proxy Vite (`http://localhost:3333` par défaut) |
+| `VITE_DEFAULT_LANGUAGE` | front | langue de l'interface (`en` par défaut) ; une langue sans fichiers de traduction retombe sur l'anglais |
 | `VITE_PLAYER_URL` | back-office | front joueur ouvert par « Try it in the game » (`http://localhost:5173` par défaut) |

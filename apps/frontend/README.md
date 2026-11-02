@@ -20,6 +20,9 @@ Le serveur Vite proxifie `/api` et `/__transmit` vers le backend (`BACKEND_URL`,
 `http://localhost:3333`) : front et API partagent une origine, condition du cookie de session
 et du jeton CSRF.
 
+`VITE_DEFAULT_LANGUAGE` (facultative, `en` par défaut) fixe la langue de l'interface ; une langue
+sans fichiers dans `src/i18n/locales/` retombe sur l'anglais.
+
 ## Organisation
 
 | Chemin | Rôle |

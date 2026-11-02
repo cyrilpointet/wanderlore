@@ -227,7 +227,7 @@ export function buildExtractionMessage(request: ExtractionRequest): string {
       .map((item) => ({ definition: item.reference, description: item.description })),
   }
 
-  return `${FRAMING}\n\n${JSON.stringify(payload, null, 2)}\n\nExtract the state changes this narration describes under the defined schema.`
+  return `${FRAMING}\n\n${JSON.stringify(payload)}\n\nExtract the state changes this narration describes under the defined schema.`
 }
 
 function itemsForExtraction(request: ExtractionRequest) {

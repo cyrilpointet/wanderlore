@@ -234,7 +234,7 @@ export function buildArbitrationMessage(context: ArbitrationContext): string {
     language: context.language,
   }
 
-  return `${FRAMING}\n\n${JSON.stringify(payload, null, 2)}\n\nAnalyse this action and return your decision under the defined schema.`
+  return `${FRAMING}\n\n${JSON.stringify(payload)}\n\nAnalyse this action and return your decision under the defined schema.`
 }
 
 type ArbitrationItem = { reference: string; label: string }

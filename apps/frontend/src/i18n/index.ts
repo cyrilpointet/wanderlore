@@ -9,9 +9,10 @@ import { defaultNS, en } from './resources'
  * narration is written by the LLM in the game's language: neither goes
  * through here.
  *
- * Fixed to English in Phase 2; the player picks a language in Phase 14.
+ * Set per deployment by `VITE_DEFAULT_LANGUAGE`, English when unset; the
+ * player picks a language in Phase 14.
  */
-export const LANGUAGE = 'en'
+export const DEFAULT_LANGUAGE: string = import.meta.env.VITE_DEFAULT_LANGUAGE || 'en'
 
 /**
  * Any language but English is split into its own chunks and fetched on first
@@ -29,7 +30,7 @@ void i18n
     })
   )
   .init({
-    lng: LANGUAGE,
+    lng: DEFAULT_LANGUAGE,
     fallbackLng: 'en',
     resources: { en },
     partialBundledLanguages: true,
