@@ -86,7 +86,7 @@ Dans l'ordre, et uniquement côté backend :
 
 Chaque `action_type` de l'univers (`resolution_rules`) se résout vers **une seule** cible : une compétence d'univers, ou une caractéristique jetée à × 5. Le jet de caractéristique est le recours du livre quand aucune compétence ne convient (Effort pour forcer une porte, Chance pour une coïncidence). Chaque univers décide d'en exposer ou non comme `action_type` : rien ne s'ajoute de soi-même à la liste lue par l'arbitrage à chaque tour.
 
-**Simplification connue** : un `action_type` désigne toujours la même compétence. `melee_combat` vaut `sword` pour tout personnage des Trois Mousquetaires, même armé d'une dague ; dans le BRP, c'est l'arme qui désigne la compétence, ce qui vient avec la boucle de combat (Phase 10).
+**Simplification connue** : un `action_type` désigne toujours la même compétence. `melee_combat` vaut `sword` pour tout personnage des Trois Mousquetaires, même armé d'une dague ; dans le BRP, c'est l'arme qui désigne la compétence. La simplification est gardée à l'ouverture de la Phase 10 : la catégorie d'action donne la compétence, l'arme ses seuls dégâts.
 
 ### Conséquence sur la validation
 
@@ -210,7 +210,7 @@ Le d100 donne directement cinq degrés, calculés par le backend sur la chance f
 
 **Usage dans le pipeline** :
 - **Le narrateur ne reçoit que `result` et `degree`** — jamais le jet, la chance ni la compétence, pour garder la mécanique hors du texte diégétique : il tenterait de justifier ou de contredire les chiffres.
-- **Le joueur, lui, voit le détail de chaque jet** (tranché à l'ouverture de la Phase 6) : la compétence ou la caractéristique jouée et sa valeur, les modificateurs appliqués avec leur valeur (une circonstance par son label d'effet, un objet par son nom), la chance finale, le résultat du d100 et le degré. Le backend les transmet à l'événement `roll_resolved` et à la lecture du tour ; le front les affiche sans rien calculer. La référence d'une circonstance (`source`) est un texte libre du LLM, sans libellé : elle n'est jamais affichée.
+- **Le joueur, lui, voit le détail de chaque jet de son personnage** (tranché à l'ouverture de la Phase 6 ; restreint au personnage à l'ouverture de la Phase 10 — les jets des PNJ restent tirés par le backend, tracés dans `turn_log`, et invisibles au joueur, qui n'en connaît que ce que la narration raconte) : la compétence ou la caractéristique jouée et sa valeur, les modificateurs appliqués avec leur valeur (une circonstance par son label d'effet, un objet par son nom), la chance finale, le résultat du d100 et le degré. Le backend les transmet à l'événement `roll_resolved` et à la lecture du tour ; le front les affiche sans rien calculer. La référence d'une circonstance (`source`) est un texte libre du LLM, sans libellé : elle n'est jamais affichée.
 - L'étape d'extraction ne reçoit pas le degré : elle lit ce que la narration en a fait — l'effet bonus d'un critique, la complication d'une maladresse —, et rien de plus.
 
 ---
@@ -221,8 +221,8 @@ Le d100 donne directement cinq degrés, calculés par le backend sur la chance f
 
 Un seul pool de ressource (`hit_points`) représente la santé du personnage.
 
-- **Personnage** : `hit_points_max = (CON + SIZ) ÷ 2`, arrondi au supérieur — une douzaine pour un adulte ordinaire. **Dérivé par le backend** de la fiche, jamais saisi. La variante « points de vie totaux » du livre (`CON + SIZ`) sera réexaminée en Phase 10, avec les dégâts réels.
-- **PNJ** : comme dans les fiches de créatures du livre, les points de vie sont saisis dans le profil de combat. Les PNJ n'ont pas de caractéristiques tant qu'aucun jet de PNJ n'existe (Phase 10).
+- **Personnage** : `hit_points_max = (CON + SIZ) ÷ 2`, arrondi au supérieur — une douzaine pour un adulte ordinaire. **Dérivé par le backend** de la fiche, jamais saisi. **Depuis la Phase 10** : les points de vie totaux du livre, `hit_points_max = CON + SIZ`, pour tous les univers — l'avantage au joueur du jeu en solo. Provisoire : le niveau de puissance de l'univers en décidera en Phase 13 (`CON + SIZ` pour le héros de cape et d'épée, `(CON + SIZ) ÷ 2` pour l'investigateur lovecraftien).
+- **PNJ** : comme dans les fiches de créatures du livre, les points de vie sont saisis dans le profil de combat, et depuis la Phase 10 le modificateur de dégâts et l'armure ordinaire aussi. Les PNJ n'ont pas de caractéristiques : une compétence absente de leur profil vaut sa chance de base, lue sur un adulte ordinaire (10 partout) quand elle dépend d'une caractéristique.
 
 ### Dégâts : la formule du BRP
 
@@ -236,11 +236,16 @@ Dégâts = dés de l'arme + modificateur de dégâts − armure de la cible   (a
 - **Modificateur de dégâts** : déduit de `STR + SIZ` de l'attaquant, selon la table du livre (de `-1D6` à `+1D4` et au-delà ; aucun entre 17 et 24). Le profil d'arme dit s'il s'applique en entier (mêlée), à moitié (armes de jet) ou pas du tout (armes à feu).
 - **Critique** : maximum des dés de l'arme, plus le modificateur jeté normalement, armure ignorée.
 - **Armure** : valeur fixe, retranchée à chaque coup.
-- **Effet spécial** : le profil d'arme note le type d'effet d'une réussite spéciale (empalement, saignement, écrasement…), sans effet mécanique avant la Phase 10.
+- **Effet spécial** d'une réussite spéciale (Phase 10), réduit à ce qui se règle dans le round : **empalement**, dés de l'arme doublés ; **écrasement**, modificateur doublé (aucun devient `+1D4`, un malus aucun) et cible étourdie ; **enchevêtrement** et **repoussement**, la cible ne riposte pas ce round ; **saignement**, 1 PV par round de combat suivant, jusqu'aux premiers soins ou la fin du combat. La réussite spéciale d'un PNJ n'applique au personnage que ses dégâts et le saignement.
+- **Armure** : celle d'un objet compte quand il est porté, la meilleure seule ; un PNJ a son armure ordinaire, qu'une armure qu'il détient remplace.
 
-**Profil d'arme** (sur une définition d'objet, lu par le backend seul) : compétence de l'arme, dés de dégâts, usage du modificateur (`full`, `half`, `none`), type d'effet spécial. Il est posé dès la Phase 6 pour que le contenu s'écrive une seule fois.
+**Profil d'arme** (sur une définition d'objet, lu par le backend seul) : nature de l'arme (`melee`, `thrown`, `projectile`), dés de dégâts, usage du modificateur (`full`, `half`, `none`), type d'effet spécial. Plus de compétence depuis la Phase 10 : c'est la catégorie d'action qui la donne. La nature dit la catégorie d'une riposte de PNJ et ce qui la pare.
 
-**Séquencement** (tranché à l'ouverture de la Phase 6) : la formule est posée et testée en Phase 6, dés simulés. Son branchement dans le tour — désigner l'attaquant et la cible, lire la défense — arrive avec la boucle de combat de la Phase 10. D'ici là, l'extraction chiffre les blessures du personnage sur l'échelle fixe de la section 10.
+**Séquencement** : la formule est posée et testée en Phase 6, dés simulés, et branchée dans le round de combat en Phase 10 (section 8). L'extraction ne chiffre plus que les blessures hors combat (chute, feu, poison), sur l'échelle fixe de la section 10, et ne soigne plus.
+
+**Blessures** (Phase 10) : un coup d'au moins la moitié des PV totaux est une **blessure grave** ; à 2 PV ou moins, le blessé est **hors de combat** (le choc du livre, ou des blessures légères accumulées) ; à 0 ou moins, **blessure mortelle**. Le personnage n'en meurt pas avant la Phase 12 : il revient à 1 PV, hors de combat pour une heure, capturé, laissé pour mort ou secouru. Un PNJ passe mourant (`dying`) et meurt à la fin du tour suivant, sauf premiers soins. Pas de table des séquelles permanentes avant la Phase 12.
+
+**Soins** (Phase 10) : **premiers soins**, catégorie `first_aid`, une tentative par blessure reçue, jamais en plein combat — `fumble` −1 PV, `failure` rien, réussite +1D3, `special` +2D3, `critical` +3+1D3 ; une réussite arrête aussi un saignement, ranime un blessé et garde un mourant en vie. **Guérison naturelle** : 1D3 PV par semaine de jeu, comptée par le backend sur l'horloge.
 
 ---
 
@@ -248,16 +253,17 @@ Dégâts = dés de l'arme + modificateur de dégâts − armure de la cible   (a
 
 Pas de sous-système de combat séparé. Un combat est modélisé comme une **séquence de jets d'action** entre le joueur et le ou les adversaires, chaque action du joueur étant traitée comme une action normale du pipeline standard :
 - l'étape d'arbitrage classe l'intention en `melee_combat` ou `ranged_combat`,
+- le backend en déduit la compétence via `resolution_rules`, comme pour toute action — jamais de l'arme, qui ne fournit que ses dégâts (tranché à l'ouverture de la Phase 10),
 - le moteur de règles calcule le résultat selon la formule générique,
 - l'étape de narration met en scène l'échange.
 
-Cette approche évite de coder un moteur de combat distinct : le combat n'est qu'un enchaînement d'appels au même pipeline. Les rounds de 12 secondes, les rangs de `DEX` et les actions multiples du livre sont écartés : un tour de Wanderlore est une action du joueur.
+Cette approche évite de coder un moteur de combat distinct : le combat n'est qu'un enchaînement d'appels au même pipeline. Du round du livre, seule la durée est gardée : un tour de combat avance l'horloge de 12 secondes (section 8bis). Les rangs de `DEX` et les actions multiples sont écartés — en solo, l'ordre d'action n'a guère d'intérêt, et un tour de Wanderlore est une action du joueur. **L'avantage est toujours au joueur** (tranché à l'ouverture de la Phase 10) : dans un round, le personnage agit le premier, quel que soit l'ordre du livre. Seuls ses jets sont lancés par le joueur et montrés ; ceux des PNJ restent au backend, invisibles.
 
 **Résolution des PNJ adverses** : leurs compétences sont stockées au même format que celles d'un personnage joueur — profil de combat sur la définition (compétences en pourcentage, points de vie maximum, arme ordinaire), points de vie courants sur l'instance (`npc_instances`). Le moteur leur applique la même formule, sans distinction de traitement entre joueur et PNJ — un seul moteur de résolution pour tous les participants.
 
 **Arme ordinaire et objet spécial** (tranché à l'ouverture de la Phase 4). L'arme ordinaire d'un PNJ est une simple référence de définition dans son profil : elle ne se vole pas et ne se transfère pas. Un objet spécial (arme de quête, épée de famille) est **détenu** par le PNJ comme tout objet (architecture, section 6bis) : c'est en le prenant que le joueur peut l'obtenir, et une arme détenue l'emporte sur l'arme ordinaire du profil.
 
-**Ce que la Phase 10 reprendra du livre** : la matrice attaque / défense (le degré de la parade ou de l'esquive annule ou dégrade celui de l'attaque), les jets opposés et la table de résistance, l'armure branchée, la blessure grave (un coup d'au moins la moitié des points de vie) et la blessure mortelle (points de vie à 0, une fenêtre d'un tour pour être soigné), les effets spéciaux, une table réduite de maladresses. Le livre conseille aussi, en jeu à un seul joueur, que l'adversaire capture plutôt qu'il ne tue.
+**Le round de combat** (Phase 10, roadmap pour le cadrage complet) : l'arbitrage désigne l'adversaire, le backend joue le round, avantage au joueur. L'attaque du personnage — le jet de son action — rencontre la défense cachée de l'adversaire ; si l'adversaire tient debout et n'est pas arrêté, il riposte, en caché, et le personnage se défend par un second jet, montré. La **matrice attaque / défense** du livre s'applique : une défense réussie retire à l'attaque autant de degrés qu'elle en a au-dessus de l'échec, et l'arrête quand il n'en reste rien. La **défense** est la meilleure chance entre la parade (compétence de `melee_combat`, une arme en main) et l'esquive (`dodge`) ; contre un projectile rapide, pas de parade et une esquive `difficult`. Seule la cible riposte ; les autres hostiles pèsent en circonstance. **Maladresses** : une table réduite de cinq issues — rien de plus, chute (la riposte devient `easy`), arme lâchée, blessure à soi-même, arme brisée (jamais un objet unique). Le livre conseille, en jeu à un seul joueur, que l'adversaire capture plutôt qu'il ne tue : le personnage n'est jamais tué.
 
 ---
 
@@ -269,7 +275,7 @@ Le temps qui passe en jeu suit la même séparation que les jets : le LLM qualif
 - **Trajet dans un réseau de lieux** : la somme des durées des passages du chemin le plus rapide, calculée par le backend, à laquelle s'ajoute le label de ce qui se fait à l'arrivée.
 - **Périodes** : sept, à bornes fixes et sans saison — `dawn` 5 h–7 h, `morning` 7 h–12 h, `midday` 12 h–14 h, `afternoon` 14 h–18 h, `dusk` 18 h–20 h, `evening` 20 h–22 h, `night` 22 h–5 h. L'arbitrage peut tirer de la période une circonstance (l'obscurité), comme de toute autre.
 - **Calendrier** grégorien seul ; sans date de départ, l'horloge compte les jours.
-- **Durées du BRP** au-delà : le round (12 s) sera imposé par le backend à la boucle de combat, et les soins (premiers soins en un round, guérison naturelle de 1D3 PV par semaine) se caleront sur l'horloge — Phase 10.
+- **Durées du BRP** au-delà (Phase 10) : un round de combat dure 12 s, imposées par le backend quelle que soit la durée proposée, et une heure de plus quand le personnage est mis hors de combat ; la guérison naturelle (1D3 PV par semaine) se compte sur l'horloge.
 
 ---
 
@@ -294,8 +300,8 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
 - La durée du tour est un label de l'échelle fixe (section 8bis), jamais une heure ni un nombre de minutes ; seul le nombre de jours de `days` est un entier, borné de 1 à 7. Avec une destination dans un réseau de lieux, la durée ne couvre que ce qui se fait à l'arrivée : le trajet est chiffré par le backend.
 - Les objets sont désignés par leur **référence stable anglaise**, transmise au modèle dans le contexte avec les seuls objets en scène — ceux du personnage, des PNJ présents et du lieu. Un objet tenu par un PNJ ou rangé dans le lieu peut être pris, demandé ou volé : c'est une action comme une autre, résolue normalement. Le joueur peut parfaitement écrire « je montre ma lettre » dans sa langue : le rapprochement inter-langue entre son texte libre et la référence anglaise est fait nativement par le modèle, sans traitement préalable.
 - **Le joueur n'est jamais bridé dans ses choix.** Une action imprudente, déshonorante, illégale ou vouée à mal finir n'est ni refusée ni requalifiée en échec : elle est résolue normalement (jet si l'issue est incertaine, succès automatique sinon), et ses conséquences sont mises en scène. La plausibilité ne juge que la possibilité matérielle dans l'univers, jamais la sagesse ou la morale de l'action. Une règle d'univers qui interdit quelque chose (l'édit contre les duels) décrit la réaction du monde, pas une limite imposée au joueur. Un échec automatique signifie que le personnage tente et échoue — jamais qu'il renonce.
-- **Le monde réagit, sans trancher contre le joueur.** Chaque personnage touché par une action y réagit dans la même narration (réplique, menace, hostilité, fuite). Une réaction peut ouvrir une menace — un PNJ attaque — mais ne la résout jamais de sa propre initiative : savoir si l'attaque porte revient à l'action suivante du joueur, et donc à un jet calculé par le backend. Aucune perte de points de vie n'est infligée par la seule initiative d'un PNJ. C'est la forme tour par tour des jets alternés joueur/PNJ (section 8), en attendant la boucle de combat de la Phase 10.
-- **Une attaque ouverte est toujours tranchée par l'action suivante** (tranché en Phase 3, après les premiers tests manuels : une menace pouvait rester suspendue indéfiniment). Tant qu'une attaque contre le personnage reste ouverte, l'action suivante du joueur la tranche, quelle qu'elle soit — une question au MJ, une attente ou une fuite comprises — et c'est **toujours un jet** : l'attaque ouverte suffit à rendre l'issue incertaine. Si le personnage ne fait rien contre elle, l'arbitrage retient la catégorie qui couvre l'esquive ou la parade. Sur une **réussite** (quel qu'en soit le degré), le personnage l'évite ; sur un **échec**, elle porte et il est **blessé** — légèrement sur un `failure` ou un échec automatique, gravement sur un `fumble` —, la narration le disant explicitement. Perdre son arme ou du terrain peut s'y ajouter, jamais le remplacer. En attendant le branchement de la formule de dégâts (section 7, Phase 10), l'extraction chiffre la blessure sur une échelle fixe : 1 ou 2 points pour une blessure légère, 3 à 5 pour une blessure grave. La règle précédente tient : la perte de points de vie vient toujours d'un jet raté du joueur, jamais de la seule initiative du PNJ.
+- **Le monde réagit, sans trancher contre le joueur.** Chaque personnage touché par une action y réagit dans la même narration (réplique, menace, hostilité, fuite). Une réaction peut ouvrir une menace — un PNJ attaque — mais ne la résout jamais de sa propre initiative : savoir si l'attaque porte revient à l'action suivante du joueur, et donc à un jet calculé par le backend. Aucune perte de points de vie n'est infligée par la seule initiative d'un PNJ. C'est la forme tour par tour des jets alternés joueur/PNJ : le round de combat de la section 8.
+- **Une attaque ouverte est toujours tranchée par l'action suivante** (tranché en Phase 3, repris par le round en Phase 10). Tant qu'une attaque contre le personnage reste ouverte, l'action suivante du joueur en fait un round contre l'attaquant, quelle qu'elle soit — une attente ou une fuite comprises : l'arbitrage désigne l'attaquant (`combat.opponent`), et c'est le backend qui joue la riposte et la défense du personnage. L'arbitrage ne décide jamais si un coup porte ni combien il blesse ; il dit seulement si la parade et l'esquive sont possibles, et jusqu'à trois circonstances de la défense. La perte de points de vie vient toujours d'un jet raté du personnage, jamais de la seule initiative du PNJ.
 
 ---
 
@@ -305,16 +311,16 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
 
   | Sous-système du BRP | Phase |
   |---|---|
-  | Matrice attaque / défense, parade, esquive, jets opposés, table de résistance, dégâts branchés, armure, blessures grave et mortelle, effets spéciaux, maladresses ; points de vie totaux du personnage | Phase 10 |
+  | Matrice attaque / défense, parade, esquive, dégâts branchés, armure, blessures grave et mortelle, effets spéciaux, maladresses ; points de vie totaux du personnage, premiers soins, guérison naturelle | Phase 10 |
+  | Jets opposés hors combat (Discrétion contre Perception…), table de résistance | Lot à part, à cadrer (écartés de la Phase 10) |
   | Création guidée (niveau de puissance, professions, réserves de points), expérience et progression | Phase 12 |
   | Règles optionnelles par univers : Santé mentale (Mythe), Passions et Réputation (Mousquetaires), jets cachés | Phase 13 |
-  | Dangers (chute, feu, noyade, poison), soins, guérison dans le temps, poursuites | Au cas par cas, quand un scénario le demande |
+  | Dangers (chute, feu, noyade, poison), soins autres que les premiers soins (médecine, remèdes), poursuites | Au cas par cas, quand un scénario le demande |
   | Pouvoirs (magie, sorcellerie, psychisme) | Hors roadmap actuelle |
 
-- **Écartés** : points de fatigue, localisation des coups (incompatible avec la blessure grave), encombrement, vieillissement, points de destin, rounds et rangs de `DEX`, actions multiples.
+- **Écartés** : points de fatigue, localisation des coups (incompatible avec la blessure grave), encombrement, vieillissement, points de destin, rangs de `DEX`, actions multiples (du round, seule la durée de 12 secondes est gardée), séquelles permanentes d'une blessure grave avant la Phase 12.
 - **Jets cachés et détail du jet** : un jet caché (Phase 13) ne pourra pas montrer son détail au joueur ; la règle de la section 6 aura alors une exception.
-- Modélisation précise des adversaires multiples en combat (plusieurs PNJ hostiles dans un même échange) — Phase 10.
-- Statuts temporaires (blessé, étourdi, à terre) traduits en modificateurs automatiques plutôt que proposés au cas par cas par le LLM — Phase 10, avec les effets spéciaux.
+- Adversaires multiples et statuts temporaires — **tranchés à l'ouverture de la Phase 10** (roadmap, décisions de cadrage) : seule la cible riposte, les autres hostiles pesant comme une circonstance ; les effets qui étourdissent ou immobilisent privent la cible de riposte pour le round, sans état tenu d'un tour à l'autre — seul le saignement en a un.
 - Gestion des objets à usage limité (usure, charges) — **différée à l'ouverture de la Phase 4** : les consommables passent par la quantité (une balle tirée est détruite), et le mécanisme de modificateurs d'objets (section 5.2) suppose un effet stable tant que l'objet est possédé/équipé. Le modèle définition / instance (architecture, section 6bis) permettra d'ajouter usure et charges sur l'instance le moment venu. Les points de vie des armes et la parade qui les abîme, dans le livre, attendent la même décision.
 
 ---

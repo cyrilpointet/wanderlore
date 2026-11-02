@@ -43,7 +43,8 @@ vit dans `doc/` — voir le skill `wanderlore-design` pour savoir quel document 
    le LLM ne les chiffre jamais.
 5. **Le narrateur ne reçoit jamais de données mécaniques brutes** (dés, chance, valeurs de
    compétence) — uniquement `result` + le degré qualitatif (`degree`, ex-`margin`). Le
-   joueur, lui, voit le détail de chaque jet depuis la Phase 6 : l'invariant porte sur le LLM.
+   joueur, lui, voit le détail de chaque jet **de son personnage** depuis la Phase 6 : l'invariant
+   porte sur le LLM. Les jets des PNJ ne quittent jamais le backend (Phase 10).
 6. **Séparation system prompt / user message.** Le system prompt est statique par étape
    (rôle, contraintes, schéma de sortie). Les données du tour passent en message
    utilisateur, toujours introduites explicitement comme données de jeu et non comme
@@ -367,7 +368,29 @@ base, mais toute route de jeu y répond comme à une partie inexistante.
 absente, fixée à `en` dans `.env.test`) ; `VITE_DEFAULT_LANGUAGE` pour l'interface, qui retombe
 sur l'anglais faute de traductions.
 
-Phase suivante : **Phase 10 (combat)**.
+**Phase 10 (combat) implémentée, en recette** — epic Jira `KAN-136`. Ses choix (détail : roadmap
+Phase 10, « Décisions de cadrage » ; règles §7, §8 ; architecture §3, §6ter, §8bis) :
+- **un tour de combat = un round de 12 s**, déduit à chaque tour de l'arbitrage (`combat` :
+  adversaire présent ou archétype attaqué, parade et esquive possibles, circonstances de la
+  défense), sans état en base ; **avantage au joueur** : son attaque d'abord, puis la riposte de
+  la seule cible si elle tient debout ;
+- **compétence d'attaque par la catégorie d'action**, jamais par l'arme (`kind` : `melee`,
+  `thrown`, `projectile`) ; `melee_combat`, `ranged_combat`, `first_aid` et `dodge` sont des
+  références du système, exigées par `checkScenario` ;
+- **matrice attaque / défense** du BRP, meilleure défense choisie par le backend ; effets
+  spéciaux et maladresses (table réduite) réglés dans le round, sauf le saignement ;
+- **seuls les jets du personnage partent au front**, un `roll_resolved` chacun (deux au plus),
+  dégâts infligés détaillés, jamais lancés ; la lecture d'un tour porte `rolls` ;
+  `turn_log.combat_result` trace tout le round ;
+- **PV totaux `CON + SIZ`** pour le personnage (provisoire, Phase 13), qui n'est jamais tué : à
+  0, il revient à 1, hors de combat une heure ; un PNJ à 0 est `dying` et meurt au tour suivant,
+  sauf premiers soins ; hors de combat à 2 PV ou moins ;
+- **soins** : premiers soins (une tentative par blessure, jamais en plein combat), guérison de
+  1D3 par semaine de jeu ; l'extraction ne lit plus que les blessures hors combat, jamais un soin ;
+- démonstration : *The Duel at the Carmes* dans `test-worlds/`.
+
+Phase suivante : **Phase 11 (échéances et événements)**, une fois la recette de la Phase 10
+validée.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
@@ -446,6 +469,11 @@ serverless pour le backend).
   (sens de lecture d'un passage, réseaux, lieux qui en contiennent un) y est pure, et le
   parcours (lieux atteignables, chemins, destinations permises) vit dans `#services/game/travel`,
   pur lui aussi : arbitrage, extraction et application le lisent, jamais le LLM.
+- **Un round de combat se joue par `playRound`** (`#services/game/combat`), pur, sur le moteur de
+  règles, et s'applique par `#services/game/apply_combat` dans la transaction du tour — avant le
+  delta de l'extraction, qui ne chiffre jamais un coup. Les références que le backend lit pour
+  lui-même (`melee_combat`, `ranged_combat`, `first_aid`, `dodge`) vivent dans
+  `#services/game/system_references`.
 - **Tout changement d'objet passe par le service d'inventaire** (`#services/game/inventory`) :
   création, transfert, destruction, équipement, placement initial. Jamais d'écriture directe
   dans `inventory_items` : les règles d'unicité, d'empilement et de détenteur y vivent.
@@ -580,7 +608,10 @@ serverless pour le backend).
 - **Les migrations lancées depuis un test passent toujours par `testUtils.db()`**, jamais
   par `node ace migration:run` ni `migration:fresh` (qui réécrivent `database/schema.ts` —
   `fresh` n'accepte même pas `--no-schema-generate`). `migration:reset` le réécrit **vide**,
-  ce qui empêche ace de démarrer : ne jamais l'utiliser, base de test comprise.
+  ce qui empêche ace de démarrer : ne jamais l'utiliser, base de test comprise. `migration:rollback`
+  sur la base de test fait de même : la suite la migre en un seul lot, qu'un rollback annule en
+  entier. Pour rejouer une migration pas encore commitée, passer par `MigrationRunner` avec
+  `step: 1`, comme les specs de migration.
 - **Échec en cascade connu** : environ un passage complet sur trois, des dizaines de tests
   tombent sur « unable to release database lock » (verrou consultatif de Lucid pris et relâché
   sur deux connexions différentes du pool). Relancer avant d'enquêter.

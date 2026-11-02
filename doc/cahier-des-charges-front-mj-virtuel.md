@@ -92,7 +92,7 @@ Ces principes découlent des invariants du projet. Ils s'appliquent à toutes le
 | 6 | Fiche au format BRP (caractéristiques, compétences en pourcentage) ; détail de chaque jet dans le journal |
 | 7 | Heure et période de jeu à côté du lieu ; éventuellement les sorties visibles du lieu courant |
 | 9 | Rien de visible (mémoire long terme côté backend) |
-| 10 | Combat en rounds |
+| 10 | Combat en rounds : jusqu'à deux jets du personnage par tour, dégâts infligés en détail |
 | 11 | Rien de visible en propre : les échéances et les emplois du temps des PNJ passent par le récit |
 | 12 | Création de personnage guidée, progression du personnage, pause / reprise, écrans de fin |
 | 13 | Santé mentale, passions et réputation sur la fiche, selon l'univers |
@@ -215,7 +215,7 @@ Le journal se lit comme un livre, pas comme une messagerie. Types d'éléments :
 | Élément | Contenu | Rendu |
 |---|---|---|
 | **Action du joueur** | Texte saisi, tel quel | Bloc compact, discret, marqué « You » ; typographie d'interface ; retrait ou teinte légère pour le distinguer du récit |
-| **Jet** | Le jet en entier : *« Persuasion 60% · Difficult · Advantage +10 · → 40% · rolled 12 · Special success »* | Pastille centrée entre l'action et la narration, couleur selon l'issue, petite icône de dé ; la chance n'est montrée que quand elle diffère de la valeur, la difficulté que quand elle n'est pas `average`. Pendant le tour en cours, carte de jet en direct (5.3.7), repliée en pastille une fois le résultat révélé |
+| **Jet** | Le jet en entier : *« Persuasion 60% · Difficult · Advantage +10 · → 40% · rolled 12 · Special success »* | Pastille centrée entre l'action et la narration, couleur selon l'issue, petite icône de dé ; la chance n'est montrée que quand elle diffère de la valeur, la difficulté que quand elle n'est pas `average`. Pendant le tour en cours, carte de jet en direct (5.3.7), repliée en pastille une fois le résultat révélé. **Une pastille par jet** du personnage, dans l'ordre où ils ont été faits (jusqu'à deux en combat). En combat, la pastille dit aussi ce que le jet a fait : une attaque son issue (*Hit*, *Blocked*, *Missed*) et, si elle porte, ses dégâts sur une seconde ligne (*« Damage 6 · Damage modifier +2 · Armor −1 · → 7 dealt · Impaling »*) ; une défense, laquelle (*Parry*, *Dodge*, en tête) et si elle a tenu (*Blow avoided*, *Blow taken*) |
 | **Narration** | Texte du MJ, un ou plusieurs paragraphes | Pleine largeur de la colonne, **typographie serif de lecture**, sans bulle, interligne généreux |
 | **Effets** | Conséquences appliquées : *« −2 HP »*, *« You arrive at Paris »* | Ligne discrète sous la narration, icônes ; absente si aucun effet visible |
 | **Attente** | Message d'étape (voir 5.3.5) | Ligne animée sous l'action en cours |
@@ -308,7 +308,7 @@ idle ──submit──▶ submitting ──202──▶ in_progress ──turn_
 | `submitting` | Envoi du POST | L'action du joueur apparaît dans le journal, marquée *Sending…* |
 | `in_progress` | Accusé `202` reçu | *« The game master considers your action… »* |
 | — | `step_started { step: "arbitration" }` | *« The game master weighs your action… »* |
-| — | `roll_resolved` | Carte de jet en direct (5.3.7) ; la narration qui suit est retenue jusqu'à la révélation |
+| — | `roll_resolved` | Carte de jet en direct (5.3.7) ; la narration qui suit est retenue jusqu'à la révélation. Deux au plus par tour, l'attaque puis la défense, lancés l'un après l'autre |
 | — | `step_started { step: "narration" }` | *« The game master tells what happens… »* |
 | `idle` | `turn_completed` | Narration, effets, fiche mise à jour ; saisie déverrouillée |
 | `failed` | `turn_failed` | Encadré d'échec, **Retry** / **Edit** |
@@ -389,28 +389,46 @@ Trois temps :
    se replie en pastille (5.3.2), puis la narration retenue apparaît en fondu et poursuit son
    écriture.
 
+**Plusieurs jets par tour** (Phase 10, KAN-141) : un round de combat apporte jusqu'à deux
+`roll_resolved`, dans l'ordre — l'attaque du personnage, puis sa défense contre la riposte ;
+un personnage attaqué pendant une action sûre n'a que sa défense. Chaque jet se lance à la
+main, l'un après l'autre, sur la même carte : le second attend, hors de vue, que le premier
+soit replié en pastille, puis se prépare à son tour. Les jets des PNJ ne sont jamais envoyés.
+La carte d'une défense porte en tête laquelle (*Parry*, *Dodge*), choisie par le backend ; à
+la révélation, le degré s'accompagne de l'issue (*Hit*, *Blocked*, *Missed* ; *Blow avoided*,
+*Blow taken*).
+
+**Dégâts montrés, jamais lancés** : ceux qu'inflige l'attaque du personnage apparaissent en
+détail à la révélation de son jet, sous le degré, sans geste de lancer — dés de l'arme,
+modificateur de dégâts et armure quand ils ne sont pas nuls, total, effet spécial. Ceux qu'il
+subit ne sont jamais détaillés : le joueur n'en voit que la perte de points de vie, sur la
+fiche et dans les effets du tour (`hitPointsDelta`, total du tour).
+
 **Narration retenue** : les fragments reçus avant la révélation sont conservés, pas affichés.
 `turn_completed` peut arriver avant le clic : le tour est alors **retenu** à la place du tour en
 cours, la même carte à l'écran, et la saisie reste verrouillée (5.3.3). Il ne rejoint le
-journal, la fiche et la lecture à voix haute qu'à la révélation : sinon les points de vie de
+journal, la fiche et la lecture à voix haute qu'à la révélation du **dernier** jet du tour : sinon les points de vie de
 l'en-tête ou la voix trahiraient l'issue avant les dés. Sur `turn_failed`, la révélation a
-lieu aussitôt, puis l'encadré d'échec remplace la narration comme d'ordinaire.
+lieu aussitôt, pour tous les jets du tour, puis l'encadré d'échec remplace la narration comme
+d'ordinaire.
 
 **Jamais rejoué** : un tour relu (réouverture de l'écran, rattrapage, historique) affiche
-directement la pastille et sa narration. Seul un `roll_resolved` reçu en direct ouvre la
+directement ses pastilles et sa narration ; la lecture du tour en porte la liste (`rolls`). Seul un `roll_resolved` reçu en direct ouvre la
 carte.
 
 **Préférences** (5.5) : avec le **lancer automatique**, la carte enchaîne seule la
-préparation et le lancer, sans bouton ; avec l'**animation des dés** coupée, la révélation est
+préparation et le lancer, sans bouton, pour chaque jet du tour ; avec l'**animation des dés** coupée, la révélation est
 immédiate (le bouton reste, sauf lancer automatique). Les deux réglages sont indépendants.
 
 **Accessibilité** : les dés sont masqués aux lecteurs d'écran (`aria-hidden`) ; le
-jet complet est annoncé une fois, à la révélation. Les couleurs d'issue doublent le libellé du
+jet complet, dégâts compris, est annoncé une fois, à sa révélation. Les couleurs d'issue doublent le libellé du
 degré, jamais l'inverse.
 
 **Mise en œuvre** : la révélation suit une petite machine pure, distincte de `turnReducer`
 (qui repasse à `idle` sur `turn_completed`), attachée à l'identifiant du tour —
-`staged → rolling → landed → revealed`. Elle est testée unitairement, et chaque état de la
+`staged → rolling → landed`, puis le jet suivant en file ou `revealed`. Elle reçoit à chaque
+`roll_resolved` la liste des jets du tour entendus jusque-là et n'ajoute à sa file que les
+nouveaux : un événement entendu deux fois ne rejoue rien. Elle est testée unitairement, et chaque état de la
 carte en HTML statique.
 
 ### 5.4 Pages système
@@ -717,8 +735,12 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   tout en stockage local.
 - **Phase 9 — Mémoire long terme.** Le résumé ne s'affiche pas ; le journal est paginé
   (*Load earlier*, 5.3.2).
-- **Phase 10 — Combat.** Combat en rounds (même pipeline, donc même journal, avec un repère
-  visuel de round et l'état de l'adversaire si le backend le transmet).
+- **Phase 10 — Combat.** Combat en rounds, un round par tour (même pipeline, donc même
+  journal). Jusqu'à deux jets du personnage par tour, l'attaque puis la défense, lancés l'un
+  après l'autre ; les dégâts infligés s'affichent en détail, sans geste de lancer, les dégâts
+  subis seulement par la perte de points de vie (5.3.2, 5.3.7, KAN-141). La lecture d'un tour
+  porte `rolls` (liste) à la place de `roll`. Ni repère de round ni état de l'adversaire : le
+  backend ne les transmet pas, le récit les porte.
 - **Phase 11 — Échéances et événements déclenchés par le temps.** Pas d'impact visible : ce
   que l'horloge déclenche passe par le récit, comme le temps lui-même (Phase 7).
 - **Phase 12 — Progression et cycle de vie.** Création de personnage guidée ; progression du

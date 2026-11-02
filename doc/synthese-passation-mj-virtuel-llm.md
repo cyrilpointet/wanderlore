@@ -161,12 +161,12 @@ Ces décisions sont considérées comme tranchées et ne doivent pas être rouve
 ### Système de règles
 - **Le BRP de Chaosium pour tous les univers** (Phase 6, licence ORC) : d100 sous la chance, la chance étant la compétence — ou la caractéristique × 5 — multipliée par une difficulté qualitative (`easy` × 2, `average`, `difficult` ÷ 2), plus les modificateurs ; cinq degrés de réussite (critique, spécial, réussite, échec, maladresse).
 - Sept caractéristiques fixes du système ; compétences en pourcentage définies par univers, avec catégorie et chance de base (donnée, pas structure figée dans le code).
-- **Le joueur voit le détail de chaque jet** ; le narrateur n'en reçoit que le résultat et le degré.
+- **Le joueur voit le détail de chaque jet de son personnage** ; ceux des PNJ restent au backend (Phase 10) ; le narrateur n'en reçoit que le résultat et le degré.
 - **Modificateurs contextuels** (situationnels, proposés par le LLM en labels qualitatifs — `minor_bonus` +10, `major_bonus` +20, `minor_penalty` -10, `major_penalty` -20 —, convertis par le backend, 3 au plus par jet) strictement séparés des **modificateurs d'objets** (fixes, calculés par le backend à partir des objets du détenteur, une fois par définition, jamais chiffrés par le LLM).
 - **Dégâts du BRP** : dés de l'arme (profil d'arme de sa définition) + modificateur de dégâts − armure ; un critique fait le maximum de l'arme et ignore l'armure. Formule posée en Phase 6 (elle remplace celle de la marge, posée en Phase 4), branchée dans le tour en Phase 10.
-- Combat modélisé comme une simple répétition du pipeline standard (pas de sous-système dédié).
+- **Combat** (Phase 10) : un tour est un round de 12 secondes, joué par le backend, avantage au joueur — son attaque, la défense cachée de l'adversaire, puis la riposte cachée et sa défense, montrée ; seule la cible riposte. Matrice attaque / défense du BRP, meilleure défense choisie pour le défenseur, effets spéciaux et maladresses réduits à ce qui se règle dans le round. PV totaux (`CON + SIZ`) pour le personnage, provisoires ; il n'est jamais tué, un PNJ meurt au tour suivant sauf premiers soins. Voir roadmap, Phase 10.
 - **Liberté du joueur** : le MJ ne refuse jamais une action parce qu'elle est imprudente, immorale ou interdite dans l'univers — il la résout et en fait assumer les conséquences. Seul l'impossible matériel mène à un échec automatique, et le personnage y tente quand même l'action. Voir règles, section 10.
-- **Réaction des PNJ** : tout personnage touché par une action réagit dans la même narration. Une réaction peut ouvrir une menace, jamais la trancher contre le joueur — c'est son action suivante, et le jet qui la résout, qui en décide. Une attaque ouverte est toujours tranchée par l'action suivante, quelle qu'elle soit, par un jet : sur un échec, elle porte et blesse. Voir règles, section 10.
+- **Réaction des PNJ** : tout personnage touché par une action réagit dans la même narration. Une réaction peut ouvrir une menace, jamais la trancher contre le joueur — c'est son action suivante, et le jet qui la résout, qui en décide. Une attaque ouverte fait de l'action suivante, quelle qu'elle soit, un round contre l'attaquant : la riposte n'est jamais tranchée par le LLM. Voir règles, section 10.
 
 ### Multi-langue
 
@@ -310,7 +310,9 @@ Depuis la Phase 6, le Basic Roleplaying de Chaosium (édition 2023, licence ORC)
 
 **Phase 9 (mémoire long terme) terminée** (epic `KAN-128`) : un résumé narratif en anglais, sur deux niveaux, écrit hors du chemin critique dans sa propre file, s'ajoute aux tours que l'arbitrage et la narration reçoivent en clair ; son coût est compté par `llm:cost`, et le journal du front se charge par pages. La langue de narration par défaut se fixe par déploiement (`DEFAULT_LANGUAGE`).
 
-**Phase suivante : Phase 10 (combat).** Voir la roadmap.
+**Phase 10 (combat) implémentée, en recette** (epic `KAN-136`) : le round de combat du BRP se joue de bout en bout, les dégâts, les morts, les soins et le temps calculés par le backend ; le joueur lance à la main les jets de son personnage, jamais ceux des PNJ.
+
+**Phase suivante : Phase 11 (échéances et événements), une fois la recette de la Phase 10 validée.** Voir la roadmap.
 
 ---
 

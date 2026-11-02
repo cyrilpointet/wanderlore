@@ -130,8 +130,9 @@ tests automatisés ont besoin.
   (*Created with it*) et créés avec l'univers. Ses scénarios s'importent à part.
 - **Un scénario complet** : ouvrir l'univers → onglet *Scenarios* → **New scenario** → **Fill
   in from a JSON file**. Mêmes catalogues, sans `actionTypes`. Les scénarios de
-  `test-worlds/` (*The Grain Road*, *The Drowned Anchor*) s'importent dans **Les Trois
-  Mousquetaires**.
+  `test-worlds/` (*The Grain Road*, *The Drowned Anchor*, et pour le combat de la Phase 10
+  *The Duel at the Carmes*) s'importent dans **Les Trois Mousquetaires** — une fois l'univers
+  re-seedé après la migration de la Phase 10, qui lui donne Esquive et Premiers soins.
 - **Tout ou rien** : le serveur vérifie chaque entrée, et la première fautive refuse tout le
   fichier ; l'erreur s'affiche sous l'entrée concernée (chemin du type `lore.2.tags`). Un tag
   peut nommer une définition du même fichier.

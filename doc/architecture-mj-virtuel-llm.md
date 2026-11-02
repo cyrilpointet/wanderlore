@@ -71,6 +71,7 @@ Transforme le texte libre du joueur en décision structurée :
 - Mode de résolution : succès automatique / échec automatique narratif / jet requis
 - Modificateurs **contextuels** uniquement (situationnels, propres au tour) — jamais les bonus/malus d'objets, qui sont calculés par le backend (voir ci-dessous)
 - Durée du tour, en label d'une échelle fermée, convertie par le backend (Phase 7, voir section 6quinquies) ; et, dans un réseau de lieux, la destination d'un déplacement, choisie parmi les lieux atteignables, dont le backend chiffre le trajet (section 6quater)
+- Engagement d'un round de combat (Phase 10) : l'adversaire — une personne présente, ou un archétype que le personnage attaque avant que personne ne l'ait introduit —, si le personnage attaque ou subit une attaque ouverte, si la parade et l'esquive lui sont possibles, et jusqu'à trois circonstances de sa défense, en labels. Jamais l'issue d'un coup
 - Détection de tentative de prompt injection ou de sortie de cadre
 
 **Avancée de l'horloge — Backend, déterministe**
@@ -79,6 +80,9 @@ Juste après l'arbitrage, avant la narration : le backend convertit la durée pr
 **Calcul du jet — Backend, déterministe**
 d100 sous la chance, selon le BRP (système de règles, section 2) : compétence — ou caractéristique × 5 — multipliée par la difficulté, puis modificateurs contextuels (proposés par le LLM en labels qualitatifs, convertis par le backend, 3 au plus) et modificateurs d'objets (calculés par le backend à partir de l'inventaire du personnage, jamais proposés par le LLM). Le résultat est l'un des cinq degrés du BRP. Jamais délégué au LLM : c'est le seul point du pipeline qui garantit que les stats du joueur ne sont jamais soumises à l'interprétation du modèle.
 
+**Round de combat — Backend, déterministe** (Phase 10)
+Quand l'arbitrage engage un round, le backend le joue entièrement, avantage au joueur : l'attaque du personnage (le jet de l'action, sur `melee_combat` ou `ranged_combat`), la défense cachée de l'adversaire — la meilleure de la parade et de l'esquive —, les dégâts (dés de l'arme détenue ou ordinaire, modificateur, armure, effet spécial), puis, si l'adversaire tient debout, sa riposte cachée et la défense du personnage, choisie elle aussi sur la meilleure chance. Le round dure 12 secondes. Les jets de PNJ restent au backend (`turn_log.combat_result`) ; le joueur ne voit que ceux du personnage, le narrateur que des labels (coup porté ou non, paré ou esquivé, blessure légère, grave ou mortelle, effet, maladresse). L'archétype attaqué est instancié par le backend dans la transaction du tour, sous le handle que le round lui a donné. Voir le module `#services/game/combat` et le système de règles, section 8.
+
 **Modificateurs d'objets — un cas particulier à part entière**
 Un objet possédé ou équipé (arme, outil, document) peut apporter un bonus/malus fixe à certaines compétences. Cette valeur est une donnée factuelle stockée dans l'inventaire, pas une appréciation narrative : le LLM d'arbitrage ne doit jamais chiffrer ni proposer ce bonus. Il se contente de juger la plausibilité factuelle de l'usage de l'objet (le joueur le possède-t-il, est-ce cohérent de l'utiliser ici). Le backend, à l'étape de calcul du jet, interroge lui-même l'inventaire du personnage, sélectionne les objets dont un modificateur cible la compétence utilisée et dont la condition (`owned`/`equipped`) est satisfaite, et additionne leur valeur au total — une fois par définition. Un modificateur d'objet peut aussi cibler les dégâts : c'est le bonus d'une arme — indépendamment de ce que le LLM a proposé comme modificateurs contextuels. Voir le document dédié au système de règles pour le détail de ce mécanisme.
 
@@ -86,7 +90,7 @@ Un objet possédé ou équipé (arme, outil, document) peut apporter un bonus/ma
 Seul appel produisant du texte libre. Reçoit le résultat déjà déterminé (succès/échec + marge), pas les détails mécaniques (pas de chiffres de dés) — uniquement des données abstraites qui influencent l'ampleur narrative du résultat.
 
 **E — Extraction des effets**
-Lit le texte narré et en extrait les changements d'état (PV, objets, PNJ, flags de scénario) selon un schéma strict de champs autorisés. Cette sortie est **toujours validée par le backend** (bornes, cohérence, existence des identifiants) avant application au state réel.
+Lit le texte narré et en extrait les changements d'état (PV — seulement les blessures hors combat, jamais un soin depuis la Phase 10 —, objets, PNJ, flags de scénario) selon un schéma strict de champs autorisés. Cette sortie est **toujours validée par le backend** (bornes, cohérence, existence des identifiants) avant application au state réel.
 
 Les identifiants manipulés à cette étape (objets, PNJ, flags) sont des **références stables en anglais**, jamais des noms d'affichage. Pour les objets, la liste des identifiants autorisés dans la scène est transmise explicitement et le modèle ne peut que piocher dedans : un objet inventé n'aurait ni effets mécaniques, ni traduction, ni référence exploitable par le code (voir section 6bis).
 
@@ -795,6 +799,17 @@ produit la langue du joueur.
   lieu relève de l'état structuré, pas du résumé : écarté de la Phase 9, lot à part à cadrer.
 - Le narrateur reste libre d'évoquer qui il veut. Seul un PNJ qui entre en scène — avec qui
   le joueur peut interagir — devient une instance.
+- **Seconde exception, l'adversaire improvisé** (Phase 10) : un archétype que le personnage
+  attaque avant que personne ne l'ait introduit (« je frappe le passant ») est désigné par
+  l'arbitrage dans la liste fermée des archétypes. Le round le joue sous le handle que le
+  backend lui donne d'avance (`nextHandleOf`), et le backend l'instancie dans la transaction du
+  tour, avant le delta : l'extraction le reçoit déjà présent.
+- **Mourant** (Phase 10) : un PNJ ramené à 0 point de vie passe `dying`. Il reste dans la
+  scène un tour, avec son état (`condition` : `standing`, `down`, `dying`), le temps d'être
+  soigné ou achevé ; à l'application du tour suivant — un aparté excepté —, il meurt où il est
+  tombé, et ses objets passent au lieu, sauf si des premiers soins réussis l'ont gardé en vie.
+  Un PNJ à 2 points de vie ou moins est hors de combat (`down`) : il ne se défend plus et ne
+  riposte plus.
 
 ### Définitions transmises au LLM
 
@@ -810,8 +825,9 @@ Phase 8 ne filtrent que le lore, pas les catalogues.
   label qualitatif.
 - **Phase 4** : profil de combat sur les définitions, points de vie propres à chaque instance.
 - **Phase 5** : table `npc_definitions` (univers, scénario nullable).
-- **Phase 10** : un PNJ improvisé doit pouvoir être la cible d'un jet opposé dès le tour où il
-  apparaît (voir roadmap, Phase 10).
+- **Phase 10** : profil de combat complété (modificateur de dégâts, armure), statut `dying`,
+  saignement et premiers soins sur l'instance ; l'adversaire improvisé instancié par le
+  backend (voir ci-dessus).
 
 Les lieux suivent le même modèle, dès la Phase 3 : voir section 6quater.
 
@@ -1058,7 +1074,7 @@ Cette séparation permet de :
 
 ```
 step_started    { event, turnId, idempotencyKey, step: "arbitration" | "narration" }
-roll_resolved   { event, turnId, idempotencyKey, skill: { reference, label } | null, characteristic, value, baseChance, difficulty, modifiers, chance, roll, result, degree }
+roll_resolved   { event, turnId, idempotencyKey, skill: { reference, label } | null, characteristic, value, baseChance, difficulty, modifiers, chance, roll, result, degree, combat }
 turn_completed  { event, turnId, idempotencyKey, turn, character, location, period }
 turn_failed     { event, turnId, idempotencyKey, failure: { code, message } }
 ```
@@ -1075,7 +1091,8 @@ d'erreur de la section 5.3.6 du cahier des charges.
 - Branche **avec jet** : `step_started(arbitration)`, `roll_resolved`, `step_started(narration)`, puis `turn_completed`.
 - `turn_completed` n'est émis qu'après la validation de la transaction du tour ; un tour balayé (`turn_expired`) reçoit son `turn_failed` du balayage, et le tour qui finirait après coup n'émet plus rien.
 - Un tour se termine toujours par **exactement un** `turn_completed` ou `turn_failed`.
-- `roll_resolved` porte **le détail du jet** (tranché à l'ouverture de la Phase 6) : la compétence (libellée) ou la caractéristique (référence de l'enum, libellée par le front) et sa valeur, la difficulté, chaque modificateur avec sa valeur — une circonstance par son label d'effet (`effect`), jamais par les mots de l'arbitrage, un objet par `{ reference, label }` —, la chance finale, le d100, le résultat et le degré. Le joueur de JDR voit son jet comme à la table ; seul le narrateur en est tenu à l'écart. Le front n'affiche que ce qu'on lui transmet (voir le cahier des charges du front). La lecture d'un tour (`turn.roll`) porte la même forme.
+- `roll_resolved` porte **le détail du jet** (tranché à l'ouverture de la Phase 6) : la compétence (libellée) ou la caractéristique (référence de l'enum, libellée par le front) et sa valeur, la difficulté, chaque modificateur avec sa valeur — une circonstance par son label d'effet (`effect`), jamais par les mots de l'arbitrage, un objet par `{ reference, label }` —, la chance finale, le d100, le résultat et le degré. Le joueur de JDR voit son jet comme à la table ; seul le narrateur en est tenu à l'écart. Le front n'affiche que ce qu'on lui transmet (voir le cahier des charges du front). La lecture d'un tour (`turn.rolls`) porte la même forme.
+- **Un round de combat : jusqu'à deux `roll_resolved`** (tranché à l'ouverture de la Phase 10). Seuls les jets **du personnage** partent, dans l'ordre où ils sont faits : son attaque, puis sa défense contre la riposte — ou sa défense seule, quand il ne frappe pas. Les jets des PNJ (défense, riposte, dégâts qu'ils infligent) ne quittent jamais le backend : ils sont tracés dans `turn_log.combat_result`. `combat` vaut `null` hors combat ; pour une attaque, `{ role: "attack", outcome: "hit" | "blocked" | "missed", damage }`, où `damage` détaille les dégâts infligés (`weapon`, `modifier`, `armor`, `total`, `effect`) quand le coup porte ; pour une défense, `{ role: "defense", defense: "parry" | "dodge", outcome: "avoided" | "struck" }`. Les dégâts subis ne se lisent que dans la perte de points de vie de la fiche. La lecture d'un tour porte la liste des jets du personnage (`turn.rolls`, de 0 à 2), dans la même forme.
 - `step_completed` est abandonné : il n'apportait au front qu'une information déjà portée par l'événement suivant.
 
 **Pas de streaming de la narration en Phase 2.** En Phase 1, l'appel de narration renvoie un **JSON** (narration + effets) : le découper en `narration_chunk` exigerait de parser un JSON partiel, pour un texte qui n'est de toute façon pas validé tant que le JSON complet ne l'est pas. Le streaming redevient naturel en Phase 3, quand la narration (D) devient du texte libre séparé de l'extraction (E).
@@ -1087,7 +1104,7 @@ narration_chunk { event, turnId, idempotencyKey, text }
 ```
 
 - `text` est un fragment **à ajouter** au texte déjà reçu, pas le texte cumulé.
-- Séquence d'un tour : `step_started(arbitration)`, `roll_resolved` s'il y a un jet, `step_started(narration)`, des `narration_chunk`, puis `turn_completed` ou `turn_failed`. L'appel fusionné de la branche sans jet disparaît avec la séparation des étapes : les deux branches streament leur narration.
+- Séquence d'un tour : `step_started(arbitration)`, un `roll_resolved` par jet du personnage (deux au plus, dans un round de combat), `step_started(narration)`, des `narration_chunk`, puis `turn_completed` ou `turn_failed`. L'appel fusionné de la branche sans jet disparaît avec la séparation des étapes : les deux branches streament leur narration.
 - **Pas de `step_started(extraction)`** (tranché en KAN-40). La narration est déjà à l'écran quand l'extraction commence, et elle reste provisoire jusqu'à `turn_completed` : un message d'attente de plus n'apprendrait rien au joueur. `turn_completed` porte, en plus du tour et de la fiche, le **lieu courant libellé** (`{ reference, label }`), pour la pastille de lieu. Depuis la Phase 7, il porte aussi la **période de la journée** où le tour s'achève (`period`, enum fermé libellé par le front), comme la vue d'une partie (`GET /sessions/:id`) ; l'heure, la date et le numéro de jour ne quittent jamais le backend : le récit seul les donne, à un personnage qui a de quoi les connaître.
 - **Aparté au MJ** (tranché pendant la validation de la Phase 3) : une remarque ou une question adressée au MJ plutôt qu'une action du personnage (« je croyais que l'auberge était à Meung ») est classée par l'arbitrage en `intent.type: out_of_character`, toujours en succès automatique. Le narrateur y répond brièvement sans faire avancer l'histoire, et le **backend saute l'extraction** : rien ne change dans le state, et ce n'est pas au modèle de le décider. Le tour coûte deux appels au lieu de trois.
 - **La narration diffusée reste provisoire jusqu'à `turn_completed`.** L'extraction (E) et la validation viennent après elle et peuvent échouer. Sur `turn_failed`, le front **retire la narration provisoire** et affiche l'encadré d'échec : le tour n'a pas eu lieu (pas de numéro, pas d'effets), sa narration non plus.

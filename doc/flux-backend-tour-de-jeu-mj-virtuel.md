@@ -261,11 +261,13 @@ flowchart TD
 ```
 
 - **Dégâts** : dés de l'arme + modificateur de dégâts (FOR + TAI) − armure ; un critique fait
-  le maximum de l'arme et ignore l'armure [règles §7]. La formule est posée en Phase 6 ; son
-  branchement dans le tour (désigner attaquant et cible) attend la Phase 10.
-- **Combat** : aucun sous-système dédié ; un round est un tour normal de ce pipeline, avec le
-  même moteur pour le joueur et les PNJ [règles §8]. *À trancher en Phase 10 : la cible d'un jet
-  opposé contre un PNJ improvisé pas encore instancié* [roadmap P8].
+  le maximum de l'arme et ignore l'armure [règles §7]. Branchés dans le round depuis la Phase 10.
+- **Combat** (Phase 10) : aucun sous-système dédié ; quand l'arbitrage engage un round, le
+  backend le joue juste après le jet de l'action, avec le même moteur pour le joueur et les PNJ
+  [règles §8] : attaque du personnage, défense cachée, dégâts, puis riposte cachée et défense du
+  personnage. Un `roll_resolved` part par jet du personnage, jamais pour un PNJ ; le round
+  complet va dans `turn_log.combat_result`, et la narration n'en reçoit que des labels. Un
+  archétype attaqué avant d'être introduit est instancié par le backend à l'application.
 
 ---
 
@@ -486,8 +488,7 @@ flowchart LR
 Repris des points ouverts des autres documents, sans les résoudre :
 
 - **Durabilité et charges des objets** — différées en Phase 4, consommables par la quantité.
-- **Branchement des dégâts dans le tour** (attaquant, cible) — Phase 10.
-- **Jets opposés contre un PNJ improvisé** — Phase 10.
+- **Jets opposés hors combat et table de résistance** — lot à part, à cadrer (écartés de la Phase 10).
 - **Conditions de fin de partie** — Phase 12.
 - **Modération de contenu** au-delà du prompt injection — Phase 14.
 - **Versionning des prompts** et différenciation du modèle par étape — Phase 14.

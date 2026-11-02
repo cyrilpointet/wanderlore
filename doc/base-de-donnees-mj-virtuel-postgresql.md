@@ -136,9 +136,9 @@ Colonnes propres à chaque catalogue :
 
 | Table | Colonnes |
 |---|---|
-| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null), `initial_location` (référence du lieu unique où un PNJ unique attend au début de la partie ; null sinon, et toujours pour un archétype — CHECK) |
+| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null —, et depuis la Phase 10 `damageModifier` — dés comme `+1D4`, ou null — et `armor`, l'armure ordinaire), `initial_location` (référence du lieu unique où un PNJ unique attend au début de la partie ; null sinon, et toujours pour un archétype — CHECK) |
 | `location_definitions` | `parent` (lieu unique englobant ; null pour un archétype, qui reçoit son parent par instance) ; depuis la Phase 7, `exits` (jsonb, `[]` par défaut : `to`, `passage`, `backPassage`, `hidden`, `requires`, `oneWay`, `duration` — voir architecture, section 6quater) et `entrance` (booléen) |
-| `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `weapon` (jsonb, nullable depuis la Phase 6 : `skill`, `damage` en dés comme `1D6+1`, `damageModifier` `full` / `half` / `none`, `special`), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement) |
+| `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `weapon` (jsonb, nullable depuis la Phase 6 : `kind` `melee` / `thrown` / `projectile` — à la place de `skill` depuis la Phase 10, la compétence venant de la catégorie d'action —, `damage` en dés comme `1D6+1`, `damageModifier` `full` / `half` / `none`, `special`), `armor` (int ≥ 0, Phase 10 : ce que l'objet arrête de chaque coup quand il est porté ; 0 pour ce qui n'est pas une armure), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement) |
 
 - Unicité de la référence parmi les définitions de l'univers, et parmi celles de chaque
   scénario (index uniques partiels) : une définition de scénario peut reprendre la référence
@@ -233,7 +233,10 @@ Le personnage joué dans une partie donnée.
 | `characteristics` | jsonb | les sept caractéristiques du BRP (`STR`, `CON`, `SIZ`, `INT`, `POW`, `DEX`, `CHA`) |
 | `skills` | jsonb | compétences entraînées, en pourcentage ; une compétence absente vaut sa chance de base |
 | `hit_points` | int | PV courants |
-| `hit_points_max` | int | PV maximum |
+| `hit_points_max` | int | PV maximum, dérivés de la fiche au lancement : `CON + SIZ` depuis la Phase 10 (provisoire, Phase 13) |
+| `bleeding` | bool | saigne d'un coup reçu : 1 PV par round de combat, jusqu'aux premiers soins ou la fin du combat (Phase 10) |
+| `first_aid_available` | bool | une blessure reçue depuis la dernière tentative de premiers soins : une tentative par blessure (Phase 10) |
+| `healing_since` | int, nullable | horloge de jeu d'où la guérison naturelle compte ses semaines ; null à PV pleins (Phase 10) |
 | `resources` | jsonb | autres ressources courantes (mana, endurance, etc.) |
 | `progression` | jsonb | niveau, expérience si applicable |
 | `created_at` / `updated_at` | timestamp | — |
@@ -386,7 +389,7 @@ est une instance d'archétype générique. Voir architecture, section 6ter.
 | `name` | varchar, nullable | nom propre appris en cours de partie (« Jacques ») |
 | `descriptor` | text, nullable | description courte en anglais, pour distinguer deux instances d'un même archétype |
 | `disposition` | enum `npc_disposition` | `hostile` / `unfriendly` / `neutral` / `friendly` / `allied` — label qualitatif seul |
-| `status` | enum `npc_status` | `present` / `absent` / `dead` |
+| `status` | enum `npc_status` | `present` / `absent` / `dying` (Phase 10) / `dead` |
 | `created_at` / `updated_at` | timestamptz | — |
 
 - Contrainte d'unicité sur `(session_id, handle)` ; le numéro d'un archétype est attribué par
@@ -408,6 +411,13 @@ set null`) — le lieu où se trouve le PNJ quand la scène n'est plus avec lui 
 laissé, null s'il est parti de lui-même. À l'arrivée du joueur dans un lieu, les PNJ absents qui
 s'y trouvent repassent `present`. La migration place les PNJ présents dans le lieu courant de
 leur partie ; les absents restent sans lieu.
+
+**Ajouté en Phase 10** : `bleeding` et `first_aid_available` (bool), comme sur `characters` ; la
+valeur `dying` de `npc_status` — un PNJ ramené à 0 point de vie reste dans la scène un tour, et
+meurt à l'application du tour suivant (un aparté excepté) sauf premiers soins réussis. Un
+archétype attaqué avant d'être introduit est instancié par le backend dans la transaction du
+tour (architecture, section 6ter). La migration recalcule les PV des parties en cours
+(`hit_points_max = CON + SIZ`, dégâts subis conservés) et convertit les profils déjà en base.
 
 **Colonne prévue plus tard** : `revealed_information` (jsonb, ce que ce PNJ a révélé au
 joueur), quand un tour le lira.
@@ -458,6 +468,8 @@ Log complet de chaque tour, table à plus forte volumétrie du système. Indispe
 | `game_time_before` / `game_time_after` | int, nullable | horloge de jeu de part et d'autre du tour (Phase 7) ; null avant la Phase 7 ou pour un tour mort avant l'arbitrage |
 | `duration` | jsonb, nullable | durée proposée par l'arbitrage : label, avec `count` ou `period` (Phase 7) |
 | `lore_sent` | jsonb, nullable | références des fragments de lore envoyés, par étape : `{ arbitration, narration }`, une étape non atteinte valant `null` (Phase 8) ; null pour un tour mort avant l'arbitrage ou joué avant la Phase 8 |
+| `combat_result` | jsonb, nullable | le round de combat joué (Phase 10) : chaque coup, chaque défense et chaque jet — ceux des PNJ compris, que le joueur ne voit jamais —, dégâts, effets, maladresses, armes perdues, état des deux camps, et l'archétype instancié pour l'occasion |
+| `first_aid` | jsonb, nullable | les premiers soins donnés (Phase 10) : cible, degré, s'il restait une blessure à soigner, PV rendus, mourant sauvé |
 | `created_at` | timestamp | — |
 
 **Pourquoi tracer `language` à côté de `llm_usage`** : le coût réel d'un tour varie
