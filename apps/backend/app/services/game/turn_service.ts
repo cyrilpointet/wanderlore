@@ -1,6 +1,8 @@
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 
+import gameConfig from '#config/game'
+
 import TurnLog from '#models/turn_log'
 import Session from '#models/session'
 import type Character from '#models/character'
@@ -113,11 +115,12 @@ const NO_CHANGE: TurnEffects = {
 }
 
 /**
- * Phase 1 plays in English. Still passed explicitly at every step rather than
- * hardcoded downstream: the architecture document requires the language to
- * never be assumed fixed.
+ * The language of a turn whose submission names none, set per deployment by
+ * `DEFAULT_LANGUAGE` (`config/game.ts`), English when unset. Still passed
+ * explicitly at every step rather than hardcoded downstream: the architecture
+ * document requires the language to never be assumed fixed.
  */
-export const DEFAULT_LANGUAGE: GameLanguage = 'en'
+export const DEFAULT_LANGUAGE: GameLanguage = gameConfig.defaultLanguage
 
 /** The queue turns are played from, one job per turn. */
 export const PLAY_TURN_QUEUE = 'play-turn'

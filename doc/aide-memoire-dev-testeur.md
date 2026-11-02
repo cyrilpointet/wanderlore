@@ -224,6 +224,7 @@ commit que la route. Le front et le back-office régénèrent eux-mêmes leur ar
 | `DEFAULT_AI_MODEL` | backend | modèle utilisé pour toutes les étapes |
 | `LLM_REQUEST_TIMEOUT_MS` | backend | plafond d'un appel LLM (60 000 par défaut) |
 | `QUEUE_DRIVER` | backend | `pgboss` (défaut) ou `memory` |
+| `DEFAULT_LANGUAGE` | backend | langue de la narration (`en` par défaut) ; lore, prompts et résumés restent en anglais. Fixée à `en` dans `.env.test` |
 | `CORS_ORIGINS` | backend, hors local | origines du front et du back-office, séparées par des virgules |
 | `COOKIE_DOMAIN` | backend, hors local | domaine parent des cookies de session et CSRF |
 | `BACKEND_URL` | front, back-office | cible du proxy Vite (`http://localhost:3333` par défaut) |

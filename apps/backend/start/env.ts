@@ -47,4 +47,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   GOOGLE_AI_API_KEY: Env.schema.secret(),
   DEFAULT_AI_MODEL: Env.schema.string(),
   LLM_REQUEST_TIMEOUT_MS: Env.schema.number.optional(),
+
+  // Game (see config/game.ts)
+  DEFAULT_LANGUAGE: Env.schema.string.optional(),
 })
