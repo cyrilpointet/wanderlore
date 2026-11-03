@@ -184,6 +184,21 @@ export function destinationsFrom(
   return { places: [...new Set([...reachable, ...open])], improvise: true }
 }
 
+/**
+ * The named places an improvised place may stand in: free places, and those
+ * around a network — never a room of a network nor its entrance, whose grain
+ * the scenario chose. A tavern improvised in Paris is fine; one improvised
+ * inside the inn's common room would be a room nobody declared.
+ */
+export function improvisationParents(places: PlaceDeclaration[]): string[] {
+  const kindOf = kindsOf(places)
+
+  return places
+    .filter((place) => place.kind === 'unique')
+    .map((place) => place.reference)
+    .filter((reference) => ['free', 'container'].includes(kindOf(reference)))
+}
+
 /** A way out of the place the scene stands in, as the turn's steps are told of it. */
 export type SceneExit = {
   /** Reference of the unique place it leads to. */

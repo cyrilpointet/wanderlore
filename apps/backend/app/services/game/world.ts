@@ -171,8 +171,8 @@ export function npcReferences(world: WorldDefinition): string[] {
 }
 
 /**
- * Named places: the only destinations a movement may name directly, and the
- * parents an improvised place may hang from.
+ * Named places: the only destinations a movement may name directly. An
+ * improvised place hangs from some of them only — `improvisationParents`.
  */
 export function uniqueLocationReferences(world: WorldDefinition): string[] {
   return world.locations

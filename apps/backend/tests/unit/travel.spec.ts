@@ -5,6 +5,7 @@ import {
   type TravelState,
   destinationsFrom,
   exitsOf,
+  improvisationParents,
   placeKindOf,
   routesFrom,
 } from '#services/game/travel'
@@ -178,6 +179,17 @@ test.group('Travel | destinations', () => {
     assert.include(places, 'house_corridor')
     assert.notInclude(places, 'house_attic')
     assert.notInclude(places, 'house')
+  })
+})
+
+test.group('Travel | improvised places', () => {
+  test('stand in a free place or around a network, never in one', ({ assert }) => {
+    const parents = improvisationParents(PLACES)
+
+    assert.includeMembers(parents, ['paris', 'meung_sur_loire', 'house'])
+    /** Neither a room nor the entrance: the scenario chose the grain of the house. */
+    assert.notInclude(parents, 'house_yard')
+    EVERY_ROOM.forEach((room) => assert.notInclude(parents, room))
   })
 })
 

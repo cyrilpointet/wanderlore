@@ -89,6 +89,7 @@ import {
   type TravelState,
   destinationsFrom,
   exitsOf,
+  improvisationParents,
   routesFrom,
   withExitsOpened,
 } from './travel.js'
@@ -110,11 +111,7 @@ import { loreFor, loreReferences, loreSceneOf } from './lore.js'
 import { type Memory, coveredUpTo, sceneToSummarise, storySoFar } from './narrative_memory.js'
 import { loadOpponents } from './npcs.js'
 import { SUMMARISE_QUEUE, type SummariseJob, loadMemory } from './summary_service.js'
-import {
-  type WorldDefinition,
-  locationArchetypeReferences,
-  uniqueLocationReferences,
-} from './world.js'
+import { type WorldDefinition, locationArchetypeReferences } from './world.js'
 import {
   OUT_OF_CHARACTER,
   ARBITRATION_SCHEMA,
@@ -1832,7 +1829,7 @@ function movementOptionsOf(scene: LoadedScene) {
       unlocked: scene.exits.filter(({ locked }) => locked).map(({ to }) => to),
     }),
     archetypes: improvise ? locationArchetypeReferences(scene.world) : [],
-    parents: improvise ? uniqueLocationReferences(scene.world) : [],
+    parents: improvise ? improvisationParents(places) : [],
     after,
   }
 }
