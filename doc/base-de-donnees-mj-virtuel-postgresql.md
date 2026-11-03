@@ -94,6 +94,8 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
 | `start_time` | time, non nul, 08:00 par défaut | heure d'ouverture de l'histoire, à la minute (Phase 7) |
 | `start_date` | date, nullable | date grégorienne d'ouverture, si l'histoire en a une (Phase 7) |
 | `glossary` | jsonb | complète le glossaire de l'univers |
+| `flags` | jsonb, `[]` par défaut | catalogue des flags du scénario (Phase 11) : `[{ reference, description }]`, une ligne d'anglais disant quand la narration le pose. L'extraction choisit dans cette **liste fermée** ; un flag hors catalogue est refusé |
+| `events` | jsonb, `[]` par défaut | événements du scénario (Phase 11) : `[{ reference, when: { at, conditions, delay }, unless, place, description, effects, interrupts, foreseeable }]` — échéance datée (`at` : jour, période ou heure), événement d'état (conditions, délai facultatif), conditions et effets en listes fermées. Voir architecture, section 6sexies |
 | `created_by` | FK → users, nullable | auteur |
 | `created_at` / `updated_at` | timestamptz | — |
 
@@ -107,6 +109,10 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
 - **Lancer une partie** copie le prétiré, l'état initial et le départ de l'horloge (heure et
   date) dans une partie neuve, dans une transaction : modifier ensuite le scénario ne décale
   pas une partie en cours. La création guidée de personnage attend la Phase 12.
+- **Cohérence des événements** (Phase 11) : `checkScenario` refuse un flag, un lieu, un PNJ, un
+  objet ou un passage inconnu dans une condition ou un effet (`unknown_flag`,
+  `unknown_passage`), un effet propre aux uniques porté sur un archétype (`not_unique`), un
+  événement sans déclencheur (`event_without_trigger`) et une chaîne qui boucle (`event_cycle`).
 - Différés : `branch_points`, conditions de progression des chapitres.
 
 **`glossary`** fige la traduction des noms propres, pour éviter qu'un même nom soit rendu
@@ -136,8 +142,8 @@ Colonnes propres à chaque catalogue :
 
 | Table | Colonnes |
 |---|---|
-| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null —, et depuis la Phase 10 `damageModifier` — dés comme `+1D4`, ou null — et `armor`, l'armure ordinaire), `initial_location` (référence du lieu unique où un PNJ unique attend au début de la partie ; null sinon, et toujours pour un archétype — CHECK) |
-| `location_definitions` | `parent` (lieu unique englobant ; null pour un archétype, qui reçoit son parent par instance) ; depuis la Phase 7, `exits` (jsonb, `[]` par défaut : `to`, `passage`, `backPassage`, `hidden`, `requires`, `oneWay`, `duration` — voir architecture, section 6quater) et `entrance` (booléen) |
+| `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null —, et depuis la Phase 10 `damageModifier` — dés comme `+1D4`, ou null — et `armor`, l'armure ordinaire), `initial_location` (référence du lieu unique où un PNJ unique attend au début de la partie ; null sinon, et toujours pour un archétype — CHECK) ; depuis la Phase 11, `schedule` (jsonb, `[]` par défaut : `[{ periods, location, activity, leavesScene, interrupts }]`, chaque période relevant d'une entrée au plus — `schedule_overlap` —, vide pour un archétype — CHECK `npc_definitions_schedule_unique_only`) |
+| `location_definitions` | `parent` (lieu unique englobant ; null pour un archétype, qui reçoit son parent par instance) ; depuis la Phase 7, `exits` (jsonb, `[]` par défaut : `to`, `passage`, `backPassage`, `hidden`, `requires`, `oneWay`, `duration` — voir architecture, section 6quater) et `entrance` (booléen) ; depuis la Phase 11, `period_notes` (jsonb, `[]` par défaut : `[{ periods, note }]`, une ligne d'anglais ajoutée à la description à ces périodes), et sur une sortie `blockedDuring` (périodes où le passage ne se franchit pas) et `blockedReason` |
 | `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `weapon` (jsonb, nullable depuis la Phase 6 : `kind` `melee` / `thrown` / `projectile` — à la place de `skill` depuis la Phase 10, la compétence venant de la catégorie d'action —, `damage` en dés comme `1D6+1`, `damageModifier` `full` / `half` / `none`, `special`), `armor` (int ≥ 0, Phase 10 : ce que l'objet arrête de chaque coup quand il est porté ; 0 pour ce qui n'est pas une armure), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement) |
 
 - Unicité de la référence parmi les définitions de l'univers, et parmi celles de chaque
@@ -336,11 +342,12 @@ de dégâts : ses dés sont dans son profil d'arme (`weapon`).
 | `id` | uuid | identifiant |
 | `session_id` | FK → sessions (unique) | partie parente — relation 1:1 |
 | `active_quests` | jsonb | liste des quêtes avec statut et étape courante |
-| `narrative_flags` | jsonb | événements/booléens déclenchés (ex: `"noble_zone_access_granted": true`) |
+| `narrative_flags` | jsonb | flags posés (ex: `"letter_delivered": true`), pris depuis la Phase 11 dans le catalogue du scénario ; les flags libres des parties plus anciennes restent lisibles |
 | ~~`visited_locations`~~ | — | **remplacé en Phase 3** par `current_location_id` et la table `location_instances`, qui forme la liste des lieux visités |
 | `current_location_id` | FK → location_instances | lieu courant de la partie (Phase 3) |
 | `game_time` | int, non nul | horloge de jeu : secondes depuis minuit du premier jour (Phase 7). Heure, période, jour et date en dérivent, jamais stockés |
 | `start_date` | date, nullable | date d'ouverture copiée du scénario au lancement (Phase 7) |
+| `pending_place_effects` | jsonb, non nul, `[]` par défaut | ce qu'un événement a posé là où la partie n'est jamais allée, ou chez un unique jamais rencontré (Phase 11) : `[{ waitsFor: { location } \| { npc }, effect, event }]`. Aucun des deux n'a d'instance pour le recevoir, et en créer une le marquerait visité ou rencontré : l'effet s'applique à la première visite ou à la première rencontre. Écrite par `#services/game/pending_effects` seul |
 | `known_npcs` | jsonb, non nul, `[]` par défaut | références des PNJ uniques dont le personnage connaît le nom, dans l'ordre où il les a appris : ceux de `initialState.knownNpcs`, copiés au lancement, puis ceux qui se présentent en jeu. Les parties lancées avant la colonne ont reçu les uniques déjà rencontrés. Voir architecture, section 6ter |
 | ~~`world_objects`~~ | — | **retiré en Phase 4** : les objets du monde sont les lignes d'`inventory_items` détenues par un lieu ou un PNJ |
 | `updated_at` | timestamp | — |
@@ -435,9 +442,51 @@ section 6quater.
 | `from_reference` / `to_reference` | varchar | le passage tel que déclaré : le lieu qui le déclare et celui où il mène. Au plus un passage joint deux lieux, la paire le nomme |
 | `discovered_at` | timestamptz, nullable | passage caché trouvé |
 | `unlocked_at` | timestamptz, nullable | passage verrouillé ouvert, pour de bon |
+| `blocked_at` | timestamptz, nullable | passage bloqué par un événement (Phase 11 : éboulement, barricade), jusqu'à ce qu'un autre le dégage — il ne se franchit alors d'aucune façon, ni clé ni crochetage. Le blocage par période vit dans la sortie (`blockedDuring`), sans état |
 | `created_at` / `updated_at` | timestamptz | — |
 
 - Unicité sur `(session_id, from_reference, to_reference)`.
+
+### `event_states`
+
+Ce que chaque événement du scénario est devenu dans une partie (Phase 11) : une ligne par
+événement armé, tombé ou annulé, sur le modèle de `passage_states`. Écrite par
+`#services/game/apply_events` seul. Les instants sont des heures de jeu, en secondes depuis
+minuit du premier jour. Voir architecture, section 6sexies.
+
+| Colonne | Type | Contenu |
+|---|---|---|
+| `id` | uuid | identifiant |
+| `session_id` | FK → sessions (cascade) | partie parente |
+| `event_reference` | varchar(64) | référence de l'événement dans `scenarios.events` |
+| `armed_at` | int, nullable | quand ses conditions ont tenu pour la première fois, pour un événement qui tombe après un délai |
+| `fired_at` | int, nullable | quand il est tombé |
+| `cancelled_at` | int, nullable | quand un de ses `unless` tenait au moment où il devenait dû : il n'arrivera jamais |
+| `turn_number` | int, nullable | le tour où il est tombé — ce qui dit à l'arbitrage, jusqu'à ce qu'un résumé couvre ce tour, que c'est arrivé |
+| `witnessed` | bool | le personnage était-il là pour le voir |
+| `told` | bool | une narration l'a-t-elle raconté : un événement d'état se raconte au tour suivant, une fois |
+| `created_at` / `updated_at` | timestamptz | — |
+
+- Unicité sur `(session_id, event_reference)` : un événement tombe une fois au plus.
+- Un emploi du temps arrêté (`schedule_stopped`) ne s'écrit nulle part : il se déduit des
+  événements tombés qui portent cet effet.
+
+### `place_notes`
+
+Ce qu'un événement a changé à l'aspect d'un lieu unique (Phase 11 : « the stables reek of
+smoke »), une note par lieu au plus — une nouvelle remplace l'ancienne. Désigné par sa
+référence, un lieu reçoit une note même jamais visité, sans instance.
+
+| Colonne | Type | Contenu |
+|---|---|---|
+| `id` | uuid | identifiant |
+| `session_id` | FK → sessions (cascade) | partie parente |
+| `location_reference` | varchar(64) | lieu unique |
+| `note` | text | une ligne d'anglais, ajoutée à la description pour l'arbitrage et la narration |
+| `event_reference` | varchar(64) | l'événement qui l'a posée |
+| `created_at` / `updated_at` | timestamptz | — |
+
+- Unicité sur `(session_id, location_reference)`.
 
 ---
 
@@ -470,6 +519,7 @@ Log complet de chaque tour, table à plus forte volumétrie du système. Indispe
 | `lore_sent` | jsonb, nullable | références des fragments de lore envoyés, par étape : `{ arbitration, narration }`, une étape non atteinte valant `null` (Phase 8) ; null pour un tour mort avant l'arbitrage ou joué avant la Phase 8 |
 | `combat_result` | jsonb, nullable | le round de combat joué (Phase 10) : chaque coup, chaque défense et chaque jet — ceux des PNJ compris, que le joueur ne voit jamais —, dégâts, effets, maladresses, armes perdues, état des deux camps, et l'archétype instancié pour l'occasion |
 | `first_aid` | jsonb, nullable | les premiers soins donnés (Phase 10) : cible, degré, s'il restait une blessure à soigner, PV rendus, mourant sauvé |
+| `events_fired` | jsonb, nullable | les événements du tour (Phase 11) : `timed` (ceux que l'horloge a amenés, instant, issue, témoin ou non), `state` (ceux que l'état a déclenchés, armés ou annulés, et la passe de la chaîne), `told` (ceux d'un tour précédent que la narration a racontés), `interrupted` (l'événement ou l'arrivée qui a écourté l'action), `awaited` (ce qu'on attendait, et s'il est venu), `deferred` (encore dus quand la chaîne a atteint sa profondeur, repris au tour suivant) |
 | `created_at` | timestamp | — |
 
 **Pourquoi tracer `language` à côté de `llm_usage`** : le coût réel d'un tour varie
@@ -573,6 +623,7 @@ worlds ──┬── resolution_rules
                               ├── location_instances ─┘   (un détenteur parmi trois)
                               ├── world_states (1:1)
                               ├── passage_states (Phase 7)
+                              ├── event_states, place_notes (Phase 11)
                               ├── turn_log
                               └── narrative_summaries (Phase 9)
 

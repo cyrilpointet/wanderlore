@@ -395,7 +395,40 @@ roadmap Phase 10, « Décisions de cadrage » ; règles §7, §8 ; architecture 
   tour en moyenne, 0,98 ¢ par tour de combat ;
 - démonstration : *The Duel at the Carmes* dans `test-worlds/`.
 
-Phase suivante : **Phase 11 (échéances et événements)**.
+**Phase 11 (échéances et événements) terminée** — epic Jira `KAN-143`. Ses choix restent en
+vigueur (détail : roadmap Phase 11, « Décisions de cadrage » ; architecture §6sexies ; base de
+données, `event_states`, `place_notes`) :
+- **le monde n'avance qu'avec l'horloge de jeu**, évalué par le backend dans le tour — ni job
+  différé, ni appel LLM de plus ; un aparté ne déclenche rien ;
+- **cycles sans état** (emploi du temps d'un unique, passage bloqué par période, note de période)
+  et **événements avec état** (`scenarios.events`, `event_states`), qui tombent une fois au plus :
+  échéance datée, ou événement d'état, aussitôt ou après un délai (armé), annulé par un `unless` ;
+- **conditions et effets en listes fermées**, lus dans l'état et appliqués par les services
+  existants ; un effet sur un lieu jamais visité ou un unique jamais rencontré **attend**
+  (`world_states.pending_place_effects`) sa première visite ou rencontre ;
+- **ordre dans la transaction** : horloge, mourants, round, premiers soins, événements de temps,
+  delta, guérison, événements d'état (chaîne de 3 passes, `EVENT_CHAIN_DEPTH`, le reste reporté
+  au tour suivant, jamais un échec), emplois du temps ;
+- **interruption** par un événement `interrupts` dont le personnage est témoin, ou l'arrivée d'un
+  unique hostile ou dont l'entrée porte `interrupts` — jamais sur un `moment` ni un round, ni
+  pendant un trajet ;
+- **attente** `until_event` (événement prévisible, jamais son heure) et `until_npc` (unique connu),
+  7 jours au plus, sinon `hours` et `awaited: did_not_happen` ;
+- **emplois du temps** des seuls uniques, placement paresseux tant qu'ils ne sont pas rencontrés ;
+  en scène, on ne part qu'avec `leavesScene` ; `schedule_stopped` y met fin ;
+- **un passage bloqué ne se franchit d'aucune façon**, des deux côtés ; **une note d'événement par
+  lieu** ; notes et raisons de blocage passent `giveaways` ;
+- **ce que voit chaque étape** : la narration, les seuls événements dont le personnage est témoin
+  (un événement d'état au tour suivant, une fois) ; l'arbitrage, les événements tombés comme faits,
+  les prévisibles et les PNJ attendables ; l'extraction, les flags du catalogue pas encore posés ;
+  le front, rien ;
+- **flags en liste fermée** : catalogue `scenarios.flags`, validation sur tout le catalogue ;
+- trace dans `turn_log.events_fired` ;
+- **coût mesuré** (novembre 2026, `gemini-3.8-flash` à 0,75 $ / 3,75 $ le million) : 1,04 ¢ par
+  tour sur la démonstration, dans la variation d'un scénario à l'autre ;
+- démonstration : *The Golden Lion* dans `test-worlds/`.
+
+Phase suivante : **Phase 12 (progression du personnage et cycle de vie complet de la partie)**.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
@@ -470,10 +503,21 @@ serverless pour le backend).
   pur : échelle des durées, périodes, jour, date. Le port `Clock` ne sert qu'au temps réel
   (budget du tour). Le front ne reçoit que la période, jamais l'heure ni la date.
 - **Tout changement de passage passe par le service des passages** (`#services/game/passages`) :
-  découverte et déverrouillage, jamais d'écriture directe dans `passage_states`. La topologie
-  (sens de lecture d'un passage, réseaux, lieux qui en contiennent un) y est pure, et le
-  parcours (lieux atteignables, chemins, destinations permises) vit dans `#services/game/travel`,
-  pur lui aussi : arbitrage, extraction et application le lisent, jamais le LLM.
+  découverte, déverrouillage, blocage et dégagement, jamais d'écriture directe dans
+  `passage_states`. La topologie (sens de lecture d'un passage, réseaux, lieux qui en contiennent
+  un) y est pure, et le parcours (lieux atteignables, chemins, destinations permises, parents
+  d'un lieu improvisé — `improvisationParents`, jamais une pièce d'un réseau) vit dans
+  `#services/game/travel`, pur lui aussi : arbitrage, extraction et application le lisent,
+  jamais le LLM.
+- **Un événement du scénario s'évalue par `#services/game/events`** et un emploi du temps par
+  `#services/game/schedules`, purs, sur un `WorldSnapshot` lu par `#services/game/game_events`
+  (`loadSnapshot`, `loadProgress`) — jamais sur le texte. Tout effet d'événement s'applique par
+  `#services/game/apply_events` (`applyEffect`, `settleStateEvents`, `followSchedules`), qui seul
+  écrit `event_states` et `place_notes` ; ce qu'un effet pose chez un lieu jamais visité ou un
+  unique jamais rencontré passe par `#services/game/pending_effects`, seul à écrire
+  `world_states.pending_place_effects`. Un nouvel effet ou une nouvelle condition = une entrée
+  dans `EVENT_EFFECT_TYPES` / `EVENT_CONDITION_TYPES`, son validateur, sa vérification dans
+  `checkScenario`.
 - **Un round de combat se joue par `playRound`** (`#services/game/combat`), pur, sur le moteur de
   règles, et s'applique par `#services/game/apply_combat` dans la transaction du tour — avant le
   delta de l'extraction, qui ne chiffre jamais un coup. Les références que le backend lit pour

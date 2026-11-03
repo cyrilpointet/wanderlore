@@ -70,12 +70,15 @@ Transforme le texte libre du joueur en décision structurée :
 - Plausibilité dans l'univers (cohérence avec le lore)
 - Mode de résolution : succès automatique / échec automatique narratif / jet requis
 - Modificateurs **contextuels** uniquement (situationnels, propres au tour) — jamais les bonus/malus d'objets, qui sont calculés par le backend (voir ci-dessous)
-- Durée du tour, en label d'une échelle fermée, convertie par le backend (Phase 7, voir section 6quinquies) ; et, dans un réseau de lieux, la destination d'un déplacement, choisie parmi les lieux atteignables, dont le backend chiffre le trajet (section 6quater)
+- Durée du tour, en label d'une échelle fermée, convertie par le backend (Phase 7, voir section 6quinquies) — depuis la Phase 11, aussi l'attente d'un événement prévisible (`until_event`) ou d'un PNJ connu (`until_npc`), choisis en liste fermée (section 6sexies) ; et, dans un réseau de lieux, la destination d'un déplacement, choisie parmi les lieux atteignables, dont le backend chiffre le trajet (section 6quater)
 - Engagement d'un round de combat (Phase 10) : l'adversaire — une personne présente, ou un archétype que le personnage attaque avant que personne ne l'ait introduit —, si le personnage attaque ou subit une attaque ouverte, si la parade et l'esquive lui sont possibles, et jusqu'à trois circonstances de sa défense, en labels. Jamais l'issue d'un coup
 - Détection de tentative de prompt injection ou de sortie de cadre
 
 **Avancée de l'horloge — Backend, déterministe**
 Juste après l'arbitrage, avant la narration : le backend convertit la durée proposée, y ajoute le trajet vers la destination annoncée, et en déduit l'heure à laquelle le tour se termine — que la narration doit connaître pour la raconter. Un aparté ne prend aucun temps. L'horloge s'écrit avec le reste de l'état, dans la transaction du tour (section 6quinquies).
+
+**Événements du scénario — Backend, déterministe** (Phase 11)
+Deux moments, sans appel LLM de plus. **Avant la narration**, avec le calcul de la durée : les échéances et les événements armés que l'horloge atteint dans la fenêtre du tour, l'éventuelle interruption — la fin du tour ramenée à l'instant d'un événement interrompant dont le personnage est témoin, ou d'une arrivée par emploi du temps —, et les arrivées et départs des PNJ dans le lieu du personnage ; leurs effets s'appliquent avant le delta de l'extraction, qui trouve déjà en scène qui ils font entrer. **Après le delta**, sur l'état nouveau : les événements d'état, en chaîne de 3 passes au plus (`EVENT_CHAIN_DEPTH`), puis les emplois du temps des PNJ qui ne sont pas avec le personnage. Voir section 6sexies.
 
 **Calcul du jet — Backend, déterministe**
 d100 sous la chance, selon le BRP (système de règles, section 2) : compétence — ou caractéristique × 5 — multipliée par la difficulté, puis modificateurs contextuels (proposés par le LLM en labels qualitatifs, convertis par le backend, 3 au plus) et modificateurs d'objets (calculés par le backend à partir de l'inventaire du personnage, jamais proposés par le LLM). Le résultat est l'un des cinq degrés du BRP. Jamais délégué au LLM : c'est le seul point du pipeline qui garantit que les stats du joueur ne sont jamais soumises à l'interprétation du modèle.
@@ -90,7 +93,7 @@ Un objet possédé ou équipé (arme, outil, document) peut apporter un bonus/ma
 Seul appel produisant du texte libre. Reçoit le résultat déjà déterminé (succès/échec + marge), pas les détails mécaniques (pas de chiffres de dés) — uniquement des données abstraites qui influencent l'ampleur narrative du résultat.
 
 **E — Extraction des effets**
-Lit le texte narré et en extrait les changements d'état (PV — seulement les blessures hors combat, jamais un soin depuis la Phase 10 —, objets, PNJ, flags de scénario) selon un schéma strict de champs autorisés. Cette sortie est **toujours validée par le backend** (bornes, cohérence, existence des identifiants) avant application au state réel.
+Lit le texte narré et en extrait les changements d'état (PV — seulement les blessures hors combat, jamais un soin depuis la Phase 10 —, objets, PNJ, flags de scénario — pris depuis la Phase 11 dans le catalogue du scénario, en liste fermée) selon un schéma strict de champs autorisés. Cette sortie est **toujours validée par le backend** (bornes, cohérence, existence des identifiants) avant application au state réel.
 
 Les identifiants manipulés à cette étape (objets, PNJ, flags) sont des **références stables en anglais**, jamais des noms d'affichage. Pour les objets, la liste des identifiants autorisés dans la scène est transmise explicitement et le modèle ne peut que piocher dedans : un objet inventé n'aurait ni effets mécaniques, ni traduction, ni référence exploitable par le code (voir section 6bis).
 
@@ -120,9 +123,9 @@ Pertinent seulement pour des lores massifs (corpus de type encyclopédie) où le
 
 | Étape | Lore | State | Mémoire narrative |
 |---|---|---|---|
-| A+B+C | Fragments `rule` et `fact`, secrets compris, sans tag ou tagués de la scène | Scène courante : PNJ présents, lieu et sa description, sorties du lieu avec leur état, lieux atteignables, période de la journée, objets en scène (personnage, PNJ présents, lieu) | Résumés (`story_so_far`) + buffer court (2 derniers tours) |
-| D | Fragments `ambiance` et `fact` non secrets, sans tag ou tagués de la scène (pas les règles) | Scène complète + résultat de résolution, noms des PNJ marqués connus ou non du personnage (`known`), description et sorties du lieu (cachées comprises, marquées ; le lieu où mène une sortie, seulement s'il a été visité), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) | Résumés (`story_so_far`) + tous les tours qu'ils ne couvrent pas (4 au moins), pour la continuité de ton |
-| E | Aucun | Handles présents, objets en scène, destinations permises, sorties cachées et verrouillées du lieu, schéma des champs modifiables (pas les valeurs actuelles) — jamais la description du lieu ni le temps | Aucun (le texte narré suffit) |
+| A+B+C | Fragments `rule` et `fact`, secrets compris, sans tag ou tagués de la scène | Scène courante : PNJ présents, lieu et sa description avec ses notes (`place_notes`, Phase 11), sorties du lieu avec leur état (bloquées comprises, avec leur raison), lieux atteignables, période de la journée, objets en scène (personnage, PNJ présents, lieu) ; événements tombés que nul résumé ne couvre encore (`world_events`), événements prévisibles et PNJ connus qu'on peut attendre (`foreseeable_events`, `awaitable_npcs`) | Résumés (`story_so_far`) + buffer court (2 derniers tours) |
+| D | Fragments `ambiance` et `fact` non secrets, sans tag ou tagués de la scène (pas les règles) | Scène complète + résultat de résolution, noms des PNJ marqués connus ou non du personnage (`known`), description et sorties du lieu (cachées comprises, marquées ; le lieu où mène une sortie, seulement s'il a été visité), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) ; depuis la Phase 11, les événements dont le personnage est témoin (`world_events`, `now` ou `earlier`), ce qui a écourté l'action (`interrupted`) ou ce qu'on attendait (`awaited`), les PNJ qui arrivent ou s'en vont, l'activité des PNJ en scène, les notes du lieu en fin de tour | Résumés (`story_so_far`) + tous les tours qu'ils ne couvrent pas (4 au moins), pour la continuité de ton |
+| E | Aucun | Handles présents, objets en scène, destinations permises, sorties cachées et verrouillées du lieu, flags du catalogue pas encore posés (Phase 11), schéma des champs modifiables (pas les valeurs actuelles) — jamais la description du lieu, ses notes, le temps ni les événements | Aucun (le texte narré suffit) |
 | Job résumé (async) | Aucun | Aucun | Résumés précédents + entrées du joueur et narrations à condenser (jamais la sortie d'arbitrage) ; pour le repli, le `global` précédent + les `scene` à absorber |
 
 **Point clé** : le lore n'est jamais injecté en bloc. Il est filtré différemment selon l'usage — règles pour l'arbitrage (A+B+C), ambiance pour la narration (D), faits pour les deux — même s'il provient de la même table source (`lore_fragments`, colonne `kind`). Les fragments sans tag d'abord, puis du plus spécifique au moins spécifique (lieu exact, parents, PNJ présents, objets), sous un plafond de 12 fragments tagués par étape (`TAGGED_LORE_CAP`) ; `turn_log.lore_sent` enregistre les références envoyées à chaque étape. La sélection est un service pur (`#services/game/lore`), sur la `WorldDefinition` chargée une fois par tour. À l'arbitrage, les fragments secrets arrivent dans un champ à part (`secret_lore`) : ils pèsent sur le jugement sans être énoncés dans `validity.justification` ni `intent.summary`, que lit la narration. La narration d'un déplacement reçoit en plus le lore de la destination et des PNJ qui y attendent.
@@ -804,6 +807,12 @@ produit la langue du joueur.
   l'arbitrage dans la liste fermée des archétypes. Le round le joue sous le handle que le
   backend lui donne d'avance (`nextHandleOf`), et le backend l'instancie dans la transaction du
   tour, avant le delta : l'extraction le reçoit déjà présent.
+- **Troisième exception, les événements et les emplois du temps** (Phase 11) : un effet
+  `npc_entered`, `npc_moved` ou `npc_left` d'un événement du scénario, et le déplacement d'un
+  unique par son emploi du temps, sont appliqués par le backend, sans l'extraction. Un unique
+  doté d'un emploi du temps n'est pas instancié tant qu'il n'est pas rencontré : son lieu se lit
+  à l'heure courante dans l'emploi du temps (placement paresseux), et `initialLocation` ne sert
+  plus qu'aux uniques sans emploi du temps. Voir section 6sexies.
 - **Mourant** (Phase 10) : un PNJ ramené à 0 point de vie passe `dying`. Il reste dans la
   scène un tour, avec son état (`condition` : `standing`, `down`, `dying`), le temps d'être
   soigné ou achevé ; à l'application du tour suivant — un aparté excepté —, il meurt où il est
@@ -828,6 +837,9 @@ Phase 8 ne filtrent que le lore, pas les catalogues.
 - **Phase 10** : profil de combat complété (modificateur de dégâts, armure), statut `dying`,
   saignement et premiers soins sur l'instance ; l'adversaire improvisé instancié par le
   backend (voir ci-dessus).
+- **Phase 11** : emploi du temps d'un unique (`npc_definitions.schedule`) ; entrées, départs et
+  dispositions posés par un événement, en attente dans `world_states.pending_place_effects`
+  pour un unique jamais rencontré (section 6sexies).
 
 Les lieux suivent le même modèle, dès la Phase 3 : voir section 6quater.
 
@@ -886,7 +898,10 @@ Un lieu unique peut déclarer ses **sorties** (`location_definitions.exits`) : c
 autre lieu unique, se décrit en une ligne d'anglais (`passage`, et `backPassage` vue de l'autre
 côté si le texte diffère), peut être **cachée** (du seul côté déclaré : vue de l'autre côté, la
 porte est en vue), **verrouillée** par un objet (`requires`, des deux côtés), **à sens unique**,
-et porter une **durée** de l'échelle fixe (`moment`, `minutes`, `hour`, `hours`). Un passage se
+et porter une **durée** de l'échelle fixe (`moment`, `minutes`, `hour`, `hours`) ; depuis la
+Phase 11, être **bloquée** à certaines périodes (`blockedDuring`, avec sa raison,
+`blockedReason` : « the sea fills the cave mouth »), des deux côtés, ou par un événement
+(section 6sexies). Un passage se
 déclare **une fois, d'un seul côté**, et vaut dans les deux sens ; au plus un passage joint deux
 lieux, si bien que la paire déclarée le nomme quel que soit le sens où on le franchit.
 
@@ -900,7 +915,12 @@ Trois sortes de lieux uniques en découlent :
 
 On ne déclare jamais de sortie vers un lieu libre (il deviendrait en réseau, par symétrie) : le
 raccord passe par les entrées, et un voyage libre se chiffre par le label de l'arbitrage. On
-n'improvise pas dans un réseau (« la salle de bains » du manoir ne déplace personne). Un lieu
+n'improvise pas dans un réseau (« la salle de bains » du manoir ne déplace personne) : ni depuis
+une de ses pièces, ni depuis l'extérieur — un lieu improvisé n'a pour parent qu'un lieu libre
+ou un lieu qui contient un réseau (`improvisationParents`), jamais une pièce ni une entrée
+(corrigé pendant la recette de la Phase 11 : un « je retourne à l'auberge » depuis les quais
+créait une auberge improvisée dans la grande salle, et les vraies pièces n'étaient jamais
+visitées). Un lieu
 qui **contient** un réseau sans en faire partie (`ward_house`) n'est pas une destination —
 « être dans le manoir » sans être dans une pièce n'a pas de sens — et reste parent.
 
@@ -984,8 +1004,11 @@ est celle de la scène ; son lieu est celui où il se trouve quand la scène n'e
   d'arrivée le reçoit dans `npcs_at_destination` avant même qu'il existe, son handle étant sa
   référence.
 
-Les emplois du temps des PNJ (le vampire au tombeau le jour) attendent la Phase 11 ; le
-placement initial en est le point de départ.
+- **emploi du temps** (Phase 11) : un unique doté d'un `schedule` change de lieu à chaque
+  période qui l'envoie ailleurs. Avec le personnage, il ne part que si l'entrée porte
+  `leavesScene` (le vampire fuit l'aube) ; ailleurs, le backend le déplace en fin de tour. Pas
+  encore rencontré, il n'a pas d'instance : on le trouve là où son emploi du temps le met à
+  l'heure courante. Voir section 6sexies.
 
 ---
 
@@ -1003,7 +1026,11 @@ cela n'est stocké. Tout est fixe dans le code, comme le moteur de règles (`gam
 `moment` (1 min), `minutes` (10 min), `hour`, `hours` (4 h), `days` avec un nombre de 1 à 7,
 `until` une période (jusqu'à son prochain début, strictement dans le futur). La même en réussite
 ou en échec ; un aparté ne prend aucun temps ; dans un réseau, le trajet vers la destination
-s'y ajoute (section 6quater). Le round du BRP et les soins attendent la Phase 10, les échéances la Phase 11.
+s'y ajoute (section 6quater). Un round de combat dure 12 secondes, imposées par le backend
+(Phase 10). Depuis la Phase 11, deux labels d'attente : `until_event` (un événement prévisible)
+et `until_npc` (un PNJ unique connu), qui mènent à l'instant où il arrive, dans la limite de
+7 jours, et qu'un événement interrompant peut écourter, comme toute durée d'au moins
+`minutes` (section 6sexies).
 
 **Ce que voit chaque étape :**
 
@@ -1015,7 +1042,92 @@ s'y ajoute (section 6quater). Le round du BRP et les soins attendent la Phase 10
 | joueur | la **période seule** (bandeau de scène, sous l'en-tête) : ni heure, ni date, ni jour, qui ne quittent jamais le backend |
 
 L'invariant 5 n'est pas en cause : l'heure n'est pas une donnée mécanique du jet. `turn_log`
-garde l'horloge avant et après le tour, et la durée proposée.
+garde l'horloge avant et après le tour, et la durée proposée ; depuis la Phase 11,
+`events_fired` dit ce qui a écourté le tour ou si l'attente a abouti.
+
+---
+
+## 6sexies. Échéances, événements et emplois du temps (Phase 11)
+
+Le monde avance avec l'horloge de jeu, sans le joueur. Tout s'évalue dans le tour, par le
+backend, de façon déterministe : ni job différé, ni temps réel, ni appel LLM de plus. Un aparté
+ne prend aucun temps, donc ne déclenche rien. Détail des décisions : roadmap, Phase 11.
+
+**Deux structures de contenu.**
+
+- Les **cycles**, sans état, dérivés de l'heure comme la période : l'emploi du temps d'un PNJ
+  unique (`schedule`), le passage bloqué par période (`blockedDuring`), la note de période d'un
+  lieu (`periodNotes`). « Tous les matins, le Cardinal passe ses troupes en revue » est un emploi
+  du temps, pas un événement répété.
+- Les **événements**, avec état, qui tombent une fois au plus (`scenarios.events`, état dans
+  `event_states`). Une **échéance** est datée (`when.at` : un jour, et une période ou une
+  heure) ; un **événement d'état** tombe quand ses conditions tiennent (`when.conditions`),
+  aussitôt ou après un délai (`when.delay`) : il est alors **armé** (`armed_at`) et redevient
+  un événement de temps. Un `unless` qui tient au moment où il devient dû l'annule pour de bon.
+
+**Conditions et effets en listes fermées**, lus et appliqués par le backend, jamais proposés
+par le LLM :
+
+- conditions : `flag`, `item_held_by` (personnage, PNJ ou lieu), `item_gone`, `npc_dead`,
+  `npc_disposition`, `npc_at`, `location_visited` — lues dans l'état (`loadSnapshot`), jamais
+  dans le texte ;
+- effets : `npc_moved`, `npc_left`, `npc_entered`, `npc_disposition`, `schedule_stopped` ;
+  `passage_blocked`, `passage_cleared`, `passage_discovered`, `passage_unlocked` ;
+  `place_note_set`, `place_note_cleared` ; `item_placed`, `item_transferred`, `item_gone` ;
+  `flag_set` — appliqués par les services existants (PNJ, passages, inventaire).
+
+Un effet sur un lieu jamais visité ou sur un unique jamais rencontré **attend**
+(`world_states.pending_place_effects`) : en créer l'instance le marquerait visité ou rencontré.
+Il s'applique à la première visite ou à la première rencontre, comme le placement initial.
+
+**Dans le tour**, dans la transaction et dans cet ordre : horloge, mourants, round, premiers
+soins, effets des événements de temps, delta de l'extraction, guérison, événements d'état,
+emplois du temps.
+
+- **Événements de temps** — avant la narration : ceux de la fenêtre `(avant, après]`. Ce qu'ils
+  font entrer en scène est créé avant la narration, qui le voit présent ; l'extraction le trouve
+  déjà là.
+- **Événements d'état** — après le delta, sur l'état nouveau, par passes : un événement peut en
+  rendre un autre dû (le vol de la lettre arme l'arrivée de l'espion, qui pose le carrosse aux
+  écuries). Trois passes au plus (`EVENT_CHAIN_DEPTH`) ; ce qui reste dû est repris au tour
+  suivant (`deferred`), jamais un échec. Un événement d'état se raconte **au tour suivant**,
+  une fois (`told`), s'il s'est produit sous les yeux du personnage.
+- **Emplois du temps** — un unique qui n'est pas avec le personnage suit le sien en fin de
+  tour ; un unique en scène ne le suit que si l'entrée porte `leavesScene`. Un unique qui
+  arrive dans le lieu du personnage pendant le tour part à la narration (`npcs_arriving`, avec
+  son activité), comme celui qui s'en va (`npcs_leaving`). Un mort, ou un unique dont un
+  événement a arrêté l'emploi du temps (`schedule_stopped`), n'en a plus.
+
+**Interruption.** La fin du tour est le plus tôt de la fin prévue et du premier de ces
+instants : un événement `interrupts` dont le personnage est **témoin** (dans son lieu ou un
+lieu qui le contient, ou sans `place`), ou l'arrivée par emploi du temps d'un unique hostile ou
+dont l'entrée porte `interrupts`. Jamais sur un `moment` ni un round ; un trajet dans un réseau
+va au bout, seul le temps passé à l'arrivée s'interrompt. Un jet tranché reste acquis, et la
+narration reçoit `interrupted`. Le combat commence au tour suivant.
+
+**Attente.** `until_event` vise un événement **prévisible** — sa condition `foreseeable`
+remplie —, que l'arbitrage reçoit avec sa description et jamais son heure ; `until_npc` un
+unique **connu** (`known_npcs`), jusqu'à ce que son emploi du temps l'amène dans le lieu du
+personnage. Plafond de 7 jours : si rien ne vient, le tour dure `hours` et la narration reçoit
+`awaited: did_not_happen`. Une interruption passe avant ce qu'on attend.
+
+**Ce que voit chaque étape.**
+
+| étape | reçoit |
+|---|---|
+| arbitrage | les événements tombés comme faits du monde (`world_events`), à part, sans les énoncer, jusqu'à ce qu'un résumé couvre leur tour ; les événements prévisibles et les PNJ attendables ; les notes du lieu et les passages bloqués |
+| narration | les événements dont le personnage est témoin, du tour (`now`) ou d'état au tour précédent (`earlier`) ; `interrupted`, `awaited` ; arrivées, départs, activités ; notes du lieu en fin de tour. Jamais un événement lointain : le personnage en découvre les suites en y allant |
+| extraction | la scène déjà modifiée et les flags du catalogue pas encore posés, rien d'autre |
+| joueur | rien : ce que l'horloge déclenche passe par le récit |
+
+Les notes et raisons de blocage suivent la règle des descriptions : elles ne nomment ni un
+unique pas encore rencontré ni ce qu'il y a derrière un passage (`giveaways`, étendu aux notes).
+
+**Modules.** `#services/game/events` et `#services/game/schedules`, purs (événements dus,
+conditions, témoin, attente ; entrée d'un emploi du temps, arrivées et départs) ;
+`#services/game/game_events` pour la lecture de l'état d'une partie ;
+`#services/game/apply_events` pour l'écriture (effets, `event_states`, notes, emplois du temps
+suivis) ; `#services/game/pending_effects` pour ce qui attend. Trace : `turn_log.events_fired`.
 
 ---
 
@@ -1160,10 +1272,10 @@ Tour de jeu
 ├─ Étape 0 (backend, dans le job) : récupération state + lore taggué + mémoire
 │
 ├─ Étape 1 (LLM, A+B+C) → event: step_completed (arbitration)
-│   IN  : lore filtré (règles et faits, secrets à part) + state scène (lieu décrit, sorties, lieux atteignables, période) + perso + résumés + buffer court (2 tours) + input joueur + language
-│   OUT : intent (+ destination dans un réseau) + validity + resolution + duration + alert
+│   IN  : lore filtré (règles et faits, secrets à part) + state scène (lieu décrit et ses notes, sorties, lieux atteignables, période) + événements tombés, prévisibles, PNJ attendables + perso + résumés + buffer court (2 tours) + input joueur + language
+│   OUT : intent (+ destination dans un réseau) + validity + resolution + duration (dont until_event / until_npc) + alert
 │
-├─ Backend : avancée de l'horloge (durée convertie + trajet vers la destination, aparté = 0)
+├─ Backend : avancée de l'horloge (durée convertie + trajet vers la destination, aparté = 0), événements de temps, interruption, attente, arrivées par emploi du temps
 │
 ├─ Étape 2 (backend) : calcul du jet si requis → event: roll_resolved
 │   IN  : compétence ou caractéristique + modificateurs + difficulté
@@ -1177,7 +1289,7 @@ Tour de jeu
 │   IN  : narrated_text + allowed_effects_schema (destinations permises, sorties cachées et verrouillées)
 │   OUT : delta d'état structuré (clés et valeurs en anglais)
 │
-├─ Étape 5 (backend) : validation + application du delta + écriture turn_log → event: turn_completed
+├─ Étape 5 (backend) : validation + application (événements de temps, delta, événements d'état en chaîne, emplois du temps) + écriture turn_log → event: turn_completed
 │
 └─ Étape 6 (job asynchrone, file à part, hors chemin critique du tour) : résumé de scène si le seuil est atteint, puis repli dans le résumé global
 ```

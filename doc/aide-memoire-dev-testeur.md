@@ -130,9 +130,11 @@ tests automatisés ont besoin.
   (*Created with it*) et créés avec l'univers. Ses scénarios s'importent à part.
 - **Un scénario complet** : ouvrir l'univers → onglet *Scenarios* → **New scenario** → **Fill
   in from a JSON file**. Mêmes catalogues, sans `actionTypes`. Les scénarios de
-  `test-worlds/` (*The Grain Road*, *The Drowned Anchor*, et pour le combat de la Phase 10
-  *The Duel at the Carmes*) s'importent dans **Les Trois Mousquetaires** — une fois l'univers
-  re-seedé après la migration de la Phase 10, qui lui donne Esquive et Premiers soins.
+  `test-worlds/` (*The Grain Road*, *The Drowned Anchor*, pour le combat de la Phase 10
+  *The Duel at the Carmes*, et pour les événements de la Phase 11 *The Golden Lion*)
+  s'importent dans **Les Trois Mousquetaires** — une fois l'univers re-seedé après la migration
+  de la Phase 10, qui lui donne Esquive et Premiers soins. Depuis la Phase 11, un scénario
+  déclare ses `flags` : l'import refuse un flag employé sans être déclaré.
 - **Tout ou rien** : le serveur vérifie chaque entrée, et la première fautive refuse tout le
   fichier ; l'erreur s'affiche sous l'entrée concernée (chemin du type `lore.2.tags`). Un tag
   peut nommer une définition du même fichier.
@@ -146,6 +148,25 @@ fragments envoyés.
 SELECT turn_number, player_input, lore_sent
 FROM turn_log WHERE session_id = '<id de la partie>' ORDER BY created_at;
 ```
+
+**Ce que les événements ont fait** (Phase 11) : `turn_log.events_fired` par tour (tombés,
+déclenchés par l'état, racontés, interruption, attente, reportés), et l'état durable de la
+partie.
+
+```sql
+SELECT turn_number, game_time_after / 3600.0 AS hour, events_fired
+FROM turn_log WHERE session_id = '<id de la partie>' ORDER BY created_at;
+
+SELECT event_reference, armed_at, fired_at, cancelled_at, witnessed, told
+FROM event_states WHERE session_id = '<id de la partie>';
+
+SELECT pending_place_effects FROM world_states WHERE session_id = '<id de la partie>';
+SELECT location_reference, note FROM place_notes WHERE session_id = '<id de la partie>';
+```
+
+Les heures de `event_states` sont des heures de jeu en secondes depuis minuit du premier jour
+(`/ 3600` pour des heures). L'arbitrage choisit `until_event` ou `until_npc` d'après la
+formulation : nommer ce qu'on attend (« j'attends le messager ») aide.
 
 ---
 
