@@ -368,8 +368,8 @@ base, mais toute route de jeu y répond comme à une partie inexistante.
 absente, fixée à `en` dans `.env.test`) ; `VITE_DEFAULT_LANGUAGE` pour l'interface, qui retombe
 sur l'anglais faute de traductions.
 
-**Phase 10 (combat) implémentée, en recette** — epic Jira `KAN-136`. Ses choix (détail : roadmap
-Phase 10, « Décisions de cadrage » ; règles §7, §8 ; architecture §3, §6ter, §8bis) :
+**Phase 10 (combat) terminée** — epic Jira `KAN-136`. Ses choix restent en vigueur (détail :
+roadmap Phase 10, « Décisions de cadrage » ; règles §7, §8 ; architecture §3, §6ter, §8bis) :
 - **un tour de combat = un round de 12 s**, déduit à chaque tour de l'arbitrage (`combat` :
   adversaire présent ou archétype attaqué, parade et esquive possibles, circonstances de la
   défense), sans état en base ; **avantage au joueur** : son attaque d'abord, puis la riposte de
@@ -387,10 +387,15 @@ Phase 10, « Décisions de cadrage » ; règles §7, §8 ; architecture §3, §6
   sauf premiers soins ; hors de combat à 2 PV ou moins ;
 - **soins** : premiers soins (une tentative par blessure, jamais en plein combat), guérison de
   1D3 par semaine de jeu ; l'extraction ne lit plus que les blessures hors combat, jamais un soin ;
+- **surprise et portée jugées par l'arbitrage** (`opponent_aware`, `riposte_possible`,
+  `opponent_defense_modifiers`) : un adversaire surpris ne se défend ni ne riposte, un adversaire
+  hors d'atteinte ne riposte pas ; chaque jet de combat nomme l'adversaire, ou son rang parmi les
+  inconnus (`Opponents`, `#services/game/opponents`) — jamais le nom d'un unique inconnu ;
+- **coût mesuré** (novembre 2026, `gemini-3.8-flash` à 0,75 $ / 3,75 $ le million) : 0,93 ¢ par
+  tour en moyenne, 0,98 ¢ par tour de combat ;
 - démonstration : *The Duel at the Carmes* dans `test-worlds/`.
 
-Phase suivante : **Phase 11 (échéances et événements)**, une fois la recette de la Phase 10
-validée.
+Phase suivante : **Phase 11 (échéances et événements)**.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de

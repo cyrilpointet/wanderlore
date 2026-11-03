@@ -310,9 +310,9 @@ Depuis la Phase 6, le Basic Roleplaying de Chaosium (édition 2023, licence ORC)
 
 **Phase 9 (mémoire long terme) terminée** (epic `KAN-128`) : un résumé narratif en anglais, sur deux niveaux, écrit hors du chemin critique dans sa propre file, s'ajoute aux tours que l'arbitrage et la narration reçoivent en clair ; son coût est compté par `llm:cost`, et le journal du front se charge par pages. La langue de narration par défaut se fixe par déploiement (`DEFAULT_LANGUAGE`).
 
-**Phase 10 (combat) implémentée, en recette** (epic `KAN-136`) : le round de combat du BRP se joue de bout en bout, les dégâts, les morts, les soins et le temps calculés par le backend ; le joueur lance à la main les jets de son personnage, jamais ceux des PNJ.
+**Phase 10 (combat) terminée** (epic `KAN-136`) : le round de combat du BRP se joue de bout en bout, les dégâts, les morts, les soins et le temps calculés par le backend ; le joueur lance à la main les jets de son personnage, jamais ceux des PNJ.
 
-**Phase suivante : Phase 11 (échéances et événements), une fois la recette de la Phase 10 validée.** Voir la roadmap.
+**Phase suivante : Phase 11 (échéances et événements).** Voir la roadmap.
 
 ---
 
