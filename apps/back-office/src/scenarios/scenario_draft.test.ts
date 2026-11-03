@@ -26,6 +26,8 @@ const SCENARIO: Scenario = {
   startTime: '10:00',
   startDate: '1625-04-07',
   glossary: [],
+  flags: [{ reference: 'letter_delivered', description: 'The letter reached Tréville.' }],
+  events: [],
   updatedAt: null,
 }
 
@@ -42,7 +44,17 @@ describe('scenario draft', () => {
         initialState: SCENARIO.initialState,
         startTime: '10:00',
         startDate: '1625-04-07',
+        flags: SCENARIO.flags,
+        events: [],
       },
+    })
+  })
+
+  test('names flags or events that are not valid JSON, and sends nothing', () => {
+    const draft = { ...scenarioDraftOf(SCENARIO), flags: '[', events: '{' }
+
+    expect(scenarioUpdateOf(draft)).toEqual({
+      errors: { flags: 'This is not valid JSON.', events: 'This is not valid JSON.' },
     })
   })
 

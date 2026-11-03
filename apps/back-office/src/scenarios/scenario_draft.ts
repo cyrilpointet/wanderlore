@@ -16,9 +16,9 @@ import type { Scenario, ScenarioPayload } from './queries'
 export type QuestDraft = { key: string; reference: string; step: string; summary: string }
 
 /**
- * A scenario being edited. The pregenerated character is written as JSON;
- * the initial state is picked from closed lists — a place, a chapter, the
- * quests under way.
+ * A scenario being edited. The pregenerated character, the flags and the
+ * events are written as JSON; the initial state is picked from closed lists —
+ * a place, a chapter, the quests under way.
  */
 export type ScenarioDraft = {
   labels: LabelRow[]
@@ -38,6 +38,10 @@ export type ScenarioDraft = {
   startTime: string
   /** `YYYY-MM-DD`; empty for a story with no date. */
   startDate: string
+  /** JSON text: the flags extraction may set. */
+  flags: string
+  /** JSON text: what happens in the story without the player. */
+  events: string
 }
 
 /** What a new character looks like, to start from rather than from a blank page. */
@@ -73,7 +77,13 @@ export function scenarioDraftOf(scenario: Scenario): ScenarioDraft {
     startKnownNpcs: state?.knownNpcs ?? [],
     startTime: scenario.startTime,
     startDate: scenario.startDate ?? '',
+    flags: json(scenario.flags ?? []),
+    events: json(scenario.events ?? []),
   }
+}
+
+function json(value: unknown): string {
+  return JSON.stringify(value, null, 2)
 }
 
 /** When a story opens if it says nothing: the default of a scenario created empty. */
@@ -112,6 +122,8 @@ export function scenarioDraftFromJson(scenario: Imported): {
       startKnownNpcs: phrasesOf(state?.knownNpcs),
       startTime: textOf(scenario.startTime) || DEFAULT_START_TIME,
       startDate: textOf(scenario.startDate),
+      flags: json(Array.isArray(scenario.flags) ? scenario.flags : []),
+      events: json(Array.isArray(scenario.events) ? scenario.events : []),
     },
   }
 }
@@ -134,6 +146,26 @@ export function scenarioUpdateOf(draft: ScenarioDraft): ScenarioUpdate {
     } catch {
       return { errors: { pregeneratedCharacter: i18n.t('invalid_json', { ns: 'errors' }) } }
     }
+  }
+
+  const errors: FieldErrors = {}
+  const list = (field: 'flags' | 'events') => {
+    if (draft[field].trim() === '') {
+      return []
+    }
+
+    try {
+      return JSON.parse(draft[field]) as unknown
+    } catch {
+      errors[field] = i18n.t('invalid_json', { ns: 'errors' })
+      return undefined
+    }
+  }
+  const flags = list('flags')
+  const events = list('events')
+
+  if (Object.keys(errors).length > 0) {
+    return { errors }
   }
 
   return {
@@ -159,6 +191,8 @@ export function scenarioUpdateOf(draft: ScenarioDraft): ScenarioUpdate {
             },
       startTime: draft.startTime,
       startDate: draft.startDate === '' ? null : draft.startDate,
+      flags,
+      events,
     },
   }
 }

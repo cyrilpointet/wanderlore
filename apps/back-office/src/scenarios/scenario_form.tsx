@@ -52,10 +52,14 @@ export function ScenarioForm({
     startKnownNpcs: set('startKnownNpcs'),
     startTime: set('startTime'),
     startDate: set('startDate'),
+    flags: set('flags'),
+    events: set('events'),
   }
   const labelsError = errorUnder(errors, 'labels')
   const characterError = errorUnder(errors, 'pregeneratedCharacter')
   const knownNpcsError = errorUnder(errors, 'initialState.knownNpcs')
+  const flagsError = errorUnder(errors, 'flags')
+  const eventsError = errorUnder(errors, 'events')
   const chapters = draft.chapters.map(({ reference: chapter }) => chapter).filter(Boolean)
   const quests = draft.quests.map(({ reference: quest }) => quest).filter(Boolean)
 
@@ -154,6 +158,32 @@ export function ScenarioForm({
             </button>
           </div>
         )}
+      </Section>
+
+      <Section title={t('form.flags')} hint={t('form.flagsHint')}>
+        <Field id="scenario-flags" label={t('form.flagsJson')} error={flagsError}>
+          <textarea
+            id="scenario-flags"
+            value={draft.flags}
+            spellCheck={false}
+            placeholder={FLAGS_EXAMPLE}
+            onChange={(event) => on.flags(event.target.value)}
+            className={CODE_AREA}
+          />
+        </Field>
+      </Section>
+
+      <Section title={t('form.events')} hint={t('form.eventsHint')}>
+        <Field id="scenario-events" label={t('form.eventsJson')} error={eventsError}>
+          <textarea
+            id="scenario-events"
+            value={draft.events}
+            spellCheck={false}
+            placeholder={EVENTS_EXAMPLE}
+            onChange={(event) => on.events(event.target.value)}
+            className={`${CODE_AREA} min-h-72`}
+          />
+        </Field>
       </Section>
 
       <Section title={t('form.start')} hint={t('form.startHint')}>
@@ -366,3 +396,31 @@ function Section({
     </section>
   )
 }
+
+/** What a flag looks like. Data, not interface text. */
+const FLAGS_EXAMPLE = JSON.stringify(
+  [{ reference: 'egg_stolen', description: "The dragon's egg has been taken from its nest." }],
+  null,
+  2
+)
+
+/** What an event looks like: a deadline the elves may be warned of. Data, not interface text. */
+const EVENTS_EXAMPLE = JSON.stringify(
+  [
+    {
+      reference: 'goblins_attack',
+      when: { at: { day: 3, period: 'night', time: null }, conditions: [], delay: null },
+      unless: [{ type: 'flag', flag: 'elves_warned' }],
+      place: 'elf_camp',
+      description: 'Goblins pour out of the woods and fall upon the camp.',
+      effects: [
+        { type: 'npc_entered', npc: 'goblin', location: 'elf_camp', descriptor: null },
+        { type: 'flag_set', flag: 'camp_attacked' },
+      ],
+      interrupts: true,
+      foreseeable: null,
+    },
+  ],
+  null,
+  2
+)

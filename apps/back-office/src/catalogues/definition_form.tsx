@@ -50,9 +50,11 @@ export function DefinitionForm({
     defaultDisposition: set('defaultDisposition'),
     combat: set('combat'),
     initialLocation: set('initialLocation'),
+    schedule: set('schedule'),
     parent: set('parent'),
     exits: set('exits'),
     entrance: set('entrance'),
+    periodNotes: set('periodNotes'),
     stackable: set('stackable'),
     equippable: set('equippable'),
     modifiers: set('modifiers'),
@@ -69,6 +71,8 @@ export function DefinitionForm({
   const weaponError = errorUnder(errors, 'weapon')
   const holderError = errorUnder(errors, 'initialHolder')
   const exitsError = errorUnder(errors, 'exits')
+  const scheduleError = errorUnder(errors, 'schedule')
+  const periodNotesError = errorUnder(errors, 'periodNotes')
 
   return (
     <div className="flex flex-col gap-4">
@@ -189,6 +193,23 @@ export function DefinitionForm({
               </select>
             </Field>
           )}
+          {unique && (
+            <Field
+              id={id('schedule')}
+              label={t('schedule')}
+              hint={t('scheduleHint')}
+              error={scheduleError}
+            >
+              <textarea
+                id={id('schedule')}
+                value={draft.schedule}
+                spellCheck={false}
+                placeholder={SCHEDULE_EXAMPLE}
+                onChange={(event) => on.schedule(event.target.value)}
+                className={CODE_AREA}
+              />
+            </Field>
+          )}
         </>
       )}
 
@@ -232,6 +253,24 @@ export function DefinitionForm({
             error={errors.entrance}
           />
         </>
+      )}
+
+      {catalogue === 'locations' && (
+        <Field
+          id={id('periodNotes')}
+          label={t('periodNotes')}
+          hint={t('periodNotesHint')}
+          error={periodNotesError}
+        >
+          <textarea
+            id={id('periodNotes')}
+            value={draft.periodNotes}
+            spellCheck={false}
+            placeholder={PERIOD_NOTES_EXAMPLE}
+            onChange={(event) => on.periodNotes(event.target.value)}
+            className={CODE_AREA}
+          />
+        </Field>
       )}
 
       {catalogue === 'items' && (
@@ -337,6 +376,28 @@ const EXITS_EXAMPLE = JSON.stringify(
       duration: 'moment',
     },
   ],
+  null,
+  2
+)
+
+/** What a schedule looks like: the Cardinal's mornings. Data, not interface text. */
+const SCHEDULE_EXAMPLE = JSON.stringify(
+  [
+    {
+      periods: ['morning'],
+      location: 'palais_cardinal_courtyard',
+      activity: 'reviews his guards',
+      leavesScene: false,
+      interrupts: false,
+    },
+  ],
+  null,
+  2
+)
+
+/** What notes for the time of day look like. Data, not interface text. */
+const PERIOD_NOTES_EXAMPLE = JSON.stringify(
+  [{ periods: ['night'], note: 'At night, a single sentry watches the gate.' }],
   null,
   2
 )

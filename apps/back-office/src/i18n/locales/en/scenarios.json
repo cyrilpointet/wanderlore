@@ -35,6 +35,12 @@
     "characterHint": "The character every game of this scenario is played with, written as JSON: name, the seven characteristics (STR, CON, SIZ, INT, POW, DEX, CHA, from 3 to 21), skills in percent and resources by reference, and items (definition, descriptor, quantity, equipped). Hit points derive from CON and SIZ.",
     "characterJson": "Character (JSON)",
     "characterTemplate": "Start from a template",
+    "flags": "Flags",
+    "flagsHint": "The closed list of notable turns of the story extraction may record, written as JSON: each with its reference and one line of English telling when the narration sets it. Events read them; extraction never sets a flag that is not listed.",
+    "flagsJson": "Flags (JSON)",
+    "events": "Events",
+    "eventsHint": "What happens in the story without the player, written as JSON, each once at most. when: a deadline (at: day from 1, and a period or a time of day), conditions on the state (flag, item_held_by, item_gone, npc_dead, npc_disposition, npc_at, location_visited), and a delay after they first hold. unless: conditions that cancel it as it falls due. place: the named place it happens in, or null for everywhere. description: one line of English for the model. effects: npc_moved, npc_left, npc_entered, npc_disposition, schedule_stopped, passage_blocked, passage_cleared, passage_discovered, passage_unlocked, place_note_set, place_note_cleared, item_placed, item_transferred, item_gone, flag_set. interrupts: it cuts a long action short when the character sees it. foreseeable: the conditions under which the character knows it is coming and may wait for it — an empty list for always, null for never.",
+    "eventsJson": "Events (JSON)",
     "start": "Where the story starts",
     "startHint": "Picked from the named places of the world and the scenario, and from this scenario's chapters and quests.",
     "startTime": "Time of day",
@@ -93,7 +99,13 @@
     "invalid_duration": "“{{reference}}” is no duration of a passage: moment, minutes, hour or hours.",
     "entrance_without_exits": "“{{reference}}” is an entrance, but has no exit: it is part of no network.",
     "unreachable_network": "Nothing leads into the network of “{{reference}}”: mark one of its places as an entrance, or start the story in it.",
-    "start_contains_network": "“{{reference}}” only contains a network: start the story in one of its places."
+    "start_contains_network": "“{{reference}}” only contains a network: start the story in one of its places.",
+    "unknown_flag": "“{{reference}}” is no flag of this scenario.",
+    "not_unique": "“{{reference}}” is no unique definition: an event names a single person or item.",
+    "unknown_passage": "No passage joins these two places ({{reference}}).",
+    "schedule_overlap": "The period “{{reference}}” is in more than one entry of this schedule.",
+    "event_without_trigger": "The event “{{reference}}” has neither a deadline nor conditions: nothing sets it off.",
+    "event_cycle": "The event “{{reference}}” is part of a chain that sets itself off again."
   },
   "importHint": "A scenario as written in the game content. Its places, people, items and lore are created with it."
 }

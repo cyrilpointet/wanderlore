@@ -21,6 +21,15 @@ const ATHOS: NpcDefinition = {
   defaultDisposition: 'neutral',
   combat: { skills: { swordsmanship: 90 }, hitPointsMax: 14, weapon: 'rapier' },
   initialLocation: null,
+  schedule: [
+    {
+      periods: ['morning'],
+      location: 'hotel_de_treville',
+      activity: null,
+      leavesScene: false,
+      interrupts: false,
+    },
+  ],
 }
 
 const STUDS: ItemDefinition = {
@@ -49,6 +58,7 @@ describe('definition draft', () => {
         defaultDisposition: 'neutral',
         combat: ATHOS.combat,
         initialLocation: null,
+        schedule: ATHOS.schedule,
       },
     })
     expect(definitionPayloadOf('npcs', draft, { creating: true }).payload).toHaveProperty(

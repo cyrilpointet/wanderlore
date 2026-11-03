@@ -33,6 +33,8 @@ export type NpcDefinition = DefinitionBase & {
   combat: unknown
   /** The named place a unique person waits in from the start; null for none. */
   initialLocation: string | null
+  /** Where a named person is, period by period: JSON checked by the backend. */
+  schedule?: unknown
 }
 
 /**
@@ -43,6 +45,8 @@ export type LocationDefinition = DefinitionBase & {
   parent: string | null
   exits?: unknown
   entrance?: boolean
+  /** What the place is like at some periods of the day: JSON checked by the backend. */
+  periodNotes?: unknown
 }
 
 export type ItemHolder = { holder: 'npc' | 'location'; reference: string }

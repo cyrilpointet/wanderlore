@@ -34,6 +34,9 @@ export type Scenario = {
   startTime: string
   startDate: string | null
   glossary: Entry[]
+  /** The flags extraction may set, and the events of the story: JSON checked by the backend. */
+  flags: unknown
+  events: unknown
   updatedAt: string | null
 }
 

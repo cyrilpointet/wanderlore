@@ -28,10 +28,14 @@ export type DefinitionDraft = {
   combat: string
   /** A named place, or empty for none. */
   initialLocation: string
+  /** JSON text: where a named person is, period by period. */
+  schedule: string
   parent: string
   /** JSON text: the exits of a named place. */
   exits: string
   entrance: boolean
+  /** JSON text: what the place is like at some periods of the day. */
+  periodNotes: string
   stackable: boolean
   equippable: boolean
   modifiers: string
@@ -55,9 +59,11 @@ export function emptyDefinitionDraft(): DefinitionDraft {
     defaultDisposition: 'neutral',
     combat: json(NEW_COMBAT),
     initialLocation: '',
+    schedule: '[]',
     parent: '',
     exits: '[]',
     entrance: false,
+    periodNotes: '[]',
     stackable: false,
     equippable: false,
     modifiers: '[]',
@@ -82,9 +88,11 @@ export function definitionDraftOf(definition: Definition): DefinitionDraft {
     defaultDisposition: npc.defaultDisposition ?? 'neutral',
     combat: npc.combat === undefined ? json(NEW_COMBAT) : json(npc.combat),
     initialLocation: npc.initialLocation ?? '',
+    schedule: npc.schedule === undefined ? '[]' : json(npc.schedule),
     parent: location.parent ?? '',
     exits: location.exits === undefined ? '[]' : json(location.exits),
     entrance: location.entrance ?? false,
+    periodNotes: location.periodNotes === undefined ? '[]' : json(location.periodNotes),
     stackable: item.stackable ?? false,
     equippable: item.equippable ?? false,
     modifiers: item.modifiers === undefined ? '[]' : json(item.modifiers),
@@ -111,7 +119,9 @@ export function definitionPayloadOf(
   options: { creating: boolean }
 ): DefinitionPayload {
   const errors: FieldErrors = {}
-  const parse = (field: 'combat' | 'modifiers' | 'weapon' | 'exits') => {
+  const parse = (
+    field: 'combat' | 'modifiers' | 'weapon' | 'exits' | 'schedule' | 'periodNotes'
+  ) => {
     try {
       return JSON.parse(draft[field]) as unknown
     } catch {
@@ -134,12 +144,14 @@ export function definitionPayloadOf(
       defaultDisposition: draft.defaultDisposition,
       combat: parse('combat'),
       initialLocation: unique && draft.initialLocation !== '' ? draft.initialLocation : null,
+      schedule: unique ? parse('schedule') : [],
     })
   } else if (catalogue === 'locations') {
     Object.assign(payload, {
       parent: unique && draft.parent !== '' ? draft.parent : null,
       exits: unique ? parse('exits') : [],
       entrance: unique && draft.entrance,
+      periodNotes: parse('periodNotes'),
     })
   } else {
     Object.assign(payload, {
