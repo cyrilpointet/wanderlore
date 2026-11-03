@@ -42,6 +42,8 @@ export function resolveWorld(world: WorldLevelContent, scenario: ScenarioContent
     lore: overlay(world.lore, scenario.lore),
     chapters: scenario.chapters.map(entryOf),
     quests: scenario.quests.map(entryOf),
+    flags: scenario.flags,
+    events: scenario.events,
     glossary: overlay(world.glossary, scenario.glossary).map(entryOf),
   }
 }
@@ -76,12 +78,16 @@ function npcOf(npc: NpcDefinitionContent): NpcDefinition {
   }
 
   return npc.kind === 'unique'
-    ? { ...shared, kind: 'unique', initialLocation: npc.initialLocation }
+    ? { ...shared, kind: 'unique', initialLocation: npc.initialLocation, schedule: npc.schedule }
     : { ...shared, kind: 'archetype', generic: npc.generic }
 }
 
 function locationOf(location: LocationDefinitionContent): LocationDefinition {
-  const shared = { ...entryOf(location), description: location.description }
+  const shared = {
+    ...entryOf(location),
+    description: location.description,
+    periodNotes: location.periodNotes,
+  }
 
   return location.kind === 'unique'
     ? {

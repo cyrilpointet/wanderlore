@@ -3,7 +3,7 @@ import { test } from '@japa/runner'
 import {
   DAY,
   MAX_DAYS,
-  type Duration,
+  type ClockDuration,
   type Period,
   dateOf,
   dayOf,
@@ -22,7 +22,7 @@ function at(time: string, day = 1): number {
 
 test.group('Game time | durations', () => {
   test('each label is worth its span of time', ({ assert }) => {
-    const spans: [Duration, number][] = [
+    const spans: [ClockDuration, number][] = [
       [{ label: 'moment' }, 60],
       [{ label: 'minutes' }, 600],
       [{ label: 'hour' }, 3600],

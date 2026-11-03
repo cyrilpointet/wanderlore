@@ -5,6 +5,8 @@ import {
   CHARACTERISTICS,
   DAMAGE_MODIFIER_USES,
   DEFINITION_KINDS,
+  EVENT_CONDITION_TYPES,
+  EVENT_EFFECT_TYPES,
   ITEM_CONDITIONS,
   LORE_FRAGMENT_KINDS,
   NPC_DISPOSITIONS,
@@ -13,7 +15,7 @@ import {
   WEAPON_KINDS,
 } from '#services/game/content/types'
 import { isDiceExpression } from '#services/rules/dice_expression'
-import { FIXED_DURATIONS } from '#services/game/game_time'
+import { FIXED_DURATIONS, MAX_DAYS, PERIODS } from '#services/game/game_time'
 
 /**
  * The game content the back-office writes. Everything a turn later reads is
@@ -115,6 +117,12 @@ const weapon = () =>
     special: vine.enum(SPECIAL_EFFECTS).nullable(),
   })
 
+const fixedDuration = () =>
+  vine.enum(Object.keys(FIXED_DURATIONS) as (keyof typeof FIXED_DURATIONS)[])
+
+/** Periods of the day, each named once. */
+const periods = () => vine.array(vine.enum(PERIODS)).minLength(1).distinct()
+
 /** A way out of a unique place: where it leads, how it reads, what shuts it. */
 const exit = () =>
   vine.object({
@@ -124,10 +132,23 @@ const exit = () =>
     hidden: vine.boolean(),
     requires: reference().nullable(),
     oneWay: vine.boolean(),
-    duration: vine
-      .enum(Object.keys(FIXED_DURATIONS) as (keyof typeof FIXED_DURATIONS)[])
-      .nullable(),
+    duration: fixedDuration().nullable(),
+    /** The periods nothing goes through it; left out, it is never shut by the time of day. */
+    blockedDuring: vine.array(vine.enum(PERIODS)).distinct().optional(),
+    blockedReason: sentence(300).nullable().optional(),
   })
+
+/** Where a unique person is at some periods of the day, and what they do there. */
+const scheduleEntry = () =>
+  vine.object({
+    periods: periods(),
+    location: reference(),
+    activity: sentence(300).nullable(),
+    leavesScene: vine.boolean(),
+    interrupts: vine.boolean(),
+  })
+
+const periodNote = () => vine.object({ periods: periods(), note: sentence(300) })
 
 const initialHolder = () =>
   vine.object({
@@ -147,11 +168,13 @@ const catalogueFields = {
     defaultDisposition: vine.enum(NPC_DISPOSITIONS),
     combat: combat(),
     initialLocation: reference().nullable(),
+    schedule: vine.array(scheduleEntry()),
   },
   locations: {
     parent: reference().nullable(),
     exits: vine.array(exit()),
     entrance: vine.boolean(),
+    periodNotes: vine.array(periodNote()),
   },
   items: {
     generic: vine.boolean(),
@@ -183,7 +206,14 @@ const loreFields = {
  */
 const importedCatalogues = () => ({
   npcs: vine
-    .array(vine.object({ reference: reference(), ...definitionBase, ...catalogueFields.npcs }))
+    .array(
+      vine.object({
+        reference: reference(),
+        ...definitionBase,
+        ...catalogueFields.npcs,
+        schedule: catalogueFields.npcs.schedule.optional(),
+      })
+    )
     .distinct('reference')
     .optional(),
   locations: vine
@@ -194,6 +224,7 @@ const importedCatalogues = () => ({
         ...catalogueFields.locations,
         exits: catalogueFields.locations.exits.optional(),
         entrance: catalogueFields.locations.entrance.optional(),
+        periodNotes: catalogueFields.locations.periodNotes.optional(),
       })
     )
     .distinct('reference')
@@ -344,6 +375,114 @@ const initialState = () =>
     knownNpcs: vine.array(reference()).optional(),
   })
 
+/** Who holds an item, as an event names them: the character, or a unique person or place. */
+const eventHolder = () =>
+  vine.union([
+    vine.union.if(
+      (value) => vine.helpers.isObject(value) && value.holder === 'character',
+      vine.object({ holder: vine.literal('character') })
+    ),
+    vine.union.else(initialHolder()),
+  ])
+
+/** One branch of a closed list of shapes, told apart by their `type`. */
+const typed = <Type extends string, Fields extends Record<string, any>>(
+  type: Type,
+  fields: Fields
+) =>
+  vine.union.if(
+    (value) => vine.helpers.isObject(value) && value.type === type,
+    vine.object({ type: vine.literal(type), ...fields })
+  )
+
+const unknownType = (types: readonly string[]) => (_value: unknown, field: FieldContext) => {
+  field.report(`The {{ field }} field must have a type among ${types.join(', ')}`, 'type', field)
+}
+
+/** What the state must hold for an event: people and items by reference, checked at publication. */
+const condition = () =>
+  vine
+    .union([
+      typed('flag', { flag: reference() }),
+      typed('item_held_by', { item: reference(), holder: eventHolder() }),
+      typed('item_gone', { item: reference() }),
+      typed('npc_dead', { npc: reference() }),
+      typed('npc_disposition', { npc: reference(), disposition: vine.enum(NPC_DISPOSITIONS) }),
+      typed('npc_at', { npc: reference(), location: reference() }),
+      typed('location_visited', { location: reference() }),
+    ])
+    .otherwise(unknownType(EVENT_CONDITION_TYPES))
+
+const conditions = () => vine.array(condition()).maxLength(10)
+
+/** The two places a passage joins, either way round. */
+const passage = { from: reference(), to: reference() }
+
+/** What an event does: a closed list, applied by the backend. */
+const effect = () =>
+  vine
+    .union([
+      typed('npc_moved', { npc: reference(), location: reference() }),
+      typed('npc_left', { npc: reference() }),
+      typed('npc_entered', {
+        npc: reference(),
+        location: reference(),
+        descriptor: sentence(200).nullable(),
+      }),
+      typed('npc_disposition', { npc: reference(), disposition: vine.enum(NPC_DISPOSITIONS) }),
+      typed('schedule_stopped', { npc: reference() }),
+      typed('passage_blocked', passage),
+      typed('passage_cleared', passage),
+      typed('passage_discovered', passage),
+      typed('passage_unlocked', passage),
+      typed('place_note_set', { location: reference(), note: sentence(300) }),
+      typed('place_note_cleared', { location: reference() }),
+      typed('item_placed', {
+        item: reference(),
+        holder: eventHolder(),
+        quantity: vine.number().withoutDecimals().min(1).max(99),
+      }),
+      typed('item_transferred', { item: reference(), holder: eventHolder() }),
+      typed('item_gone', { item: reference() }),
+      typed('flag_set', { flag: reference() }),
+    ])
+    .otherwise(unknownType(EVENT_EFFECT_TYPES))
+
+/** How long after its conditions hold an event falls: a fixed span, or days within a week. */
+const delay = () =>
+  vine.union([
+    vine.union.if(
+      (value) => vine.helpers.isObject(value) && value.label === 'days',
+      vine.object({
+        label: vine.literal('days'),
+        count: vine.number().withoutDecimals().min(1).max(MAX_DAYS),
+      })
+    ),
+    vine.union.else(vine.object({ label: fixedDuration() })),
+  ])
+
+const scenarioEvent = () =>
+  vine.object({
+    reference: reference(),
+    when: vine.object({
+      at: vine
+        .object({
+          day: vine.number().withoutDecimals().min(1).max(999),
+          period: vine.enum(PERIODS).nullable(),
+          time: timeOfDay().nullable(),
+        })
+        .nullable(),
+      conditions: conditions(),
+      delay: delay().nullable(),
+    }),
+    unless: conditions(),
+    place: reference().nullable(),
+    description: sentence(500),
+    effects: vine.array(effect()).minLength(1).maxLength(20),
+    interrupts: vine.boolean(),
+    foreseeable: conditions().nullable(),
+  })
+
 const scenarioFields = {
   synopsis: vine.string().trim().maxLength(4000),
   chapters: vine.array(entry()).distinct('reference'),
@@ -353,6 +492,10 @@ const scenarioFields = {
   startTime: timeOfDay(),
   startDate: calendarDate().nullable(),
   glossary: vine.array(entry()).distinct('reference'),
+  flags: vine
+    .array(vine.object({ reference: reference(), description: sentence(300) }))
+    .distinct('reference'),
+  events: vine.array(scenarioEvent()).distinct('reference'),
 }
 
 /** A scenario is created as a draft: publishing is a step of its own. */
@@ -367,6 +510,8 @@ export const createScenarioValidator = vine.create({
   startTime: scenarioFields.startTime.optional(),
   startDate: scenarioFields.startDate.optional(),
   glossary: scenarioFields.glossary.optional(),
+  flags: scenarioFields.flags.optional(),
+  events: scenarioFields.events.optional(),
   ...importedCatalogues(),
 })
 
@@ -380,6 +525,8 @@ export const updateScenarioValidator = vine.create({
   startTime: scenarioFields.startTime.optional(),
   startDate: scenarioFields.startDate.optional(),
   glossary: scenarioFields.glossary.optional(),
+  flags: scenarioFields.flags.optional(),
+  events: scenarioFields.events.optional(),
 })
 
 export const CATALOGUES = ['npcs', 'locations', 'items', 'lore'] as const
@@ -389,17 +536,24 @@ export type Catalogue = (typeof CATALOGUES)[number]
 /** Per catalogue, the validator of a new definition and of an edit to one. */
 export const definitionValidators = {
   npcs: {
-    create: vine.create({ reference: reference(), ...definitionBase, ...catalogueFields.npcs }),
+    /** A schedule may be left out: most people keep none. */
+    create: vine.create({
+      reference: reference(),
+      ...definitionBase,
+      ...catalogueFields.npcs,
+      schedule: catalogueFields.npcs.schedule.optional(),
+    }),
     update: vine.create(optional({ ...definitionBase, ...catalogueFields.npcs })),
   },
   locations: {
-    /** Exits and entrance may be left out: a place travelled to freely has neither. */
+    /** Exits, entrance and notes may be left out: a place travelled to freely has none. */
     create: vine.create({
       reference: reference(),
       ...definitionBase,
       ...catalogueFields.locations,
       exits: catalogueFields.locations.exits.optional(),
       entrance: catalogueFields.locations.entrance.optional(),
+      periodNotes: catalogueFields.locations.periodNotes.optional(),
     }),
     update: vine.create(optional({ ...definitionBase, ...catalogueFields.locations })),
   },

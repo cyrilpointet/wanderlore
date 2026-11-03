@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import gameConfig from '#config/game'
 
@@ -9,6 +10,7 @@ import type Character from '#models/character'
 import type WorldState from '#models/world_state'
 import LocationInstance from '#models/location_instance'
 import NpcInstance from '#models/npc_instance'
+import type EventState from '#models/event_state'
 import type { LlmGateway } from '#services/llm/gateway'
 import type { RulesEngine } from '#services/rules/engine'
 import type { Clock } from '#services/clock'
@@ -29,6 +31,7 @@ import {
   enterableNpcs,
   nextHandleOf,
   guardedPlaces,
+  meetThoseWaiting,
   metNpcs,
   npcsPlacedIn,
   npcsWaitingIn,
@@ -45,7 +48,40 @@ import {
 } from './inventory.js'
 import { actionTypesOf, resolutionFor, rollBaseFor } from './resolution_rules.js'
 import { ContentLabels } from './content_labels.js'
-import { periodAt, secondsOf } from './game_time.js'
+import { DAY, FIXED_DURATIONS, MAX_DAYS, periodAt, secondsOf } from './game_time.js'
+import {
+  type DueEvent,
+  type WorldSnapshot,
+  awaitedTimeOf,
+  foreseeableEvents,
+  timedEventsDue,
+  witnesses,
+} from './events.js'
+import {
+  eventsSince,
+  loadProgress,
+  loadSnapshot,
+  placeNoteOf,
+  placesAround,
+  progressReader,
+  stoppedSchedules,
+  untoldEvents,
+} from './game_events.js'
+import {
+  applyEvent,
+  followSchedules,
+  markTold,
+  recordEvent,
+  settleStateEvents,
+} from './apply_events.js'
+import {
+  type ScheduledNpc,
+  entryAt,
+  movesWithin,
+  nextArrivalIn,
+  scheduledNpcs,
+} from './schedules.js'
+import type { ScenarioEvent } from './content/types.js'
 import { passageStates } from './passages.js'
 import {
   type Route,
@@ -96,6 +132,7 @@ import type {
   CombatEngagement,
   GameLanguage,
   NarratedFirstAid,
+  NarrationRequest,
   OutcomeToNarrate,
   RecentTurn,
   TurnContext,
@@ -105,6 +142,7 @@ import { type ValidationMeta, validateArbitration, validateExtraction } from './
 import {
   type StoredFailure,
   type TracedFirstAid,
+  type TracedEvents,
   type TracedRound,
   type TracedTime,
   type TurnTrace,
@@ -423,11 +461,19 @@ export class TurnService {
     /** The world's own list, from the snapshot the turn was picked up with. */
     const actionTypes = actionTypesOf(world)
     const movement = movementOptionsOf(scene)
-    /** Someone waiting in a place from the start comes into a scene only there, or within reach. */
+    const clock = { gameTime: scene.worldState.gameTime, stopped: scene.stopped }
+    const progressOf = progressReader(scene.eventRows)
+    /** Someone waiting in a place — from the start, or by their schedule — comes into a scene only there, or within reach. */
     const npcDefinitions = enterableNpcs(
       world,
       scene.metNpcs,
-      new Set([...(scene.here === null ? [] : [scene.here]), ...movement.destinations])
+      new Set([...(scene.here === null ? [] : [scene.here]), ...movement.destinations]),
+      clock
+    )
+    /** What the character knows is coming, and whom they know to come and go. */
+    const foreseeable = foreseeableEvents(world.events, progressOf, scene.snapshot)
+    const awaitable = scheduledNpcs(world, scene.stopped).filter(({ reference }) =>
+      scene.worldState.knownNpcs.includes(reference)
     )
     const meta: ValidationMeta = {
       actionTypes: actionTypes.map(({ actionType }) => actionType),
@@ -454,6 +500,10 @@ export class TurnService {
       reachableLocations: scene.routes.map(({ to }) => to),
       hasLocation: scene.worldState.currentLocationId !== null,
       hitPointsMax: scene.character.hitPointsMax,
+      /** One set already sets nothing: refusing it would only cost a second call. */
+      flags: world.flags.map(({ reference }) => reference),
+      foreseeableEvents: foreseeable.map(({ reference }) => reference),
+      awaitableNpcs: awaitable.map(({ reference }) => reference),
     }
     const step = { trace, budget }
 
@@ -463,7 +513,17 @@ export class TurnService {
 
     const decision = await this.#arbitrate(
       turn,
-      buildArbitrationMessage({ ...context, action_types: actionTypes, lore: arbitrationLore }),
+      buildArbitrationMessage({
+        ...context,
+        action_types: actionTypes,
+        lore: arbitrationLore,
+        world_events: scene.recentEvents.map(({ description }) => description),
+        foreseeable_events: foreseeable.map(({ reference, description }) => ({
+          reference,
+          description,
+        })),
+        awaitable_npcs: awaitable.map(({ reference, label }) => ({ reference, label })),
+      }),
       meta,
       step
     )
@@ -474,18 +534,44 @@ export class TurnService {
     await this.#announceRolls(turn, scene, resolution, trace.combat)
     /** A round of combat is fought where it stands: nobody walks away mid-blow. */
     const route = aside || round !== null ? null : routeTo(scene, decision.intent.destination)
-    const time = timeOf(scene.worldState.gameTime, decision, aside, route, round)
+    /** The clock of the turn, cut short by what the character sees happen, or ended by what they waited for. */
+    const timing = planTime(scene, decision, aside, route, round)
+    const time = timing.time
     trace.time = time
-    /** The opponent the round brought in counts as present from here on: narrated, then read. */
-    const present = withOpponent(context, trace.combat, world)
-    /** Whoever was left where the character goes, or waits there from the start, is there to meet them. */
+    /** Whoever comes where the character is, brought by an event or their schedule. */
+    const arriving = await this.#arriving(scene, timing, trace.combat)
+    trace.events = {
+      timed: timing.due.map((due) => ({
+        event: due.event.reference,
+        at: due.at,
+        outcome: due.outcome,
+        witnessed: due.outcome === 'fired' && witnesses(due.event, timing.around),
+      })),
+      state: [],
+      told: aside ? [] : scene.untold.map(({ reference }) => reference),
+      interrupted: timing.interrupted,
+      awaited: timing.awaited,
+      deferred: [],
+    }
+    /**
+     * The opponent the round brought in counts as present from here on:
+     * narrated, then read — and so does whoever arrives during the turn.
+     */
+    const present = withArrivals(withOpponent(context, trace.combat, world), arriving)
+    for (const { definition } of arriving) {
+      if (!npcDefinitions.includes(definition)) npcDefinitions.push(definition)
+    }
+    /** Whoever was left where the character goes, or waits there, is there to meet them. */
     const waiting =
       route === null
         ? []
         : [
             ...(await npcsWaitingIn(scene.session.id, route.to)),
-            ...(await npcsPlacedIn(world, scene.session.id, route.to)),
-          ]
+            ...(await npcsPlacedIn(world, scene.session.id, route.to, undefined, {
+              gameTime: time.after,
+              stopped: scene.stopped,
+            })),
+          ].filter(({ handle }) => !arriving.some((npc) => npc.handle === handle))
     /** Staging an arrival calls for the lore of where it ends, and of who waits there. */
     const narrationLore = loreFor(
       world,
@@ -502,7 +588,7 @@ export class TurnService {
     const narration = await this.#narrate(
       turn,
       buildNarrationMessage({
-        ...present,
+        ...withOpponent(context, trace.combat, world),
         /** A verdict and a qualitative degree. Never the dice or the chance. */
         outcome,
         /** The round in labels: landed or not, how it was met, how badly it wounded. */
@@ -511,6 +597,26 @@ export class TurnService {
         game_time_after: time.after,
         route,
         npcs_at_destination: waiting,
+        npcs_arriving: arriving,
+        npcs_leaving: timing.leaving,
+        activities: activitiesOf(scene, present.scene.npcs_present, timing),
+        place_notes_after: notesOf(
+          world,
+          route === null
+            ? (scene.worldState.currentLocation ?? null)
+            : { definitionReference: route.to },
+          route === null ? scene.placeNote : null,
+          time.after
+        ),
+        world_events: [
+          ...scene.untold.map(({ description }) => ({ description, when: 'earlier' as const })),
+          ...timing.due
+            .filter((due) => due.outcome === 'fired' && witnesses(due.event, timing.around))
+            .map(({ event }) => ({ description: event.description, when: 'now' as const })),
+        ],
+        interrupted: interruptionText(world, timing),
+        awaited:
+          timing.awaited === null ? null : timing.awaited.arrived ? 'arrived' : 'did_not_happen',
         intent_summary: decision.intent.summary,
         aside,
         lore: narrationLore,
@@ -530,6 +636,10 @@ export class TurnService {
     if (trace.combat?.provisional) {
       meta.npcHandles = [...meta.npcHandles, trace.combat.opponent]
     }
+    meta.npcHandles = [
+      ...meta.npcHandles,
+      ...arriving.map(({ handle }) => handle).filter((handle) => !meta.npcHandles.includes(handle)),
+    ]
 
     return this.#extract(
       buildExtractionMessage({
@@ -537,6 +647,7 @@ export class TurnService {
         narration,
         creatable_items: scene.creatableItems,
         enterable_npcs: npcDefinitions,
+        flags: world.flags.filter(({ reference }) => !scene.snapshot.flags.has(reference)),
         movement: {
           destinations: movement.destinations,
           archetypes: movement.archetypes,
@@ -546,6 +657,103 @@ export class TurnService {
       meta,
       step
     )
+  }
+
+  /**
+   * Who comes where the character is during the turn, under the handle they
+   * will have once the turn applies: whoever an event the character sees
+   * brings there, and whoever their schedule does. A person of an archetype
+   * is numbered in the order the backend will create them — after the
+   * opponent a round brought in.
+   */
+  async #arriving(
+    scene: LoadedScene,
+    timing: TurnTiming,
+    round: TracedRound | null
+  ): Promise<NarrationRequest['npcs_arriving']> {
+    const { world } = scene
+    const place = timing.place
+    const arriving: NarrationRequest['npcs_arriving'] = []
+
+    if (place === null) {
+      return arriving
+    }
+
+    const known = new Set(scene.npcs.map(({ handle }) => handle))
+    const numbered = new Map<string, number>()
+    const nextOf = async (definition: string) => {
+      const first = await nextHandleOf(scene.session.id, definition)
+      const next =
+        numbered.get(definition) ??
+        Number(first.split('_').pop()) + (round?.provisional?.definition === definition ? 1 : 0)
+      numbered.set(definition, next + 1)
+
+      return `${definition}_${next}`
+    }
+    const unique = async (reference: string, activity: string | null) => {
+      const npc = scene.snapshot.npcs.get(reference)
+      const definition = world.npcs.find((entry) => entry.reference === reference)
+
+      if (known.has(reference) || npc?.status === 'dead' || definition === undefined) {
+        return
+      }
+
+      const instance =
+        npc === undefined
+          ? null
+          : await NpcInstance.query()
+              .where('sessionId', scene.session.id)
+              .where('handle', reference)
+              .first()
+      known.add(reference)
+      arriving.push({
+        handle: reference,
+        name: instance?.name ?? null,
+        descriptor: instance?.descriptor ?? null,
+        disposition: npc?.disposition ?? definition.defaultDisposition,
+        condition: 'standing',
+        definition: reference,
+        activity,
+      })
+    }
+
+    for (const { event, outcome } of timing.due) {
+      if (outcome !== 'fired') continue
+
+      for (const effect of event.effects) {
+        if (effect.type !== 'npc_entered' && effect.type !== 'npc_moved') continue
+
+        const definition = world.npcs.find(({ reference }) => reference === effect.npc)
+        const created =
+          definition?.kind === 'archetype' && scene.snapshot.visited.has(effect.location)
+
+        if (effect.location !== place) {
+          /** Elsewhere, a new person still takes their number. */
+          if (created) await nextOf(effect.npc)
+          continue
+        }
+
+        if (definition?.kind === 'archetype') {
+          arriving.push({
+            handle: await nextOf(effect.npc),
+            name: null,
+            descriptor: effect.type === 'npc_entered' ? effect.descriptor : null,
+            disposition: definition.defaultDisposition,
+            condition: 'standing',
+            definition: effect.npc,
+            activity: null,
+          })
+        } else {
+          await unique(effect.npc, null)
+        }
+      }
+    }
+
+    for (const { npc, activity } of timing.arrivals) {
+      await unique(npc.reference, activity)
+    }
+
+    return arriving
   }
 
   /**
@@ -868,7 +1076,13 @@ export class TurnService {
       passages: await passageStates(sessionId),
       held: new Set(items.character.map(({ definition }) => definition)),
       guarded: await guardedPlaces(sessionId),
+      /** A passage the time of day shuts is shut for the whole turn. */
+      period: periodAt(session.worldState.gameTime),
     }
+
+    /** What the scenario's events did so far, and what their conditions read. */
+    const eventRows = await loadProgress(sessionId)
+    const snapshot = await loadSnapshot(world, sessionId, session.worldState)
 
     const memory = await loadMemory(sessionId)
     /** Who in the scene has a wound first aid can still see to. */
@@ -912,6 +1126,13 @@ export class TurnService {
       ...describePlace(world, place),
       exits: here === null ? [] : exitsOf(world.locations, here, travel),
       routes: here === null ? [] : [...routesFrom(world.locations, here, travel).values()],
+      eventRows,
+      snapshot,
+      stopped: stoppedSchedules(world, eventRows),
+      placeNote: here === null ? null : await placeNoteOf(sessionId, here),
+      untold: untoldEvents(world, eventRows),
+      recentEvents: eventsSince(world, eventRows, coveredUpTo(memory)),
+      around: placesAround(world, place),
       memory,
       /** Oldest first, so the model reads the exchange in the order it happened. */
       recentTurns: turns,
@@ -979,6 +1200,22 @@ export class TurnService {
           await applyFirstAid(combat, trace.firstAid, trx)
         }
 
+        const events = {
+          world: scene.world,
+          sessionId: scene.session.id,
+          worldState: scene.worldState,
+          characterId: scene.character.id,
+          placeId: scene.worldState.currentLocationId,
+        }
+
+        /**
+         * What the clock brought, in the order it fell — before the delta,
+         * whose extraction already saw whoever it brought in.
+         */
+        if (!aside && trace.events !== null) {
+          await this.#settleTimedEvents(events, trace.events, turnNumber, trx)
+        }
+
         const applied = await applyDelta(
           {
             world: scene.world,
@@ -1004,6 +1241,10 @@ export class TurnService {
             applied.hit_points_delta < 0,
             trx
           )
+
+          if (trace.events !== null) {
+            await this.#settleTheWorld(scene, events, trace.events, turnNumber, trx)
+          }
         }
 
         scene.session.lastActivityAt = DateTime.now()
@@ -1037,6 +1278,99 @@ export class TurnService {
       throw error
     }
   }
+
+  /** The timed events of the turn, as planned: each recorded, and set off unless cancelled. */
+  async #settleTimedEvents(
+    target: EventsTarget,
+    events: TracedEvents,
+    turnNumber: number,
+    trx: TransactionClientContract
+  ): Promise<void> {
+    for (const timed of events.timed) {
+      const event = target.world.events.find(({ reference }) => reference === timed.event)
+
+      if (event === undefined) {
+        continue
+      }
+
+      if (timed.outcome === 'cancelled') {
+        await recordEvent(
+          target.sessionId,
+          event.reference,
+          { cancelledAt: timed.at, turnNumber },
+          trx
+        )
+        continue
+      }
+
+      await recordEvent(
+        target.sessionId,
+        event.reference,
+        {
+          firedAt: timed.at,
+          turnNumber,
+          witnessed: timed.witnessed,
+          /** Seen, it was just narrated. */
+          told: timed.witnessed,
+        },
+        trx
+      )
+      await applyEvent(target, event, trx)
+    }
+  }
+
+  /**
+   * The world once the turn applied: what the state now sets off, then where
+   * the schedules put people — whoever ends where the character stands is
+   * there to meet them. The events told this turn are told for good.
+   */
+  async #settleTheWorld(
+    scene: LoadedScene,
+    target: EventsTarget,
+    events: TracedEvents,
+    turnNumber: number,
+    trx: TransactionClientContract
+  ): Promise<void> {
+    const { world, worldState } = scene
+    const placeId = worldState.currentLocationId
+    const place = placeId === null ? null : await LocationInstance.find(placeId, { client: trx })
+    const around = placesAround(world, place)
+
+    const { settled, deferred } = await settleStateEvents(
+      { ...target, placeId },
+      { gameTime: worldState.gameTime, turnNumber, around: async () => around },
+      trx
+    )
+    events.state = settled
+    events.deferred = deferred
+
+    await followSchedules(
+      {
+        world,
+        sessionId: scene.session.id,
+        place: place === null ? null : { id: place.id, reference: uniqueReferenceOf(world, place) },
+      },
+      {
+        gameTime: worldState.gameTime,
+        stopped: stoppedSchedules(world, await loadProgress(scene.session.id, trx)),
+      },
+      trx
+    )
+    if (place !== null) {
+      await meetThoseWaiting(scene.session.id, place.id, trx)
+    }
+
+    await markTold(scene.session.id, events.told, trx)
+    await worldState.useTransaction(trx).save()
+  }
+}
+
+type EventsTarget = {
+  world: WorldDefinition
+  sessionId: string
+  worldState: WorldState
+  characterId: string
+  placeId: string | null
 }
 
 type LoadedScene = {
@@ -1064,6 +1398,20 @@ type LoadedScene = {
   exits: SceneExit[]
   /** The places those ways reach, each by its quickest way. */
   routes: Route[]
+  /** What became of each event the game armed, set off or saw cancelled, by reference. */
+  eventRows: Map<string, EventState>
+  /** What the conditions of the events read of the game as the turn began. */
+  snapshot: WorldSnapshot
+  /** The unique people whose schedule an event stopped. */
+  stopped: Set<string>
+  /** The note an event left on the named place the scene stands in, if any. */
+  placeNote: string | null
+  /** The events of the state set off at the end of the last turn before the character, not told yet. */
+  untold: ScenarioEvent[]
+  /** The events that fell since the last turn a summary covers: facts for arbitration. */
+  recentEvents: ScenarioEvent[]
+  /** The place the scene stands in, then every place containing it. */
+  around: string[]
   /** The summaries the game has, which the turns below follow on from. */
   memory: Memory
   /**
@@ -1099,6 +1447,12 @@ function buildContext(
       start_date: scene.worldState.startDate,
       place_description: scene.placeDescription,
       surroundings: scene.surroundings,
+      place_notes: notesOf(
+        scene.world,
+        scene.worldState.currentLocation ?? null,
+        scene.placeNote,
+        scene.worldState.gameTime
+      ),
       exits: scene.exits,
       routes: scene.routes,
     },
@@ -1121,30 +1475,275 @@ function itemReferencesOf(items: ItemsInScene): string[] {
   ]
 }
 
+/** The clock of a turn, and what happens in the world while it runs. */
+type TurnTiming = {
+  time: TracedTime
+  /** The timed events the turn's clock brings, in the order they fall. */
+  due: DueEvent[]
+  /** The named place the character sees the turn end in, if any: where an arrival happens. */
+  place: string | null
+  /** That place, then every place containing it: where an event must happen to be seen. */
+  around: string[]
+  /** Who their schedule brings into that place during the turn. */
+  arrivals: { npc: ScheduledNpc; at: number; activity: string | null }[]
+  /** Handles of the people in the scene their schedule takes away. */
+  leaving: string[]
+  interrupted: TracedEvents['interrupted']
+  awaited: TracedEvents['awaited']
+}
+
 /**
- * Where the clock stands once the turn is over: the duration arbitration
- * proposed, converted by the backend, after the walk to the destination it
- * named, timed by the backend on the quickest way. An aside takes no time,
- * whatever the model proposed.
+ * Where the clock stands once the turn is over, and what happens meanwhile.
+ * The duration arbitration proposed, converted by the backend, after the
+ * walk to the destination it named, timed on the quickest way — or the wait
+ * until what the character waits for comes, a week at most, else an
+ * afternoon spent for nothing. An event or an arrival the character sees cuts
+ * anything longer than a moment short. An aside takes no time, whatever the
+ * model proposed, and sets nothing off; a round lasts its twelve seconds.
  */
-function timeOf(
-  before: number,
+function planTime(
+  scene: LoadedScene,
   decision: ArbitrationOutput,
   aside: boolean,
   route: Route | null,
   round: Round | null
-): TracedTime {
-  if (round !== null) {
-    /** A round lasts its twelve seconds; a character brought down is out for an hour. */
-    const seconds = ROUND_SECONDS + (round.character.down ? DOWN_SECONDS : 0)
-
-    return { before, after: before + seconds, duration: decision.duration }
+): TurnTiming {
+  const { world, snapshot } = scene
+  const before = scene.worldState.gameTime
+  const duration = decision.duration
+  const place = route?.to ?? scene.here
+  const around =
+    route === null
+      ? scene.around
+      : placesAround(world, { definitionReference: route.to, parentReference: null })
+  const quiet: TurnTiming = {
+    time: { before, after: before, duration },
+    due: [],
+    place,
+    around,
+    arrivals: [],
+    leaving: [],
+    interrupted: null,
+    awaited: null,
   }
 
-  const walk = route?.seconds ?? 0
-  const seconds = aside ? 0 : walk + secondsOf(decision.duration, before + walk)
+  if (aside) {
+    return quiet
+  }
 
-  return { before, after: before + seconds, duration: decision.duration }
+  const progressOf = progressReader(scene.eventRows)
+  const inScene = new Set(scene.npcs.map(({ handle }) => handle))
+  const scheduled = scheduledNpcs(world, scene.stopped)
+  const walkEnd = before + (route?.seconds ?? 0)
+  let end: number
+  let awaited: TracedEvents['awaited'] = null
+
+  if (round !== null) {
+    /** A round lasts its twelve seconds; a character brought down is out for an hour. */
+    end = before + ROUND_SECONDS + (round.character.down ? DOWN_SECONDS : 0)
+  } else if (duration.label === 'until_event' || duration.label === 'until_npc') {
+    const limit = walkEnd + MAX_DAYS * DAY
+    let at: number | null = null
+
+    if (duration.label === 'until_event') {
+      const event = world.events.find(({ reference }) => reference === duration.event)
+      at =
+        event === undefined
+          ? null
+          : awaitedTimeOf(event, progressOf(event.reference), snapshot, {
+              from: walkEnd,
+              until: limit,
+            })
+    } else if (inScene.has(duration.npc)) {
+      /** Already here: no wait. */
+      at = walkEnd + FIXED_DURATIONS.moment
+    } else {
+      const npc = scheduled.find(({ reference }) => reference === duration.npc)
+      at =
+        npc === undefined || place === null
+          ? null
+          : (nextArrivalIn(npc.schedule, place, walkEnd, limit)?.at ?? null)
+    }
+
+    end = at ?? walkEnd + FIXED_DURATIONS.hours
+    awaited =
+      duration.label === 'until_event'
+        ? { event: duration.event, arrived: at !== null }
+        : { npc: duration.npc, arrived: at !== null }
+  } else {
+    end = walkEnd + secondsOf(duration, walkEnd)
+  }
+
+  /** Whoever a schedule brings where the character is, between two moments. */
+  const arrivalsWithin = (from: number, to: number) =>
+    place === null
+      ? []
+      : scheduled.flatMap((npc) => {
+          const status = snapshot.npcs.get(npc.reference)?.status
+
+          if (inScene.has(npc.reference) || status === 'dead' || status === 'dying') {
+            return []
+          }
+
+          const move = nextArrivalIn(npc.schedule, place, from, to)
+
+          return move === null ? [] : [{ npc, at: move.at, entry: move.entry }]
+        })
+
+  let interrupted: TracedEvents['interrupted'] = null
+
+  if (round === null && duration.label !== 'moment') {
+    const awaitedEvent = awaited !== null && 'event' in awaited ? awaited.event : null
+    const awaitedNpc = awaited !== null && 'npc' in awaited ? awaited.npc : null
+    const event = timedEventsDue(world.events, progressOf, snapshot, end).find(
+      (due) =>
+        due.outcome === 'fired' &&
+        due.event.interrupts &&
+        due.at > walkEnd &&
+        due.at < end &&
+        due.event.reference !== awaitedEvent &&
+        witnesses(due.event, around)
+    )
+    const arrival = arrivalsWithin(walkEnd, end)
+      .filter(
+        ({ npc, entry, at }) =>
+          at < end &&
+          npc.reference !== awaitedNpc &&
+          (entry.interrupts ||
+            (snapshot.npcs.get(npc.reference)?.disposition ?? npc.defaultDisposition) === 'hostile')
+      )
+      .sort((a, b) => a.at - b.at)[0]
+
+    if (event !== undefined && (arrival === undefined || event.at <= arrival.at)) {
+      end = event.at
+      interrupted = { event: event.event.reference, at: event.at }
+    } else if (arrival !== undefined) {
+      end = arrival.at
+      interrupted = { npc: arrival.npc.reference, at: arrival.at }
+    }
+
+    if (interrupted !== null && awaited !== null) {
+      awaited = { ...awaited, arrived: false }
+    }
+  }
+
+  /** People of the scene their schedule calls away, unless it calls them where the character is. */
+  const leaving = scene.npcs
+    .map(({ handle }) => scheduled.find(({ reference }) => reference === handle))
+    .filter((npc): npc is ScheduledNpc => npc !== undefined)
+    .filter((npc) =>
+      movesWithin(npc.schedule, before, end).some(
+        ({ entry }) => entry.leavesScene && entry.location !== place
+      )
+    )
+    .map(({ reference }) => reference)
+
+  return {
+    time: { before, after: end, duration },
+    due: timedEventsDue(world.events, progressOf, snapshot, end),
+    place,
+    around,
+    arrivals: arrivalsWithin(before, end).map(({ npc, at, entry }) => ({
+      npc,
+      at,
+      activity: entry.activity,
+    })),
+    leaving,
+    interrupted,
+    awaited,
+  }
+}
+
+/** What cut the action short, in English, for the narrator. */
+function interruptionText(world: WorldDefinition, timing: TurnTiming): string | null {
+  const cut = timing.interrupted
+
+  if (cut === null) {
+    return null
+  }
+
+  if ('event' in cut) {
+    return world.events.find(({ reference }) => reference === cut.event)?.description ?? null
+  }
+
+  return `${cut.npc} arrives.`
+}
+
+/**
+ * What the people in the scene are doing by their schedule, for those it has
+ * where the character sees them as the turn ends.
+ */
+function activitiesOf(
+  scene: LoadedScene,
+  present: PresentNpc[],
+  timing: TurnTiming
+): { handle: string; activity: string }[] {
+  return present.flatMap(({ handle }) => {
+    const npc = scene.world.npcs.find(({ reference }) => reference === handle)
+    const entry = npc?.kind === 'unique' ? entryAt(npc.schedule, timing.time.after) : null
+
+    return entry?.activity && entry.location === timing.place
+      ? [{ handle, activity: entry.activity }]
+      : []
+  })
+}
+
+/**
+ * What a place is like at a time of day, in English: the notes of its
+ * definition for the period, then the one an event left there, if any.
+ */
+function notesOf(
+  world: WorldDefinition,
+  place: { definitionReference: string } | null,
+  eventNote: string | null,
+  gameTime: number
+): string[] {
+  if (place === null) {
+    return []
+  }
+
+  const period = periodAt(gameTime)
+  const definition = world.locations.find(
+    ({ reference }) => reference === place.definitionReference
+  )
+
+  return [
+    ...(definition?.periodNotes ?? [])
+      .filter(({ periods }) => periods.includes(period))
+      .map(({ note }) => note),
+    ...(eventNote === null ? [] : [eventNote]),
+  ]
+}
+
+/** The context with whoever arrives during the turn, present for extraction to read. */
+function withArrivals(
+  context: TurnContext,
+  arriving: NarrationRequest['npcs_arriving']
+): TurnContext {
+  if (arriving.length === 0) {
+    return context
+  }
+
+  return {
+    ...context,
+    scene: {
+      ...context.scene,
+      npcs_present: [
+        ...context.scene.npcs_present,
+        ...arriving.map(({ handle, name, descriptor, disposition, condition }) => ({
+          handle,
+          name,
+          descriptor,
+          disposition,
+          condition,
+        })),
+      ],
+      npc_definitions: {
+        ...context.scene.npc_definitions,
+        ...Object.fromEntries(arriving.map(({ handle, definition }) => [handle, definition])),
+      },
+    },
+  }
 }
 
 /**

@@ -10,9 +10,10 @@ const inText = (label: string) => label.replace(/^The /, '').toLowerCase()
 
 /**
  * What the texts of a network give away to the narrator before the character
- * could know it: a passage naming the place it leads to, from either side; a
- * room naming one of its neighbours, or a person the character does not know
- * by name yet. Each as `place: what it names`.
+ * could know it: a passage — or why it is shut — naming the place it leads
+ * to, from either side; a room naming one of its neighbours, or a person the
+ * character does not know by name yet, in its description or in one of its
+ * notes for the time of day. Each as `place: what it names`.
  */
 export function giveaways(
   scenario: ScenarioContent,
@@ -36,16 +37,25 @@ export function giveaways(
       if (exit.backPassage?.toLowerCase().includes(label(room.reference))) {
         found.push(`${exit.to} → ${room.reference}: ${exit.backPassage}`)
       }
-    }
-
-    const description = room.description.toLowerCase()
-    for (const neighbour of rooms.filter((other) => other !== room)) {
-      if (description.includes(label(neighbour.reference))) {
-        found.push(`${room.reference}: ${neighbour.reference}`)
+      /** Read from either side: it names neither. */
+      const reason = exit.blockedReason?.toLowerCase() ?? ''
+      for (const end of [exit.to, room.reference]) {
+        if (reason.includes(label(end))) {
+          found.push(`${room.reference} ↔ ${exit.to}: ${exit.blockedReason}`)
+        }
       }
     }
-    for (const name of strangers.filter((stranger) => room.description.includes(stranger))) {
-      found.push(`${room.reference}: ${name}`)
+
+    for (const text of [room.description, ...(room.periodNotes ?? []).map(({ note }) => note)]) {
+      const lower = text.toLowerCase()
+      for (const neighbour of rooms.filter((other) => other !== room)) {
+        if (lower.includes(label(neighbour.reference))) {
+          found.push(`${room.reference}: ${neighbour.reference}`)
+        }
+      }
+      for (const name of strangers.filter((stranger) => text.includes(stranger))) {
+        found.push(`${room.reference}: ${name}`)
+      }
     }
   }
 

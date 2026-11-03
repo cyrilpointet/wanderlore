@@ -21,6 +21,8 @@ const TABLES = [
   'passage_states',
   'lore_fragments',
   'narrative_summaries',
+  'event_states',
+  'place_notes',
 ]
 
 const ENUM_TYPES = [

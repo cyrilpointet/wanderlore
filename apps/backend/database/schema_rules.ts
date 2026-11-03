@@ -110,6 +110,8 @@ export default {
         pregenerated_character: content('PregeneratedCharacter'),
         initial_state: content('InitialState'),
         glossary: content('GlossaryEntry[]', { array: true }),
+        flags: content('ScenarioFlag[]', { array: true }),
+        events: content('ScenarioEvent[]', { array: true }),
         /** `HH:MM`: a `time` reads back with its seconds, which a scenario never has. */
         start_time: {
           tsType: 'string',
@@ -133,11 +135,17 @@ export default {
         kind,
         default_disposition: content('NpcDisposition'),
         combat: content('CombatProfile'),
+        schedule: content('ScheduleEntry[]', { array: true }),
       },
     },
 
     location_definitions: {
-      columns: { labels, kind, exits: content('LocationExit[]', { array: true }) },
+      columns: {
+        labels,
+        kind,
+        exits: content('LocationExit[]', { array: true }),
+        period_notes: content('PeriodNote[]', { array: true }),
+      },
     },
 
     item_definitions: {
@@ -216,6 +224,12 @@ export default {
         start_date: calendarDate,
         /** References of the unique people whose names the character knows. */
         known_npcs: { tsType: 'string[]', decorators: arrayColumn },
+        /** Written through the pending effects only (`#services/game/pending_effects`). */
+        pending_place_effects: {
+          tsType: 'PendingEffect[]',
+          decorators: arrayColumn,
+          imports: [{ source: '#services/game/pending_effects', typeImports: ['PendingEffect'] }],
+        },
       },
     },
 
@@ -240,6 +254,11 @@ export default {
         rejected_attempts: jsonObjectList,
         combat_result: jsonObject,
         first_aid: jsonObject,
+        events_fired: {
+          tsType: 'TracedEvents',
+          decorators: column,
+          imports: [{ source: '#services/game/turn_trace', typeImports: ['TracedEvents'] }],
+        },
         duration: {
           tsType: 'Duration',
           decorators: column,

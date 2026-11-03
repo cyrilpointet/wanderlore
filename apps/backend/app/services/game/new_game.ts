@@ -13,6 +13,7 @@ import { loadContent } from './content/load.js'
 import { resolveWorld } from './content/resolve.js'
 import { type CoherenceIssue, checkScenario } from './content/coherence.js'
 import { secondsOfTime } from './game_time.js'
+import { followSchedules } from './apply_events.js'
 import { UnknownLocationError, visitUniqueLocation } from './locations.js'
 import { meetThoseWaiting } from './npcs.js'
 import { ItemRefusedError, UnknownItemError, createItem, equipItem } from './inventory.js'
@@ -123,6 +124,12 @@ export async function startGame(user: User, scenarioId: string): Promise<Session
     try {
       /** The first place of the story, with what it holds and who waits there from the start. */
       const start = await visitUniqueLocation(world, session.id, initialState.location, trx)
+      /** And whoever their schedule has there as the story opens. */
+      await followSchedules(
+        { world, sessionId: session.id, place: { id: start.id, reference: initialState.location } },
+        { gameTime: secondsOfTime(scenario.startTime), stopped: new Set() },
+        trx
+      )
       await meetThoseWaiting(session.id, start.id, trx)
 
       await WorldState.create(

@@ -279,6 +279,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'athos',
@@ -296,6 +297,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'porthos',
@@ -312,6 +314,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'aramis',
@@ -329,6 +332,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'planchet',
@@ -345,6 +349,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'rochefort',
@@ -362,6 +367,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'milady',
@@ -379,6 +385,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'jussac',
@@ -395,6 +402,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'monsieur_bonacieux',
@@ -411,6 +419,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'constance_bonacieux',
@@ -427,6 +436,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'richelieu',
@@ -443,6 +453,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'louis_xiii',
@@ -460,6 +471,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'anne_of_austria',
@@ -476,6 +488,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'buckingham',
@@ -493,6 +506,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'musketeer',
@@ -510,6 +524,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 1,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'cardinal_guard',
@@ -527,6 +542,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 1,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'royal_guard',
@@ -543,6 +559,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'commoner',
@@ -559,6 +576,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'merchant',
@@ -575,6 +593,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'servant',
@@ -591,6 +610,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'noble',
@@ -607,6 +627,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'clergyman',
@@ -623,6 +644,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'soldier',
@@ -639,6 +661,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'thug',
@@ -655,6 +678,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
   ],
   /**
@@ -672,6 +696,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'england',
@@ -681,6 +706,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'meung_sur_loire',
@@ -690,6 +716,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'france',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'road_to_paris',
@@ -699,6 +726,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'france',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'paris',
@@ -708,6 +736,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'france',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'rue_des_fossoyeurs',
@@ -717,6 +746,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'paris',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'hotel_de_treville',
@@ -726,6 +756,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'paris',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'carmes_deschaux',
@@ -735,6 +766,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'paris',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'louvre',
@@ -744,6 +776,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'paris',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'palais_cardinal',
@@ -753,6 +786,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'paris',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'chantilly',
@@ -762,6 +796,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'france',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'amiens',
@@ -771,6 +806,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'france',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'calais',
@@ -780,6 +816,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'france',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'london',
@@ -789,6 +826,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: 'england',
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'town',
@@ -798,6 +836,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'road',
@@ -807,6 +846,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'forest',
@@ -816,6 +856,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'alley',
@@ -825,6 +866,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'tavern',
@@ -834,6 +876,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'inn',
@@ -843,6 +886,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'residence',
@@ -852,6 +896,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'church',
@@ -861,6 +906,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'port',
@@ -870,6 +916,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
   ],
   /**
@@ -1244,6 +1291,26 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         /** The letter is for Tréville: d'Artagnan knows whom he rides to. */
         knownNpcs: ['treville'],
       },
+      /** What extraction may record of the story, for the steps that follow and the events. */
+      flags: [
+        {
+          reference: 'met_the_stranger',
+          description: "D'Artagnan has crossed the dark stranger with the scar, at Meung or since.",
+        },
+        {
+          reference: 'letter_delivered',
+          description: "D'Artagnan has handed his father's letter to Monsieur de Tréville.",
+        },
+        {
+          reference: 'letter_lost',
+          description: "D'Artagnan's letter for Tréville has been lost, stolen or destroyed.",
+        },
+        {
+          reference: 'duel_challenged',
+          description: "D'Artagnan has a duel to fight: a challenge given or accepted.",
+        },
+      ],
+      events: [],
       /** Dumas: « le premier lundi du mois d'avril 1625 », as d'Artagnan rides into Meung. */
       startTime: '10:00',
       startDate: '1625-04-07',
@@ -1314,6 +1381,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         /** Tréville sent him; Jussac crossed swords with him at the Carmes-Deschaux. */
         knownNpcs: ['treville', 'jussac'],
       },
+      flags: [],
+      events: [],
       /** Late at night: most of the guards are asleep, the post is not. */
       startTime: '23:00',
       startDate: '1625-06-02',
@@ -1346,6 +1415,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'laffemas_courtyard',
+          schedule: [],
         },
         {
           reference: 'biscarat',
@@ -1363,6 +1433,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'laffemas_guardroom',
+          schedule: [],
         },
         {
           reference: 'bernajoux',
@@ -1380,6 +1451,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'laffemas_landing',
+          schedule: [],
         },
         {
           reference: 'dame_perrine',
@@ -1397,6 +1469,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'laffemas_kitchen',
+          schedule: [],
         },
         {
           reference: 'cerberus',
@@ -1414,6 +1487,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'laffemas_garden',
+          schedule: [],
         },
         {
           reference: 'rouvray',
@@ -1431,6 +1505,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'laffemas_dormitory',
+          schedule: [],
         },
         {
           reference: 'jussac',
@@ -1448,6 +1523,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'laffemas_bedchamber',
+          schedule: [],
         },
       ],
       /**
@@ -1470,6 +1546,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           parent: 'paris',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'hotel_de_laffemas',
@@ -1480,6 +1557,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           parent: 'paris',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_courtyard',
@@ -1527,6 +1605,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
           ],
           entrance: true,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_stables',
@@ -1547,6 +1626,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_guardroom',
@@ -1567,6 +1647,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_armoury',
@@ -1577,6 +1658,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           parent: 'hotel_de_laffemas',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_vestibule',
@@ -1615,6 +1697,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_kitchen',
@@ -1653,6 +1736,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
           ],
           entrance: true,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_pantry',
@@ -1663,6 +1747,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           parent: 'hotel_de_laffemas',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_refectory',
@@ -1673,6 +1758,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           parent: 'hotel_de_laffemas',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_gallery',
@@ -1702,6 +1788,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_garden',
@@ -1712,6 +1799,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           parent: 'hotel_de_laffemas',
           exits: [],
           entrance: true,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_chapel',
@@ -1722,6 +1810,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           parent: 'hotel_de_laffemas',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_landing',
@@ -1769,6 +1858,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_salon',
@@ -1789,6 +1879,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_dormitory',
@@ -1799,6 +1890,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           parent: 'hotel_de_laffemas',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_library',
@@ -1819,6 +1911,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_office',
@@ -1839,6 +1932,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'laffemas_bedchamber',
@@ -1849,6 +1943,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           parent: 'hotel_de_laffemas',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
       ],
       /** What the guards took, and the key that opens where they keep it. */

@@ -6,9 +6,10 @@
 
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
-import type { Characteristics, ItemHolderReference, DefinitionKind, Labels, ItemModifier, WeaponProfile, LocationExit, LoreFragmentKind, CombatProfile, NpcDisposition, Characteristic, LabelledEntry, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
+import type { Characteristics, ItemHolderReference, DefinitionKind, Labels, ItemModifier, WeaponProfile, LocationExit, PeriodNote, LoreFragmentKind, CombatProfile, NpcDisposition, ScheduleEntry, Characteristic, LabelledEntry, ScenarioEvent, ScenarioFlag, GlossaryEntry, InitialState, PregeneratedCharacter, ScenarioStatus, SkillEntry } from '#services/game/content/types'
 import type { Duration } from '#services/game/game_time'
-import type { TracedLore } from '#services/game/turn_trace'
+import type { TracedEvents, TracedLore } from '#services/game/turn_trace'
+import type { PendingEffect } from '#services/game/pending_effects'
 
 export class AuthAccessTokenSchema extends BaseModel {
   static $columns = ['abilities', 'createdAt', 'expiresAt', 'hash', 'id', 'lastUsedAt', 'name', 'tokenableId', 'type', 'updatedAt'] as const
@@ -66,6 +67,33 @@ export class CharacterSchema extends BaseModel {
   declare skills: Record<string, number>
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+}
+
+export class EventStateSchema extends BaseModel {
+  static $columns = ['armedAt', 'cancelledAt', 'createdAt', 'eventReference', 'firedAt', 'id', 'sessionId', 'told', 'turnNumber', 'updatedAt', 'witnessed'] as const
+  $columns = EventStateSchema.$columns
+  @column()
+  declare armedAt: number | null
+  @column()
+  declare cancelledAt: number | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare eventReference: string
+  @column()
+  declare firedAt: number | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare sessionId: string
+  @column()
+  declare told: boolean
+  @column()
+  declare turnNumber: number | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare witnessed: boolean
 }
 
 export class InventoryItemSchema extends BaseModel {
@@ -135,7 +163,7 @@ export class ItemDefinitionSchema extends BaseModel {
 }
 
 export class LocationDefinitionSchema extends BaseModel {
-  static $columns = ['createdAt', 'description', 'entrance', 'exits', 'id', 'kind', 'labels', 'parent', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
+  static $columns = ['createdAt', 'description', 'entrance', 'exits', 'id', 'kind', 'labels', 'parent', 'periodNotes', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
   $columns = LocationDefinitionSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -153,6 +181,8 @@ export class LocationDefinitionSchema extends BaseModel {
   declare labels: Labels
   @column()
   declare parent: string | null
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare periodNotes: PeriodNote[]
   @column()
   declare reference: string
   @column()
@@ -233,7 +263,7 @@ export class NarrativeSummarySchema extends BaseModel {
 }
 
 export class NpcDefinitionSchema extends BaseModel {
-  static $columns = ['combat', 'createdAt', 'defaultDisposition', 'description', 'generic', 'id', 'initialLocation', 'kind', 'labels', 'reference', 'scenarioId', 'updatedAt', 'worldId'] as const
+  static $columns = ['combat', 'createdAt', 'defaultDisposition', 'description', 'generic', 'id', 'initialLocation', 'kind', 'labels', 'reference', 'scenarioId', 'schedule', 'updatedAt', 'worldId'] as const
   $columns = NpcDefinitionSchema.$columns
   @column()
   declare combat: CombatProfile
@@ -257,6 +287,8 @@ export class NpcDefinitionSchema extends BaseModel {
   declare reference: string
   @column()
   declare scenarioId: string | null
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare schedule: ScheduleEntry[]
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
   @column()
@@ -297,8 +329,10 @@ export class NpcInstanceSchema extends BaseModel {
 }
 
 export class PassageStateSchema extends BaseModel {
-  static $columns = ['createdAt', 'discoveredAt', 'fromReference', 'id', 'sessionId', 'toReference', 'unlockedAt', 'updatedAt'] as const
+  static $columns = ['blockedAt', 'createdAt', 'discoveredAt', 'fromReference', 'id', 'sessionId', 'toReference', 'unlockedAt', 'updatedAt'] as const
   $columns = PassageStateSchema.$columns
+  @column.dateTime()
+  declare blockedAt: DateTime | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column.dateTime()
@@ -313,6 +347,25 @@ export class PassageStateSchema extends BaseModel {
   declare toReference: string
   @column.dateTime()
   declare unlockedAt: DateTime | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class PlaceNoteSchema extends BaseModel {
+  static $columns = ['createdAt', 'eventReference', 'id', 'locationReference', 'note', 'sessionId', 'updatedAt'] as const
+  $columns = PlaceNoteSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare eventReference: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare locationReference: string
+  @column()
+  declare note: string
+  @column()
+  declare sessionId: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
@@ -339,7 +392,7 @@ export class ResolutionRuleSchema extends BaseModel {
 }
 
 export class ScenarioSchema extends BaseModel {
-  static $columns = ['chapters', 'createdAt', 'createdBy', 'glossary', 'id', 'initialState', 'labels', 'pregeneratedCharacter', 'quests', 'reference', 'startDate', 'startTime', 'status', 'synopsis', 'updatedAt', 'worldId'] as const
+  static $columns = ['chapters', 'createdAt', 'createdBy', 'events', 'flags', 'glossary', 'id', 'initialState', 'labels', 'pregeneratedCharacter', 'quests', 'reference', 'startDate', 'startTime', 'status', 'synopsis', 'updatedAt', 'worldId'] as const
   $columns = ScenarioSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare chapters: LabelledEntry[]
@@ -347,6 +400,10 @@ export class ScenarioSchema extends BaseModel {
   declare createdAt: DateTime
   @column()
   declare createdBy: string | null
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare events: ScenarioEvent[]
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare flags: ScenarioFlag[]
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare glossary: GlossaryEntry[]
   @column({ isPrimary: true })
@@ -403,7 +460,7 @@ export class SessionSchema extends BaseModel {
 }
 
 export class TurnLogSchema extends BaseModel {
-  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'combatResult', 'createdAt', 'duration', 'extractionOutput', 'failure', 'firstAid', 'gameTimeAfter', 'gameTimeBefore', 'id', 'idempotencyKey', 'language', 'llmUsage', 'loreSent', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
+  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'combatResult', 'createdAt', 'duration', 'eventsFired', 'extractionOutput', 'failure', 'firstAid', 'gameTimeAfter', 'gameTimeBefore', 'id', 'idempotencyKey', 'language', 'llmUsage', 'loreSent', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
   $columns = TurnLogSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare alerts: Record<string, unknown>[] | null
@@ -417,6 +474,8 @@ export class TurnLogSchema extends BaseModel {
   declare createdAt: DateTime
   @column()
   declare duration: Duration | null
+  @column()
+  declare eventsFired: TracedEvents | null
   @column()
   declare extractionOutput: Record<string, unknown> | null
   @column()
@@ -475,7 +534,7 @@ export class UserSchema extends BaseModel {
 }
 
 export class WorldStateSchema extends BaseModel {
-  static $columns = ['activeQuests', 'createdAt', 'currentLocationId', 'gameTime', 'id', 'knownNpcs', 'narrativeFlags', 'sessionId', 'startDate', 'updatedAt'] as const
+  static $columns = ['activeQuests', 'createdAt', 'currentLocationId', 'gameTime', 'id', 'knownNpcs', 'narrativeFlags', 'pendingPlaceEffects', 'sessionId', 'startDate', 'updatedAt'] as const
   $columns = WorldStateSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare activeQuests: Record<string, unknown>[]
@@ -491,6 +550,8 @@ export class WorldStateSchema extends BaseModel {
   declare knownNpcs: string[]
   @column()
   declare narrativeFlags: Record<string, unknown>
+  @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
+  declare pendingPlaceEffects: PendingEffect[]
   @column()
   declare sessionId: string
   @column({ consume: (value)=>value instanceof Date ? [

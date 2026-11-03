@@ -7,6 +7,8 @@ import { DOWN_AT } from '#services/rules/engine'
 import type { ContentLabels } from './content_labels.js'
 import { placeInitialItems } from './inventory.js'
 import { Opponents } from './opponents.js'
+import { bringPending, pendingNpcs } from './pending_effects.js'
+import { lastEntryAt } from './schedules.js'
 
 import type { NpcDefinition, NpcDisposition, WorldDefinition } from './world.js'
 
@@ -174,28 +176,78 @@ async function createInstance(
       definition.reference,
       client
     )
+    /** What an event left with them before they existed. */
+    await bringPending(world, sessionId, { npc: definition.reference }, client)
   }
 
   return instance
 }
 
-/** The unique people who wait in a place from the start, and have not been met yet. */
+/**
+ * Someone the backend brings in itself — an event, a schedule — rather than
+ * extraction: a new instance where `at` says, numbered like any other. A
+ * unique person who already has one is never given a second.
+ */
+export async function placeNpc(
+  world: WorldDefinition,
+  sessionId: string,
+  definition: NpcDefinition,
+  at: { status: 'present' | 'absent'; place: string | null; descriptor?: string | null },
+  client?: QueryClientContract
+): Promise<NpcInstance> {
+  return createInstance(
+    world,
+    sessionId,
+    definition,
+    { definition: definition.reference, descriptor: at.descriptor ?? null },
+    { status: at.status, place: at.place },
+    client
+  )
+}
+
+export type UniqueNpc = Extract<NpcDefinition, { kind: 'unique' }>
+
+/**
+ * Where a unique person the game has not met is to be found, as the clock
+ * stands: where their schedule last sent them — unless it stopped — or else
+ * the place they wait in from the start. Null: nowhere in particular.
+ */
+export function expectedPlaceOf(
+  npc: UniqueNpc,
+  clock: { gameTime: number; stopped: Set<string> } | null
+): string | null {
+  if (clock !== null && npc.schedule.length > 0 && !clock.stopped.has(npc.reference)) {
+    return lastEntryAt(npc.schedule, clock.gameTime)?.location ?? npc.initialLocation
+  }
+
+  return npc.initialLocation
+}
+
+/**
+ * The unique people the game has not met who are to be found in a place: by
+ * their schedule when `clock` is given and they have one, by the place they
+ * wait in from the start otherwise. Someone an event sent elsewhere before
+ * they were met is wherever it sent them, not here.
+ */
 async function placedUnmet(
   world: WorldDefinition,
   sessionId: string,
   place: string,
-  client?: QueryClientContract
-): Promise<Extract<NpcDefinition, { kind: 'unique' }>[]> {
+  client?: QueryClientContract,
+  clock: { gameTime: number; stopped: Set<string> } | null = null
+): Promise<UniqueNpc[]> {
   const placed = world.npcs.filter(
-    (npc): npc is Extract<NpcDefinition, { kind: 'unique' }> =>
-      npc.kind === 'unique' && npc.initialLocation === place
+    (npc): npc is UniqueNpc =>
+      npc.kind === 'unique' &&
+      (clock === null && npc.schedule.length > 0 ? false : expectedPlaceOf(npc, clock) === place)
   )
   if (placed.length === 0) {
     return []
   }
 
   const met = await metNpcs(sessionId, client)
-  return placed.filter((npc) => !met.has(npc.reference))
+  const sent = await pendingNpcs(sessionId, client)
+  return placed.filter((npc) => !met.has(npc.reference) && !sent.has(npc.reference))
 }
 
 /**
@@ -203,7 +255,8 @@ async function placedUnmet(
  * start, the first time the game visits it — as the items kept there come
  * into being with it. They wait there, absent, until the character arrives:
  * arriving is what makes whoever waits in a place present. A unique character
- * already met elsewhere is never created again.
+ * already met elsewhere is never created again. Someone with a schedule is
+ * placed by it instead (`bringScheduled`).
  */
 export async function placeInitialNpcs(
   world: WorldDefinition,
@@ -264,16 +317,19 @@ export async function metNpcs(
 export function enterableNpcs(
   world: WorldDefinition,
   met: Set<string>,
-  around: Set<string>
+  around: Set<string>,
+  clock: { gameTime: number; stopped: Set<string> } | null = null
 ): string[] {
   return world.npcs
-    .filter(
-      (npc) =>
-        npc.kind === 'archetype' ||
-        npc.initialLocation === null ||
-        met.has(npc.reference) ||
-        around.has(npc.initialLocation)
-    )
+    .filter((npc) => {
+      if (npc.kind === 'archetype' || met.has(npc.reference)) {
+        return true
+      }
+
+      const place = expectedPlaceOf(npc, clock)
+
+      return place === null || around.has(place)
+    })
     .map((npc) => npc.reference)
 }
 
@@ -398,9 +454,10 @@ export async function npcsPlacedIn(
   world: WorldDefinition,
   sessionId: string,
   place: string,
-  client?: QueryClientContract
+  client?: QueryClientContract,
+  clock: { gameTime: number; stopped: Set<string> } | null = null
 ): Promise<(PresentNpc & { definition: string })[]> {
-  const placed = await placedUnmet(world, sessionId, place, client)
+  const placed = await placedUnmet(world, sessionId, place, client, clock)
 
   return placed.map((npc) => ({
     handle: npc.reference,

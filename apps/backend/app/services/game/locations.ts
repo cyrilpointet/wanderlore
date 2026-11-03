@@ -4,6 +4,7 @@ import LocationInstance from '#models/location_instance'
 
 import { placeInitialItems } from './inventory.js'
 import { placeInitialNpcs } from './npcs.js'
+import { bringPending } from './pending_effects.js'
 
 import {
   type WorldDefinition,
@@ -43,7 +44,8 @@ export class UnknownLocationError extends Error {
  * the reference itself for handle, and found again on every later one. A
  * unique place is never duplicated. On the first visit, the unique items kept
  * there from the start come into being with it, and so do the unique people
- * who wait there — absent until the character arrives (`meetThoseWaiting`).
+ * who wait there — absent until the character arrives (`meetThoseWaiting`) —
+ * and whatever an event placed there before anyone had been.
  */
 export async function visitUniqueLocation(
   world: WorldDefinition,
@@ -70,6 +72,7 @@ export async function visitUniqueLocation(
       client
     )
     await placeInitialNpcs(world, sessionId, { id: instance.id, reference }, client)
+    await bringPending(world, sessionId, { location: reference }, client)
   }
 
   return instance

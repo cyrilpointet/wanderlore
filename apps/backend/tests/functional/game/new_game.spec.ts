@@ -192,6 +192,7 @@ test.group('New game | starting', (group) => {
       defaultDisposition: 'neutral',
       combat: { skills: {}, hitPointsMax: 10, weapon: null, damageModifier: null, armor: 0 },
       initialLocation: 'meung_sur_loire',
+      schedule: [],
     })
 
     const response = await client

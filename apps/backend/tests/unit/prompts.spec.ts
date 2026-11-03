@@ -127,6 +127,7 @@ function turnContext(overrides: Partial<TurnContext> = {}): TurnContext {
       start_date: '1625-04-07',
       place_description: 'The courtyard of the hôtel, crowded with musketeers.',
       surroundings: null,
+      place_notes: [],
       exits: [],
       routes: [],
     },
@@ -150,7 +151,15 @@ const SECRET: LoreFragmentContent = {
 }
 
 function arbitrationContext(overrides: Partial<ArbitrationContext> = {}): ArbitrationContext {
-  return { ...turnContext(), action_types: ACTION_TYPES, lore: [RULE, SECRET], ...overrides }
+  return {
+    ...turnContext(),
+    action_types: ACTION_TYPES,
+    lore: [RULE, SECRET],
+    world_events: [],
+    foreseeable_events: [],
+    awaitable_npcs: [],
+    ...overrides,
+  }
 }
 
 function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationRequest {
@@ -161,6 +170,13 @@ function narrationRequest(overrides: Partial<NarrationRequest> = {}): NarrationR
     game_time_after: 24 * 3600 + 3600 + 10 * 60,
     route: null,
     npcs_at_destination: [],
+    npcs_arriving: [],
+    npcs_leaving: [],
+    activities: [],
+    place_notes_after: [],
+    world_events: [],
+    interrupted: null,
+    awaited: null,
     intent_summary: 'Persuading the guard with a letter of recommendation',
     aside: false,
     lore: [AMBIANCE],
@@ -581,6 +597,7 @@ test.group('Extraction | contract', () => {
       narration: 'Tréville reads the letter and waves you upstairs.',
       creatable_items: ['improvised_weapon', 'rope', 'food'],
       enterable_npcs: npcReferences(THREE_MUSKETEERS),
+      flags: [],
       movement: FREE_MOVEMENT,
     })
   }
@@ -823,6 +840,7 @@ test.group('Prompts | the language of the game', () => {
       narration: 'Le garde vous laisse passer.',
       creatable_items: ['rope'],
       enterable_npcs: npcReferences(THREE_MUSKETEERS),
+      flags: [],
       movement: FREE_MOVEMENT,
     })
 
@@ -842,7 +860,13 @@ test.group('Prompts | the time of the game', () => {
     }
     assert.include(ARBITRATION_SYSTEM_PROMPT, 'the backend keeps the clock')
     assert.include(ARBITRATION_SCHEMA.required, 'duration')
-    assert.deepEqual(ARBITRATION_SCHEMA.properties.duration.required, ['label', 'count', 'period'])
+    assert.deepEqual(ARBITRATION_SCHEMA.properties.duration.required, [
+      'label',
+      'count',
+      'period',
+      'event',
+      'npc',
+    ])
   })
 
   test('arbitration is handed the period of the day, never the hour', ({ assert }) => {
@@ -891,6 +915,7 @@ test.group('Prompts | the time of the game', () => {
       narration: 'Night falls on the courtyard.',
       creatable_items: [],
       enterable_npcs: npcReferences(THREE_MUSKETEERS),
+      flags: [],
       movement: FREE_MOVEMENT,
     })
 
@@ -925,7 +950,14 @@ test.group('Prompts | places and their exits', () => {
 
   test('arbitration is handed the place, all its exits and where they lead', ({ assert }) => {
     const payload = payloadOf(
-      buildArbitrationMessage({ ...inTheHall(), action_types: ACTION_TYPES, lore: [] })
+      buildArbitrationMessage({
+        ...inTheHall(),
+        action_types: ACTION_TYPES,
+        lore: [],
+        world_events: [],
+        foreseeable_events: [],
+        awaitable_npcs: [],
+      })
     )
 
     assert.equal(payload.scene_state.description, 'A tall hall with a staircase.')
@@ -936,6 +968,8 @@ test.group('Prompts | places and their exits', () => {
       locked: true,
       requires: 'iron_key',
       one_way: false,
+      blocked: false,
+      blocked_reason: null,
     })
     assert.sameMembers(
       payload.reachable_locations.map(({ reference }: { reference: string }) => reference),
@@ -977,13 +1011,19 @@ test.group('Prompts | places and their exits', () => {
       })
     )
 
-    assert.deepEqual(payload.place, { description: 'A cluttered study.', surroundings: null })
+    assert.deepEqual(payload.place, {
+      description: 'A cluttered study.',
+      surroundings: null,
+      notes: [],
+    })
     /** The hidden one too: a search that succeeds has to find something. */
     assert.deepInclude(payload.exits, {
       to: 'The cellar',
       passage: 'a bookcase that swings open',
       hidden: true,
       locked: false,
+      blocked: false,
+      blocked_reason: null,
     })
     assert.include(NARRATION_SYSTEM_PROMPT, 'never mention it, unless the character searches')
   })
@@ -1027,13 +1067,9 @@ test.group('Prompts | places and their exits', () => {
       })
     )
 
-    assert.deepInclude(payload.exits, { passage: 'a swing door', hidden: false, locked: false })
-    assert.deepInclude(payload.exits, {
-      to: 'The yard',
-      passage: 'the front door',
-      hidden: false,
-      locked: false,
-    })
+    const open = { hidden: false, locked: false, blocked: false, blocked_reason: null }
+    assert.deepInclude(payload.exits, { passage: 'a swing door', ...open })
+    assert.deepInclude(payload.exits, { to: 'The yard', passage: 'the front door', ...open })
     assert.notInclude(JSON.stringify(payload.exits), 'The kitchen')
     assert.include(NARRATION_SYSTEM_PROMPT, 'never name or guess what lies beyond')
   })
@@ -1057,6 +1093,7 @@ test.group('Prompts | places and their exits', () => {
       narration: 'You cross the hall.',
       creatable_items: [],
       enterable_npcs: npcReferences(THREE_MUSKETEERS),
+      flags: [],
       movement: { destinations: ['house_hall', 'house_kitchen'], archetypes: [], parents: [] },
     })
     const payload = payloadOf(message)
@@ -1074,6 +1111,7 @@ test.group('Prompts | places and their exits', () => {
         narration: 'You cross the hall.',
         creatable_items: [],
         enterable_npcs: npcReferences(THREE_MUSKETEERS),
+        flags: [],
         movement: { destinations: ['house_hall', 'house_kitchen'], archetypes: [], parents: [] },
       })
     )
@@ -1220,5 +1258,84 @@ test.group('Prompts | what the character knows of names', () => {
         disposition: 'neutral',
       },
     ])
+  })
+})
+
+test.group('Prompts | deadlines and events', () => {
+  test('arbitration is told what happened in the world, and what may be waited for', ({
+    assert,
+  }) => {
+    const payload = payloadOf(
+      buildArbitrationMessage(
+        arbitrationContext({
+          world_events: ['The Cardinal’s guards searched the inn at dawn.'],
+          foreseeable_events: [{ reference: 'cardinal_arrives', description: 'He comes.' }],
+          awaitable_npcs: [{ reference: 'treville', label: 'M. de Tréville' }],
+        })
+      )
+    )
+
+    assert.deepEqual(payload.world_context.world_events, [
+      'The Cardinal’s guards searched the inn at dawn.',
+    ])
+    assert.deepEqual(payload.foreseeable_events, [
+      { reference: 'cardinal_arrives', description: 'He comes.' },
+    ])
+    assert.deepEqual(payload.awaitable_npcs, [{ reference: 'treville', label: 'M. de Tréville' }])
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'never state it nor hint at it')
+    assert.include(ARBITRATION_SYSTEM_PROMPT, 'until_event')
+  })
+
+  test('the narrator is told what happens before the character’s eyes', ({ assert }) => {
+    const payload = payloadOf(
+      buildNarrationMessage(
+        narrationRequest({
+          world_events: [{ description: 'Bells ring out.', when: 'now' }],
+          interrupted: 'Masked men burst in.',
+          awaited: 'did_not_happen',
+          npcs_leaving: ['royal_guard_1'],
+          place_notes_after: ['The courtyard is empty at night.'],
+        })
+      )
+    )
+
+    assert.deepEqual(payload.world_events, [{ description: 'Bells ring out.', when: 'now' }])
+    assert.equal(payload.interrupted, 'Masked men burst in.')
+    assert.equal(payload.awaited, 'did_not_happen')
+    assert.deepEqual(payload.npcs_leaving, ['royal_guard_1'])
+    assert.deepEqual(payload.place.notes, ['The courtyard is empty at night.'])
+  })
+
+  test('an aside is told nothing of the world moving on', ({ assert }) => {
+    const payload = payloadOf(
+      buildNarrationMessage(
+        narrationRequest({
+          aside: true,
+          world_events: [{ description: 'Bells ring out.', when: 'earlier' }],
+          interrupted: 'Masked men burst in.',
+        })
+      )
+    )
+
+    assert.deepEqual(payload.world_events, [])
+    assert.isNull(payload.interrupted)
+  })
+
+  test('extraction picks flags from the scenario’s list only', ({ assert }) => {
+    const payload = payloadOf(
+      buildExtractionMessage({
+        ...turnContext(),
+        narration: 'Tréville reads the letter.',
+        creatable_items: [],
+        enterable_npcs: [],
+        flags: [{ reference: 'letter_delivered', description: 'The letter reached Tréville.' }],
+        movement: FREE_MOVEMENT,
+      })
+    )
+
+    assert.deepEqual(payload.flags, [
+      { flag: 'letter_delivered', description: 'The letter reached Tréville.' },
+    ])
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'never one that is not listed')
   })
 })

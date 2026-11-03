@@ -359,6 +359,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'sailor',
@@ -375,6 +376,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'professional',
@@ -391,6 +393,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'lawman',
@@ -407,6 +410,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'thug',
@@ -423,6 +427,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'cultist',
@@ -440,6 +445,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         armor: 0,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'deep_one',
@@ -457,6 +463,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         armor: 2,
       },
       initialLocation: null,
+      schedule: [],
     },
     {
       reference: 'deep_one_hybrid',
@@ -474,6 +481,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         armor: 1,
       },
       initialLocation: null,
+      schedule: [],
     },
   ],
   /** Archetypes only: each scenario sets its own named places. */
@@ -486,6 +494,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'road',
@@ -495,6 +504,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'wilderness',
@@ -504,6 +514,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'shore',
@@ -513,6 +524,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'ship',
@@ -522,6 +534,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'house',
@@ -531,6 +544,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'church',
@@ -540,6 +554,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'cave',
@@ -549,6 +564,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
     {
       reference: 'ruin',
@@ -558,6 +574,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       parent: null,
       exits: [],
       entrance: false,
+      periodNotes: [],
     },
   ],
   /**
@@ -853,6 +870,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         /** The landing party are shipmates; the master of the Sovereign is a name still to learn. */
         knownNpcs: ['bosun_mcrae', 'tomas_reyes', 'professor_whitcombe'],
       },
+      flags: [],
+      events: [],
       /** At first light, the boat still in the surf. */
       startTime: '07:00',
       startDate: '1926-03-11',
@@ -879,6 +898,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: null,
+          schedule: [],
         },
         {
           reference: 'bosun_mcrae',
@@ -896,6 +916,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'black_sand_beach',
+          schedule: [],
         },
         {
           reference: 'tomas_reyes',
@@ -913,6 +934,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'black_sand_beach',
+          schedule: [],
         },
         {
           reference: 'professor_whitcombe',
@@ -930,6 +952,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'black_sand_beach',
+          schedule: [],
         },
         {
           reference: 'captain_voss',
@@ -947,6 +970,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'sovereign_wreck',
+          schedule: [],
         },
         {
           reference: 'the_drowned_priest',
@@ -964,6 +988,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'drowned_temple',
+          schedule: [],
         },
       ],
       /** The ocean, the schooner, and the island from its beach to its drowned heart. */
@@ -976,6 +1001,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: null,
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'the_perseverance',
@@ -986,6 +1012,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'south_pacific',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'risen_island',
@@ -996,6 +1023,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'south_pacific',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'black_sand_beach',
@@ -1006,6 +1034,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'risen_island',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'sovereign_wreck',
@@ -1016,6 +1045,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'risen_island',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'cyclopean_ruins',
@@ -1026,6 +1056,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'risen_island',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'drowned_temple',
@@ -1036,6 +1067,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'cyclopean_ruins',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
       ],
       items: [
@@ -1210,6 +1242,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         /** The great-uncle who left the house, and the attorney whose letter announced it. */
         knownNpcs: ['silas_ward', 'ephraim_crane'],
       },
+      flags: [],
+      events: [],
       /** An autumn afternoon: night falls on the house a few turns in. */
       startTime: '16:00',
       startDate: '1927-10-28',
@@ -1236,6 +1270,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: null,
+          schedule: [],
         },
         {
           reference: 'martha_pike',
@@ -1253,6 +1288,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'ward_house_kitchen',
+          schedule: [],
         },
         {
           reference: 'henry_armitage',
@@ -1270,6 +1306,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: null,
+          schedule: [],
         },
         {
           reference: 'nathaniel_crowe',
@@ -1287,6 +1324,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: null,
+          schedule: [],
         },
         {
           reference: 'josiah_ward',
@@ -1304,6 +1342,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: null,
+          schedule: [],
         },
         {
           reference: 'silas_ward',
@@ -1321,6 +1360,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: 'sealed_vault',
+          schedule: [],
         },
         {
           reference: 'imperfect_revenant',
@@ -1338,6 +1378,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: null,
+          schedule: [],
         },
         {
           reference: 'piping_servitor',
@@ -1355,6 +1396,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             armor: 0,
           },
           initialLocation: null,
+          schedule: [],
         },
       ],
       /**
@@ -1377,6 +1419,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: null,
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'arkham',
@@ -1387,6 +1430,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'new_england',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'cold_spring',
@@ -1397,6 +1441,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'new_england',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house',
@@ -1407,6 +1452,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'new_england',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_grounds',
@@ -1445,6 +1491,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             },
           ],
           entrance: true,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_carriage_house',
@@ -1455,6 +1502,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'ward_house',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_family_cemetery',
@@ -1465,6 +1513,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'ward_house',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_entrance_hall',
@@ -1522,6 +1571,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_parlour',
@@ -1532,6 +1582,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'ward_house',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_dining_room',
@@ -1552,6 +1603,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_library',
@@ -1572,6 +1624,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_study',
@@ -1582,6 +1635,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'ward_house',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_kitchen',
@@ -1620,6 +1674,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             },
           ],
           entrance: true,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_upstairs_corridor',
@@ -1658,6 +1713,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_silas_bedroom',
@@ -1668,6 +1724,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'ward_house',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_guest_bedroom',
@@ -1678,6 +1735,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'ward_house',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_attic',
@@ -1688,6 +1746,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'ward_house',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_house_cellar',
@@ -1708,6 +1767,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_laboratory',
@@ -1737,6 +1797,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
             },
           ],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'ward_laboratory_pits',
@@ -1747,6 +1808,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'ward_laboratory',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
         {
           reference: 'sealed_vault',
@@ -1757,6 +1819,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           parent: 'ward_laboratory',
           exits: [],
           entrance: false,
+          periodNotes: [],
         },
       ],
       /**

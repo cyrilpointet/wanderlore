@@ -80,12 +80,40 @@ export type TracedFirstAid = {
   saved: boolean
 }
 
+/** An event of the state as the end of a turn settled it. */
+export type SettledStateEvent = {
+  event: string
+  outcome: 'fired' | 'armed' | 'cancelled'
+  witnessed: boolean
+}
+
+/**
+ * What the scenario's events did in a turn (roadmap, Phase 11): those the
+ * clock brought, those the state set off once the turn applied, what cut the
+ * turn short or ended a wait, and what the chain left for the next turn.
+ */
+export type TracedEvents = {
+  /** The timed events the turn's clock brought, in the order they fell. */
+  timed: { event: string; at: number; outcome: 'fired' | 'cancelled'; witnessed: boolean }[]
+  /** The events the state set off, armed or cancelled once the turn applied. */
+  state: SettledStateEvent[]
+  /** Events of an earlier turn this narration told. */
+  told: string[]
+  /** What cut the action short: an event, or someone's arrival. */
+  interrupted: { event: string; at: number } | { npc: string; at: number } | null
+  /** What the character waited for, and whether it came. */
+  awaited: { event: string; arrived: boolean } | { npc: string; arrived: boolean } | null
+  /** Still due when the chain reached its depth: taken up at the end of the next turn. */
+  deferred: string[]
+}
+
 export type TurnTrace = {
   arbitration: ArbitrationOutput | null
   roll: TracedRoll | null
   combat: TracedRound | null
   firstAid: TracedFirstAid | null
   time: TracedTime | null
+  events: TracedEvents | null
   narration: string | null
   extraction: Record<string, unknown> | null
   lore: TracedLore
@@ -116,6 +144,7 @@ export function emptyTrace(): TurnTrace {
     combat: null,
     firstAid: null,
     time: null,
+    events: null,
     narration: null,
     extraction: null,
     lore: { arbitration: null, narration: null },
@@ -143,6 +172,7 @@ export function traceColumns(trace: TurnTrace) {
     gameTimeBefore: trace.time?.before ?? null,
     gameTimeAfter: trace.time?.after ?? null,
     duration: trace.time?.duration ?? null,
+    eventsFired: trace.events,
     narratedText: trace.narration,
     extractionOutput: trace.extraction,
     loreSent: trace.lore.arbitration === null ? null : trace.lore,

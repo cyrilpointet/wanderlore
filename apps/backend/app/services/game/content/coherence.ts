@@ -1,6 +1,6 @@
 import { isDiceExpression } from '#services/rules/dice_expression'
 import { FIXED_DURATIONS } from '#services/game/game_time'
-import { networkContainers, networksOf } from '#services/game/passages'
+import { networkContainers, networksOf, passageBetween } from '#services/game/passages'
 
 import {
   COMBAT_ACTION_TYPES,
@@ -11,9 +11,14 @@ import {
 import { overlay, type WorldLevelContent } from './resolve.js'
 import {
   CHARACTERISTICS,
+  type EventCondition,
+  type EventEffect,
+  type ItemDefinitionContent,
   type LabelledEntry,
   type LocationDefinitionContent,
+  type NpcDefinitionContent,
   type ScenarioContent,
+  type ScenarioEvent,
 } from './types.js'
 
 /**
@@ -59,6 +64,12 @@ export type CoherenceIssueCode =
   | 'entrance_without_exits'
   | 'unreachable_network'
   | 'start_contains_network'
+  | 'unknown_flag'
+  | 'not_unique'
+  | 'unknown_passage'
+  | 'schedule_overlap'
+  | 'event_without_trigger'
+  | 'event_cycle'
 
 /**
  * One thing that does not hold. `location` is the path of the faulty field
@@ -212,6 +223,7 @@ export function checkScenario(
     if (npc.initialLocation !== null && !uniqueLocations.has(npc.initialLocation)) {
       report('unknown_location', `npcs.${npc.reference}.initialLocation`, npc.initialLocation)
     }
+    checkSchedule(npc, uniqueLocations, report)
   }
 
   for (const location of locations) {
@@ -266,6 +278,7 @@ export function checkScenario(
     }
   }
 
+  checkEvents(scenario, { npcs, locations, items }, report)
   checkCharacter(scenario, { skills, resources, itemsByReference }, report)
   checkInitialState(scenario, { uniqueLocations, uniqueNpcs }, report)
   checkNetworks(locations, scenario, report)
@@ -452,6 +465,236 @@ function checkNetworks(
   if (start !== undefined && networkContainers(locations).has(start)) {
     report('start_contains_network', 'initialState.location', start)
   }
+}
+
+/** A schedule sends a person to named places, and each period of the day to one of them at most. */
+function checkSchedule(npc: NpcDefinitionContent, uniqueLocations: Set<string>, report: Report) {
+  const taken = new Set<string>()
+
+  ;(npc.schedule ?? []).forEach((entry, index) => {
+    const path = `npcs.${npc.reference}.schedule.${index}`
+
+    if (!uniqueLocations.has(entry.location)) {
+      report('unknown_location', `${path}.location`, entry.location)
+    }
+    for (const period of entry.periods) {
+      if (taken.has(period)) report('schedule_overlap', `${path}.periods`, period)
+      taken.add(period)
+    }
+  })
+}
+
+type EventCatalogues = {
+  npcs: NpcDefinitionContent[]
+  locations: LocationDefinitionContent[]
+  items: ItemDefinitionContent[]
+}
+
+/**
+ * Every event names what exists: unique people and items — an archetype has
+ * no one instance to look at or move — named places, declared flags, the
+ * passages of the world. Each has something to set it off, and no chain of
+ * events sets itself off again.
+ */
+function checkEvents(scenario: ScenarioContent, known: EventCatalogues, report: Report) {
+  const flags = referencesOf(scenario.flags ?? [])
+  const npcs = new Map(known.npcs.map((npc) => [npc.reference, npc]))
+  const items = new Map(known.items.map((item) => [item.reference, item]))
+  const places = new Set(
+    known.locations.filter(({ kind }) => kind === 'unique').map(({ reference }) => reference)
+  )
+
+  const person = (path: string, reference: string, archetypeToo = false) => {
+    const npc = npcs.get(reference)
+    if (npc === undefined) report('unknown_npc', path, reference)
+    else if (npc.kind !== 'unique' && !archetypeToo) report('not_unique', path, reference)
+  }
+  const item = (path: string, reference: string, archetypeToo = false) => {
+    const definition = items.get(reference)
+    if (definition === undefined) report('unknown_item', path, reference)
+    else if (definition.kind !== 'unique' && !archetypeToo) report('not_unique', path, reference)
+  }
+  const place = (path: string, reference: string) => {
+    if (!places.has(reference)) report('unknown_location', path, reference)
+  }
+  const holder = (path: string, to: { holder: string; reference?: string }) => {
+    if (to.holder === 'npc') person(`${path}.reference`, to.reference!)
+    if (to.holder === 'location') place(`${path}.reference`, to.reference!)
+  }
+  const flag = (path: string, reference: string) => {
+    if (!flags.has(reference)) report('unknown_flag', path, reference)
+  }
+
+  const checkCondition = (path: string, condition: EventCondition) => {
+    switch (condition.type) {
+      case 'flag':
+        return flag(`${path}.flag`, condition.flag)
+      case 'item_held_by':
+        item(`${path}.item`, condition.item)
+        return holder(`${path}.holder`, condition.holder)
+      case 'item_gone':
+        return item(`${path}.item`, condition.item)
+      case 'npc_dead':
+      case 'npc_disposition':
+        return person(`${path}.npc`, condition.npc)
+      case 'npc_at':
+        person(`${path}.npc`, condition.npc)
+        return place(`${path}.location`, condition.location)
+      case 'location_visited':
+        return place(`${path}.location`, condition.location)
+    }
+  }
+
+  const checkEffect = (path: string, effect: EventEffect) => {
+    switch (effect.type) {
+      case 'npc_moved':
+        person(`${path}.npc`, effect.npc)
+        return place(`${path}.location`, effect.location)
+      case 'npc_entered':
+        person(`${path}.npc`, effect.npc, true)
+        return place(`${path}.location`, effect.location)
+      case 'npc_left':
+      case 'npc_disposition':
+      case 'schedule_stopped':
+        return person(`${path}.npc`, effect.npc)
+      case 'passage_blocked':
+      case 'passage_cleared':
+      case 'passage_discovered':
+      case 'passage_unlocked':
+        place(`${path}.from`, effect.from)
+        place(`${path}.to`, effect.to)
+        if (passageBetween(known.locations, effect.from, effect.to) === null) {
+          report('unknown_passage', path, `${effect.from}|${effect.to}`)
+        }
+        return
+      case 'place_note_set':
+      case 'place_note_cleared':
+        return place(`${path}.location`, effect.location)
+      case 'item_placed':
+        item(`${path}.item`, effect.item, true)
+        return holder(`${path}.holder`, effect.holder)
+      case 'item_transferred':
+        item(`${path}.item`, effect.item)
+        return holder(`${path}.holder`, effect.holder)
+      case 'item_gone':
+        return item(`${path}.item`, effect.item)
+      case 'flag_set':
+        return flag(`${path}.flag`, effect.flag)
+    }
+  }
+
+  for (const event of scenario.events ?? []) {
+    const path = `events.${event.reference}`
+
+    if (event.when.at === null && event.when.conditions.length === 0) {
+      report('event_without_trigger', `${path}.when`, event.reference)
+    }
+    if (event.place !== null) place(`${path}.place`, event.place)
+
+    event.when.conditions.forEach((condition, index) =>
+      checkCondition(`${path}.when.conditions.${index}`, condition)
+    )
+    event.unless.forEach((condition, index) => checkCondition(`${path}.unless.${index}`, condition))
+    ;(event.foreseeable ?? []).forEach((condition, index) =>
+      checkCondition(`${path}.foreseeable.${index}`, condition)
+    )
+    event.effects.forEach((effect, index) => checkEffect(`${path}.effects.${index}`, effect))
+  }
+
+  for (const reference of eventCycle(scenario.events ?? [])) {
+    report('event_cycle', `events.${reference}`, reference)
+  }
+}
+
+/**
+ * The events of a chain that leads back to itself: an effect of one makes a
+ * condition of the next hold, round to the first. Each event falls once, so
+ * the game would never loop — but the author meant something else.
+ */
+export function eventCycle(events: ScenarioEvent[]): string[] {
+  const keysOf = (effect: EventEffect): string[] => {
+    switch (effect.type) {
+      case 'flag_set':
+        return [`flag:${effect.flag}`]
+      case 'npc_moved':
+      case 'npc_entered':
+        return [`npc_at:${effect.npc}:${effect.location}`]
+      case 'npc_disposition':
+        return [`npc_disposition:${effect.npc}:${effect.disposition}`]
+      case 'item_placed':
+      case 'item_transferred':
+        return [`item_held_by:${effect.item}:${holderKey(effect.holder)}`]
+      case 'item_gone':
+        return [`item_gone:${effect.item}`]
+      default:
+        return []
+    }
+  }
+  const keyOf = (condition: EventCondition): string | null => {
+    switch (condition.type) {
+      case 'flag':
+        return `flag:${condition.flag}`
+      case 'npc_at':
+        return `npc_at:${condition.npc}:${condition.location}`
+      case 'npc_disposition':
+        return `npc_disposition:${condition.npc}:${condition.disposition}`
+      case 'item_held_by':
+        return `item_held_by:${condition.item}:${holderKey(condition.holder)}`
+      case 'item_gone':
+        return `item_gone:${condition.item}`
+      default:
+        return null
+    }
+  }
+
+  /** Each event leads to those whose conditions one of its effects makes hold. */
+  const next = new Map(
+    events.map((event) => {
+      const made = new Set(event.effects.flatMap(keysOf))
+
+      return [
+        event.reference,
+        events
+          .filter((other) =>
+            other.when.conditions.some((condition) => {
+              const key = keyOf(condition)
+              return key !== null && made.has(key)
+            })
+          )
+          .map(({ reference }) => reference),
+      ]
+    })
+  )
+
+  const state = new Map<string, 'open' | 'done'>()
+  const stack: string[] = []
+
+  const visit = (reference: string): string[] | null => {
+    if (state.get(reference) === 'done') return null
+    if (state.get(reference) === 'open') return stack.slice(stack.indexOf(reference))
+
+    state.set(reference, 'open')
+    stack.push(reference)
+    for (const following of next.get(reference) ?? []) {
+      const cycle = visit(following)
+      if (cycle !== null) return cycle
+    }
+    stack.pop()
+    state.set(reference, 'done')
+
+    return null
+  }
+
+  for (const { reference } of events) {
+    const cycle = visit(reference)
+    if (cycle !== null) return cycle
+  }
+
+  return []
+}
+
+function holderKey(holder: { holder: string; reference?: string }): string {
+  return holder.holder === 'character' ? 'character' : `${holder.holder}:${holder.reference}`
 }
 
 /** A human's characteristics: 3 to 21, INT and SIZ at least 8 (rules, section 3). */

@@ -109,6 +109,12 @@ export type ValidationMeta = {
   hasLocation: boolean
   /** Bounds the damage or healing a single turn may claim. */
   hitPointsMax: number
+  /** Closed list: the scenario's flags, the only ones extraction may set. */
+  flags: string[]
+  /** Closed list: the events the character knows are coming, which they may wait for. */
+  foreseeableEvents: string[]
+  /** Closed list: the unique people the character knows whose schedule may bring them here. */
+  awaitableNpcs: string[]
 }
 
 export type ItemKind = {
@@ -118,12 +124,7 @@ export type ItemKind = {
   equippable: boolean
 }
 
-/**
- * Stable English reference, never a display name.
- *
- * A flag that arrives as "Queen's favour earned" would never match the one
- * written last turn, and the state would silently grow duplicates.
- */
+/** Stable English reference, never a display name. */
 const REFERENCE = /^[a-z][a-z0-9_]{0,63}$/
 
 const MAX_FLAGS_PER_TURN = 5
@@ -197,6 +198,9 @@ const arbitrationValidator = vine.withMetaData<ValidationMeta>().create({
     label: vine.enum(DURATION_LABELS),
     count: vine.number().withoutDecimals().min(1).max(MAX_DAYS).nullable(),
     period: vine.enum(PERIODS).nullable(),
+    /** Checked against what the character may wait for, below. Optional on the wire: no wait. */
+    event: vine.string().trim().nullable().optional(),
+    npc: vine.string().trim().nullable().optional(),
   }),
   /**
    * Flat on the wire, so any provider can describe it: no opponent is no
@@ -272,7 +276,14 @@ const extractionValidator = vine.withMetaData<ValidationMeta>().create({
   npc_relations: vine
     .array(vine.object({ handle: presentHandle(), disposition: vine.enum(NPC_DISPOSITIONS) }))
     .maxLength(MAX_NPC_CHANGES_PER_TURN),
-  scenario_flags: vine.array(vine.string().regex(REFERENCE)).maxLength(MAX_FLAGS_PER_TURN),
+  /**
+   * From the scenario's closed list: a flag that arrives as "Queen's favour
+   * earned", or as one nothing declared, would never set off an event.
+   */
+  scenario_flags: vine
+    .array(vine.enum((field) => limitsOf(field).flags))
+    .distinct()
+    .maxLength(MAX_FLAGS_PER_TURN),
   hit_points_delta: vine.number().withoutDecimals(),
   /** Only from the closed list: an item the model invented would have no effect and no label. */
   items_created: vine
@@ -324,7 +335,7 @@ export async function validateArbitration(
   const reasons = [
     ...coherenceReasons(output),
     ...modifierReasons(modifiers, meta),
-    ...durationReasons(output.duration),
+    ...durationReasons(output.duration, meta),
     ...destination.reasons,
     ...combat.reasons,
   ]
@@ -514,20 +525,49 @@ type FlatDuration = {
   label: DurationLabel
   count: number | null
   period: Period | null
+  event?: string | null
+  npc?: string | null
 }
 
 /**
- * Days need their count, a wait needs its period. A count or a period sent
- * with a label that has none is dropped rather than refused: it changes
- * nothing, and refusing it would only cost a second call.
+ * Days need their count, a wait needs its period — or what it waits for, from
+ * the closed lists of what the character knows is coming. A field sent with a
+ * label that has none is dropped rather than refused: it changes nothing, and
+ * refusing it would only cost a second call.
  */
-function durationReasons(duration: FlatDuration): RejectionReason[] {
+function durationReasons(duration: FlatDuration, meta: ValidationMeta): RejectionReason[] {
   if (duration.label === 'days' && duration.count === null) {
     return [reason('duration.count', 'required', `Days need their count, from 1 to ${MAX_DAYS}.`)]
   }
 
   if (duration.label === 'until' && duration.period === null) {
     return [reason('duration.period', 'required', 'A wait needs the period of the day it ends at.')]
+  }
+
+  if (duration.label === 'until_event' && !meta.foreseeableEvents.includes(duration.event ?? '')) {
+    return [
+      {
+        ...reason(
+          'duration.event',
+          'enum',
+          'A wait for an event names one the character knows is coming.'
+        ),
+        allowed: meta.foreseeableEvents,
+      },
+    ]
+  }
+
+  if (duration.label === 'until_npc' && !meta.awaitableNpcs.includes(duration.npc ?? '')) {
+    return [
+      {
+        ...reason(
+          'duration.npc',
+          'enum',
+          'A wait for someone names a person the character knows, whose comings and goings bring them here.'
+        ),
+        allowed: meta.awaitableNpcs,
+      },
+    ]
   }
 
   return []
@@ -539,6 +579,10 @@ function toDuration(duration: FlatDuration): Duration {
       return { label: 'days', count: duration.count! }
     case 'until':
       return { label: 'until', period: duration.period! }
+    case 'until_event':
+      return { label: 'until_event', event: duration.event! }
+    case 'until_npc':
+      return { label: 'until_npc', npc: duration.npc! }
     default:
       return { label: duration.label }
   }

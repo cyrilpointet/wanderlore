@@ -33,7 +33,7 @@ Passages:
 - An exit merely seen, tried or talked about is neither. A place reached through one only once it is found or opened.
 
 People:
-- npcs_entered lists the people who come into the scene and can be interacted with: each with a definition from npc_definitions, a short English descriptor telling them apart ("a baker's apprentice with flour on his sleeves"), and their proper name if the narration gives one, else null. Someone merely mentioned does not enter. Use a generic definition for anyone the list does not name.
+- npcs_entered lists the people who come into the scene and can be interacted with — never someone already in npcs_present: each with a definition from npc_definitions, a short English descriptor telling them apart ("a baker's apprentice with flour on his sleeves"), and their proper name if the narration gives one, else null. Someone merely mentioned does not enter. Use a generic definition for anyone the list does not name.
 - A descriptor describes how someone looks or what they do; it is never their name. A name goes in name.
 - npcs_left, npcs_following, npc_names and npc_relations designate people already present, by their handle from npcs_present only.
 - npcs_following lists those who come along when the character changes place. Leave it empty when there is no movement.
@@ -50,7 +50,7 @@ Items:
 - An item merely described, seen or mentioned does not change hands and does not come into being.
 
 Other changes:
-- scenario_flags are short English references in snake_case for notable story events (for example letter_delivered). Never a sentence, never a display name.
+- scenario_flags lists the flags of flags the narration makes true, each by its reference, as its description tells: never one that is not listed. Leave it empty when none is.
 - hit_points_delta is the harm the narration describes the character taking from something other than a blow in a fight — a fall, a fire, a poison: negative, or 0 when nothing of the kind happened. Never positive: healing is the game's own. Blows dealt or taken in a fight are the game's too, already counted: they are 0 here.
 - Such a harm the narration states is never 0: -1 or -2 when it is light, -3 to -5 when it is serious, more only when the narration makes it plainly worse. A lost weapon or a fall without injury is no hit point change.
 
@@ -221,6 +221,8 @@ export function buildExtractionMessage(request: ExtractionRequest): string {
      * copy by handle, a stack by definition. No modifier, ever.
      */
     items_in_scene: itemsForExtraction(request),
+    /** The only flags it may set: the scenario's, not set yet. */
+    flags: request.flags.map(({ reference, description }) => ({ flag: reference, description })),
     /** The only definitions an item may come into being from. */
     item_definitions: request.world.items
       .filter((item) => request.creatable_items.includes(item.reference))

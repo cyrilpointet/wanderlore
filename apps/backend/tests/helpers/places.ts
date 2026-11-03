@@ -35,6 +35,7 @@ function place(
     parent: 'house',
     exits: [],
     entrance: false,
+    periodNotes: [],
     ...rest,
   }
 }
@@ -129,6 +130,7 @@ export const STEWARD: NpcDefinitionContent = {
     armor: 0,
   },
   initialLocation: 'house_attic',
+  schedule: [],
 }
 
 const { scenarios, ...MUSKETEERS_WORLD } = THREE_MUSKETEERS_CONTENT

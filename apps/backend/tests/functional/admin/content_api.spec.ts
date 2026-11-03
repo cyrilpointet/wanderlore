@@ -68,6 +68,7 @@ const GUARD = {
     armor: 0,
   },
   initialLocation: null,
+  schedule: [],
 }
 
 /** A game in the seeded world whose character has a score in `persuasion`. */
@@ -778,6 +779,7 @@ test.group('Content API | kinds', (group) => {
       ...GUARD,
       reference: 'watchman',
       initialLocation: 'paris',
+      schedule: [],
     })
 
     for (const [response, field] of [
@@ -870,6 +872,7 @@ test.group('Content API | time and places', (group) => {
       kind: 'unique',
       parent: null,
       entrance: true,
+      periodNotes: [],
       exits: [
         {
           to: 'baker_street_sitting_room',
@@ -922,10 +925,173 @@ test.group('Content API | time and places', (group) => {
     const entrance = await as(client, user).post(`/worlds/${worldId}/locations`, {
       ...archetype,
       entrance: true,
+      periodNotes: [],
     })
 
     entrance.assertStatus(422)
     assert.equal(bodyOf(entrance).error.code, 'kind_mismatch')
     assert.equal(bodyOf(entrance).error.details.field, 'entrance')
+  })
+})
+
+test.group('Content API | deadlines and events', (group) => {
+  useTransaction(group)
+
+  const WATSON_ARRIVES = {
+    reference: 'watson_arrives',
+    when: { at: { day: 1, period: 'evening', time: null }, conditions: [], delay: null },
+    unless: [{ type: 'flag', flag: 'telegram_lost' }],
+    place: null,
+    description: 'Watson comes back from his rounds.',
+    effects: [{ type: 'flag_set', flag: 'watson_home' }],
+    interrupts: false,
+    foreseeable: [],
+  }
+
+  async function scenarioOf(client: ApiClient, user: User) {
+    const worldId = await createWorld()
+    const { data: scenario } = bodyOf(
+      await as(client, user).post(`/worlds/${worldId}/scenarios`, {
+        reference: 'the_speckled_band',
+        labels: { en: 'The Speckled Band' },
+      })
+    )
+
+    return { worldId, scenario }
+  }
+
+  test('a scenario keeps its flags and its events', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const { scenario } = await scenarioOf(client, user)
+    const flags = [
+      { reference: 'telegram_lost', description: 'The telegram never reached Baker Street.' },
+      { reference: 'watson_home', description: 'Watson is back at Baker Street.' },
+    ]
+
+    const response = await as(client, user).patch(`/scenarios/${scenario.id}`, {
+      flags,
+      events: [WATSON_ARRIVES],
+    })
+
+    response.assertStatus(200)
+    assert.deepEqual(bodyOf(response).data.flags, flags)
+    assert.deepEqual(bodyOf(response).data.events, [WATSON_ARRIVES])
+  })
+
+  test('a scenario imported whole brings its flags, events and schedules', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/scenarios`, {
+      reference: 'the_speckled_band',
+      labels: { en: 'The Speckled Band' },
+      flags: [{ reference: 'watson_home', description: 'Watson is back at Baker Street.' }],
+      events: [{ ...WATSON_ARRIVES, unless: [] }],
+      npcs: [
+        {
+          ...GUARD,
+          reference: 'mrs_hudson',
+          kind: 'unique',
+          schedule: [
+            {
+              periods: ['morning'],
+              location: 'kitchen',
+              activity: 'makes the breakfast',
+              leavesScene: false,
+              interrupts: false,
+            },
+          ],
+        },
+      ],
+    })
+
+    response.assertStatus(201)
+    const scenario = bodyOf(response).data
+    assert.lengthOf(scenario.events, 1)
+    const npcs = bodyOf(await as(client, user).get(`/scenarios/${scenario.id}/npcs`)).data
+    assert.equal(npcs[0].schedule[0].activity, 'makes the breakfast')
+  })
+
+  test('checks an event written by hand, field by field', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const { scenario } = await scenarioOf(client, user)
+
+    const response = await as(client, user).patch(`/scenarios/${scenario.id}`, {
+      events: [
+        {
+          ...WATSON_ARRIVES,
+          when: { at: { day: 0, period: 'teatime', time: null }, conditions: [], delay: null },
+          effects: [{ type: 'summon_lestrade' }],
+        },
+      ],
+    })
+
+    response.assertStatus(422)
+    const fields = bodyOf(response).errors.map((error: { field: string }) => error.field)
+    assert.include(fields, 'events.0.when.at.day')
+    assert.include(fields, 'events.0.when.at.period')
+    assert.include(fields, 'events.0.effects.0')
+  })
+
+  test('a schedule is for a named person only', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/npcs`, {
+      ...GUARD,
+      schedule: [
+        {
+          periods: ['night'],
+          location: 'baker_street',
+          activity: null,
+          leavesScene: false,
+          interrupts: false,
+        },
+      ],
+    })
+
+    response.assertStatus(422)
+    assert.equal(bodyOf(response).error.code, 'kind_mismatch')
+    assert.equal(bodyOf(response).error.details.field, 'schedule')
+  })
+
+  test('a place keeps its notes for the time of day, an exit when it is shut', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+
+    const response = await as(client, user).post(`/worlds/${worldId}/locations`, {
+      reference: 'cave_mouth',
+      labels: { en: 'The cave mouth' },
+      description: 'A dark mouth in the cliff.',
+      kind: 'unique',
+      parent: null,
+      exits: [
+        {
+          to: 'beach',
+          passage: 'a shingle slope',
+          backPassage: null,
+          hidden: false,
+          requires: null,
+          oneWay: false,
+          duration: null,
+          blockedDuring: ['dawn', 'morning'],
+          blockedReason: 'the tide fills the slope',
+        },
+      ],
+      entrance: false,
+      periodNotes: [{ periods: ['night'], note: 'The wind howls in the cave at night.' }],
+    })
+
+    response.assertStatus(201)
+    assert.deepEqual(bodyOf(response).data.periodNotes, [
+      { periods: ['night'], note: 'The wind howls in the cave at night.' },
+    ])
+    assert.deepEqual(bodyOf(response).data.exits[0].blockedDuring, ['dawn', 'morning'])
   })
 })

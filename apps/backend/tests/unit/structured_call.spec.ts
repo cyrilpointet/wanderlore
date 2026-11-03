@@ -32,6 +32,9 @@ const META = {
   creatableItems: [],
   itemKinds: [],
   hasLocation: true,
+  flags: [],
+  foreseeableEvents: [],
+  awaitableNpcs: [],
   hitPointsMax: 10,
 }
 

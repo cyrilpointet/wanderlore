@@ -58,6 +58,10 @@ const META: ValidationMeta = {
     { reference: 'lead_shot', unique: false, stackable: true, equippable: false },
   ],
   hasLocation: true,
+  /** The scenario's flags: the only ones extraction may set. */
+  flags: ['duel_survived', 'letter_delivered'],
+  foreseeableEvents: [],
+  awaitableNpcs: [],
   hitPointsMax: 10,
 }
 
@@ -1168,5 +1172,55 @@ test.group('Turn validator | combat', () => {
     const error = await reject(() => validateExtraction(extraction({ hit_points_delta: 3 }), META))
 
     assert.include(fields(error), 'hit_points_delta')
+  })
+})
+
+test.group('Turn validator | flags and waits', () => {
+  test('a flag the scenario does not declare is refused', async ({ assert }) => {
+    const error = await reject(() =>
+      validateExtraction(extraction({ scenario_flags: ['dragon_slain'] }), META)
+    )
+
+    assert.include(fields(error), 'scenario_flags.0')
+  })
+
+  test('a wait for an event the character knows is coming', async ({ assert }) => {
+    const meta = { ...META, foreseeableEvents: ['cardinal_arrives'] }
+    const wait = (event: string | null) =>
+      settled({ duration: { label: 'until_event', count: null, period: null, event, npc: null } })
+
+    const output = await validateArbitration(wait('cardinal_arrives'), meta)
+    assert.deepEqual(output.duration, { label: 'until_event', event: 'cardinal_arrives' })
+
+    const error = await reject(() => validateArbitration(wait('goblins_attack'), meta))
+    assert.include(fields(error), 'duration.event')
+    assert.deepEqual(error.reasons[0].allowed, ['cardinal_arrives'])
+  })
+
+  test('a wait for someone the character knows, whose schedule may bring them', async ({
+    assert,
+  }) => {
+    const meta = { ...META, awaitableNpcs: ['treville'] }
+    const wait = (person: string | null) =>
+      settled({
+        duration: { label: 'until_npc', count: null, period: null, event: null, npc: person },
+      })
+
+    const output = await validateArbitration(wait('treville'), meta)
+    assert.deepEqual(output.duration, { label: 'until_npc', npc: 'treville' })
+
+    const error = await reject(() => validateArbitration(wait(null), meta))
+    assert.include(fields(error), 'duration.npc')
+  })
+
+  test('what a wait names goes with its label only', async ({ assert }) => {
+    const output = await validateArbitration(
+      settled({
+        duration: { label: 'hour', count: null, period: null, event: 'stray', npc: 'stray' },
+      }),
+      META
+    )
+
+    assert.deepEqual(output.duration, { label: 'hour' })
   })
 })

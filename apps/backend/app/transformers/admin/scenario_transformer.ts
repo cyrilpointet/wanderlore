@@ -19,6 +19,8 @@ export default class ScenarioTransformer extends BaseTransformer<Scenario> {
       'startTime',
       'startDate',
       'glossary',
+      'flags',
+      'events',
       'updatedAt',
     ])
   }

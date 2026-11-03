@@ -19,7 +19,16 @@ export const DAY = 24 * HOUR
  * The scale of durations arbitration picks from (roadmap, Phase 7). The model
  * only ever reads what each one covers; the values below are the backend's.
  */
-export const DURATION_LABELS = ['moment', 'minutes', 'hour', 'hours', 'days', 'until'] as const
+export const DURATION_LABELS = [
+  'moment',
+  'minutes',
+  'hour',
+  'hours',
+  'days',
+  'until',
+  'until_event',
+  'until_npc',
+] as const
 
 export type DurationLabel = (typeof DURATION_LABELS)[number]
 
@@ -64,9 +73,24 @@ const PERIOD_STARTS: Record<Period, number> = {
   night: 22,
 }
 
-/** What a turn lasts, as validated: a label, with how many days or until which period. */
-export type Duration =
+/** A span the clock alone can work out: a label, with how many days or until which period. */
+export type ClockDuration =
   { label: FixedDuration } | { label: 'days'; count: number } | { label: 'until'; period: Period }
+
+/**
+ * What a turn lasts, as validated: a span of the clock — or a wait for
+ * something the content holds (roadmap, Phase 11), an event coming or a
+ * person whose schedule brings them here, which the turn works out.
+ */
+export type Duration =
+  ClockDuration | { label: 'until_event'; event: string } | { label: 'until_npc'; npc: string }
+
+/** The labels that wait for something of the content rather than for the clock. */
+export function isAwaiting(
+  duration: Duration
+): duration is Extract<Duration, { label: 'until_event' | 'until_npc' }> {
+  return duration.label === 'until_event' || duration.label === 'until_npc'
+}
 
 /** The days of the week, Sunday first as `Date.getUTCDay()` counts them. */
 const WEEKDAYS = [
@@ -85,7 +109,7 @@ export type Weekday = (typeof WEEKDAYS)[number]
  * How long a duration lasts from `gameTime`, in seconds. Only `until`
  * depends on when it starts.
  */
-export function secondsOf(duration: Duration, gameTime: number): number {
+export function secondsOf(duration: ClockDuration, gameTime: number): number {
   switch (duration.label) {
     case 'days':
       return duration.count * DAY
@@ -105,6 +129,31 @@ export function secondsUntil(period: Period, gameTime: number): number {
   const intoDay = secondsIntoDay(gameTime)
 
   return start > intoDay ? start - intoDay : DAY - intoDay + start
+}
+
+/** When a period begins, in seconds since midnight. */
+export function periodStartOf(period: Period): number {
+  return PERIOD_STARTS[period] * HOUR
+}
+
+/**
+ * The times a period begins within `(from, to]`, in order: where the clock
+ * crosses from one period into the next.
+ */
+export function periodStartsWithin(from: number, to: number): { at: number; period: Period }[] {
+  const starts: { at: number; period: Period }[] = []
+
+  for (let day = Math.floor(from / DAY); day * DAY <= to; day++) {
+    for (const period of PERIODS) {
+      const at = day * DAY + periodStartOf(period)
+
+      if (at > from && at <= to) {
+        starts.push({ at, period })
+      }
+    }
+  }
+
+  return starts.sort((a, b) => a.at - b.at)
 }
 
 /** The period the clock stands in. */

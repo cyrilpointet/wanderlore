@@ -107,7 +107,7 @@ function completedTurn(sessionId: string, turnNumber: number) {
     narratedText: `Narration ${turnNumber}`,
     appliedEffects: {
       movement: 'hotel_de_treville',
-      scenario_flags: ['letter_read'],
+      scenario_flags: ['letter_delivered'],
       hit_points_delta: -2,
     },
   })

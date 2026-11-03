@@ -1,8 +1,9 @@
-import { FIXED_DURATIONS } from './game_time.js'
+import { FIXED_DURATIONS, type Period } from './game_time.js'
 import {
   type PassageStates,
   type PlaceDeclaration,
   type Way,
+  isBlocked,
   keyOf,
   networkContainers,
   networkPlaces,
@@ -35,6 +36,11 @@ export type TravelState = {
   held: Set<string>
   /** The places someone hostile was left in: no way leads through them. */
   guarded: Set<string>
+  /**
+   * The period the turn begins in: a passage the time of day shuts is shut
+   * for all of it. Absent: no passage is shut by the time of day.
+   */
+  period?: Period
 }
 
 /** The way to a place: the passages gone through, in order, and how long it takes. */
@@ -74,13 +80,18 @@ function kindsOf(places: PlaceDeclaration[]): (reference: string) => PlaceKind {
 }
 
 /**
- * Whether a way can be taken: found if it is hidden from this side, and open
- * — unlocked once and for all, or opened by an item the character holds.
+ * Whether a way can be taken: found if it is hidden from this side, not shut
+ * by an event or the time of day, and open — unlocked once and for all, or
+ * opened by an item the character holds.
  */
 export function isPracticable(way: Way, state: TravelState): boolean {
   const key = keyOf(way.declared)
 
   if (way.hidden && !state.passages.discovered.has(key)) {
+    return false
+  }
+
+  if (isBlocked(way, state.passages, state.period ?? null)) {
     return false
   }
 
@@ -186,6 +197,10 @@ export type SceneExit = {
   /** The item that opens it, if it is locked. */
   requires: string | null
   oneWay: boolean
+  /** Shut for now, by an event or the time of day: nothing goes through. */
+  blocked: boolean
+  /** Why it is shut, in a line of English, when it is and something needs saying. */
+  blockedReason: string | null
 }
 
 /** The ways out of a place, with what the game knows of each. */
@@ -194,6 +209,8 @@ export function exitsOf(places: PlaceDeclaration[], from: string, state: TravelS
     const key = keyOf(way.declared)
     const locked = way.requires !== null && !state.passages.unlocked.has(key)
 
+    const blocked = isBlocked(way, state.passages, state.period ?? null)
+
     return {
       to: way.to,
       passage: way.passage,
@@ -201,6 +218,8 @@ export function exitsOf(places: PlaceDeclaration[], from: string, state: TravelS
       locked,
       requires: locked ? way.requires : null,
       oneWay: way.oneWay,
+      blocked,
+      blockedReason: blocked ? way.blockedReason : null,
     }
   })
 }
@@ -222,6 +241,7 @@ export function withExitsOpened(
   return {
     ...state,
     passages: {
+      ...state.passages,
       discovered: new Set([...state.passages.discovered, ...keysTo(opened.discovered)]),
       unlocked: new Set([...state.passages.unlocked, ...keysTo(opened.unlocked)]),
     },

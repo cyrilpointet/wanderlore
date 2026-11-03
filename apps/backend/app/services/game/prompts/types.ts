@@ -1,6 +1,11 @@
 import type { PlacedLocation } from '#services/game/content_labels'
 import type { ContextualModifier, Degree, Difficulty, RollOutcome } from '#services/rules/types'
-import type { LoreFragmentContent, NpcDisposition, WorldDefinition } from '#services/game/world'
+import type {
+  LoreFragmentContent,
+  NpcDisposition,
+  ScenarioFlag,
+  WorldDefinition,
+} from '#services/game/world'
 import type { ActionType } from '#services/game/resolution_rules'
 import type { PresentNpc } from '#services/game/npcs'
 import type { ItemsInScene } from '#services/game/inventory'
@@ -258,6 +263,11 @@ export type SceneState = {
   exits: SceneExit[]
   /** The places the exits reach, each by its quickest way: none outside a network. */
   routes: Route[]
+  /**
+   * What the place is like at this time of day, and what an event changed
+   * in it, in English: added to its description.
+   */
+  place_notes: string[]
   /** The game clock as the turn began: seconds since midnight of the first day. */
   game_time: number
   /** The date the game started on, if its story has one. */
@@ -297,6 +307,15 @@ export type TurnContext = {
 export type ArbitrationContext = TurnContext & {
   action_types: ActionType[]
   lore: LoreFragmentContent[]
+  /**
+   * What happened in the world lately without the player — events of the
+   * scenario, the character's witness or not: facts to rule by, never to state.
+   */
+  world_events: string[]
+  /** The events the character knows are coming, which they may wait for: never when. */
+  foreseeable_events: { reference: string; description: string }[]
+  /** The unique people the character knows, whose comings and goings they may wait for. */
+  awaitable_npcs: { reference: string; label: string }[]
 }
 
 /**
@@ -335,6 +354,26 @@ export type NarrationRequest = TurnContext & {
   route: Route | null
   /** Who was left at the destination and is there still, with their definition for naming them. */
   npcs_at_destination: (PresentNpc & { definition: string })[]
+  /**
+   * Who comes where the character is during the turn: brought by an event, or
+   * by their schedule — with what they come to do.
+   */
+  npcs_arriving: (PresentNpc & { definition: string; activity: string | null })[]
+  /** Who leaves the scene during the turn, their schedule taking them elsewhere. */
+  npcs_leaving: string[]
+  /** What the people in the scene are doing by their schedule, by handle. */
+  activities: { handle: string; activity: string }[]
+  /** What the place is like as the turn ends: its notes for the time of day and any an event left. */
+  place_notes_after: string[]
+  /**
+   * What happens in the world before the character's eyes, in English: during
+   * this turn (`now`), or set off at the end of the last one (`earlier`).
+   */
+  world_events: { description: string; when: 'now' | 'earlier' }[]
+  /** What cut the action short, in English; null when it ran its course. */
+  interrupted: string | null
+  /** Whether what the character waited for came; null when they waited for nothing in particular. */
+  awaited: 'arrived' | 'did_not_happen' | null
   intent_summary: string
   /** The player spoke to the game master rather than acting: answer, do not move the story. */
   aside: boolean
@@ -356,6 +395,8 @@ export type ExtractionRequest = Pick<TurnContext, 'world' | 'scene' | 'character
    * here or within reach from the start.
    */
   enterable_npcs: string[]
+  /** The closed list of flags it may set: the scenario's, not set yet. */
+  flags: ScenarioFlag[]
   /**
    * Where a movement may lead from where the scene began: the places the
    * exits reach — once those it finds or opens are — or, outside a network,

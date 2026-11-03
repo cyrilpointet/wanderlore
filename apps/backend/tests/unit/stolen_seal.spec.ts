@@ -128,6 +128,16 @@ test.group('The Stolen Seal | the Hôtel de Laffemas', () => {
     assert.deepEqual(giveaways(STOLEN_SEAL, MUSKETEERS.npcs, 'hotel_de_laffemas'), [])
   })
 
+  test('a note for the time of day would be caught giving a room away', ({ assert }) => {
+    const leaky = structuredClone(STOLEN_SEAL)
+    const [first, second] = leaky.locations.filter(({ parent }) => parent === 'hotel_de_laffemas')
+    first.periodNotes = [
+      { periods: ['night'], note: `At night, light shows from the ${second.labels.en}.` },
+    ]
+
+    assert.lengthOf(giveaways(leaky, MUSKETEERS.npcs, 'hotel_de_laffemas'), 1)
+  })
+
   test('a guard or a trial in about half of the house, the rest quiet', ({ assert }) => {
     const quiet = STOLEN_SEAL.locations
       .filter(

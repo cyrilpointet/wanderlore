@@ -16,22 +16,22 @@ export type CatalogueLevel = { worldId: string | null; scenarioId: string | null
 
 /**
  * What only one kind of definition may have: a unique is neither generic nor
- * stackable, an archetype has no parent, initial holder or place, exit nor
- * entrance.
+ * stackable, an archetype has no parent, initial holder or place, schedule,
+ * exit nor entrance.
  */
 export function refuseKindMismatch(definition: Record<string, unknown>, path = '') {
   const unique = definition.kind === 'unique'
   const mismatch = unique
     ? (['generic', 'stackable'] as const).find((field) => definition[field] === true)
-    : (['parent', 'initialHolder', 'initialLocation', 'exits', 'entrance'] as const).find(
-        (field) => {
-          const value = definition[field]
+    : (
+        ['parent', 'initialHolder', 'initialLocation', 'schedule', 'exits', 'entrance'] as const
+      ).find((field) => {
+        const value = definition[field]
 
-          return Array.isArray(value)
-            ? value.length > 0
-            : value !== null && value !== undefined && value !== false
-        }
-      )
+        return Array.isArray(value)
+          ? value.length > 0
+          : value !== null && value !== undefined && value !== false
+      })
 
   if (mismatch) {
     throw new Refusal(
@@ -49,6 +49,7 @@ const ARCHETYPE_LACKS = {
   parent: 'parent',
   initialHolder: 'initial holder',
   initialLocation: 'initial place',
+  schedule: 'schedule',
   exits: 'exit',
   entrance: 'entrance',
 }
@@ -170,10 +171,13 @@ export async function refuseImportedCatalogues(catalogues: Catalogues, level: Ca
 
 /** Imported catalogues, with what a file may leave out filled in as a form would. */
 export function importedCatalogues(payload: {
-  npcs?: Catalogues['npcs']
-  locations?: (Omit<Catalogues['locations'][number], 'exits' | 'entrance'> & {
+  npcs?: (Omit<Catalogues['npcs'][number], 'schedule'> & {
+    schedule?: Catalogues['npcs'][number]['schedule']
+  })[]
+  locations?: (Omit<Catalogues['locations'][number], 'exits' | 'entrance' | 'periodNotes'> & {
     exits?: Catalogues['locations'][number]['exits']
     entrance?: boolean
+    periodNotes?: Catalogues['locations'][number]['periodNotes']
   })[]
   items?: Catalogues['items']
   lore?: (Omit<Catalogues['lore'][number], 'tags' | 'secret'> & {
@@ -182,11 +186,12 @@ export function importedCatalogues(payload: {
   })[]
 }): Catalogues {
   return {
-    npcs: payload.npcs ?? [],
+    npcs: (payload.npcs ?? []).map((npc) => ({ ...npc, schedule: npc.schedule ?? [] })),
     locations: (payload.locations ?? []).map((location) => ({
       ...location,
       exits: location.exits ?? [],
       entrance: location.entrance ?? false,
+      periodNotes: location.periodNotes ?? [],
     })),
     items: payload.items ?? [],
     lore: (payload.lore ?? []).map((fragment) => ({

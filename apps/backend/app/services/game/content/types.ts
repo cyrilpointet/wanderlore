@@ -23,7 +23,7 @@ import type {
   SpecialEffect,
   WeaponKind,
 } from '#services/rules/types'
-import type { FixedDuration } from '#services/game/game_time'
+import type { FixedDuration, Period } from '#services/game/game_time'
 
 export {
   CHARACTERISTICS,
@@ -189,6 +189,35 @@ export type NpcDefinitionContent = DefinitionContent & {
    * none.
    */
   initialLocation: string | null
+  /**
+   * Where a unique person is through the day, period by period (roadmap,
+   * Phase 11); empty for none, and always for an archetype. A period no entry
+   * covers leaves them where they are.
+   */
+  schedule: ScheduleEntry[]
+}
+
+/**
+ * Where a unique person goes at some periods of the day, and what they do
+ * there. Each period belongs to one entry at most.
+ */
+export type ScheduleEntry = {
+  periods: Period[]
+  /** Reference of a unique place. */
+  location: string
+  /** One line of English for the narrator, when they are in the scene: "reviews his guards". */
+  activity: string | null
+  /** They keep to it even in the scene with the character: the vampire flees the dawn. */
+  leavesScene: boolean
+  /** Their arrival where the character is cuts a long action short. */
+  interrupts: boolean
+}
+
+/** What a place is like at some periods of the day, added to its description. */
+export type PeriodNote = {
+  periods: Period[]
+  /** One line of English: "at night, a single sentry watches the gate". */
+  note: string
 }
 
 /**
@@ -218,6 +247,14 @@ export type LocationExit = {
   oneWay: boolean
   /** How long going through takes, from the scale of durations; null is a moment. */
   duration: FixedDuration | null
+  /**
+   * The periods it cannot be gone through at all, from either side: the sea
+   * fills the cave mouth. No key, no skill opens it. Absent from an exit
+   * written before Phase 11.
+   */
+  blockedDuring?: Period[]
+  /** One line of English on why, seen from either side; null when nothing needs saying. */
+  blockedReason?: string | null
 }
 
 /**
@@ -233,6 +270,7 @@ export type LocationDefinitionContent = DefinitionContent & {
   parent: string | null
   exits: LocationExit[]
   entrance: boolean
+  periodNotes: PeriodNote[]
 }
 
 /**
@@ -341,6 +379,143 @@ export type InitialState = {
   knownNpcs?: string[]
 }
 
+/**
+ * A notable turn of the story extraction may record, from the scenario's
+ * closed list (roadmap, Phase 11): what sets off an event, or what the next
+ * steps read of the story.
+ */
+export type ScenarioFlag = {
+  reference: string
+  /** One line of English, for extraction: when the narration sets it. */
+  description: string
+}
+
+/**
+ * What the state must hold for an event, read by the backend — never in the
+ * text. People and items are unique ones, by reference: an archetype has no
+ * single instance to look at.
+ */
+export type EventCondition =
+  | { type: 'flag'; flag: string }
+  | { type: 'item_held_by'; item: string; holder: { holder: 'character' } | ItemHolderReference }
+  | { type: 'item_gone'; item: string }
+  | { type: 'npc_dead'; npc: string }
+  | { type: 'npc_disposition'; npc: string; disposition: NpcDisposition }
+  | { type: 'npc_at'; npc: string; location: string }
+  | { type: 'location_visited'; location: string }
+
+export const EVENT_CONDITION_TYPES = [
+  'flag',
+  'item_held_by',
+  'item_gone',
+  'npc_dead',
+  'npc_disposition',
+  'npc_at',
+  'location_visited',
+] as const
+
+/**
+ * What an event does, applied by the backend through the services of the
+ * game — never proposed by the model. A passage is named by the two places
+ * it joins, either way round.
+ */
+export type EventEffect =
+  /** A unique person goes to a unique place. */
+  | { type: 'npc_moved'; npc: string; location: string }
+  /** A unique person goes away, nobody knows where. */
+  | { type: 'npc_left'; npc: string }
+  /** Someone comes into a unique place: a new person of an archetype, or a unique one. */
+  | { type: 'npc_entered'; npc: string; location: string; descriptor: string | null }
+  | { type: 'npc_disposition'; npc: string; disposition: NpcDisposition }
+  /** A unique person's schedule stops for good: the Cardinal arrested reviews no troops. */
+  | { type: 'schedule_stopped'; npc: string }
+  | { type: 'passage_blocked'; from: string; to: string }
+  | { type: 'passage_cleared'; from: string; to: string }
+  | { type: 'passage_discovered'; from: string; to: string }
+  | { type: 'passage_unlocked'; from: string; to: string }
+  /** One line of English on how a unique place looks now; it replaces any note an event left there. */
+  | { type: 'place_note_set'; location: string; note: string }
+  | { type: 'place_note_cleared'; location: string }
+  /** An item comes into being with someone or somewhere — or a unique one, already about, goes there. */
+  | {
+      type: 'item_placed'
+      item: string
+      holder: { holder: 'character' } | ItemHolderReference
+      quantity: number
+    }
+  /** A unique item goes to someone or somewhere, wherever it was. */
+  | {
+      type: 'item_transferred'
+      item: string
+      holder: { holder: 'character' } | ItemHolderReference
+    }
+  /** A unique item is destroyed. */
+  | { type: 'item_gone'; item: string }
+  | { type: 'flag_set'; flag: string }
+
+export const EVENT_EFFECT_TYPES = [
+  'npc_moved',
+  'npc_left',
+  'npc_entered',
+  'npc_disposition',
+  'schedule_stopped',
+  'passage_blocked',
+  'passage_cleared',
+  'passage_discovered',
+  'passage_unlocked',
+  'place_note_set',
+  'place_note_cleared',
+  'item_placed',
+  'item_transferred',
+  'item_gone',
+  'flag_set',
+] as const
+
+/** How long after its conditions first hold an event falls: a fixed span, or days. */
+export type EventDelay = { label: FixedDuration } | { label: 'days'; count: number }
+
+/**
+ * When a deadline falls: a day of the game, the first being 1, and the start
+ * of a period or a time of day on it — midnight when it names neither.
+ */
+export type EventMoment = {
+  day: number
+  period: Period | null
+  /** `HH:MM`; wins over the period. */
+  time: string | null
+}
+
+/**
+ * Something that happens in the story without the player (roadmap, Phase 11),
+ * once at most. A deadline falls at a moment of the clock; an event of the
+ * state when the state holds its conditions — at once, or after a delay.
+ */
+export type ScenarioEvent = {
+  reference: string
+  when: {
+    /** A deadline; with conditions, it falls once they hold, at that moment or after. */
+    at: EventMoment | null
+    /** All must hold. */
+    conditions: EventCondition[]
+    /** After the conditions first hold, for an event that is no deadline. */
+    delay: EventDelay | null
+  }
+  /** Checked as it falls due: if any holds, it never happens. */
+  unless: EventCondition[]
+  /** The unique place it happens in; null when it is felt everywhere — bells, a storm. */
+  place: string | null
+  /** One line of English for the steps: what happens. */
+  description: string
+  effects: EventEffect[]
+  /** Witnessed, it cuts a long action short: the character wakes up. */
+  interrupts: boolean
+  /**
+   * When the character knows it is coming, and so may wait for it: every
+   * condition holds — none, always. Null: never.
+   */
+  foreseeable: EventCondition[] | null
+}
+
 export const SCENARIO_STATUSES = ['draft', 'published'] as const
 
 export type ScenarioStatus = (typeof SCENARIO_STATUSES)[number]
@@ -363,6 +538,9 @@ export type ScenarioContent = Catalogues & {
   startTime: string
   startDate: string | null
   glossary: GlossaryEntry[]
+  /** The closed list of flags extraction may set. */
+  flags: ScenarioFlag[]
+  events: ScenarioEvent[]
 }
 
 export type WorldContent = Catalogues & {

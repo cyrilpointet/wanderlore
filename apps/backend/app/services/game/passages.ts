@@ -3,7 +3,7 @@ import type { QueryClientContract } from '@adonisjs/lucid/types/database'
 
 import PassageState from '#models/passage_state'
 
-import type { FixedDuration } from './game_time.js'
+import type { FixedDuration, Period } from './game_time.js'
 import type { LocationExit } from './content/types.js'
 
 /**
@@ -49,6 +49,10 @@ export type Way = {
   duration: FixedDuration
   /** No way back through it. */
   oneWay: boolean
+  /** The periods nothing goes through it, from either side. */
+  blockedDuring: Period[]
+  /** Why, in a line of English; null when nothing needs saying. */
+  blockedReason: string | null
   /** The passage it goes through, as declared. */
   declared: PassageKey
 }
@@ -57,9 +61,15 @@ export type Way = {
 export type PassageStates = {
   discovered: Set<string>
   unlocked: Set<string>
+  /** Shut by an event, until another clears it. Absent: none is. */
+  blocked?: Set<string>
 }
 
-export const NO_PASSAGE_STATE: PassageStates = { discovered: new Set(), unlocked: new Set() }
+export const NO_PASSAGE_STATE: PassageStates = {
+  discovered: new Set(),
+  unlocked: new Set(),
+  blocked: new Set(),
+}
 
 /**
  * A passage outside the world's. The closed lists are checked before anything
@@ -98,6 +108,10 @@ export function waysOutOf(places: PlaceDeclaration[], from: string): Way[] {
   return passagesOf(places).flatMap(({ from: declaredIn, to, exit }): Way[] => {
     const declared = { from: declaredIn, to }
     const duration = exit.duration ?? 'moment'
+    const blocked = {
+      blockedDuring: exit.blockedDuring ?? [],
+      blockedReason: exit.blockedReason ?? null,
+    }
 
     if (declaredIn === from) {
       return [
@@ -108,6 +122,7 @@ export function waysOutOf(places: PlaceDeclaration[], from: string): Way[] {
           requires: exit.requires,
           duration,
           oneWay: exit.oneWay,
+          ...blocked,
           declared,
         },
       ]
@@ -122,6 +137,7 @@ export function waysOutOf(places: PlaceDeclaration[], from: string): Way[] {
           requires: exit.requires,
           duration,
           oneWay: false,
+          ...blocked,
           declared,
         },
       ]
@@ -129,6 +145,30 @@ export function waysOutOf(places: PlaceDeclaration[], from: string): Way[] {
 
     return []
   })
+}
+
+/** The passage joining two places, whichever side declares it; null when none does. */
+export function passageBetween(
+  places: PlaceDeclaration[],
+  a: string,
+  b: string
+): PassageKey | null {
+  const found = passagesOf(places).find(
+    ({ from, to }) => (from === a && to === b) || (from === b && to === a)
+  )
+
+  return found === undefined ? null : { from: found.from, to: found.to }
+}
+
+/**
+ * Whether nothing goes through a way now: an event shut it, or the time of
+ * day does. No key, no skill opens it.
+ */
+export function isBlocked(way: Way, states: PassageStates, period: Period | null): boolean {
+  return (
+    (states.blocked?.has(keyOf(way.declared)) ?? false) ||
+    (period !== null && way.blockedDuring.includes(period))
+  )
 }
 
 /** The unique places a passage touches, from either side: the places of a network. */
@@ -202,14 +242,18 @@ export async function passageStates(
 ): Promise<PassageStates> {
   const rows = await PassageState.query({ client }).where('sessionId', sessionId)
 
-  const keysWhere = (column: 'discoveredAt' | 'unlockedAt') =>
+  const keysWhere = (column: 'discoveredAt' | 'unlockedAt' | 'blockedAt') =>
     new Set(
       rows
         .filter((row) => row[column] !== null)
         .map((row) => keyOf({ from: row.fromReference, to: row.toReference }))
     )
 
-  return { discovered: keysWhere('discoveredAt'), unlocked: keysWhere('unlockedAt') }
+  return {
+    discovered: keysWhere('discoveredAt'),
+    unlocked: keysWhere('unlockedAt'),
+    blocked: keysWhere('blockedAt'),
+  }
 }
 
 /** A hidden passage found. Found again, it keeps the moment it was first found. */
@@ -232,13 +276,38 @@ export function unlockPassage(
   return record(places, sessionId, passage, 'unlockedAt', client)
 }
 
-async function record(
+/** A passage shut by an event, from either side, until another clears it. */
+export function blockPassage(
   places: PlaceDeclaration[],
   sessionId: string,
   passage: PassageKey,
-  column: 'discoveredAt' | 'unlockedAt',
   client?: QueryClientContract
 ): Promise<void> {
+  return record(places, sessionId, passage, 'blockedAt', client)
+}
+
+/** A passage an event had shut, open again — the time of day may still shut it. */
+export async function clearPassage(
+  places: PlaceDeclaration[],
+  sessionId: string,
+  passage: PassageKey,
+  client?: QueryClientContract
+): Promise<void> {
+  checkKnown(places, passage)
+
+  const state = await PassageState.query({ client })
+    .where('sessionId', sessionId)
+    .where('fromReference', passage.from)
+    .where('toReference', passage.to)
+    .first()
+
+  if (state !== null && state.blockedAt !== null) {
+    state.blockedAt = null
+    await state.save()
+  }
+}
+
+function checkKnown(places: PlaceDeclaration[], passage: PassageKey): void {
   const known = passagesOf(places).some(
     ({ from, to }) => from === passage.from && to === passage.to
   )
@@ -246,6 +315,16 @@ async function record(
   if (!known) {
     throw new UnknownPassageError(passage)
   }
+}
+
+async function record(
+  places: PlaceDeclaration[],
+  sessionId: string,
+  passage: PassageKey,
+  column: 'discoveredAt' | 'unlockedAt' | 'blockedAt',
+  client?: QueryClientContract
+): Promise<void> {
+  checkKnown(places, passage)
 
   const state = await PassageState.firstOrCreate(
     { sessionId, fromReference: passage.from, toReference: passage.to },

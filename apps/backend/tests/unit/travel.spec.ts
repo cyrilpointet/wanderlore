@@ -1,7 +1,13 @@
 import { test } from '@japa/runner'
 
 import { keyOf } from '#services/game/passages'
-import { type TravelState, destinationsFrom, placeKindOf, routesFrom } from '#services/game/travel'
+import {
+  type TravelState,
+  destinationsFrom,
+  exitsOf,
+  placeKindOf,
+  routesFrom,
+} from '#services/game/travel'
 import { HOUSE_WORLD } from '#tests/helpers/places'
 
 const PLACES = HOUSE_WORLD.locations
@@ -172,5 +178,82 @@ test.group('Travel | destinations', () => {
     assert.include(places, 'house_corridor')
     assert.notInclude(places, 'house_attic')
     assert.notInclude(places, 'house')
+  })
+})
+
+test.group('Travel | passages shut', () => {
+  const tidal = {
+    ...HOUSE_WORLD,
+    locations: HOUSE_WORLD.locations.map((place) =>
+      place.reference === 'house_kitchen' && place.kind === 'unique'
+        ? {
+            ...place,
+            exits: place.exits.map((way) => ({
+              ...way,
+              blockedDuring: ['night' as const],
+              blockedReason: 'the cellar floods at night',
+            })),
+          }
+        : place
+    ),
+  }
+
+  test('a passage the time of day shuts is no way, from either side', ({ assert }) => {
+    const visited = ['house_kitchen', 'house_cellar']
+
+    assert.include(
+      [
+        ...routesFrom(
+          tidal.locations,
+          'house_kitchen',
+          stateOf(visited, { period: 'morning' })
+        ).keys(),
+      ],
+      'house_cellar'
+    )
+    assert.notInclude(
+      [
+        ...routesFrom(
+          tidal.locations,
+          'house_kitchen',
+          stateOf(visited, { period: 'night' })
+        ).keys(),
+      ],
+      'house_cellar'
+    )
+    assert.notInclude(
+      [
+        ...routesFrom(
+          tidal.locations,
+          'house_cellar',
+          stateOf(visited, { period: 'night' })
+        ).keys(),
+      ],
+      'house_kitchen'
+    )
+  })
+
+  test('the exit says it is shut, and why', ({ assert }) => {
+    const stairs = exitsOf(tidal.locations, 'house_kitchen', stateOf([], { period: 'night' })).find(
+      ({ to }) => to === 'house_cellar'
+    )
+
+    assert.include(stairs, { blocked: true, blockedReason: 'the cellar floods at night' })
+  })
+
+  test('a passage an event shut is no way until cleared', ({ assert }) => {
+    const shut = stateOf(['house_hall', 'house_kitchen'], {
+      passages: {
+        discovered: new Set(),
+        unlocked: new Set(),
+        blocked: new Set([keyOf({ from: 'house_hall', to: 'house_kitchen' })]),
+      },
+    })
+
+    assert.notInclude([...routesFrom(PLACES, 'house_hall', shut).keys()], 'house_kitchen')
+    assert.include(
+      [...routesFrom(PLACES, 'house_hall', stateOf(['house_hall'])).keys()],
+      'house_kitchen'
+    )
   })
 })

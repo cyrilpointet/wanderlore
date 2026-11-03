@@ -7,6 +7,10 @@ import type {
   LocationExit,
   LoreFragmentContent,
   NpcDisposition,
+  PeriodNote,
+  ScenarioEvent,
+  ScenarioFlag,
+  ScheduleEntry,
   SkillCategory,
   WeaponProfile,
 } from './content/types.js'
@@ -22,6 +26,10 @@ export {
   type LocationExit,
   type LoreFragmentContent,
   type NpcDisposition,
+  type PeriodNote,
+  type ScenarioEvent,
+  type ScenarioFlag,
+  type ScheduleEntry,
   type WeaponProfile,
 } from './content/types.js'
 
@@ -91,6 +99,10 @@ export type WorldDefinition = {
   lore: LoreFragmentContent[]
   chapters: ContentEntry[]
   quests: ContentEntry[]
+  /** The scenario's closed list of flags, which extraction picks from. */
+  flags: ScenarioFlag[]
+  /** What the scenario's story holds that happens without the player (roadmap, Phase 11). */
+  events: ScenarioEvent[]
   /**
    * Proper names that are no entity of the game, the world's then the
    * scenario's. For the narrator only, in the game's language.
@@ -112,7 +124,10 @@ type DescribedEntry = ContentEntry & {
 export type NpcDefinition = DescribedEntry & {
   defaultDisposition: NpcDisposition
   combat: CombatProfile
-} & ({ kind: 'unique'; initialLocation: string | null } | { kind: 'archetype'; generic: boolean })
+} & (
+    | { kind: 'unique'; initialLocation: string | null; schedule: ScheduleEntry[] }
+    | { kind: 'archetype'; generic: boolean }
+  )
 
 /**
  * A place of the world. A unique place declares the place that contains it,
@@ -120,8 +135,10 @@ export type NpcDefinition = DescribedEntry & {
  * per instance, picked from the unique places. Every archetype serves
  * improvised places, so none needs a `generic` flag.
  */
-export type LocationDefinition = DescribedEntry &
-  (
+export type LocationDefinition = DescribedEntry & {
+  /** What the place is like at some periods of the day. */
+  periodNotes: PeriodNote[]
+} & (
     | { kind: 'unique'; parent: string | null; exits: LocationExit[]; entrance: boolean }
     | { kind: 'archetype' }
   )

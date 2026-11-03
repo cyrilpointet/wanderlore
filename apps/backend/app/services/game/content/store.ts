@@ -83,6 +83,8 @@ export async function storeWorldContent(
         startTime: scenario.startTime,
         startDate: scenario.startDate,
         glossary: scenario.glossary,
+        flags: scenario.flags,
+        events: scenario.events,
       },
       { client: trx }
     )
@@ -210,6 +212,8 @@ export async function scenarioContentOf(
     startTime: scenario.startTime,
     startDate: scenario.startDate,
     glossary: scenario.glossary,
+    flags: scenario.flags,
+    events: scenario.events,
     ...(await readCatalogues(scenario.worldId, scenario.id, client)),
   }
 }
@@ -249,6 +253,7 @@ export async function readCatalogues(
       defaultDisposition: npc.defaultDisposition,
       combat: npc.combat,
       initialLocation: npc.initialLocation,
+      schedule: npc.schedule,
     })),
     locations: locations.map((location): LocationDefinitionContent => ({
       reference: location.reference,
@@ -258,6 +263,7 @@ export async function readCatalogues(
       parent: location.parent,
       exits: location.exits,
       entrance: location.entrance,
+      periodNotes: location.periodNotes,
     })),
     items: items.map((item): ItemDefinitionContent => ({
       reference: item.reference,

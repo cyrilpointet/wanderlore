@@ -39,8 +39,13 @@ Hard rules:
 - names gives, in the language of the narration, the name of the place and of each person present, and the fixed translation of other proper names (glossary). Use these names exactly, every time — except a person marked known: false. The character has not learnt their name: call them by their looks or their role, never by their name, unless they give it in this very narration.
 - items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason.
 - place says what the place is like, and what an improvised one stands in. exits lists its ways out, each with how it looks from here, and where it leads when the character has been there. An exit with no "to" leads somewhere the character has never been: describe the way, never name or guess what lies beyond it. One marked hidden has not been found: never mention it, unless the character searches and the outcome gives them reason to find it. One marked locked stays shut unless the story opens it.
+- place.notes add to what the place is like as the turn ends: the time of day, what has changed in it. An exit marked blocked cannot be gone through for now: say why when blocked_reason gives a reason.
 - When route is given, the character goes to its last place by these passages, in this order: follow them, and invent no other way.
 - npcs_at_destination lists who the character finds where they arrive: people left there earlier, or waiting there since the story began, there still, in the disposition given. One marked known: false is named the same way as above: by looks or role, until they give their name.
+- world_events lists what happens in the world before the character's eyes, beyond their own action: now — during this very turn; earlier — just after the last exchange, to be told first. Stage each one as given, and invent no consequence beyond it.
+- When interrupted is given, it cuts the action short: the character is woken, startled or stopped, and the turn ends then and there. Tell the action as far as it went, then what interrupts it.
+- awaited says whether what the character waited for came: arrived — it comes as the wait ends; did_not_happen — they wait in vain, and nothing comes.
+- npcs_arriving lists who comes where the character is during the turn, with what they come to do; npcs_leaving, by handle, who goes away, their business calling them elsewhere; activities, what the people present are busy with. One marked known: false is named by looks or role, as above.
 - time tells when the action began and when it ends: the period of the day at each end, the day of the game, the date and the day of the week when the story has one, and the hour it ends at, to the quarter. Never contradict the time that passes: the light changes, night falls, a day goes by.
 - Never write the hour in your text unless the character has a way to know it — a watch they hold, a clock that still runs in the place, church bells — and wants to know it. Otherwise speak of the light and of the time of day. Never state the date without a reason either.
 - The character may take, give, hide, drop, use up or draw an item in your story. Never decide what that changes in the game: a separate step reads it from your text.
@@ -85,6 +90,7 @@ export function buildNarrationMessage(request: NarrationRequest): string {
     place: {
       description: request.scene.place_description,
       surroundings: request.scene.surroundings,
+      notes: request.place_notes_after,
     },
     exits: exitsForNarration(request, labels),
     route: routeForNarration(request, labels),
@@ -99,6 +105,24 @@ export function buildNarrationMessage(request: NarrationRequest): string {
             disposition,
           })
         ),
+    /** An aside moves nothing: nobody comes, nobody goes, nothing happens. */
+    npcs_arriving: request.aside
+      ? []
+      : request.npcs_arriving.map(
+          ({ handle, name, descriptor, disposition, definition, activity }) => ({
+            handle,
+            name: name ?? labels.of('npc', definition).label,
+            known: knowsName(request, definition, name),
+            descriptor,
+            disposition,
+            activity,
+          })
+        ),
+    npcs_leaving: request.aside ? [] : request.npcs_leaving,
+    activities: request.activities,
+    world_events: request.aside ? [] : request.world_events,
+    interrupted: request.aside ? null : request.interrupted,
+    awaited: request.aside ? null : request.awaited,
     /**
      * When the turn began and ends, worked out by the backend: periods, the
      * day, the date when the story has one, and the hour rounded to the
@@ -152,6 +176,8 @@ function exitsForNarration(request: NarrationRequest, labels: ContentLabels) {
       passage: exit.passage,
       hidden: exit.hidden,
       locked: exit.locked,
+      blocked: exit.blocked,
+      blocked_reason: exit.blockedReason,
     }))
 }
 

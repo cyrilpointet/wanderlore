@@ -465,3 +465,137 @@ test.group('Coherence | exits and networks', () => {
     )
   })
 })
+
+test.group('Coherence | schedules and events', () => {
+  const athos = (world: WorldLevel) => world.npcs.find(({ reference }) => reference === 'athos')!
+
+  test('a schedule sends someone to named places, each period once', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((world) => {
+        athos(world).schedule = [
+          {
+            periods: ['morning', 'midday'],
+            location: 'hotel_de_treville',
+            activity: null,
+            leavesScene: false,
+            interrupts: false,
+          },
+          {
+            periods: ['midday'],
+            location: 'la_rochelle',
+            activity: null,
+            leavesScene: false,
+            interrupts: false,
+          },
+        ]
+      }),
+      [
+        ['unknown_location', 'npcs.athos.schedule.1.location', 'la_rochelle'],
+        ['schedule_overlap', 'npcs.athos.schedule.1.periods', 'midday'],
+      ]
+    )
+  })
+
+  test('an event names declared flags, unique people and items, and named places', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        scenario.events.push({
+          reference: 'guards_arrive',
+          when: {
+            at: null,
+            conditions: [
+              { type: 'flag', flag: 'alarm_raised' },
+              { type: 'npc_at', npc: 'royal_guard', location: 'paris' },
+            ],
+            delay: null,
+          },
+          unless: [{ type: 'item_gone', item: 'rapier' }],
+          place: 'la_rochelle',
+          description: 'The guards come.',
+          effects: [
+            { type: 'npc_entered', npc: 'royal_guard', location: 'louvre', descriptor: null },
+            { type: 'passage_blocked', from: 'paris', to: 'louvre' },
+          ],
+          interrupts: false,
+          foreseeable: null,
+        })
+      }),
+      [
+        ['unknown_location', 'events.guards_arrive.place', 'la_rochelle'],
+        ['unknown_flag', 'events.guards_arrive.when.conditions.0.flag', 'alarm_raised'],
+        ['not_unique', 'events.guards_arrive.when.conditions.1.npc', 'royal_guard'],
+        ['not_unique', 'events.guards_arrive.unless.0.item', 'rapier'],
+        ['unknown_passage', 'events.guards_arrive.effects.1', 'paris|louvre'],
+      ]
+    )
+  })
+
+  test('an event is set off by a deadline or by conditions', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        scenario.events.push({
+          reference: 'nothing_sets_it_off',
+          when: { at: null, conditions: [], delay: { label: 'hour' } },
+          unless: [],
+          place: null,
+          description: 'Nothing.',
+          effects: [{ type: 'flag_set', flag: 'letter_lost' }],
+          interrupts: false,
+          foreseeable: null,
+        })
+      }),
+      [['event_without_trigger', 'events.nothing_sets_it_off.when', 'nothing_sets_it_off']]
+    )
+  })
+
+  test('no chain of events sets itself off again', ({ assert }) => {
+    const chained = (reference: string, needs: string, sets: string) => ({
+      reference,
+      when: { at: null, conditions: [{ type: 'flag' as const, flag: needs }], delay: null },
+      unless: [],
+      place: null,
+      description: `${reference}.`,
+      effects: [{ type: 'flag_set' as const, flag: sets }],
+      interrupts: false,
+      foreseeable: null,
+    })
+
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        scenario.events.push(
+          chained('first', 'letter_lost', 'duel_challenged'),
+          chained('second', 'duel_challenged', 'letter_lost')
+        )
+      }),
+      [
+        ['event_cycle', 'events.first', 'first'],
+        ['event_cycle', 'events.second', 'second'],
+      ]
+    )
+  })
+
+  test('a chain that ends is no cycle', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        scenario.events.push({
+          reference: 'stranger_vanishes',
+          when: {
+            at: null,
+            conditions: [{ type: 'flag', flag: 'met_the_stranger' }],
+            delay: { label: 'hours' },
+          },
+          unless: [],
+          place: 'meung_sur_loire',
+          description: 'The stranger rides off towards Paris.',
+          effects: [
+            { type: 'npc_moved', npc: 'rochefort', location: 'paris' },
+            { type: 'flag_set', flag: 'letter_lost' },
+          ],
+          interrupts: false,
+          foreseeable: [],
+        })
+      }),
+      []
+    )
+  })
+})
