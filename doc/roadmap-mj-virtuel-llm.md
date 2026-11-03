@@ -672,14 +672,96 @@ Tranchées à l'ouverture de la phase (2026-11-02) :
 
 **Objectif** : que le monde avance de lui-même avec l'horloge de la Phase 7, sans attendre une action du joueur.
 
+### Décisions de cadrage
+
+Tranchées à l'ouverture de la phase (2026-11-03). Trois sortes d'échéances : déclenchées par le temps (le troisième jour, les gobelins attaquent le camp des elfes), par l'état (quand on a volé son œuf, le dragon se réveille et s'envole), et cycliques (tous les matins, le Cardinal passe ses troupes en revue dans la cour ; le vampire est au tombeau le jour, au château la nuit ; l'entrée de la grotte est noyée par la marée).
+
+- **Le monde n'avance qu'avec l'horloge de jeu** : l'horloge ne bouge qu'à chaque tour, et tout s'évalue dans le tour, de façon déterministe, par le backend — ni job différé, ni temps réel, ni appel LLM de plus. Un aparté ne prend aucun temps et ne déclenche donc rien.
+- **Deux structures de contenu** :
+  - les **cycles**, sans état, dérivés de l'heure comme la période : emploi du temps d'un PNJ unique, passage bloqué par période, note de période sur un lieu ;
+  - les **événements**, avec état, déclenchés une seule fois, saisis sur le scénario (`scenarios.events`, jsonb).
+
+  « Tous les matins, le Cardinal passe ses troupes en revue » est un emploi du temps (le lieu et l'activité), pas un événement répété.
+- **Forme d'un événement** :
+
+  ```ts
+  type ScenarioEvent = {
+    reference: string
+    when: {
+      at?: { day: number; period?: Period; time?: string } // a deadline
+      conditions?: EventCondition[]                       // all must hold
+      delay?: TravelDuration                              // after the conditions first hold
+    }
+    unless?: EventCondition[]          // checked when it falls due: if any holds, it never happens
+    place: string | null               // where it happens; null = felt everywhere (bells, a storm)
+    description: string                // one line of English, for arbitration and narration
+    effects: EventEffect[]
+    interrupts: boolean                // cuts a long action short when witnessed
+    foreseeable: EventCondition[] | null // when the character knows it is coming; null = never
+  }
+  ```
+
+  Une **échéance** est un événement daté (`at`), éventuellement assorti d'un `unless` (les gobelins attaquent le jour 3, sauf si les elfes ont été prévenus).
+- **Conditions en liste fermée, lues dans l'état, jamais dans le texte** : `flag`, `item_held_by` (personnage, PNJ ou lieu), `item_gone`, `npc_dead`, `npc_disposition`, `npc_at` (tel PNJ dans tel lieu), `location_visited`. Une condition d'état vaut mieux qu'un flag quand l'état la porte déjà : pour l'œuf, `item_held_by: character` ne dépend pas de ce que l'extraction aura pensé à noter. Avec `delay`, l'événement est **armé** à l'instant où ses conditions sont réunies (`armed_at`), puis tombe à `armed_at + delay` : il redevient un événement de temps.
+- **Effets en liste fermée, appliqués par le backend** à travers les services existants (PNJ, passages, inventaire) — le LLM n'en propose aucun :
+  - PNJ : `npc_moved` (vers un lieu), `npc_left` (lieu inconnu), `npc_entered` (un unique ou un archétype, dans un lieu), `npc_disposition`, `schedule_stopped` (l'emploi du temps cesse : le Cardinal arrêté ne retourne pas passer ses troupes en revue) ;
+  - lieux : `passage_blocked` / `passage_cleared`, `passage_discovered`, `passage_unlocked`, `place_note_set` / `place_note_cleared` ;
+  - objets : `item_placed` (créé dans un lieu ou chez un PNJ : le carrosse du Cardinal dans les écuries), `item_transferred`, `item_gone` ;
+  - histoire : `flag_set`.
+- **État par partie** : une table `event_states` (partie, référence de l'événement, `armed_at`, `fired_at`, numéro du tour), sur le modèle de `passage_states` ; une colonne `blocked_at` sur `passage_states` ; une table `place_notes`. **Un lieu jamais visité n'a pas d'instance**, et en créer une le marquerait visité : un objet, un PNJ ou une note qu'un effet y pose reste en attente dans une colonne `world_states.pending_place_effects` (lieu, effet, événement), et se matérialise à la première visite, comme le placement initial.
+- **Flags déclarés** : le scénario porte un catalogue `flags` (référence et description d'une ligne, en anglais), et l'extraction choisit dans la **liste fermée** des flags du catalogue pas encore posés — conformément à l'invariant 9, que les flags libres de la Phase 1 ne respectaient pas. Un événement pose aussi des flags (`flag_set`), ce qui permet les chaînes. Les flags libres des parties en cours restent lisibles dans `narrative_flags`, mais aucun nouveau ne peut s'écrire hors catalogue.
+- **Deux moments d'évaluation** :
+  - **avant la narration**, juste après le calcul de la durée : les événements de temps de la fenêtre `(avant, après]` du tour, et les cycles du lieu du personnage. Ce qu'ils font entrer en scène (gobelins, Cardinal) est créé par le backend avant la narration, comme l'adversaire provisoire d'un round : la narration le voit présent, l'extraction le trouve déjà là et ne le recrée pas. Leurs effets s'appliquent dans la transaction du tour ;
+  - **après le delta**, sur l'état nouveau : les événements d'état, en chaîne bornée (un événement peut en rendre un autre dû) — par passes, 3 au plus (`EVENT_CHAIN_DEPTH`) ; un dépassement ne fait pas échouer le tour, ce qui reste dû est repris au tour suivant et tracé —, puis les emplois du temps des PNJ qui ne sont pas avec le personnage. Un événement d'état dépend de ce que l'extraction a lu : il se raconte **au tour suivant** (le vol au tour N, le rugissement au tour N + 1).
+- **Ordre d'application dans la transaction** : horloge, mourants, round, premiers soins, effets des événements de temps, delta de l'extraction, guérison, événements d'état, emplois du temps.
+- **Un événement peut interrompre une action** (`interrupts`) : la fin du tour est le plus tôt de la fin prévue et de l'instant du premier événement interrompant dans la fenêtre. « Je dors jusqu'au matin » et une attaque nocturne de gobelins : le personnage est réveillé, l'horloge est à la nuit. Précisions :
+  - seul un événement **dont le personnage est témoin** interrompt — dans son lieu, ou sans `place` ; l'attaque du camp des elfes, à l'autre bout de la carte, ne réveille personne ;
+  - à partir de `minutes` seulement : ni `moment` ni un round de combat ne s'interrompent ;
+  - l'arrivée d'un PNJ par son emploi du temps interrompt s'il est `hostile` ou si l'entrée de l'emploi du temps porte `interrupts` (le vampire qui rentre au château où dort le personnage) — pas l'aubergiste au matin ;
+  - un jet déjà tranché reste acquis, et la narration reçoit `interrupted` avec l'événement, pour raconter l'action écourtée ;
+  - un trajet dans un réseau va toujours au bout : seul le temps passé à l'arrivée s'interrompt ;
+  - le combat commence au tour suivant : la narration pose l'attaque, le joueur y répond. Avantage au joueur, comme en Phase 10.
+- **Le joueur peut attendre un événement** : deux durées de plus dans l'échelle de l'arbitrage. « J'attends l'arrivée du Cardinal » mène à l'heure de son arrivée, le Cardinal présent.
+  - `until_event` + référence d'un événement **prévisible** : le backend le mène à l'instant où il tombe. L'arbitrage ne reçoit, en liste fermée, que les événements dont la condition `foreseeable` est remplie (le personnage sait qu'il vient, par exemple par un flag posé quand il l'apprend), avec leur description et **jamais leur heure**, à part, sans les énoncer, comme `secret_lore` ;
+  - `until_npc` + référence d'un PNJ unique **connu** (`known_npcs`) : jusqu'au prochain moment où son emploi du temps l'amène dans le lieu du personnage ;
+  - **plafond de 7 jours**, comme `days` : si rien ne vient d'ici là (événement annulé par `unless`, emploi du temps qui ne passe jamais par ici), le backend fait attendre `hours` et la narration reçoit `awaited: did_not_happen` — on a attendu, personne n'est venu ;
+  - une interruption passe avant ce qu'on attend.
+- **Emplois du temps des PNJ uniques** (`npc_definitions.schedule`) : une liste d'entrées `{ periods, location, activity, leavesScene, interrupts }`, dont chaque période relève d'une seule entrée ; une période sans entrée laisse le PNJ où il est. `activity`, une ligne d'anglais (« reviews his guards »), part à la narration quand le PNJ est en scène. Précisions :
+  - un PNJ **en scène** avec le personnage ne suit son emploi du temps que si l'entrée porte `leavesScene` (le vampire fuit l'aube, même devant le personnage) ; sinon il reste, et rejoint son emploi du temps une fois la scène quittée ;
+  - un PNJ **pas encore rencontré** n'est pas instancié : `npcsPlacedIn` lit le lieu que lui donne son emploi du temps à l'heure courante au lieu de `initialLocation`, qui ne sert plus qu'aux PNJ sans emploi du temps ;
+  - un PNJ mort n'a plus d'emploi du temps, et `schedule_stopped` y met fin ;
+  - pas d'emploi du temps pour un archétype (les archétypes postés restent hors périmètre, complément de la Phase 7) : « une seule sentinelle la nuit » est une note de période sur le lieu.
+- **Seul un passage se bloque, jamais un lieu** : un passage bloqué ne se franchit d'aucune façon — ni clé, ni crochetage — à la différence de `locked`. Cyclique (`blockedDuring: Period[]` et `blockedReason` sur une sortie, « the sea fills the cave mouth ») ou posé par un événement. **Des deux côtés**, comme `requires`. `#services/game/travel` n'en fait ni une destination ni une étape de chemin, évalué au début du tour, comme le reste du parcours. Arbitrage et narration reçoivent la sortie avec l'état `blocked` et sa raison. Si l'entrée d'une grotte se rejoint depuis le monde libre, l'auteur fait de la plage l'entrée du réseau et déclare une sortie « plage → grotte » : pas de seconde notion d'accessibilité d'un lieu.
+- **Notes de scène** : une ligne d'anglais ajoutée à la description d'un lieu (« the stables smell of horses not your own »), pour ce qui change l'aspect d'un lieu sans conséquence mécanique — ce sur quoi le joueur peut agir est un objet ou un passage. Cycliques (`periodNotes: { periods, note }[]` sur la définition de lieu) ou posées par un événement. Comme la description, elles partent à l'arbitrage et à la narration, jamais à l'extraction, et ne nomment ni un unique pas encore rencontré ni ce qu'il y a derrière un passage (`giveaways`, étendu aux notes).
+- **Ce que voit chaque étape** :
+  - la narration : la `description` des événements dont le personnage est témoin dans le tour et de ceux d'état tombés au tour précédent, `interrupted` ou `awaited` s'il y a lieu, l'activité des PNJ en scène, les notes de scène, les passages bloqués. Jamais un événement lointain : le personnage en découvre les suites en y allant, par l'état ;
+  - l'arbitrage : les événements tombés, comme faits du monde, à part et sans les énoncer, jusqu'à ce qu'un résumé `scene` couvre leur tour ; les événements prévisibles (pour `until_event`) ; les notes et les passages bloqués. Jamais un événement à venir qui n'est pas prévisible ;
+  - l'extraction : la scène déjà modifiée et le catalogue des flags, rien d'autre ;
+  - le front : rien. Ce que l'horloge déclenche passe par le récit, comme le temps lui-même (Phase 7).
+- **Traçabilité** : `turn_log.events_fired` (les événements tombés, leur instant et leurs effets), et la durée proposée, la durée réelle et la cause d'un écart (interruption, attente atteinte ou manquée).
+- **Contenu et outils** : événements, flags, emplois du temps, passages bloqués et notes de période saisis en JSON brut validé au back-office, comme les sorties, et repris par l'import JSON. `checkScenario` vérifie que toute référence existe (lieux, PNJ, objets, flags, événements), que les entrées d'un emploi du temps ne se chevauchent pas, et que les chaînes d'événements ne bouclent pas.
+
 ### Contenu
 
-- Échéances et événements déclenchés par le temps, à cadrer : une condition (jour, période, peut-être un flag) et un effet appliqué par le backend en delta validé, saisis comme contenu de scénario et vérifiés par `checkScenario`.
-- **Emplois du temps des PNJ** (gardes moins nombreux la nuit, vampire au tombeau le jour et au château la nuit), qui déplacent ou retirent des instances via leur lieu (`location_instance_id`, Phase 7), en partant de leur placement initial (complément de la Phase 7).
+- Catalogue de flags et liste fermée à l'extraction.
+- Emplois du temps des PNJ uniques : contenu, `#services/game/schedules` (pur), placement paresseux des PNJ non rencontrés, déplacement en fin de tour, `until_npc`.
+- Passages bloqués et notes de scène, cycliques et posés par un événement.
+- Événements de temps : contenu, `event_states`, `#services/game/events` (pur : contenu, état et fenêtre donnent les événements dus, leurs instants et l'interruption), `#services/game/apply_events`, interruption, `until_event`.
+- Événements d'état : conditions, délai, chaînes, narration au tour suivant.
+- Back-office, import JSON, `checkScenario`.
+- Démonstration : un scénario de `test-worlds/` qui déclare au moins une échéance, un événement d'état, un emploi du temps de PNJ et un passage bloqué par période.
+
+### Hors périmètre
+
+- Cycles au-delà des périodes : « tous les N jours », jours de la semaine (qui exigeraient une date), calendrier propre à un univers.
+- Archétypes à horaires, horaires d'ouverture des lieux, météo.
+- Guérison d'un PNJ dans le temps (évoquée en Phase 10).
+- Événements répétés porteurs d'effets : un cycle ne fait que placer, bloquer ou décrire.
 
 ### Critère de sortie de phase
 
 - Un scénario déclare une échéance, un événement et un emploi du temps de PNJ, et le backend les applique quand l'horloge les atteint.
+- Une longue action est interrompue par un événement dont le personnage est témoin, et « attendre » un événement prévisible ou un PNJ connu mène à son arrivée.
 
 ---
 
