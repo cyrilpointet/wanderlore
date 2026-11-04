@@ -42,7 +42,7 @@ Dans l'ordre, et uniquement côté backend :
 
 **Bornes** : un jet de **01 à 05 réussit toujours**, un jet de **96 à 00 échoue toujours**, quelle que soit la chance. *Écart au livre* : il réserve le plancher aux compétences dont la base atteint 5 %, et son texte se contredit sur le plafond ; la règle simple est retenue.
 
-**Pourquoi le d100 sous la chance** : la chance de réussite se lit directement (55 % à l'épée, c'est 55 chances sur 100), tant pour le `game_master` qui écrit un prétiré que pour le joueur qui voit le détail de son jet (section 6). Les degrés de réussite en découlent sans table (section 6).
+**Pourquoi le d100 sous la chance** : la chance de réussite se lit directement (55 % à l'épée, c'est 55 chances sur 100), tant pour le joueur qui répartit ses points à la création (section 3bis) que pour celui qui voit le détail de son jet (section 6). Les degrés de réussite en découlent sans table (section 6).
 
 ---
 
@@ -70,7 +70,7 @@ Dans l'ordre, et uniquement côté backend :
 - Chaque compétence d'univers porte une **catégorie** (enum fermé du système : `combat`, `communication`, `manipulation`, `mental`, `perception`, `physical`) et une **chance de base** : un nombre fixe (Grimper 40, Premiers soins 30, Écouter 25, Persuasion 15…), ou une caractéristique et un multiplicateur (Esquive = `DEX` × 2, langue maternelle = `INT` × 5).
 - **Une compétence absente de la fiche vaut sa chance de base** — tout personnage sait un peu grimper ou écouter. La règle « une compétence absente vaut 0 » des phases précédentes disparaît.
 - **Une spécialité est une compétence à part entière** : l'arme de mêlée (épée) et l'arme de mêlée (lance) du livre deviennent deux compétences d'univers (`sword`, `spear`). Pas de repli d'une spécialité sur une voisine.
-- Les **bonus de catégorie** (règle optionnelle du livre) sont écartés : un prétiré porte directement les valeurs finales.
+- Les **bonus de catégorie** (règle optionnelle du livre) sont écartés : la fiche porte directement les valeurs finales (prétiré jusqu'à la Phase 11, création depuis la Phase 12, section 3bis).
 - La liste n'est jamais transmise au LLM : sa longueur ne coûte aucun jeton.
 
 **Exemple de compétences d'univers :**
@@ -90,7 +90,34 @@ Chaque `action_type` de l'univers (`resolution_rules`) se résout vers **une seu
 
 ### Conséquence sur la validation
 
-Un personnage ne peut posséder que des compétences existant dans la définition de son univers, et ses caractéristiques restent dans leurs bornes. Toute règle de résolution doit désigner une compétence de l'univers ou une caractéristique. C'est une validation applicative (au lancement d'une partie, à la publication d'un scénario), pas une contrainte de schéma rigide — puisque la liste des compétences est une donnée variable.
+Un personnage ne peut posséder que des compétences existant dans la définition de son univers, et ses caractéristiques restent dans leurs bornes. Toute règle de résolution doit désigner une compétence de l'univers ou une caractéristique. C'est une validation applicative (à la création du personnage, au lancement d'une partie, à la publication d'un scénario), pas une contrainte de schéma rigide — puisque la liste des compétences est une donnée variable.
+
+---
+
+## 3bis. Création du personnage (Phase 12)
+
+Le joueur crée son personnage dans un univers, avant d'y choisir un scénario. La création suit le livre (*Step One*, option *Choosing Characteristic Values* ; *Step Seven*), sans ses autres options. Tout est tiré ou vérifié par le backend ; le front ne calcule rien.
+
+1. **Tirage** : sept fois **3D6**, par le backend (`dice`). La série est gardée en base : le joueur ne peut placer que ce qui a été tiré. **Relance à volonté** de toute la série (*écart au livre*, qui la soumet à l'accord du MJ).
+2. **Placement** : le joueur répartit les sept résultats entre les sept caractéristiques, une permutation exacte de la série. `SIZ` et `INT` ne descendent jamais sous **8** : un résultat plus bas placé là est relevé à 8. Pas de redistribution de 3 points.
+3. **Profession**, dans le catalogue de l'univers : une liste de compétences professionnelles, un équipement et des ressources de départ.
+4. **Compétences** : deux réserves de points, ajoutés à la chance de base (calculée sur les caractéristiques placées) :
+   - **professionnelle**, sur les seules compétences de la profession, selon le niveau de puissance de l'univers ;
+   - **personnelle**, `INT × 10`, sur n'importe quelle compétence de l'univers.
+
+   | Niveau de puissance (`worlds.power_level`) | Réserve professionnelle | Plafond d'une compétence à la création |
+   |---|---|---|
+   | `normal` | 250 | 75 % |
+   | `heroic` | 325 | 90 % |
+   | `epic` | 400 | 101 % |
+   | `superhuman` | 500 | aucun |
+
+   Le plafond porte sur la valeur finale. Une réserve ne se dépasse pas ; un reliquat est permis. Le barème est **fixe dans le code** ; seul le niveau est une donnée d'univers (`normal` pour le Mythe de Lovecraft, `heroic` pour les Trois Mousquetaires).
+5. **Identité** : un nom (35 caractères au plus) et un genre en choix fermé (`female`, `male`, `neutral`).
+
+- **Écartés** : personnalité (*Step Six*), bonus de catégorie, âge et `EDU`, redistribution de 3 points, 2D6+6 pour toutes les caractéristiques, réserve personnelle accrue, création par points.
+- Les **points de vie** ne s'enregistrent pas sur la fiche : ils se dérivent au lancement de chaque partie (section 7).
+- Le niveau de puissance ne règle encore que la création ; il décidera aussi des points de vie totaux en Phase 13 (section 7).
 
 ---
 
@@ -313,7 +340,7 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
   |---|---|
   | Matrice attaque / défense, parade, esquive, dégâts branchés, armure, blessures grave et mortelle, effets spéciaux, maladresses ; points de vie totaux du personnage, premiers soins, guérison naturelle | Phase 10 |
   | Jets opposés hors combat (Discrétion contre Perception…), table de résistance | Lot à part, à cadrer (écartés de la Phase 10) |
-  | Création guidée (niveau de puissance, professions, réserves de points), expérience et progression | Phase 12 |
+  | ~~Création guidée (niveau de puissance, professions, réserves de points)~~ — cadrée à l'ouverture de la Phase 12 (section 3bis) ; expérience et progression | Phase 12 |
   | Règles optionnelles par univers : Santé mentale (Mythe), Passions et Réputation (Mousquetaires), jets cachés | Phase 13 |
   | Dangers (chute, feu, noyade, poison), soins autres que les premiers soins (médecine, remèdes), poursuites | Au cas par cas, quand un scénario le demande |
   | Pouvoirs (magie, sorcellerie, psychisme) | Hors roadmap actuelle |

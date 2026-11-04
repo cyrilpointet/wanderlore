@@ -35,6 +35,7 @@ en `jsonb`, lues et écrites avec l'univers ; les catalogues ont leurs tables.
 | `skills` | jsonb | `[{ reference, labels, category, baseChance }]` : catégorie du BRP (`combat`, `communication`, `manipulation`, `mental`, `perception`, `physical`) et chance de base, fixe (`25`) ou caractéristique × multiplicateur (`{ characteristic: "DEX", multiplier: 2 }`). Plus de colonne `attributes` depuis la Phase 6 : les sept caractéristiques sont celles du système |
 | `resources` | jsonb | `[{ reference, labels }]` (ex. `purse`) |
 | `glossary` | jsonb | `[{ reference, labels }]` : noms propres qui ne sont pas des entités du jeu (factions, figures hors scène) et leurs traductions |
+| `power_level` | enum `power_level`, `normal` par défaut | niveau de puissance du BRP (Phase 12) : `normal`, `heroic`, `epic`, `superhuman`. Il fixe, à la création d'un personnage, la réserve de points professionnels et le plafond d'une compétence (barème fixe dans le code, règles section 3bis) |
 | `created_by` | FK → users, nullable | auteur ; null pour le contenu que possède le seeder |
 | `created_at` / `updated_at` | timestamptz | — |
 
@@ -89,7 +90,7 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
 | `status` | enum `scenario_status` | `draft` / `published` ; seul un scénario publié est proposé aux joueurs |
 | `chapters` | jsonb | `[{ reference, labels }]`, dans l'ordre ; sans conditions de progression à ce stade |
 | `quests` | jsonb | `[{ reference, labels }]` |
-| `pregenerated_character` | jsonb, nullable | le personnage copié dans chaque partie : `name`, `characteristics` (les sept du BRP), `skills` (en pourcentage, les seules compétences entraînées), `resources` (valeurs par référence), `items` (`definition`, `descriptor`, `quantity`, `equipped`). Pas de points de vie : ils se dérivent de CON et TAI au lancement de la partie |
+| `starting_kit` | jsonb, `{ items: [], resources: {} }` par défaut | ce que le scénario donne au personnage au lancement (Phase 12), en plus de l'équipement de sa profession : `items` (`definition`, `descriptor`, `quantity`, `equipped`) et `resources` (valeurs par référence, ajoutées à celles de la profession). Remplace `pregenerated_character` (Phases 5 à 11), supprimé sans reprise |
 | `initial_state` | jsonb, nullable | là où une partie commence : `location` (lieu unique), `chapter`, `quests` (`reference`, `step`, `summary`), `knownNpcs` facultatif (les PNJ uniques que le personnage connaît de nom au départ) |
 | `start_time` | time, non nul, 08:00 par défaut | heure d'ouverture de l'histoire, à la minute (Phase 7) |
 | `start_date` | date, nullable | date grégorienne d'ouverture, si l'histoire en a une (Phase 7) |
@@ -102,13 +103,18 @@ Trame narrative rattachée à un univers, d'où une partie est lancée. **Schém
 - Unicité sur `(world_id, reference)`, et sur `(id, world_id)` : cible des clés étrangères
   composites qui empêchent une définition ou une partie de nommer le scénario d'un autre
   univers.
-- **Brouillon et publication** : un brouillon peut manquer de personnage ou d'état initial. La
-  publication vérifie que le scénario tient debout (`checkScenario`, références, archétypes
-  génériques, personnage, état initial, nom anglais partout) et renvoie la liste complète des
-  incohérences ; la vérification est refaite au lancement de chaque partie.
-- **Lancer une partie** copie le prétiré, l'état initial et le départ de l'horloge (heure et
-  date) dans une partie neuve, dans une transaction : modifier ensuite le scénario ne décale
-  pas une partie en cours. La création guidée de personnage attend la Phase 12.
+- **Brouillon et publication** : un brouillon peut manquer d'état initial. La publication
+  vérifie que le scénario tient debout (`checkScenario`, références, archétypes génériques,
+  équipement de départ, état initial, nom anglais partout) et renvoie la liste complète des
+  incohérences ; la vérification est refaite au lancement de chaque partie. Depuis la Phase 12,
+  elle vérifie aussi qu'aucune profession de l'univers ne rend le scénario impossible (un objet
+  unique donné à la fois par la profession et par le scénario).
+- **Lancer une partie** (Phase 12) engage un personnage du joueur, de l'univers du scénario,
+  qui n'est engagé dans aucune autre partie. Il copie l'état initial et le départ de l'horloge
+  (heure et date) dans une partie neuve, crée l'état de partie du personnage
+  (`character_states`, points de vie au maximum, ressources de la profession et du scénario)
+  et son équipement (objets de la profession, puis du scénario), dans une transaction :
+  modifier ensuite le scénario ne décale pas une partie en cours.
 - **Cohérence des événements** (Phase 11) : `checkScenario` refuse un flag, un lieu, un PNJ, un
   objet ou un passage inconnu dans une condition ou un effet (`unknown_flag`,
   `unknown_passage`), un effet propre aux uniques porté sur un archétype (`not_unique`), un
@@ -200,13 +206,79 @@ enum : la liste est propre à chaque univers, donc ouverte.
 }
 ```
 
+### `professions`
+
+Catalogue des professions d'un univers (Phase 12), où le joueur choisit celle de son
+personnage. Pas de surcharge par scénario : une profession vaut pour tout l'univers.
+
+| Colonne | Type | Contenu |
+|---|---|---|
+| `id` | uuid | identifiant |
+| `world_id` | FK → worlds (cascade) | univers |
+| `reference` | varchar | référence anglaise stable (`musketeer`), unique dans l'univers, immuable |
+| `labels` | jsonb | noms d'affichage par langue, `en` obligatoire |
+| `description` | text | une ligne d'anglais, montrée à la création et transmise à l'arbitrage et à la narration |
+| `skills` | jsonb | références des compétences professionnelles, parmi `worlds.skills` ; seules à recevoir les points professionnels |
+| `starting_items` | jsonb, `[]` par défaut | `[{ definition, descriptor, quantity, equipped }]`, objets **de l'univers** (jamais d'un seul scénario) donnés au lancement de chaque partie |
+| `starting_resources` | jsonb, `{}` par défaut | valeurs par référence de `worlds.resources`, ajoutées à celles du scénario |
+| `created_at` / `updated_at` | timestamptz | — |
+
+- Unicité sur `(world_id, reference)`, et sur `(id, world_id)` : cible de la clé étrangère
+  composite de `characters`, qui empêche un personnage de suivre la profession d'un autre univers.
+- Une profession qu'un personnage emploie ne se supprime pas (restrict, `content_in_use`).
+- Ce que le validateur ne voit pas (compétence ou objet inconnu de l'univers, objet de scénario)
+  se refuse dans `catalogue_checks`.
+
 ---
 
-## 3. Domaine "Partie en cours" (une instance jouée)
+## 3. Domaine "Personnage et partie"
+
+### `characters`
+
+Le personnage d'un joueur, dans un univers (Phase 12) : la fiche durable, qui survit à ses
+parties. Jusqu'à la Phase 11, un personnage appartenait à une partie (`session_id`), copié du
+prétiré du scénario ; ce qui ne dure qu'une partie vit désormais dans `character_states`.
+
+| Colonne | Type | Contenu |
+|---|---|---|
+| `id` | uuid | identifiant |
+| `user_id` | FK → users | joueur propriétaire |
+| `world_id` | FK → worlds (restrict) | univers du personnage, pour toujours |
+| `profession_id` | uuid | profession ; clé étrangère composite `(profession_id, world_id)` → `professions(id, world_id)`, restrict |
+| `name` | varchar(35) | nom choisi par le joueur : lettres, espaces, apostrophe, trait d'union, point |
+| `gender` | enum `character_gender` | `female` / `male` / `neutral` : pronoms et accords de la narration |
+| `characteristics` | jsonb | les sept caractéristiques du BRP (`STR`, `CON`, `SIZ`, `INT`, `POW`, `DEX`, `CHA`), placées par le joueur depuis sa série tirée |
+| `skills` | jsonb | compétences entraînées, en pourcentage (chance de base + points de création) ; une compétence absente vaut sa chance de base |
+| `progression` | jsonb | expérience, pour le lot de la progression |
+| `created_at` / `updated_at` | timestamptz | — |
+| `deleted_at` | timestamptz, nullable | suppression douce par le joueur, possible seulement s'il n'est engagé dans aucune partie |
+
+**Exemple de contenu `characteristics`** : `{ "STR": 13, "CON": 14, "SIZ": 12, "INT": 13, "POW": 12, "DEX": 16, "CHA": 14 }`
+**Exemple de contenu `skills`** : `{ "swordsmanship": 60, "persuasion": 45, "athletics": 30 }`
+
+- **Lu sans copie par la partie** : caractéristiques et compétences se lisent sur la fiche à
+  chaque tour. Un personnage n'étant engagé que dans une partie à la fois, rien ne peut
+  diverger ; la progression écrira sur la fiche à la fin d'un scénario.
+- **Le personnage ne garde rien d'une partie à l'autre** (pour l'instant) : points de vie,
+  ressources et inventaire repartent à neuf à chaque lancement.
+- Un personnage supprimé disparaît des routes du joueur avec ses parties, qui restent en base.
+
+### `character_rolls`
+
+La série de caractéristiques tirée pour la création d'un personnage (Phase 12) : sept fois 3D6,
+tirés par le backend. Une série courante par joueur, remplacée à chaque relance (à volonté) et
+consommée par la création, qui n'accepte qu'une permutation exacte de cette série.
+
+| Colonne | Type | Contenu |
+|---|---|---|
+| `id` | uuid | identifiant |
+| `user_id` | FK → users (cascade), unique | joueur |
+| `values` | jsonb | les sept résultats, dans l'ordre du tirage |
+| `created_at` | timestamptz | — |
 
 ### `sessions`
 
-Une partie jouée par un joueur donné.
+Une partie : un personnage engagé dans un scénario.
 
 | Colonne | Type | Contenu |
 |---|---|---|
@@ -214,41 +286,46 @@ Une partie jouée par un joueur donné.
 | `user_id` | FK → users | joueur propriétaire |
 | `world_id` | FK → worlds (restrict), non null | univers de la partie (Phase 5) |
 | `scenario_id` | uuid, non null | scénario d'où la partie est lancée ; clé étrangère composite `(scenario_id, world_id)` → `scenarios(id, world_id)`, restrict |
-| `status` | enum `session_status` | `in_progress` / `paused` / `completed` |
+| `character_id` | uuid, non null | personnage engagé (Phase 12) ; clé étrangère composite `(character_id, world_id)` → `characters(id, world_id)`, restrict |
+| `status` | enum `session_status` | `in_progress` / `paused` / `completed` (réussie) / `failed` (Phase 12) |
+| `ended_at` | timestamptz, nullable | fin de la partie (`completed` ou `failed`) |
 | `current_chapter` | varchar, nullable | référence du chapitre courant, parmi `scenarios.chapters` |
 | `created_at` / `last_activity_at` | timestamptz | — |
 | `deleted_at` | timestamptz, nullable | moment où le joueur a retiré la partie de sa liste ; null tant qu'elle y figure |
 
-- **Suppression douce** : une partie supprimée par le joueur reste en base avec ses tours
-  (coût des jetons compris), mais toute route de jeu — liste, lecture, tours, soumission,
-  canal SSE — y répond comme à une partie inexistante (scope `listed` du modèle). Un tour déjà
-  en cours se joue jusqu'au bout sans être vu. Elle continue d'empêcher la suppression du
-  contenu avec lequel elle a été jouée.
-- `world_id` et `scenario_id` sont arrivés `NOT NULL` **sans reprise de données** : la
-  migration refuse de passer tant que des parties existent (`node ace game:reset --no-seed`).
+- **Une partie à la fois par personnage** : index unique partiel sur `character_id` pour les
+  parties `in_progress` ou `paused` ; un second lancement est refusé (`character_engaged`).
+- **Abandon** : la partie passe `failed` (avec `ended_at`), refusé pendant un tour en cours. Une
+  partie `failed` est close : son journal se relit, aucun tour ne s'y soumet plus. La raison
+  d'une fin (abandon, mort, victoire) arrive avec les conditions de fin de partie.
+- **Rejouer** un scénario `failed` crée une partie neuve, une nouvelle tentative ; un scénario
+  qu'un personnage a réussi (`completed`) ne se relance pas pour lui.
+- **Suppression douce** : seulement une partie `failed` (Phase 12). Elle reste en base avec ses
+  tours (coût des jetons compris), mais toute route de jeu — liste, lecture, tours, soumission,
+  canal SSE — y répond comme à une partie inexistante (scope `listed` du modèle). Elle continue
+  d'empêcher la suppression du contenu avec lequel elle a été jouée.
+- `world_id`, `scenario_id` puis `character_id` sont arrivés `NOT NULL` **sans reprise de
+  données** : la migration refuse de passer tant que des parties existent
+  (`node ace game:reset --no-seed`).
 - Le contenu avec lequel une partie a été jouée ne se supprime pas (restrict).
 
-### `characters`
+### `character_states`
 
-Le personnage joué dans une partie donnée.
+Ce que le personnage vit le temps d'une partie (Phase 12) : une ligne par partie, créée au
+lancement. Ces colonnes vivaient sur `characters` jusqu'à la Phase 11.
 
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant |
-| `session_id` | FK → sessions | partie parente |
-| `characteristics` | jsonb | les sept caractéristiques du BRP (`STR`, `CON`, `SIZ`, `INT`, `POW`, `DEX`, `CHA`) |
-| `skills` | jsonb | compétences entraînées, en pourcentage ; une compétence absente vaut sa chance de base |
+| `session_id` | FK → sessions (cascade), unique | partie |
+| `character_id` | FK → characters | personnage engagé |
 | `hit_points` | int | PV courants |
 | `hit_points_max` | int | PV maximum, dérivés de la fiche au lancement : `CON + SIZ` depuis la Phase 10 (provisoire, Phase 13) |
 | `bleeding` | bool | saigne d'un coup reçu : 1 PV par round de combat, jusqu'aux premiers soins ou la fin du combat (Phase 10) |
 | `first_aid_available` | bool | une blessure reçue depuis la dernière tentative de premiers soins : une tentative par blessure (Phase 10) |
 | `healing_since` | int, nullable | horloge de jeu d'où la guérison naturelle compte ses semaines ; null à PV pleins (Phase 10) |
-| `resources` | jsonb | autres ressources courantes (mana, endurance, etc.) |
-| `progression` | jsonb | niveau, expérience si applicable |
-| `created_at` / `updated_at` | timestamp | — |
-
-**Exemple de contenu `characteristics`** : `{ "STR": 13, "CON": 14, "SIZ": 12, "INT": 13, "POW": 12, "DEX": 16, "CHA": 14 }`
-**Exemple de contenu `skills`** : `{ "swordsmanship": 60, "persuasion": 45, "athletics": 30 }`
+| `resources` | jsonb | ressources courantes, par référence de `worlds.resources` ; au lancement, profession + scénario |
+| `created_at` / `updated_at` | timestamptz | — |
 
 ### `inventory_items`
 
@@ -293,7 +370,9 @@ lieux ; en base depuis la Phase 5 (`item_definitions`, section 2). Chaque défin
 - **L'identité d'un objet ne dépend pas de son détenteur** : un exemplaire garde son handle
   quand il change de mains, et ce handle est unique dans la partie. Un empilable compte au plus
   une ligne par détenteur et par définition (index uniques partiels) : vingt balles données à un
-  PNJ font deux lignes, une quantité de chaque côté.
+  PNJ font deux lignes, une quantité de chaque côté. Depuis la Phase 12, le personnage survit à
+  ses parties : le détenteur `character_id` se lit toujours avec `session_id`, qui entre dans
+  l'index d'empilement, et l'inventaire d'une partie ne passe jamais à la suivante.
 - **Changer de détenteur n'est pas perdre.** Donner, voler, cacher, poser, ramasser sont des
   transferts. `gone` est réservé à l'objet détruit ou consommé ; une ligne n'est jamais
   supprimée, comme un PNJ passe `absent`.
@@ -615,19 +694,21 @@ retrouve le dernier résumé d'un niveau.
 
 ```
 worlds ──┬── resolution_rules
+         ├── professions (Phase 12) ───────────────── characters (Phase 12, durable)
          ├── npc_ / location_ / item_definitions ──┐ (univers, ou scénario qui surcharge)
          ├── lore_fragments (Phase 8) ─────────────┤ (idem)
          └── scenarios ────────────────────────────┘
-               └── sessions ──┬── characters ─────────┐
-                              ├── npc_instances ──────┼── inventory_items
-                              ├── location_instances ─┘   (un détenteur parmi trois)
+               └── sessions (un personnage engagé) ─┬── character_states (1:1, Phase 12)
+                              ├── npc_instances ──────┐
+                              ├── location_instances ─┼── inventory_items
+                              │   (+ characters) ─────┘   (un détenteur parmi trois)
                               ├── world_states (1:1)
                               ├── passage_states (Phase 7)
                               ├── event_states, place_notes (Phase 11)
                               ├── turn_log
                               └── narrative_summaries (Phase 9)
 
-users ──── sessions
+users ──── characters, character_rolls (Phase 12), sessions
 users ──── worlds, scenarios (created_by)
 users ──── usage_quotas (optionnel)
 ```
@@ -641,7 +722,7 @@ users ──── usage_quotas (optionnel)
 - **Contrainte d'unicité** sur `world_states.session_id` pour garantir la relation 1:1 avec `sessions`.
 - **pgvector** comme option native si le RAG est hébergé directement dans PostgreSQL plutôt que dans un vector store externe dédié — évite une dépendance d'infrastructure supplémentaire pour un volume de lore raisonnable, à réévaluer si le corpus devient très volumineux.
 - **Partitionnement de `turn_log`** à envisager si le volume de parties/tours devient important (par exemple partition par `session_id` ou par plage temporelle), pour garder les performances de lecture sur les tours récents indépendantes du volume historique total.
-- **Séparation lecture chaude / lecture froide** : `world_states`, `characters`, `npc_instances` sont lus à chaque tour (chemin critique) — `turn_log` et `narrative_summaries` sont surtout écrits en continu ; à chaque tour, on n'en lit que les quelques lignes de la mémoire (les résumés d'une partie, les tours qu'ils ne couvrent pas), le reste ponctuellement (debug, reprise, génération de résumé, pages du journal) : ce sont des profils d'accès différents à garder en tête pour le dimensionnement des index.
+- **Séparation lecture chaude / lecture froide** : `world_states`, `characters`, `character_states`, `npc_instances` sont lus à chaque tour (chemin critique) — `turn_log` et `narrative_summaries` sont surtout écrits en continu ; à chaque tour, on n'en lit que les quelques lignes de la mémoire (les résumés d'une partie, les tours qu'ils ne couvrent pas), le reste ponctuellement (debug, reprise, génération de résumé, pages du journal) : ce sont des profils d'accès différents à garder en tête pour le dimensionnement des index.
 
 ---
 

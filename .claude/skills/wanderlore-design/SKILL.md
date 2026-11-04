@@ -28,6 +28,7 @@ Les invariants non négociables sont dans `CLAUDE.md` (déjà chargé). Ce skill
 | Lieux : définitions, instances, parent, affichage | `doc/architecture-mj-virtuel-llm.md` | 6quater |
 | Temps de jeu : horloge, durées, périodes | `doc/architecture-mj-virtuel-llm.md` | 6quinquies |
 | Échéances, événements, emplois du temps, interruption et attente | `doc/architecture-mj-virtuel-llm.md` ; `doc/roadmap-mj-virtuel-llm.md` | 6sexies ; Phase 11, décisions de cadrage |
+| Création du personnage (tirage, profession, réserves, niveau de puissance), parties d'un personnage (une à la fois, abandon, rejeu) | `doc/systeme-regles-jeu-mj-virtuel.md` ; `doc/roadmap-mj-virtuel-llm.md` ; `doc/base-de-donnees-mj-virtuel-postgresql.md` | 3bis ; Phase 12, décisions de cadrage ; `characters`, `character_states`, `sessions` |
 | Exemple complet de tour avec system prompts réels | `doc/architecture-mj-virtuel-llm.md` | 6 |
 | Sécurité des prompts, anti prompt-injection | `doc/architecture-mj-virtuel-llm.md` | 7 |
 | Découpage applicatif AdonisJS (services, jobs) | `doc/architecture-mj-virtuel-llm.md` | 8 |

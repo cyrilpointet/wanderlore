@@ -94,7 +94,7 @@ Ces principes découlent des invariants du projet. Ils s'appliquent à toutes le
 | 9 | Rien de visible (mémoire long terme côté backend) |
 | 10 | Combat en rounds : jusqu'à deux jets du personnage par tour, dégâts infligés en détail |
 | 11 | Rien de visible en propre : les échéances et les emplois du temps des PNJ passent par le récit |
-| 12 | Création de personnage guidée, progression du personnage, pause / reprise, écrans de fin |
+| 12 | Accueil par personnages, création de personnage guidée, page d'un personnage et ses parties, abandon (5.6) ; puis progression du personnage, pause / reprise, écrans de fin |
 | 13 | Santé mentale, passions et réputation sur la fiche, selon l'univers |
 | 14 | Inscription, mot de passe oublié, choix de la langue, paramètres du compte |
 
@@ -149,6 +149,9 @@ authentifié.
 existe, sinon `/games`.
 
 ### 5.2 Mes parties — `/games`
+
+> **Remplacé en Phase 12** par l'accueil par personnages et la page d'un personnage (5.6). La
+> suppression d'une partie n'y vaut plus que pour une partie échouée.
 
 **Objectif** : retrouver et reprendre une partie.
 
@@ -466,6 +469,65 @@ réglables : ils signalent un état, et le réglage du système suffit à les fi
 La liste des animations réglables grandit avec elles : toute nouvelle animation notable
 (au-delà d'une transition de survol) y prend sa ligne.
 
+### 5.6 Personnages et parties d'un personnage (Phase 12)
+
+Depuis la Phase 12, le joueur ne lance plus une partie depuis un catalogue de scénarios avec
+un prétiré : il choisit un univers, y crée un personnage, puis choisit pour lui un scénario de
+cet univers. Un personnage ne joue qu'une partie à la fois. Ces écrans remplacent **My games**
+(5.2) et **New game** (Phase 5). Tout ce qui est chiffré vient du backend ; le front ne fait
+qu'afficher et tenir le brouillon de la création.
+
+**Accueil — `/`** (après connexion)
+- **Mes personnages** : une carte par personnage, les engagés d'abord (avec leur partie en
+  cours : scénario, chapitre, points de vie, bouton **Continue**), puis par dernière activité ;
+  nom, univers, profession. La carte mène à la page du personnage.
+- **Univers** : une carte par univers où le joueur peut créer un personnage (libellé, ton),
+  bouton **Create a character**.
+- **États** : chargement (squelettes) ; aucun personnage (*« No character yet. »*, invitation à
+  choisir un univers) ; erreur de chargement avec **Try again**.
+
+**Création — `/worlds/:worldId/new-character`**, cinq étapes, avec retour en arrière possible
+jusqu'à la soumission ; le brouillon vit dans le composant (perdu si l'on quitte la page) :
+1. **Dés** : sept fois 3D6, tirés par le backend et révélés à l'écran comme un jet en direct
+   (5.3.7, préférence d'animation *Dés*, `prefers-reduced-motion` en plancher). **Reroll**
+   à volonté, qui remplace toute la série (et défait le placement).
+2. **Placement** : glisser ou attribuer chaque résultat à une caractéristique, chaque résultat
+   une seule fois. Une mention signale que SIZ et INT ne descendent pas sous 8 ; la valeur
+   relevée s'affiche telle que la renvoie l'aperçu.
+3. **Profession** : les professions de l'univers, avec leur description, leurs compétences
+   professionnelles et leur équipement de départ.
+4. **Compétences** : deux réserves affichées avec leur reste (professionnelle, sur les seules
+   compétences de la profession ; personnelle, sur toutes), chaque compétence avec sa chance
+   de base et sa valeur, le plafond de l'univers rappelé. Un reliquat est signalé, pas bloquant.
+5. **Identité** : nom (35 caractères au plus, compteur), genre (*Female*, *Male*, *Neutral*).
+   Récapitulatif, puis **Create**. Une erreur de validation renvoie à l'étape du champ fautif.
+
+Le front ne calcule rien, même ici : à chaque changement du brouillon (avec un léger délai), il
+l'envoie à l'**aperçu** (`POST /characters/preview`), qui renvoie la fiche calculée —
+caractéristiques relevées, chance de base et valeur de chaque compétence, reste des réserves,
+points de vie — et les refus par champ. C'est le même calcul que la création, sans écriture.
+
+**Page d'un personnage — `/characters/:characterId`**
+- Sa fiche (comme 5.3.4, sans l'état de partie quand il n'est pas engagé) : nom, genre,
+  profession, univers, caractéristiques, compétences.
+- **Partie en cours**, s'il y en a une : **Continue** (vers `/games/:gameId`) et **Abandon**,
+  derrière une modale de confirmation (*« Abandon this scenario? »*, la partie passe en échec et
+  ne se reprend pas) ; refusé pendant un tour en cours.
+- **Scénarios disponibles** (s'il n'est pas engagé) : ceux de son univers qu'il n'a pas
+  réussis, avec synopsis ; un scénario échoué est marqué (*Failed — try again*). **Play**
+  lance une nouvelle partie. Un `game_master` y voit aussi les brouillons, marqués.
+- **Parties passées** : échouées (supprimables, avec confirmation) et réussies ; chacune se
+  relit.
+- **Supprimer le personnage**, avec confirmation, seulement s'il n'est engagé dans aucune
+  partie.
+
+**Écran de jeu d'une partie close** (`failed`, et plus tard `completed`) : le journal se relit,
+la zone de saisie laisse place à un bandeau (*« This game is over. »*) et un retour à la page
+du personnage. L'en-tête de l'écran de jeu mène à la page du personnage plutôt qu'à
+**My games**.
+
+**Fiche (5.3.4)** : profession et genre s'ajoutent à l'identité.
+
 ---
 
 ## 6. Contrat avec le backend — besoins du front
@@ -484,6 +546,7 @@ disponible.
 | `GET` | `/sessions/:id/turns/:turnId` | Existe (KAN-16) | État et résultat d'un tour (rattrapage) |
 | `POST` | `/sessions/:id/turns` | Existe, **à passer en `202` + clé d'idempotence** | Soumission |
 | SSE | canal Transmit de la partie | **À créer** | Progression du tour (architecture, 8bis) |
+| — | personnages, création, lancement, abandon | **Phase 12** | Écrans 5.6 ; routes esquissées dans l'architecture, 8bis (« Personnages et parties d'un personnage ») |
 
 **Authentification** : cookie de session `httpOnly` ; aucun jeton stocké côté front. En
 développement, le serveur Vite proxifie `/api` et `/__transmit` vers le backend (même
@@ -745,9 +808,10 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   backend ne les transmet pas, le récit les porte.
 - **Phase 11 — Échéances et événements déclenchés par le temps.** Pas d'impact visible : ce
   que l'horloge déclenche passe par le récit, comme le temps lui-même (Phase 7).
-- **Phase 12 — Progression et cycle de vie.** Création de personnage guidée ; progression du
-  personnage en fin de scénario ; mise en pause et reprise ; écrans de fin (victoire, mort du
-  personnage, abandon).
+- **Phase 12 — Progression et cycle de vie.** Accueil par personnages et création de
+  personnage guidée, page d'un personnage avec ses parties, abandon d'un scénario (5.6) — le
+  prétiré et l'écran **New game** disparaissent ; puis progression du personnage en fin de
+  scénario ; mise en pause et reprise ; écrans de fin (victoire, mort du personnage, abandon).
 - **Phase 13 — Règles optionnelles par univers.** Santé mentale, passions et réputation
   sur la fiche, pour les seuls univers qui les emploient ; un jet caché n'affiche pas son
   détail.
