@@ -48,10 +48,20 @@ router
 
     router
       .group(() => {
-        router.get('scenarios', [controllers.Scenarios, 'index'])
-        router.get('sessions', [controllers.Sessions, 'index'])
-        router.post('sessions', [controllers.Sessions, 'store'])
+        /** Where a character is made: the worlds with a scenario to play, and what each takes. */
+        router.get('worlds', [controllers.Worlds, 'index'])
+        router.get('worlds/:worldId/creation', [controllers.Worlds, 'creation'])
+        router.post('character-rolls', [controllers.CharacterRolls, 'store'])
+
+        router.get('characters', [controllers.Characters, 'index'])
+        router.post('characters', [controllers.Characters, 'store'])
+        router.post('characters/preview', [controllers.Characters, 'preview'])
+        router.get('characters/:id', [controllers.Characters, 'show'])
+        router.delete('characters/:id', [controllers.Characters, 'destroy'])
+        router.post('characters/:id/sessions', [controllers.Characters, 'play'])
+
         router.get('sessions/:id', [controllers.Sessions, 'show'])
+        router.post('sessions/:id/abandon', [controllers.Sessions, 'abandon'])
         router.delete('sessions/:id', [controllers.Sessions, 'destroy'])
         router.get('sessions/:id/turns', [controllers.Turns, 'index'])
         router.get('sessions/:id/turns/:turnId', [controllers.Turns, 'show'])
@@ -62,6 +72,7 @@ router
        * matchers it would reach PostgreSQL and fail there as a 500.
        */
       .where('id', router.matchers.uuid())
+      .where('worldId', router.matchers.uuid())
       .where('turnId', router.matchers.uuid())
       .as('game')
       .use(middleware.auth())
@@ -82,6 +93,12 @@ router
         router.post('worlds/:worldId/action-types', [controllers.admin.ActionTypes, 'store'])
         router.patch('action-types/:id', [controllers.admin.ActionTypes, 'update'])
         router.delete('action-types/:id', [controllers.admin.ActionTypes, 'destroy'])
+
+        /** What a character of the world may be: at world level only. */
+        router.get('worlds/:worldId/professions', [controllers.admin.Professions, 'index'])
+        router.post('worlds/:worldId/professions', [controllers.admin.Professions, 'store'])
+        router.patch('professions/:professionId', [controllers.admin.Professions, 'update'])
+        router.delete('professions/:professionId', [controllers.admin.Professions, 'destroy'])
 
         router.get('worlds/:worldId/scenarios', [controllers.admin.Scenarios, 'index'])
         router.post('worlds/:worldId/scenarios', [controllers.admin.Scenarios, 'store'])
@@ -110,6 +127,7 @@ router
       .where('worldId', router.matchers.uuid())
       .where('scenarioId', router.matchers.uuid())
       .where('definitionId', router.matchers.uuid())
+      .where('professionId', router.matchers.uuid())
       .where('id', router.matchers.uuid())
       .where('catalogue', { match: /^(npcs|locations|items|lore)$/ })
       .prefix('admin')

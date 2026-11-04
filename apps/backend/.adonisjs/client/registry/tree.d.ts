@@ -20,13 +20,24 @@ export interface ApiDefinition {
     }
   }
   game: {
-    scenarios: {
-      index: typeof routes['game.scenarios.index']
+    worlds: {
+      index: typeof routes['game.worlds.index']
+      creation: typeof routes['game.worlds.creation']
+    }
+    characterRolls: {
+      store: typeof routes['game.character_rolls.store']
+    }
+    characters: {
+      index: typeof routes['game.characters.index']
+      store: typeof routes['game.characters.store']
+      preview: typeof routes['game.characters.preview']
+      show: typeof routes['game.characters.show']
+      destroy: typeof routes['game.characters.destroy']
+      play: typeof routes['game.characters.play']
     }
     sessions: {
-      index: typeof routes['game.sessions.index']
-      store: typeof routes['game.sessions.store']
       show: typeof routes['game.sessions.show']
+      abandon: typeof routes['game.sessions.abandon']
       destroy: typeof routes['game.sessions.destroy']
     }
     turns: {
@@ -48,6 +59,12 @@ export interface ApiDefinition {
       store: typeof routes['admin.action_types.store']
       update: typeof routes['admin.action_types.update']
       destroy: typeof routes['admin.action_types.destroy']
+    }
+    professions: {
+      index: typeof routes['admin.professions.index']
+      store: typeof routes['admin.professions.store']
+      update: typeof routes['admin.professions.update']
+      destroy: typeof routes['admin.professions.destroy']
     }
     scenarios: {
       index: typeof routes['admin.scenarios.index']

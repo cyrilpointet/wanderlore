@@ -67,40 +67,112 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/login_controller').default['destroy']>>>
     }
   }
-  'game.scenarios.index': {
+  'game.worlds.index': {
     methods: ["GET","HEAD"]
-    pattern: '/api/v1/scenarios'
+    pattern: '/api/v1/worlds'
     types: {
       body: {}
       paramsTuple: []
       params: {}
       query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/scenarios_controller').default['index']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/scenarios_controller').default['index']>>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/worlds_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/worlds_controller').default['index']>>>
     }
   }
-  'game.sessions.index': {
+  'game.worlds.creation': {
     methods: ["GET","HEAD"]
-    pattern: '/api/v1/sessions'
+    pattern: '/api/v1/worlds/:worldId/creation'
     types: {
       body: {}
-      paramsTuple: []
-      params: {}
+      paramsTuple: [ParamValue]
+      params: { worldId: ParamValue }
       query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['index']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['index']>>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/worlds_controller').default['creation']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/worlds_controller').default['creation']>>>
     }
   }
-  'game.sessions.store': {
+  'game.character_rolls.store': {
     methods: ["POST"]
-    pattern: '/api/v1/sessions'
+    pattern: '/api/v1/character-rolls'
     types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/session').startGameValidator)>>
+      body: {}
       paramsTuple: []
       params: {}
-      query: ExtractQuery<InferInput<(typeof import('#validators/session').startGameValidator)>>
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['store']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/character_rolls_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/character_rolls_controller').default['store']>>>
+    }
+  }
+  'game.characters.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/characters'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['index']>>>
+    }
+  }
+  'game.characters.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/characters'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/character').createCharacterValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/character').createCharacterValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'game.characters.preview': {
+    methods: ["POST"]
+    pattern: '/api/v1/characters/preview'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/character').previewCharacterValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/character').previewCharacterValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['preview']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['preview']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'game.characters.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/characters/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['show']>>>
+    }
+  }
+  'game.characters.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/characters/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['destroy']>>>
+    }
+  }
+  'game.characters.play': {
+    methods: ["POST"]
+    pattern: '/api/v1/characters/:id/sessions'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/character').startGameValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/character').startGameValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['play']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/characters_controller').default['play']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'game.sessions.show': {
@@ -113,6 +185,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['show']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['show']>>>
+    }
+  }
+  'game.sessions.abandon': {
+    methods: ["POST"]
+    pattern: '/api/v1/sessions/:id/abandon'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['abandon']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sessions_controller').default['abandon']>>>
     }
   }
   'game.sessions.destroy': {
@@ -269,6 +353,54 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/action_types_controller').default['destroy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/action_types_controller').default['destroy']>>>
+    }
+  }
+  'admin.professions.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/admin/worlds/:worldId/professions'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { worldId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/professions_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/professions_controller').default['index']>>>
+    }
+  }
+  'admin.professions.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/admin/worlds/:worldId/professions'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/content').createProfessionValidator)>>
+      paramsTuple: [ParamValue]
+      params: { worldId: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/content').createProfessionValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/professions_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/professions_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.professions.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/admin/professions/:professionId'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/content').updateProfessionValidator)>>
+      paramsTuple: [ParamValue]
+      params: { professionId: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/content').updateProfessionValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/professions_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/professions_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.professions.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/admin/professions/:professionId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { professionId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/professions_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/professions_controller').default['destroy']>>>
     }
   }
   'admin.scenarios.index': {

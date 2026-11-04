@@ -8,10 +8,10 @@ import type { InferData, InferVariants } from '@adonisjs/core/types/transformers
 import type AdminAccountTransformer from '#transformers/admin/account_transformer'
 import type AdminActionTypeTransformer from '#transformers/admin/action_type_transformer'
 import type AdminDefinitionTransformer from '#transformers/admin/definition_transformer'
+import type AdminProfessionTransformer from '#transformers/admin/profession_transformer'
 import type AdminScenarioTransformer from '#transformers/admin/scenario_transformer'
 import type AdminWorldTransformer from '#transformers/admin/world_transformer'
 import type CharacterTransformer from '#transformers/character_transformer'
-import type ScenarioTransformer from '#transformers/scenario_transformer'
 import type SessionTransformer from '#transformers/session_transformer'
 import type TurnTransformer from '#transformers/turn_transformer'
 import type UserTransformer from '#transformers/user_transformer'
@@ -30,6 +30,10 @@ export namespace Data {
     export namespace Definition {
       export type Variants = InferVariants<AdminDefinitionTransformer>
     }
+    export type Profession = InferData<AdminProfessionTransformer>
+    export namespace Profession {
+      export type Variants = InferVariants<AdminProfessionTransformer>
+    }
     export type Scenario = InferData<AdminScenarioTransformer>
     export namespace Scenario {
       export type Variants = InferVariants<AdminScenarioTransformer>
@@ -42,10 +46,6 @@ export namespace Data {
   export type Character = InferData<CharacterTransformer>
   export namespace Character {
     export type Variants = InferVariants<CharacterTransformer>
-  }
-  export type Scenario = InferData<ScenarioTransformer>
-  export namespace Scenario {
-    export type Variants = InferVariants<ScenarioTransformer>
   }
   export type Session = InferData<SessionTransformer>
   export namespace Session {
