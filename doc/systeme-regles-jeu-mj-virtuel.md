@@ -118,6 +118,7 @@ Le joueur crée son personnage dans un univers, avant d'y choisir un scénario. 
 - **Écartés** : personnalité (*Step Six*), bonus de catégorie, âge et `EDU`, redistribution de 3 points, 2D6+6 pour toutes les caractéristiques, réserve personnelle accrue, création par points.
 - Les **points de vie** ne s'enregistrent pas sur la fiche : ils se dérivent au lancement de chaque partie (section 7).
 - Le niveau de puissance ne règle encore que la création ; il décidera aussi des points de vie totaux en Phase 13 (section 7).
+- **Espèces non humaines (Phase 13bis)** : un ajustement fixe des caractéristiques propre à l'espèce s'appliquera après le placement, avant le relèvement de `SIZ` et `INT` à 8 ; tirage et placement restent ceux d'un humain.
 
 ---
 
@@ -342,8 +343,8 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
   | Jets opposés hors combat (Discrétion contre Perception…), table de résistance | Lot à part, à cadrer (écartés de la Phase 10) |
   | ~~Création guidée (niveau de puissance, professions, réserves de points)~~ — cadrée à l'ouverture de la Phase 12 (section 3bis) ; expérience et progression | Phase 12 |
   | Règles optionnelles par univers : Santé mentale (Mythe), Passions et Réputation (Mousquetaires), jets cachés | Phase 13 |
+  | Pouvoirs (magie, sorcellerie, psychisme), avec la table de résistance si elle n'est pas encore posée ; espèces non humaines (*Non-human Characters*) | Phase 13bis |
   | Dangers (chute, feu, noyade, poison), soins autres que les premiers soins (médecine, remèdes), poursuites | Au cas par cas, quand un scénario le demande |
-  | Pouvoirs (magie, sorcellerie, psychisme) | Hors roadmap actuelle |
 
 - **Écartés** : points de fatigue, localisation des coups (incompatible avec la blessure grave), encombrement, vieillissement, points de destin, rangs de `DEX`, actions multiples (du round, seule la durée de 12 secondes est gardée), séquelles permanentes d'une blessure grave avant la Phase 12.
 - **Jets cachés et détail du jet** : un jet caché (Phase 13) ne pourra pas montrer son détail au joueur ; la règle de la section 6 aura alors une exception.

@@ -810,6 +810,7 @@ Tranchées à l'ouverture de la phase (2026-11-04). Le parcours du joueur : il c
   - **page d'un personnage** : sa fiche, sa partie en cours (reprendre, abandonner), les scénarios disponibles de son univers (publiés ; brouillons compris pour un `game_master`, qui suit le même parcours pour tester), ses parties passées (échouées, supprimables ; réussies) ; sa suppression.
 - **Back-office** : niveau de puissance sur l'univers ; onglet *Professions* (formulaire, JSON brut validé pour l'équipement) ; équipement de départ du scénario à la place du prétiré ; import JSON (un univers clé en main porte ses professions et son niveau, un scénario son équipement de départ). Ce que les validateurs ne voient pas (compétence ou objet qui n'existe pas dans l'univers, objet de scénario dans une profession) se refuse dans `catalogue_checks`.
 - **Bascule sans reprise de données**, comme en Phase 6 : les parties existantes sont supprimées avant la migration (`game:reset --no-seed`). Le seeder de démo crée un personnage de test (Trois Mousquetaires) et sa partie.
+- **Place réservée pour l'espèce (Phase 13bis)** : une étape *espèce* viendra s'insérer avant le placement, et son ajustement des caractéristiques juste après lui, avant le relèvement de SIZ et INT à 8. Le calcul pur de la fiche (aperçu et création) s'écrit donc comme une suite d'étapes où cet ajustement se glisse sans réécriture. Ni colonne ni étape d'interface avant la Phase 13bis.
 - **Hors périmètre de ce lot** : conditions de fin et écrans de fin, progression, pause et reprise ; champs libres (apparence, passé) ; options de création du livre (personnalité, bonus de catégorie, âge et EDU, redistribution, 2D6+6 pour tous) ; limite du nombre de personnages par joueur.
 
 ### Contenu
@@ -839,9 +840,44 @@ Tranchées à l'ouverture de la phase (2026-11-04). Le parcours du joueur : il c
 - **Passions et Réputation** (Trois Mousquetaires) : honneur, loyauté, amour, renommée, comme bonus ou malus tirés par le backend, d'après un label fermé.
 - **Jets cachés** : une compétence marquée cachée est jetée sans que le joueur en voie le détail, et le narrateur reçoit la consigne de taire ou d'égarer sur un échec — l'exception prévue à la règle « le joueur voit le détail de chaque jet » (Phase 6).
 
+Pouvoirs et espèces non humaines, qui emploient les mêmes drapeaux par univers, sont séparés en Phase 13bis pour garder cette phase à sa taille.
+
 ### Critère de sortie de phase
 
 - Le Mythe se joue avec la santé mentale, les Trois Mousquetaires avec les passions et la réputation, chaque univers n'activant que ses propres règles.
+
+---
+
+## Phase 13bis — Pouvoirs et espèces non humaines
+
+**Objectif** : jouer, dans les univers qui le permettent, un personnage doté de pouvoirs ou d'une autre espèce qu'humaine (elfe, nain, orc, vampire…) — sans toucher au moteur commun. Placée après la Phase 13, dont elle réutilise les drapeaux de règles par univers et le niveau de puissance ; les pouvoirs d'abord, dont dépendent les pouvoirs innés d'une espèce.
+
+### Contenu
+
+- **Pouvoirs** (magie, sorcellerie, psychisme ; chapitre *Powers* du livre), chaque type activé par son drapeau d'univers :
+  - **points de pouvoir** du personnage, dérivés de `POW` et tenus par le backend (dépense, régénération), jamais par le LLM ;
+  - **catalogue de pouvoirs en liste fermée**, au niveau de l'univers ou d'un scénario qui le surcharge, comme les autres catalogues ; le personnage ne connaît que ceux de sa fiche ;
+  - l'arbitrage désigne le pouvoir employé et sa cible par leurs références ; le backend vérifie qu'il est connu et payable, jette, dépense et applique l'**effet, choisi dans une liste fermée** et appliqué par les services existants (dégâts, soins, modificateur, passage…) ; le narrateur ne reçoit que le résultat et le degré ;
+  - un pouvoir dirigé contre un être qui y résiste passe par la **table de résistance** (points de pouvoir contre points de pouvoir) : posée ici si le lot des jets opposés ne l'a pas fait avant. La magie se joue comme une compétence (un sort = une compétence en pourcentage) ; la sorcellerie, presque sans jet, repose entièrement sur la résistance et tient ses sorts en mémoire ou au grimoire — un état de plus sur la fiche.
+  - Mutations et super-pouvoirs, du même chapitre, restent hors périmètre.
+- **Espèces jouables** (option *Non-human Characters* du livre ; profils du chapitre *Creatures*) :
+  - **catalogue d'espèces** (`species_definitions`) au niveau de l'univers, surchargé par un scénario, comme les autres catalogues : référence immuable, libellés par langue, `playable`, niveau de puissance minimal de l'univers. Un univers sans espèce ne joue que des humains, et la création n'en montre pas l'étape ;
+  - **la fiche porte son espèce** (`characters.species`), choisie à la création, pour toujours ;
+  - **caractéristiques : un ajustement fixe après le placement** (nain `STR +3`, `CON +6`, `SIZ −4`…), avec plancher et plafond — le tirage et le placement humains de la Phase 12 ne changent pas (le livre applique ses modificateurs culturels *afterwards*). L'espèce peut aussi ajuster quelques compétences (chance de base, compétence offerte comme une langue) ;
+  - **traits en liste fermée**, rangés selon ce qui les porte, jamais inventés par le LLM :
+    - *modificateur permanent* (bonus d'un nain en Évaluation) : lu et chiffré par le backend, comme un modificateur d'objet ;
+    - *fait qui change le possible* (vision dans le noir, pas de reflet, n'entre pas sans invitation, ne franchit pas l'eau courante) : **fragments de lore tagués par la référence de l'espèce** — l'espèce du personnage compte parmi les tags de la scène ; `rule` pour l'arbitrage, `ambiance` pour la narration ;
+    - *pouvoir inné* (regard hypnotique, forme de brume) : un pouvoir du catalogue, accordé par l'espèce ;
+    - *effet que le monde applique seul* (vampire : dégâts au soleil, régénération par round, pieu) : nouveaux effets et conditions évalués par le backend — exigent un attribut intérieur / extérieur des lieux et un effet par round dans `playRound` ;
+  - **ce que voient les étapes** : l'arbitrage, l'espèce et ses traits (en anglais) ; la narration, l'espèce traduite — les PNJ réagissent à un orc ou à un vampire ; l'extraction, rien ; le front, l'espèce et ses traits libellés sur la fiche ;
+  - **en deux lots** : d'abord les espèces que portent modificateurs, lore et pouvoirs innés (elfe, nain, orc), puis les effets appliqués par le monde (vampire). D'ici là, les faiblesses d'un vampire passent par le lore : l'arbitrage refuse ou pénalise ;
+  - plus tard, une définition de PNJ pourra désigner une espèce pour en hériter les traits — hors périmètre.
+- **Front** : points de pouvoir, pouvoirs connus, espèce et traits sur la fiche ; étape *espèce* dans la création. **Back-office** : onglets *Pouvoirs* et *Espèces*, import JSON ; ce que les validateurs ne voient pas (trait, pouvoir ou compétence qui n'existe pas dans l'univers) se refuse dans `catalogue_checks`.
+
+### Critère de sortie de phase
+
+- Un univers à pouvoirs (démonstration à choisir à l'ouverture de la phase) se joue avec ses sorts, et un univers sans drapeau n'en voit aucun.
+- Un joueur crée et joue un elfe, un nain et un orc dans un univers qui les permet ; un univers sans espèce ne montre aucun choix.
 
 ---
 
@@ -904,6 +940,7 @@ Tranchées à l'ouverture de la phase (2026-11-04). Le parcours du joueur : il c
 | 11 | Échéances et événements déclenchés par le temps | — |
 | 12 | Progression du personnage, cycle de vie complet de la partie | — |
 | 13 | Règles optionnelles par univers | — |
+| 13bis | Pouvoirs et espèces non humaines | — |
 | 14 | Production-ready | — |
 
 ---

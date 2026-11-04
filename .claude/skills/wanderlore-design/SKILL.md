@@ -156,6 +156,7 @@ jamais de valeur numérique de règle — uniquement des labels qualitatifs.
 | 11 | Échéances et événements déclenchés par le temps, emplois du temps des PNJ | — |
 | 12 | Progression du personnage, cycle de vie complet de la partie | — |
 | 13 | Règles optionnelles par univers (santé mentale, passions, réputation) | — |
+| 13bis | Pouvoirs (magie, sorcellerie, psychisme) et espèces non humaines | — |
 | 14 | Production-ready : observabilité, versionning de prompts, modération, beta test | — |
 
 Les simplifications d'une phase sont **volontaires** — ne pas implémenter le pipeline

@@ -815,6 +815,9 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
 - **Phase 13 — Règles optionnelles par univers.** Santé mentale, passions et réputation
   sur la fiche, pour les seuls univers qui les emploient ; un jet caché n'affiche pas son
   détail.
+- **Phase 13bis — Pouvoirs et espèces non humaines.** Points de pouvoir, pouvoirs connus,
+  espèce et traits sur la fiche ; étape *espèce* dans la création, pour les seuls univers qui
+  en déclarent.
 - **Phase 14 — Ouverture.** Inscription, validation d'email, mot de passe oublié ; choix de la
   langue de la partie et de l'interface (traductions ajoutées à l'i18n posée en Phase 2) ; paramètres du
   compte ; messages de modération.
