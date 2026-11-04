@@ -8,7 +8,7 @@ describe('redirectTarget', () => {
     expect(redirectTarget('/games/42?tab=sheet')).toBe('/games/42?tab=sheet')
   })
 
-  test('lands on the games list when nothing was asked for', () => {
+  test('lands on the home when nothing was asked for', () => {
     expect(redirectTarget(undefined)).toBe(HOME)
     expect(redirectTarget('')).toBe(HOME)
   })
@@ -22,6 +22,10 @@ describe('redirectTarget', () => {
 
   test('never loops back to the sign-in page', () => {
     expect(redirectTarget('/login?redirect=/games')).toBe(HOME)
+  })
+
+  test('lands on the characters home by default', () => {
+    expect(HOME).toBe('/')
   })
 })
 

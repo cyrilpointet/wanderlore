@@ -31,7 +31,9 @@ sans fichiers dans `src/i18n/locales/` retombe sur l'anglais.
 | `src/api/client.ts` | Seul point d'accès à l'API : cookie de session, en-tête CSRF, `401` → `/login?redirect=…` |
 | `src/api/enums.ts` | Enums fermés du système (`status`, `step`, `result`, `margin`) |
 | `src/auth/` | Utilisateur courant, connexion, déconnexion, cible de redirection |
+| `src/characters/` | Personnages : accueil, page d'un personnage, création en étapes (`creation/`, brouillon dans `draft.ts`) |
 | `src/games/` | Requêtes et composants des parties |
+| `src/test/` | Aides des tests de composants (routeur pour les liens) |
 | `src/format/` | Dérivations purement visuelles (unité d'un temps relatif) ; le texte reste à `Intl` |
 | `src/i18n/` | Initialisation, fichiers de traduction par langue et namespace, clés typées |
 | `src/theme.ts` | Thème sombre par défaut, choix mémorisé, sinon celui du système |

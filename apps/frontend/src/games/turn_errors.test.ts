@@ -56,6 +56,12 @@ describe('turn errors — failures of the submission (the POST)', () => {
     )
   })
 
+  test('409 game_ended: no card, the game is read back closed', () => {
+    expect(classifySubmitError(new ApiError(409, 'game_ended', 'Over.', {}))).toEqual({
+      kind: 'ended',
+    })
+  })
+
   test.each([
     ['maxLength', 'input_too_long', 'Your action is too long. Shorten it and send it again.'],
     ['minLength', 'input_empty', 'Write what you do first.'],

@@ -18,6 +18,8 @@ export type SubmitOutcome =
   | { kind: 'wait' }
   /** The session is gone: the sign-in redirect takes over, the draft stays. */
   | { kind: 'signed_out' }
+  /** The game is over (abandoned elsewhere, say): the screen reads it back, closed. */
+  | { kind: 'ended' }
 
 export function classifySubmitError(error: unknown): SubmitOutcome {
   // No answer at all: the turn may have been recorded, so the same key goes again.
@@ -36,6 +38,8 @@ export function classifySubmitError(error: unknown): SubmitOutcome {
   if (error.status === 401) return { kind: 'signed_out' }
 
   if (error.code === 'turn_already_in_progress') return { kind: 'wait' }
+
+  if (error.code === 'game_ended') return { kind: 'ended' }
 
   // The queue refused the turn, which is recorded as failed: trying again is a new turn.
   if (error.code === 'turn_queue_unavailable') {

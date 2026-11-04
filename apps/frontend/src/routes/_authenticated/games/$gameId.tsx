@@ -4,6 +4,8 @@ import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { ApiError } from '@/api/client'
+import { isOver } from '@/api/enums'
+import { PRIMARY_ACTION } from '@/components/actions'
 import { errorMessage } from '@/i18n/errors'
 import { AppHeader } from '@/components/app_header'
 import { CharacterSheet } from '@/games/character_sheet'
@@ -12,6 +14,7 @@ import { Journal } from '@/games/journal'
 import { gameQuery, turnsQuery } from '@/games/queries'
 import { SheetDialog } from '@/games/sheet_dialog'
 import { Composer } from '@/games/composer'
+import { GameOver } from '@/games/game_over'
 import { heldInFlight } from '@/games/held_turn'
 import { lastRevealed, liveRollOf, locksInput } from '@/games/roll_reveal'
 import { rollLine, rollText } from '@/games/roll_text'
@@ -98,21 +101,25 @@ function GameScreen() {
               )
             }
           />
-          <Composer
-            value={draft}
-            onChange={(value) => {
-              setDraft(value)
-              turn.inputChanged()
-            }}
-            onSubmit={turn.submit}
-            locked={isBusy(state) || locksInput(reveal)}
-            ready={turn.subscribed}
-            error={
-              state.status === 'idle' && state.inputError
-                ? errorMessage(state.inputError)
-                : undefined
-            }
-          />
+          {isOver(game.status) ? (
+            <GameOver characterId={game.characterId} name={game.character.name} />
+          ) : (
+            <Composer
+              value={draft}
+              onChange={(value) => {
+                setDraft(value)
+                turn.inputChanged()
+              }}
+              onSubmit={turn.submit}
+              locked={isBusy(state) || locksInput(reveal)}
+              ready={turn.subscribed}
+              error={
+                state.status === 'idle' && state.inputError
+                  ? errorMessage(state.inputError)
+                  : undefined
+              }
+            />
+          )}
           {/*
            * Waiting messages, then the narration, told once to screen readers.
            * Silent while the dice wait: the card's button speaks for itself.
@@ -148,11 +155,8 @@ function GameNotFound() {
       <AppHeader />
       <main className="mx-auto flex max-w-xl flex-col items-center px-4 py-24 text-center">
         <p className="font-serif text-narration-lg text-text">{t('notFound')}</p>
-        <Link
-          to="/games"
-          className="mt-8 inline-flex h-10 items-center rounded-lg bg-accent px-4 text-body font-medium text-on-accent transition-colors hover:bg-accent-hover"
-        >
-          {t('backToGames')}
+        <Link to="/" className={`mt-8 ${PRIMARY_ACTION}`}>
+          {t('backHome')}
         </Link>
       </main>
     </>

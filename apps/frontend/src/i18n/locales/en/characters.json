@@ -1,0 +1,136 @@
+{
+  "separator": " · ",
+  "home": {
+    "title": "My characters",
+    "loading": "Loading your characters…",
+    "empty": "No character yet.",
+    "emptyHint": "Choose a world below to create one."
+  },
+  "worlds": {
+    "title": "Worlds",
+    "intro": "Create a character in one of these worlds, then choose a story for them.",
+    "loading": "Loading the worlds…",
+    "empty": "No world can be played yet.",
+    "create": "Create a character"
+  },
+  "game": {
+    "title": "Current game",
+    "current": "Playing",
+    "continue": "Continue",
+    "abandon": "Abandon"
+  },
+  "scenarios": {
+    "title": "Scenarios",
+    "empty": "No scenario left to play in this world.",
+    "failed": "Failed — try again",
+    "play": "Play",
+    "starting": "Starting…"
+  },
+  "pastGames": {
+    "title": "Past games",
+    "ended": "Ended {{value, relativetime}}",
+    "read": "Read",
+    "delete": "Delete the game of {{scenario}}"
+  },
+  "page": {
+    "back": "My characters",
+    "sheet": "Character sheet",
+    "deleteCharacter": "Delete this character",
+    "notFound": "This character does not exist or is not yours."
+  },
+  "abandonDialog": {
+    "title": "Abandon this scenario?",
+    "body": "{{scenario}} ends in failure: the game cannot be resumed. You can start the scenario again afterwards.",
+    "cancel": "Keep playing",
+    "confirm": "Abandon",
+    "pending": "Abandoning…"
+  },
+  "deleteGameDialog": {
+    "title": "Delete this game?",
+    "body": "The failed game of {{scenario}} leaves this page for good.",
+    "cancel": "Keep it",
+    "confirm": "Delete",
+    "pending": "Deleting…"
+  },
+  "deleteCharacterDialog": {
+    "title": "Delete this character?",
+    "body": "{{name}} leaves your list for good, with the games they played.",
+    "cancel": "Keep them",
+    "confirm": "Delete",
+    "pending": "Deleting…"
+  },
+  "creation": {
+    "title": "Create a character",
+    "notFound": "No character can be created in this world.",
+    "unknown": "—",
+    "percent": "{{value, number}}%",
+    "list": "{{items, list}}",
+    "hitPoints": "Hit points: {{value, number}}",
+    "back": "Back",
+    "next": "Next",
+    "create": "Create",
+    "creating": "Creating…",
+    "steps": {
+      "label": "Steps of the creation",
+      "number": "{{value, number}}",
+      "dice": "Dice",
+      "placement": "Characteristics",
+      "profession": "Profession",
+      "skills": "Skills",
+      "identity": "Identity"
+    },
+    "dice": {
+      "intro": "Seven times three six-sided dice, one result for each characteristic. Roll again as often as you like.",
+      "results": "Results: {{values, list}}",
+      "roll": "Roll the dice",
+      "reroll": "Reroll",
+      "rolling": "Rolling…",
+      "rerollHint": "A new roll replaces every result and clears their placement."
+    },
+    "placement": {
+      "intro": "Give each result to a characteristic, each result once. Drag a result onto a characteristic, or pick it in the list.",
+      "results": "Your results",
+      "floor": "Size and Intelligence never go below {{floor, number}}: a lower result placed there is raised.",
+      "none": "—",
+      "option": "{{value, number}}",
+      "optionTaken": "{{value, number}} (now {{characteristic}})",
+      "score": "{{characteristic}} score:",
+      "raised": "Raised to {{floor, number}}"
+    },
+    "profession": {
+      "intro": "What your character does for a living. Its skills get the professional points.",
+      "skills": "Skills:",
+      "kit": "Starts with:",
+      "item_one": "{{item}}",
+      "item_other": "{{item}} ×{{count, number}}",
+      "itemEquipped_one": "{{item}} (equipped)",
+      "itemEquipped_other": "{{item}} ×{{count, number}} (equipped)",
+      "resource": "{{resource}} {{value, number}}"
+    },
+    "skills": {
+      "intro": "Spend the professional points on the skills of the profession, the personal points on any skill.",
+      "professionalPool": "Professional points",
+      "personalPool": "Personal points",
+      "left": "{{left, number}} left of {{total, number}}",
+      "unspent_one": "{{count, number}} point unspent: you can still go on.",
+      "unspent_other": "{{count, number}} points unspent: you can still go on.",
+      "cap": "No skill may go above {{cap, number}}% at creation.",
+      "professionSkills": "Skills of the profession",
+      "valueOf": "{{skill}}:",
+      "base": "Base {{value, number}}%",
+      "baseOf": "Base {{characteristic}} ×{{multiplier, number}}",
+      "professionalShort": "Prof.",
+      "personalShort": "Pers.",
+      "professionalFor": "Professional points on {{skill}}",
+      "personalFor": "Personal points on {{skill}}"
+    },
+    "identity": {
+      "name": "Name",
+      "counter": "{{count, number}} / {{max, number}}",
+      "gender": "Gender",
+      "summary": "Your character",
+      "unnamed": "Unnamed",
+      "hitPoints": "Hit points"
+    }
+  }
+}

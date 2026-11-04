@@ -15,8 +15,8 @@ export function NotFoundPage() {
 
   return (
     <SystemPage message={t('system.notFound')}>
-      <Link to="/games" className={ACTION}>
-        {t('system.backToGames')}
+      <Link to="/" className={ACTION}>
+        {t('system.backHome')}
       </Link>
     </SystemPage>
   )

@@ -1,4 +1,5 @@
 import auth from './locales/en/auth.json'
+import characters from './locales/en/characters.json'
 import common from './locales/en/common.json'
 import enums from './locales/en/enums.json'
 import errors from './locales/en/errors.json'
@@ -13,4 +14,4 @@ import preferences from './locales/en/preferences.json'
  */
 export const defaultNS = 'common'
 
-export const en = { common, enums, errors, auth, games, game, preferences }
+export const en = { common, enums, errors, auth, characters, games, game, preferences }

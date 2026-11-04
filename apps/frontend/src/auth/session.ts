@@ -12,7 +12,7 @@ export type User = {
 }
 
 /** Where a signed-in player lands when nothing else was asked for. */
-export const HOME = '/games'
+export const HOME = '/'
 
 /**
  * Who is signed in, or `null`. Only sign-in, sign-out and a 401 change it,

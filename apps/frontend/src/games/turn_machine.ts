@@ -96,6 +96,8 @@ export type TurnAction =
    * field, never accepted.
    */
   | { type: 'superseded'; turn: Turn | null }
+  /** The game is over: the submission is dropped, nothing more is played. */
+  | { type: 'ended' }
   /** The player changes the text an error was about. */
   | { type: 'input_changed' }
   | { type: 'message'; message: TurnMessage }
@@ -209,6 +211,9 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
         rolls: action.turn.rolls,
         narration: null,
       }
+
+    case 'ended':
+      return state.status === 'submitting' ? initialTurnState : state
 
     case 'input_changed':
       return state.status === 'idle' && state.inputError ? initialTurnState : state

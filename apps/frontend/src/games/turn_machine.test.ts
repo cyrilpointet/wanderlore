@@ -300,6 +300,10 @@ describe('turn machine — refusals of the submission', () => {
     )
     expect(run(submit, { type: 'superseded', turn: null })).toEqual(initialTurnState)
   })
+
+  test('the game is over: the submission is dropped', () => {
+    expect(run(submit, { type: 'ended' })).toEqual(initialTurnState)
+  })
 })
 
 describe('turn machine — catching up', () => {

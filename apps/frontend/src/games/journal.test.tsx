@@ -10,10 +10,15 @@ const GAME: Game = {
   id: 'game-1',
   status: 'in_progress',
   lastActivityAt: '2026-10-11T10:00:00Z',
+  endedAt: null,
+  characterId: 'character-1',
   world: { reference: 'three_musketeers', label: 'The Three Musketeers' },
+  scenario: { id: 'scenario-1', title: 'A Gascon in Paris' },
   chapter: null,
   character: {
     name: "d'Artagnan",
+    gender: 'male',
+    profession: { reference: 'musketeer', label: 'Musketeer' },
     hitPoints: 10,
     hitPointsMax: 10,
     characteristics: [],
@@ -104,7 +109,9 @@ describe('Journal | a round of combat read back', () => {
     expect(markup).toContain('Swordsmanship 60% · rolled 23 · Success · Hit')
     // The modifier left out when it is nought; the damage on a line of its own.
     expect(markup).toContain('>Damage 5 · Armor −2 · → 3 dealt · Bleeding<')
-    expect(markup).toContain('Dodge against unknown opponent 2 · Dodge 35% · rolled 90 · Failure · Blow taken')
+    expect(markup).toContain(
+      'Dodge against unknown opponent 2 · Dodge 35% · rolled 90 · Failure · Blow taken'
+    )
     expect(markup.indexOf('rolled 23')).toBeLessThan(markup.indexOf('rolled 90'))
     expect(markup).not.toContain('Roll the dice')
   })

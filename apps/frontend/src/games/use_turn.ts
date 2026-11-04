@@ -3,7 +3,8 @@ import { useQueryClient } from '@tanstack/react-query'
 
 import { transmit } from '@/api/transmit'
 import { animates, preferences, systemReducesMotion } from '@/preferences'
-import { gameQuery, gamesQuery, turnsQuery, type Game, type Turn } from './queries'
+import { CHARACTERS_KEY } from '@/characters/queries'
+import { gameQuery, turnsQuery, type Game, type Turn } from './queries'
 import { channelOf, readTurn, submitTurn } from './turn_api'
 import { withCompletedTurn } from './game_cache'
 import { withTurn } from './journal_pages'
@@ -100,7 +101,8 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
         void queryClient.invalidateQueries({ queryKey: gameQuery(gameId).queryKey, exact: true })
       }
 
-      void queryClient.invalidateQueries({ queryKey: gamesQuery.queryKey, exact: true })
+      // The character's card and page show how the game stands.
+      void queryClient.invalidateQueries({ queryKey: CHARACTERS_KEY })
       setNarrated(turn.narration)
     },
     [queryClient, gameId]
@@ -253,12 +255,18 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
           return act({ type: 'rejected', failure: outcome.failure })
         case 'wait':
           return waitForTurnInProgress()
+        case 'ended':
+          // Read back, the game shows closed: the input gives way to the end banner.
+          act({ type: 'ended' })
+          void queryClient.invalidateQueries({ queryKey: gameQuery(gameId).queryKey, exact: true })
+          void queryClient.invalidateQueries({ queryKey: CHARACTERS_KEY })
+          return
         case 'signed_out':
           // The sign-in redirect is already under way; the draft is safe in storage.
           return
       }
     }
-  }, [gameId, act, settle, waitForTurnInProgress])
+  }, [gameId, act, settle, waitForTurnInProgress, queryClient])
 
   const submit = useCallback(
     (playerInput: string) => {

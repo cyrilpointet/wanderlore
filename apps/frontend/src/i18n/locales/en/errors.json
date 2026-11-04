@@ -15,5 +15,21 @@
   "input_invalid": "This action cannot be sent as it is.",
   "scenario_not_playable": "This scenario cannot be played yet.",
   "forbidden_role": "This account cannot do that.",
-  "account_suspended": "This account is suspended."
+  "account_suspended": "This account is suspended.",
+  "game_ended": "This game is over: no action can be played in it any more.",
+  "game_not_failed": "Only a failed game can be deleted.",
+  "character_engaged": "This character is in a game. Abandon it first.",
+  "scenario_completed": "This character has already completed this scenario.",
+  "stale_characteristic_roll": "Your dice were rolled again elsewhere. Place the new results.",
+  "no_characteristic_roll": "Roll the dice first.",
+  "invalid_placement": "Each result goes to one characteristic, once.",
+  "incomplete_placement": "Place every result on a characteristic.",
+  "unknown_profession": "This profession does not exist in this world.",
+  "missing_profession": "Choose a profession.",
+  "unknown_skill": "This skill does not exist in this world.",
+  "profession_skill_only": "Professional points only go to the skills of the profession.",
+  "pool_exceeded": "More points are spent than the pool holds.",
+  "skill_cap_exceeded": "This skill goes over the cap.",
+  "invalid_character_name": "A name is made of letters, spaces, apostrophes, hyphens and full stops, within the length allowed.",
+  "missing_gender": "Choose a gender."
 }

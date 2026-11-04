@@ -10,10 +10,10 @@ import type {
   Degree,
   Difficulty,
   GameStatus,
+  Gender,
   ItemChange,
   Period,
   Result,
-  ScenarioStatus,
   SkillCategory,
   SpecialEffect,
   TurnStatus,
@@ -28,23 +28,22 @@ type GameHeader = {
   id: string
   status: GameStatus
   lastActivityAt: string
+  /** Set once the game is over, `failed` or `completed`. */
+  endedAt: string | null
+  /** The character who plays it: the game screen leads back to their page. */
+  characterId: string
   world: ContentLabel
+  /** Titles in English until the player can pick a language. */
+  scenario: { id: string; title: string }
   chapter: ContentLabel | null
-}
-
-/** A game as the list shows it. */
-export type GameSummary = GameHeader & {
-  character: {
-    name: string
-    hitPoints: number
-    hitPointsMax: number
-  }
 }
 
 export type LabelledValue = ContentLabel & { value: number }
 
 export type Character = {
   name: string
+  gender: Gender
+  profession: ContentLabel
   hitPoints: number
   hitPointsMax: number
   /** The seven of BRP, always in the same order; the front labels them. */
@@ -164,12 +163,6 @@ export type Turn = {
   failure: { code: string; message: string } | null
 }
 
-/** The player's games, most recently played first — the backend sorts them. */
-export const gamesQuery = queryOptions({
-  queryKey: ['games'],
-  queryFn: async () => (await api<{ data: GameSummary[] }>('/sessions')).data,
-})
-
 export const gameQuery = (gameId: string) =>
   queryOptions({
     queryKey: ['games', gameId],
@@ -177,11 +170,17 @@ export const gameQuery = (gameId: string) =>
   })
 
 /**
- * Takes a game off the player's list. The backend keeps it, but answers for it
- * as for a game that does not exist from then on.
+ * Takes a failed game off its character's page. The backend keeps it, but
+ * answers for it as for a game that does not exist from then on.
  */
 export async function deleteGame(gameId: string): Promise<void> {
   await api<undefined>(`/sessions/${gameId}`, { method: 'DELETE' })
+}
+
+/** Gives the game up: it fails and closes. The answer is the game, closed. */
+export async function abandonGame(gameId: string): Promise<Game> {
+  const { data } = await api<{ data: Game }>(`/sessions/${gameId}/abandon`, { method: 'POST' })
+  return data
 }
 
 /**
@@ -209,28 +208,3 @@ export const turnsQuery = (gameId: string) =>
     queryKey: ['games', gameId, 'turns'],
     queryFn: () => turnsPage(gameId),
   })
-
-/** A scenario a game can be started from, as the New game catalogue shows it. */
-export type ScenarioSummary = {
-  id: string
-  title: string
-  synopsis: string
-  /** Always `published` for a player; a game master also sees drafts. */
-  status: ScenarioStatus
-  world: ContentLabel & { tone: string }
-}
-
-/** The scenarios this account may start a game from, sorted by the backend. */
-export const scenariosQuery = queryOptions({
-  queryKey: ['scenarios'],
-  queryFn: async () => (await api<{ data: ScenarioSummary[] }>('/scenarios')).data,
-})
-
-/** Starts a game from a scenario; the answer is the new game, as its screen reads it. */
-export async function startGame(scenarioId: string): Promise<Game> {
-  const { data } = await api<{ data: Game }>('/sessions', {
-    method: 'POST',
-    body: { scenarioId },
-  })
-  return data
-}

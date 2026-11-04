@@ -3,21 +3,17 @@ import { describe, expect, test } from 'vitest'
 
 import '@/i18n'
 import { ScenarioCard } from './scenario_card'
-import type { ScenarioSummary } from './queries'
+import type { ScenarioChoice } from './queries'
 
-const PUBLISHED: ScenarioSummary = {
+const PUBLISHED: ScenarioChoice = {
   id: 'f1d3c1e2-0000-4000-8000-000000000001',
   title: 'A Gascon in Paris',
   synopsis: "Young d'Artagnan leaves Gascony for Paris.",
   status: 'published',
-  world: {
-    reference: 'three_musketeers',
-    label: 'The Three Musketeers',
-    tone: 'Cloak-and-dagger adventure.',
-  },
+  failed: false,
 }
 
-function render(scenario: ScenarioSummary, state: { starting?: boolean; disabled?: boolean } = {}) {
+function render(scenario: ScenarioChoice, state: { starting?: boolean; disabled?: boolean } = {}) {
   return renderToStaticMarkup(
     <ScenarioCard
       scenario={scenario}
@@ -29,23 +25,26 @@ function render(scenario: ScenarioSummary, state: { starting?: boolean; disabled
 }
 
 describe('ScenarioCard', () => {
-  test('shows the world, the title, the tone and the synopsis the backend sent', () => {
+  test('shows the title and the synopsis the backend sent, and a way in', () => {
     const html = render(PUBLISHED)
 
     for (const text of [
-      'The Three Musketeers',
       'A Gascon in Paris',
-      'Cloak-and-dagger adventure.',
       'Young d&#x27;Artagnan leaves Gascony for Paris.',
       'Play',
     ]) {
       expect(html).toContain(text)
     }
+    expect(html).not.toContain('Failed')
   })
 
   test('marks a draft, which only a game master is shown', () => {
     expect(render({ ...PUBLISHED, status: 'draft' })).toContain('Draft')
     expect(render(PUBLISHED)).not.toContain('Draft')
+  })
+
+  test('marks a scenario the character failed, to try again', () => {
+    expect(render({ ...PUBLISHED, failed: true })).toContain('Failed — try again')
   })
 
   test('says the game is starting, and lets nothing else start meanwhile', () => {

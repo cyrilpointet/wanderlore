@@ -28,11 +28,12 @@ export function GameHeader({
     <header className="shrink-0 border-b border-border bg-surface-1">
       <div className="flex h-16 items-center gap-2 px-2 sm:gap-4 sm:px-6">
         <Link
-          to="/games"
+          to="/characters/$characterId"
+          params={{ characterId: game.characterId }}
           className="flex shrink-0 items-center gap-1.5 rounded-md p-1.5 text-label text-muted transition-colors hover:text-text"
         >
           <ArrowLeft aria-hidden className="size-5 sm:size-4" />
-          <span className="sr-only sm:not-sr-only">{t('backToGames')}</span>
+          <span className="sr-only sm:not-sr-only">{t('backToCharacter')}</span>
         </Link>
         <div aria-hidden className="hidden h-6 border-l border-border-strong sm:block" />
 

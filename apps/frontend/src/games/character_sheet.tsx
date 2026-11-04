@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { IdentityLine } from '@/characters/character_card'
 import { HitPointGauge } from './hit_point_gauge'
 import { groupSkills, showsQuantity } from './presentation'
 import type { Character, Game } from './queries'
@@ -53,7 +54,9 @@ export function CharacterSheet({
         >
           {character.name}
         </h2>
-        <p className="mt-1 text-label text-muted">{game.world.label}</p>
+        <p className="mt-1 text-label text-muted">
+          <IdentityLine character={{ ...character, world: game.world }} withGender />
+        </p>
       </div>
 
       <section>
@@ -158,6 +161,39 @@ function CharacterTab({ character }: { character: Character }) {
 
   return (
     <>
+      <CharacterStats character={character} />
+
+      {character.resources.length > 0 && (
+        <Section title={t('sheet.resources')}>
+          <dl className="flex flex-col gap-1.5">
+            {character.resources.map((resource) => (
+              <Row
+                key={resource.reference}
+                label={resource.label}
+                value={resource.value}
+                className="text-body text-text"
+              />
+            ))}
+          </dl>
+        </Section>
+      )}
+    </>
+  )
+}
+
+/**
+ * The durable sheet: the seven characteristics, the skills trained under
+ * their category. The same in a game and on the character's page.
+ */
+export function CharacterStats({
+  character,
+}: {
+  character: Pick<Character, 'characteristics' | 'skills'>
+}) {
+  const { t } = useTranslation('game')
+
+  return (
+    <>
       <Section title={t('sheet.characteristics')}>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5">
           {character.characteristics.map((characteristic) => (
@@ -193,21 +229,6 @@ function CharacterTab({ character }: { character: Character }) {
           ))}
         </div>
       </Section>
-
-      {character.resources.length > 0 && (
-        <Section title={t('sheet.resources')}>
-          <dl className="flex flex-col gap-1.5">
-            {character.resources.map((resource) => (
-              <Row
-                key={resource.reference}
-                label={resource.label}
-                value={resource.value}
-                className="text-body text-text"
-              />
-            ))}
-          </dl>
-        </Section>
-      )}
     </>
   )
 }

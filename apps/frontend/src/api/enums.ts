@@ -4,7 +4,8 @@
  * namespace (front spec, principle 2). Content references (skills, locations…)
  * are not here — their labels come from the backend.
  */
-export const GAME_STATUSES = ['in_progress', 'paused', 'completed'] as const
+/** A game ends `completed` or `failed` — abandoned, for now — and is then only read. */
+export const GAME_STATUSES = ['in_progress', 'paused', 'completed', 'failed'] as const
 export const TURN_STATUSES = ['pending', 'completed', 'failed'] as const
 export const STEPS = ['arbitration', 'narration'] as const
 export const RESULTS = ['success', 'failure'] as const
@@ -47,6 +48,9 @@ export const SKILL_CATEGORIES = [
 /** What happened to one of the character's items during a turn. */
 export const ITEM_CHANGES = ['gained', 'lost', 'used_up', 'equipped', 'unequipped'] as const
 
+/** A character's gender, chosen at creation: what the story calls them. */
+export const GENDERS = ['female', 'male', 'neutral'] as const
+
 /** Only a game master sees drafts, to try them out before publishing. */
 export const SCENARIO_STATUSES = ['draft', 'published'] as const
 
@@ -66,6 +70,7 @@ export const PERIODS = [
 ] as const
 
 export type GameStatus = (typeof GAME_STATUSES)[number]
+export type Gender = (typeof GENDERS)[number]
 export type ScenarioStatus = (typeof SCENARIO_STATUSES)[number]
 export type TurnStatus = (typeof TURN_STATUSES)[number]
 export type Step = (typeof STEPS)[number]
@@ -81,3 +86,8 @@ export type Characteristic = (typeof CHARACTERISTICS)[number]
 export type SkillCategory = (typeof SKILL_CATEGORIES)[number]
 export type ItemChange = (typeof ITEM_CHANGES)[number]
 export type Period = (typeof PERIODS)[number]
+
+/** Whether a game is over: it is then read, never played. */
+export function isOver(status: GameStatus): boolean {
+  return status === 'completed' || status === 'failed'
+}

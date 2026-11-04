@@ -1,5 +1,6 @@
 {
-  "backToGames": "My games",
+  "backToCharacter": "Character page",
+  "backHome": "My characters",
   "openSheet": "Character sheet",
   "closeSheet": "Close",
   "voice": {
@@ -86,5 +87,9 @@
   "failure": {
     "retry": "Retry",
     "edit": "Edit"
+  },
+  "over": {
+    "message": "This game is over.",
+    "back": "Back to {{name}}"
   }
 }

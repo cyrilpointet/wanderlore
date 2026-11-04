@@ -33,6 +33,8 @@ const SHOT: InventoryItem = {
 function character(inventory: InventoryItem[]): Character {
   return {
     name: "d'Artagnan",
+    gender: 'male',
+    profession: { reference: 'musketeer', label: 'Musketeer' },
     hitPoints: 10,
     hitPointsMax: 10,
     characteristics: [
@@ -57,7 +59,10 @@ function game(inventory: InventoryItem[]): Game {
     id: 'game-1',
     status: 'in_progress',
     lastActivityAt: '2026-10-11T10:00:00Z',
+    endedAt: null,
+    characterId: 'character-1',
     world: { reference: 'three_musketeers', label: 'The Three Musketeers' },
+    scenario: { id: 'scenario-1', title: 'A Gascon in Paris' },
     chapter: null,
     character: character(inventory),
     location: { reference: 'paris', label: 'Paris' },
@@ -74,6 +79,14 @@ function textOf(markup: string): string {
     .replace(/\s+/g, ' ')
     .trim()
 }
+
+describe('Character sheet | identity', () => {
+  test('names the profession and the gender with the world', () => {
+    const text = textOf(renderToStaticMarkup(<CharacterSheet game={game([])} />))
+
+    expect(text).toContain('Musketeer · Male · The Three Musketeers')
+  })
+})
 
 describe('Character sheet | inventory tab', () => {
   test('opens on the character, with the inventory one tab away', () => {

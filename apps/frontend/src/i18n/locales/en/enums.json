@@ -2,7 +2,13 @@
   "gameStatus": {
     "in_progress": "In progress",
     "paused": "Paused",
-    "completed": "Completed"
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "gender": {
+    "female": "Female",
+    "male": "Male",
+    "neutral": "Neutral"
   },
   "turnStatus": {
     "pending": "In progress",

@@ -1,26 +1,4 @@
 {
-  "title": "My games",
-  "loading": "Loading your games…",
-  "empty": "No game yet.",
   "worldAndChapter": "{{world}} · {{chapter}}",
-  "lastActivity": "{{value, relativetime}}",
-  "newGame": "New game",
-  "emptyHint": "Start one from a scenario.",
-  "deleteGame": "Delete the game of {{name}}",
-  "deleteDialog": {
-    "title": "Delete this game?",
-    "body": "The game of {{name}} leaves your list for good: it cannot be resumed.",
-    "cancel": "Keep it",
-    "confirm": "Delete",
-    "deleting": "Deleting…"
-  },
-  "newGamePage": {
-    "title": "New game",
-    "intro": "Pick a story. You play its character from the first scene.",
-    "loading": "Loading the scenarios…",
-    "empty": "No scenario can be played yet.",
-    "start": "Play",
-    "starting": "Starting…",
-    "back": "My games"
-  }
+  "lastActivity": "{{value, relativetime}}"
 }

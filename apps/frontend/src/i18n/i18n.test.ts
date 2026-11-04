@@ -11,6 +11,7 @@ import {
   DEGREES,
   DIFFICULTIES,
   GAME_STATUSES,
+  GENDERS,
   ITEM_CHANGES,
   PERIODS,
   RESULTS,
@@ -24,6 +25,7 @@ import {
 describe('i18n', () => {
   test.each([
     ['gameStatus', GAME_STATUSES],
+    ['gender', GENDERS],
     ['turnStatus', TURN_STATUSES],
     ['step', STEPS],
     ['result', RESULTS],
