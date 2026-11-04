@@ -478,7 +478,9 @@ serverless pour le backend).
 - **Le contenu de test manuel vit dans `test-worlds/`** (racine, ignoré par git) : des JSON à
   la forme du contenu en code, importés par le back-office. Les seeders n'écrivent que ce dont
   les tests automatisés ont besoin, plus le contenu de `database/content/` et la partie de
-  démo.
+  démo. Un univers s'y nomme `<référence du monde>.world.json`, sans ses scénarios ; un
+  scénario `<référence du monde>.<référence du scénario>.scenario.json`
+  (`three_musketeers.the_golden_lion.scenario.json`).
 - **Ce que les validateurs ne voient pas d'une définition ou d'un fragment** (champ réservé à
   un `kind`, tag qui ne désigne rien, ambiance secrète, catégorie d'action sans résolution
   unique) se refuse dans `app/controllers/admin/catalogue_checks.ts`, partagé par le formulaire
