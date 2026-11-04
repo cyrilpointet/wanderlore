@@ -9,18 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedCharactersCharacterIdRouteImport } from './routes/_authenticated/characters/$characterId'
 import { Route as AuthenticatedGamesIndexRouteImport } from './routes/_authenticated/games/index'
 import { Route as AuthenticatedGamesGameIdRouteImport } from './routes/_authenticated/games/$gameId'
-import { Route as AuthenticatedGamesNewRouteImport } from './routes/_authenticated/games/new'
+import { Route as AuthenticatedWorldsWorldIdNewCharacterRouteImport } from './routes/_authenticated/worlds/$worldId/new-character'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -30,6 +26,17 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCharactersCharacterIdRoute =
+  AuthenticatedCharactersCharacterIdRouteImport.update({
+    id: '/characters/$characterId',
+    path: '/characters/$characterId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedGamesIndexRoute = AuthenticatedGamesIndexRouteImport.update({
   id: '/games/',
   path: '/games/',
@@ -41,65 +48,74 @@ const AuthenticatedGamesGameIdRoute =
     path: '/games/$gameId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedGamesNewRoute = AuthenticatedGamesNewRouteImport.update({
-  id: '/games/new',
-  path: '/games/new',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
+const AuthenticatedWorldsWorldIdNewCharacterRoute =
+  AuthenticatedWorldsWorldIdNewCharacterRouteImport.update({
+    id: '/worlds/$worldId/new-character',
+    path: '/worlds/$worldId/new-character',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/characters/$characterId': typeof AuthenticatedCharactersCharacterIdRoute
   '/games/$gameId': typeof AuthenticatedGamesGameIdRoute
-  '/games/new': typeof AuthenticatedGamesNewRoute
   '/games/': typeof AuthenticatedGamesIndexRoute
+  '/worlds/$worldId/new-character': typeof AuthenticatedWorldsWorldIdNewCharacterRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/characters/$characterId': typeof AuthenticatedCharactersCharacterIdRoute
   '/games/$gameId': typeof AuthenticatedGamesGameIdRoute
-  '/games/new': typeof AuthenticatedGamesNewRoute
   '/games': typeof AuthenticatedGamesIndexRoute
+  '/worlds/$worldId/new-character': typeof AuthenticatedWorldsWorldIdNewCharacterRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/characters/$characterId': typeof AuthenticatedCharactersCharacterIdRoute
   '/_authenticated/games/$gameId': typeof AuthenticatedGamesGameIdRoute
-  '/_authenticated/games/new': typeof AuthenticatedGamesNewRoute
   '/_authenticated/games/': typeof AuthenticatedGamesIndexRoute
+  '/_authenticated/worlds/$worldId/new-character': typeof AuthenticatedWorldsWorldIdNewCharacterRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/games/$gameId' | '/games/new' | '/games/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/characters/$characterId'
+    | '/games/$gameId'
+    | '/games/'
+    | '/worlds/$worldId/new-character'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/games/$gameId' | '/games/new' | '/games'
+  to:
+    | '/login'
+    | '/'
+    | '/characters/$characterId'
+    | '/games/$gameId'
+    | '/games'
+    | '/worlds/$worldId/new-character'
   id:
     | '__root__'
-    | '/'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/'
+    | '/_authenticated/characters/$characterId'
     | '/_authenticated/games/$gameId'
-    | '/_authenticated/games/new'
     | '/_authenticated/games/'
+    | '/_authenticated/worlds/$worldId/new-character'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -113,6 +129,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/characters/$characterId': {
+      id: '/_authenticated/characters/$characterId'
+      path: '/characters/$characterId'
+      fullPath: '/characters/$characterId'
+      preLoaderRoute: typeof AuthenticatedCharactersCharacterIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/games/': {
       id: '/_authenticated/games/'
@@ -128,26 +158,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGamesGameIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/games/new': {
-      id: '/_authenticated/games/new'
-      path: '/games/new'
-      fullPath: '/games/new'
-      preLoaderRoute: typeof AuthenticatedGamesNewRouteImport
+    '/_authenticated/worlds/$worldId/new-character': {
+      id: '/_authenticated/worlds/$worldId/new-character'
+      path: '/worlds/$worldId/new-character'
+      fullPath: '/worlds/$worldId/new-character'
+      preLoaderRoute: typeof AuthenticatedWorldsWorldIdNewCharacterRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedCharactersCharacterIdRoute: typeof AuthenticatedCharactersCharacterIdRoute
   AuthenticatedGamesGameIdRoute: typeof AuthenticatedGamesGameIdRoute
-  AuthenticatedGamesNewRoute: typeof AuthenticatedGamesNewRoute
   AuthenticatedGamesIndexRoute: typeof AuthenticatedGamesIndexRoute
+  AuthenticatedWorldsWorldIdNewCharacterRoute: typeof AuthenticatedWorldsWorldIdNewCharacterRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedCharactersCharacterIdRoute:
+    AuthenticatedCharactersCharacterIdRoute,
   AuthenticatedGamesGameIdRoute: AuthenticatedGamesGameIdRoute,
-  AuthenticatedGamesNewRoute: AuthenticatedGamesNewRoute,
   AuthenticatedGamesIndexRoute: AuthenticatedGamesIndexRoute,
+  AuthenticatedWorldsWorldIdNewCharacterRoute:
+    AuthenticatedWorldsWorldIdNewCharacterRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -155,7 +191,6 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
 }
