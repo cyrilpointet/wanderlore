@@ -1,3 +1,4 @@
+import type { CharacterGender } from '#services/game/content/types'
 import type { PlacedLocation } from '#services/game/content_labels'
 import type { ContextualModifier, Degree, Difficulty, RollOutcome } from '#services/rules/types'
 import type {
@@ -277,9 +278,16 @@ export type SceneState = {
 /**
  * The character as the model sees them. No skill values: arbitration judges
  * the situation, not the character, and the narrator never sees a number.
+ *
+ * The name is the player's own text (roadmap, Phase 12): it travels in the
+ * user message, inside the game data, never in a system prompt.
  */
 export type CharacterContext = {
   name: string
+  /** For the narrator's pronouns and agreements. */
+  gender: CharacterGender
+  /** Their trade, by reference: arbitration reads it in English, the narrator in the game's language. */
+  profession: string
   hit_points: number
   hit_points_max: number
 }
