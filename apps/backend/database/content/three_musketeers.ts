@@ -20,6 +20,8 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
   labels: { en: 'The Three Musketeers' },
   narrativeTone:
     'France, 1625: cloak-and-dagger adventure, court intrigue, honour and hot tempers.',
+  /** Dumas's heroes are a cut above the crowd: the book's heroic level. */
+  powerLevel: 'heroic',
   /**
    * Without tags: sent with every turn, the rules to arbitration, the ambiance
    * to the narrator. The novel is known to the model; nothing more is needed.
@@ -1241,6 +1243,93 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       initialHolder: null,
     },
   ],
+  /**
+   * What a character of the novel may be. Each trains a handful of the
+   * world's skills and starts every game with the tools of the trade.
+   */
+  professions: [
+    {
+      reference: 'musketeer',
+      labels: { en: 'Musketeer', fr: 'Mousquetaire' },
+      description:
+        "A soldier of the King's Musketeers under Monsieur de Tréville: a duellist, proud of the blue tabard.",
+      skills: [
+        'swordsmanship',
+        'marksmanship',
+        'athletics',
+        'dodge',
+        'intimidation',
+        'etiquette',
+        'first_aid',
+      ],
+      startingItems: [
+        { definition: 'rapier', descriptor: null, quantity: 1, equipped: true },
+        { definition: 'musketeer_tabard', descriptor: null, quantity: 1, equipped: true },
+      ],
+      startingResources: { purse: 10 },
+    },
+    {
+      reference: 'cardinals_guard',
+      labels: { en: "Cardinal's Guard", fr: 'Garde du Cardinal' },
+      description:
+        "A guardsman of His Eminence the Cardinal: disciplined, well paid, and the Musketeers' sworn rival.",
+      skills: [
+        'swordsmanship',
+        'marksmanship',
+        'athletics',
+        'dodge',
+        'intimidation',
+        'observation',
+        'etiquette',
+      ],
+      startingItems: [
+        { definition: 'rapier', descriptor: null, quantity: 1, equipped: true },
+        { definition: 'buff_coat', descriptor: null, quantity: 1, equipped: true },
+      ],
+      startingResources: { purse: 15 },
+    },
+    {
+      reference: 'gascon_gentleman',
+      labels: { en: 'Gascon gentleman', fr: 'Gentilhomme gascon' },
+      description:
+        'A younger son of the minor nobility of Gascony, come to Paris with a sword, a temper and an empty purse.',
+      skills: [
+        'swordsmanship',
+        'athletics',
+        'dodge',
+        'persuasion',
+        'deception',
+        'etiquette',
+        'stealth',
+      ],
+      startingItems: [
+        {
+          definition: 'rapier',
+          descriptor: "his father's old sword, long and a little out of fashion",
+          quantity: 1,
+          equipped: true,
+        },
+      ],
+      startingResources: { purse: 3 },
+    },
+    {
+      reference: 'valet',
+      labels: { en: 'Valet', fr: 'Valet' },
+      description:
+        'A servant to a gentleman of the sword: resourceful, discreet, and the one who finds supper when there is none.',
+      skills: [
+        'stealth',
+        'observation',
+        'deception',
+        'persuasion',
+        'athletics',
+        'dodge',
+        'first_aid',
+      ],
+      startingItems: [{ definition: 'dagger', descriptor: null, quantity: 1, equipped: false }],
+      startingResources: { purse: 2 },
+    },
+  ],
   scenarios: [
     {
       reference: 'the_stolen_seal',
@@ -1250,29 +1339,12 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
       status: 'published',
       chapters: [{ reference: 'the_guards_house', labels: { en: "The Guards' House" } }],
       quests: [{ reference: 'recover_the_seal', labels: { en: 'Recover the stolen seal' } }],
-      pregeneratedCharacter: {
-        name: "d'Artagnan",
-        /** Quick, hot-headed and charming: a young Gascon in Tréville's favour. */
-        characteristics: { STR: 13, CON: 14, SIZ: 12, INT: 13, POW: 12, DEX: 16, CHA: 14 },
-        skills: {
-          swordsmanship: 60,
-          athletics: 40,
-          stealth: 35,
-          observation: 35,
-          persuasion: 40,
-          deception: 30,
-          etiquette: 30,
-        },
-        resources: { purse: 10 },
-        /** Armed for a night's work: his sword, a dagger, a rope for walls, and Tréville's note. */
+      /**
+       * What the night's work needs, whatever the character's trade: a rope
+       * for walls, and Tréville's note. Their sword comes with their profession.
+       */
+      startingKit: {
         items: [
-          {
-            definition: 'rapier',
-            descriptor: "his father's old sword, long and a little out of fashion",
-            quantity: 1,
-            equipped: true,
-          },
-          { definition: 'dagger', descriptor: 'a main-gauche', quantity: 1, equipped: false },
           {
             definition: 'rope',
             descriptor: 'a knotted rope with a small grapnel, for climbing a wall',
@@ -1287,6 +1359,7 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
             equipped: false,
           },
         ],
+        resources: {},
       },
       /** The story opens in the street, before the guards' house. */
       initialState: {

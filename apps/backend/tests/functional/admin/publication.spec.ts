@@ -2,9 +2,15 @@ import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 
 import User from '#models/user'
+import Character from '#models/character'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
 import { seedMusketeers } from '#tests/helpers/content'
-import { createScenario, createUser, useTransaction } from '#tests/helpers/database'
+import {
+  createCharacter,
+  createScenario,
+  createUser,
+  useTransaction,
+} from '#tests/helpers/database'
 
 const PUBLISHED = THREE_MUSKETEERS_CONTENT.scenarios[0]
 
@@ -14,6 +20,21 @@ function bodyOf(response: { body(): unknown }): any {
 
 async function userWith(role: 'player' | 'game_master'): Promise<User> {
   return User.findOrFail(await createUser({ role }))
+}
+
+/** A player's character in the world, and the scenarios their page offers them. */
+async function playerIn(worldId: string) {
+  const player = await userWith('player')
+  const character = await Character.findOrFail(await createCharacter(player.id, worldId))
+
+  return {
+    player,
+    character,
+    offered: async (client: any): Promise<string[]> =>
+      bodyOf(
+        await client.get(`/api/v1/characters/${character.id}`).loginAs(player)
+      ).data.scenarios.map(({ id }: { id: string }) => id),
+  }
 }
 
 test.group('Publication', (group) => {
@@ -35,7 +56,7 @@ test.group('Publication', (group) => {
     assert.equal(bodyOf(response).error.code, 'scenario_incoherent')
     assert.deepEqual(
       bodyOf(response).error.details.issues.map(({ code }: { code: string }) => code),
-      ['missing_character', 'missing_initial_state']
+      ['missing_initial_state']
     )
     const row = await db.from('scenarios').where('id', draft).firstOrFail()
     assert.equal(row.status, 'draft')
@@ -53,7 +74,7 @@ test.group('Publication', (group) => {
       .update({
         chapters: JSON.stringify(PUBLISHED.chapters),
         quests: JSON.stringify(PUBLISHED.quests),
-        pregenerated_character: JSON.stringify(PUBLISHED.pregeneratedCharacter),
+        starting_kit: JSON.stringify(PUBLISHED.startingKit),
         /** The draft has none of the published scenario's own places: it opens in one of the world. */
         initial_state: JSON.stringify({ ...PUBLISHED.initialState, location: 'hotel_de_treville' }),
       })
@@ -66,15 +87,12 @@ test.group('Publication', (group) => {
     response.assertStatus(200)
     assert.equal(bodyOf(response).data.status, 'published')
 
-    const catalogue = await client.get('/api/v1/scenarios').loginAs(await userWith('player'))
-    assert.include(
-      bodyOf(catalogue).data.map(({ id }: { id: string }) => id),
-      draft
-    )
+    const { offered } = await playerIn(worldId)
+    assert.include(await offered(client), draft)
   })
 
   test('back to a draft, a scenario leaves the catalogue', async ({ client, assert }) => {
-    const { scenarioId } = await seedMusketeers()
+    const { worldId, scenarioId } = await seedMusketeers()
 
     const response = await client
       .post(`/api/v1/admin/scenarios/${scenarioId}/unpublish`)
@@ -82,24 +100,22 @@ test.group('Publication', (group) => {
       .withCsrfToken()
 
     response.assertStatus(200)
-    const catalogue = await client.get('/api/v1/scenarios').loginAs(await userWith('player'))
-    assert.notInclude(
-      bodyOf(catalogue).data.map(({ id }: { id: string }) => id),
-      scenarioId
-    )
+    const { offered } = await playerIn(worldId)
+    assert.notInclude(await offered(client), scenarioId)
   })
 
   test('a published scenario broken since is not played from', async ({ client, assert }) => {
-    const { scenarioId } = await seedMusketeers()
+    const { worldId, scenarioId } = await seedMusketeers()
     await db
       .from('scenarios')
       .where('id', scenarioId)
       .update({ initial_state: JSON.stringify({ ...PUBLISHED.initialState, location: 'navarre' }) })
+    const { player, character } = await playerIn(worldId)
 
     const response = await client
-      .post('/api/v1/sessions')
+      .post(`/api/v1/characters/${character.id}/sessions`)
       .json({ scenarioId })
-      .loginAs(await userWith('player'))
+      .loginAs(player)
       .withCsrfToken()
 
     response.assertStatus(422)

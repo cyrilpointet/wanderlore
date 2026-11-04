@@ -13,9 +13,16 @@ const SCENARIO: Scenario = {
   status: 'draft',
   chapters: [{ reference: 'the_road_to_paris', labels: { en: 'The Road to Paris' } }],
   quests: [{ reference: 'deliver_the_letter', labels: { en: 'Deliver the letter' } }],
-  pregeneratedCharacter: {
-    name: "d'Artagnan",
-    characteristics: { STR: 13, CON: 14, SIZ: 12, INT: 13, POW: 12, DEX: 16, CHA: 14 },
+  startingKit: {
+    items: [
+      {
+        definition: 'letter_of_introduction',
+        descriptor: 'for Monsieur de Tréville',
+        quantity: 1,
+        equipped: false,
+      },
+    ],
+    resources: { purse: 5 },
   },
   initialState: {
     location: 'meung_sur_loire',
@@ -40,7 +47,7 @@ describe('scenario draft', () => {
         chapters: SCENARIO.chapters,
         quests: SCENARIO.quests,
         glossary: [],
-        pregeneratedCharacter: SCENARIO.pregeneratedCharacter,
+        startingKit: SCENARIO.startingKit,
         initialState: SCENARIO.initialState,
         startTime: '10:00',
         startDate: '1625-04-07',
@@ -72,21 +79,35 @@ describe('scenario draft', () => {
     expect(scenarioUpdateOf(draft).payload).toMatchObject({ startTime: '10:00', startDate: null })
   })
 
-  test('no starting place, no initial state; no character text, no character', () => {
-    const draft = { ...scenarioDraftOf(SCENARIO), startLocation: '', pregeneratedCharacter: ' ' }
+  test('no starting place, no initial state; an empty kit gives nothing', () => {
+    const draft = {
+      ...scenarioDraftOf(SCENARIO),
+      startLocation: '',
+      kitItems: ' ',
+      kitResources: '',
+    }
 
     expect(scenarioUpdateOf(draft).payload).toMatchObject({
       initialState: null,
-      pregeneratedCharacter: null,
+      startingKit: { items: [], resources: {} },
     })
   })
 
-  test('names a character that is not valid JSON, and sends nothing', () => {
-    const draft = { ...scenarioDraftOf(SCENARIO), pregeneratedCharacter: '{ name: ' }
+  test('names a kit that is not valid JSON on its field, as the backend names it', () => {
+    const draft = { ...scenarioDraftOf(SCENARIO), kitItems: '[{ definition: ', kitResources: '{' }
 
     expect(scenarioUpdateOf(draft)).toEqual({
-      errors: { pregeneratedCharacter: 'This is not valid JSON.' },
+      errors: {
+        'startingKit.items': 'This is not valid JSON.',
+        'startingKit.resources': 'This is not valid JSON.',
+      },
     })
+  })
+
+  test('never sends a pregenerated character', () => {
+    expect(scenarioUpdateOf(scenarioDraftOf(SCENARIO)).payload).not.toHaveProperty(
+      'pregeneratedCharacter'
+    )
   })
 })
 
@@ -109,7 +130,8 @@ describe('scenario from a JSON file', () => {
     expect(reference).toBe('')
     expect(draft).toMatchObject({
       synopsis: '',
-      pregeneratedCharacter: '',
+      kitItems: '[]',
+      kitResources: '{}',
       startLocation: '',
       startKnownNpcs: [],
       startTime: '08:00',
@@ -117,7 +139,20 @@ describe('scenario from a JSON file', () => {
     })
     expect(scenarioUpdateOf(draft).payload).toMatchObject({
       initialState: null,
-      pregeneratedCharacter: null,
+      startingKit: { items: [], resources: {} },
     })
+  })
+
+  test('a kit of the wrong shape is left empty; a pregenerated character is left out', () => {
+    const { draft } = scenarioDraftFromJson({
+      labels: { en: 'The Stolen Seal' },
+      startingKit: { items: { definition: 'seal' }, resources: ['purse'] },
+      pregeneratedCharacter: { name: "d'Artagnan" },
+    })
+
+    expect(scenarioUpdateOf(draft).payload).toMatchObject({
+      startingKit: { items: [], resources: {} },
+    })
+    expect(scenarioUpdateOf(draft).payload).not.toHaveProperty('pregeneratedCharacter')
   })
 })

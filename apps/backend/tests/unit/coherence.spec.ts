@@ -140,6 +140,10 @@ test.group('Coherence | references', () => {
       issuesAfter((world) => {
         world.actionTypes = world.actionTypes.filter(({ actionType }) => actionType !== 'first_aid')
         world.skills = world.skills.filter(({ reference }) => reference !== 'dodge')
+        /** The professions that train it would be wrong too: not the point here. */
+        for (const profession of world.professions) {
+          profession.skills = profession.skills.filter((skill) => skill !== 'dodge')
+        }
       }),
       [
         ['missing_system_reference', 'actionTypes', 'first_aid'],
@@ -264,69 +268,102 @@ test.group('Coherence | what the model improvises from', () => {
   })
 })
 
-test.group('Coherence | the character and where the story starts', () => {
-  test('a scenario has both', ({ assert }) => {
+test.group('Coherence | the starting equipment and where the story starts', () => {
+  test('a scenario has a place to start in', ({ assert }) => {
     assert.deepEqual(
       issuesAfter((_world, scenario) => {
-        scenario.pregeneratedCharacter = null
         scenario.initialState = null
       }),
-      [
-        ['missing_character', 'pregeneratedCharacter', undefined],
-        ['missing_initial_state', 'initialState', undefined],
-      ]
+      [['missing_initial_state', 'initialState', undefined]]
     )
   })
 
-  test('the character only has scores the world defines', ({ assert }) => {
+  test('a world without a profession has no character to play the story with', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((world) => {
+        world.professions = []
+      }),
+      [['no_profession', 'professions', undefined]]
+    )
+  })
+
+  test('the kit gives items the character can hold as declared, and resources of the world', ({
+    assert,
+  }) => {
     assert.deepEqual(
       issuesAfter((_world, scenario) => {
-        scenario.pregeneratedCharacter!.skills.fencing = 3
-        scenario.pregeneratedCharacter!.resources.gold = 3
+        scenario.startingKit = {
+          items: [
+            { definition: 'halberd', descriptor: null, quantity: 1, equipped: false },
+            { definition: 'letter_to_treville', descriptor: null, quantity: 1, equipped: true },
+            { definition: 'rapier', descriptor: null, quantity: 2, equipped: false },
+            { definition: 'queens_diamond_studs', descriptor: null, quantity: 1, equipped: false },
+            { definition: 'letter_to_treville', descriptor: null, quantity: 1, equipped: false },
+          ],
+          resources: { gold: 3 },
+        }
       }),
       [
-        ['unknown_skill', 'pregeneratedCharacter.skills', 'fencing'],
-        ['unknown_resource', 'pregeneratedCharacter.resources', 'gold'],
+        ['unknown_item', 'startingKit.items.0.definition', 'halberd'],
+        ['not_equippable', 'startingKit.items.1.equipped', 'letter_to_treville'],
+        ['not_stackable', 'startingKit.items.2.quantity', 'rapier'],
+        ['item_held_elsewhere', 'startingKit.items.3.definition', 'queens_diamond_studs'],
+        ['unknown_resource', 'startingKit.resources', 'gold'],
+        ['item_given_twice', 'startingKit.items', 'letter_to_treville'],
       ]
     )
   })
 
-  test('the character has the seven characteristics, within human bounds', ({ assert }) => {
+  test('a profession trains skills and gives resources of the world', ({ assert }) => {
     assert.deepEqual(
-      issuesAfter((_world, scenario) => {
-        const characteristics = scenario.pregeneratedCharacter!.characteristics as Record<
-          string,
-          number
-        >
-        characteristics.STR = 22
-        characteristics.SIZ = 7
-        delete characteristics.CHA
-        characteristics.LUCK = 10
+      issuesAfter((world) => {
+        const [first] = world.professions
+        first.skills = [...first.skills, 'fencing']
+        first.startingResources = { gold: 3 }
       }),
       [
-        ['characteristic_out_of_range', 'pregeneratedCharacter.characteristics.STR', 'STR'],
-        ['characteristic_out_of_range', 'pregeneratedCharacter.characteristics.SIZ', 'SIZ'],
-        ['characteristic_out_of_range', 'pregeneratedCharacter.characteristics.CHA', 'CHA'],
-        ['unknown_characteristic', 'pregeneratedCharacter.characteristics', 'LUCK'],
+        ['unknown_skill', `professions.${WORLD.professions[0].reference}.skills`, 'fencing'],
+        [
+          'unknown_resource',
+          `professions.${WORLD.professions[0].reference}.startingResources`,
+          'gold',
+        ],
       ]
     )
   })
 
-  test('the character starts with items it can hold as declared', ({ assert }) => {
+  test('no profession gives a unique item the scenario gives too', ({ assert }) => {
+    const profession = WORLD.professions[0].reference
+
     assert.deepEqual(
-      issuesAfter((_world, scenario) => {
-        scenario.pregeneratedCharacter!.items = [
-          { definition: 'halberd', descriptor: null, quantity: 1, equipped: false },
-          { definition: 'letter_to_treville', descriptor: null, quantity: 1, equipped: true },
-          { definition: 'rapier', descriptor: null, quantity: 2, equipped: false },
-          { definition: 'queens_diamond_studs', descriptor: null, quantity: 1, equipped: false },
+      issuesAfter((world, scenario) => {
+        const unique = { definition: 'letter_to_treville', descriptor: null, quantity: 1 }
+        world.professions[0].startingItems = [{ ...unique, equipped: false }]
+        scenario.startingKit = { items: [{ ...unique, equipped: false }], resources: {} }
+      }),
+      [['item_given_twice', `professions.${profession}.startingItems`, 'letter_to_treville']]
+    )
+  })
+
+  test('a profession gives an item a scenario defines anew, resolved on the scenario', ({
+    assert,
+  }) => {
+    assert.deepEqual(
+      issuesAfter((world, scenario) => {
+        /** The one profession that draws the sword: the others give it too. */
+        world.professions.forEach((profession) => (profession.startingItems = []))
+        world.professions[0].startingItems = [
+          { definition: 'rapier', descriptor: null, quantity: 1, equipped: true },
         ]
+        const rapier = world.items.find(({ reference }) => reference === 'rapier')!
+        scenario.items.push({ ...rapier, equippable: false })
       }),
       [
-        ['unknown_item', 'pregeneratedCharacter.items.0.definition', 'halberd'],
-        ['not_equippable', 'pregeneratedCharacter.items.1.equipped', 'letter_to_treville'],
-        ['not_stackable', 'pregeneratedCharacter.items.2.quantity', 'rapier'],
-        ['item_held_elsewhere', 'pregeneratedCharacter.items.3.definition', 'queens_diamond_studs'],
+        [
+          'not_equippable',
+          `professions.${WORLD.professions[0].reference}.startingItems.0.equipped`,
+          'rapier',
+        ],
       ]
     )
   })

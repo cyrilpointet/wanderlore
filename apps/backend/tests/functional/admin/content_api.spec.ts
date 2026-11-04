@@ -5,7 +5,7 @@ import type { ApiClient } from '@japa/api-client'
 import User from '#models/user'
 import { seedMusketeers } from '#tests/helpers/content'
 import {
-  createCharacter,
+  characterOf,
   createNpcInstance,
   createSession,
   createTurn,
@@ -75,7 +75,7 @@ const GUARD = {
 async function gameInMusketeers() {
   const content = await seedMusketeers()
   const sessionId = await createSession(await createUser(), content)
-  const characterId = await createCharacter(sessionId)
+  const characterId = await characterOf(sessionId)
   await db
     .from('characters')
     .where('id', characterId)
@@ -313,10 +313,7 @@ test.group('Content API | scenarios', (group) => {
     assert.deepEqual(bodyOf(response).data.chapters, [])
   })
 
-  test('checks the pregenerated character written by hand, field by field', async ({
-    client,
-    assert,
-  }) => {
+  test('checks the starting kit written by hand, field by field', async ({ client, assert }) => {
     const user = await gameMaster()
     const worldId = await createWorld()
     const { data: scenario } = bodyOf(
@@ -327,19 +324,17 @@ test.group('Content API | scenarios', (group) => {
     )
 
     const response = await as(client, user).patch(`/scenarios/${scenario.id}`, {
-      pregeneratedCharacter: {
-        name: 'Dr Watson',
-        characteristics: { STR: 11, CON: 12, SIZ: 13, INT: 14, POW: 12, DEX: 11 },
-        skills: { deduction: 250 },
-        resources: {},
-        items: [],
+      startingKit: {
+        items: [{ definition: 'Revolver', descriptor: null, quantity: 0, equipped: false }],
+        resources: { money: 'plenty' },
       },
     })
 
     response.assertStatus(422)
     const fields = bodyOf(response).errors.map((error: { field: string }) => error.field)
-    assert.include(fields, 'pregeneratedCharacter.characteristics.CHA')
-    assert.include(fields, 'pregeneratedCharacter.skills.deduction')
+    assert.include(fields, 'startingKit.items.0.definition')
+    assert.include(fields, 'startingKit.items.0.quantity')
+    assert.include(fields, 'startingKit.resources.money')
   })
 
   test('keeps a chapter a game stands in', async ({ client, assert }) => {

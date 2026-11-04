@@ -14,7 +14,7 @@ export default class ScenarioTransformer extends BaseTransformer<Scenario> {
       'status',
       'chapters',
       'quests',
-      'pregeneratedCharacter',
+      'startingKit',
       'initialState',
       'startTime',
       'startDate',

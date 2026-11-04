@@ -14,6 +14,7 @@ export type ContentKind =
   | 'npc'
   | 'location'
   | 'item'
+  | 'profession'
 
 /**
  * Content that games are played with cannot be deleted: their state names it
@@ -50,8 +51,9 @@ export async function refuseIfPlayed(kind: 'world' | 'scenario', scope: GamesSco
 }
 
 /**
- * Refuses the removal of skills or resources that a character of these games
- * still has a score in.
+ * Refuses the removal of skills a character of the world has a value in —
+ * played or not, deleted or not: the sheet outlives its games — or of
+ * resources a character holds in one of these games.
  */
 export async function refuseRemovedScores(
   kind: 'skill' | 'resource',
@@ -60,15 +62,36 @@ export async function refuseRemovedScores(
 ) {
   if (removed.length === 0) return
 
-  const column = { skill: 'skills', resource: 'resources' }[kind]
-  const rows: { reference: string }[] = await db
-    .from('characters')
-    .whereIn('session_id', sessionsOf(scope))
-    .joinRaw(`cross join lateral jsonb_object_keys(characters.${column}) as reference`)
-    .whereIn('reference', removed)
-    .distinct('reference')
+  const rows: { reference: string }[] =
+    kind === 'skill'
+      ? await db
+          .from('characters')
+          .if('worldId' in scope, (query) =>
+            query.where('world_id', (scope as { worldId: string }).worldId)
+          )
+          .if('scenarioId' in scope, (query) =>
+            query.whereIn('id', sessionsOf(scope).clearSelect().select('character_id'))
+          )
+          .joinRaw('cross join lateral jsonb_object_keys(characters.skills) as reference')
+          .whereIn('reference', removed)
+          .distinct('reference')
+      : await db
+          .from('character_states')
+          .whereIn('session_id', sessionsOf(scope))
+          .joinRaw('cross join lateral jsonb_object_keys(character_states.resources) as reference')
+          .whereIn('reference', removed)
+          .distinct('reference')
 
   refuseFound(kind, rows)
+}
+
+/** Refuses the deletion of a profession a character follows: they keep it for good. */
+export async function refuseUsedProfession(profession: { id: string; reference: string }) {
+  const used = await db.from('characters').where('profession_id', profession.id).first()
+
+  if (used) {
+    throw new ContentInUseError('profession', [profession.reference])
+  }
 }
 
 /** Refuses the removal of categories of action a logged roll of these games resolved. */

@@ -8,6 +8,7 @@ const WORLD: WorldDetail = {
   reference: 'three_musketeers',
   labels: { en: 'The Three Musketeers', fr: 'Les Trois Mousquetaires' },
   narrativeTone: 'France, 1625.',
+  powerLevel: 'heroic',
   skills: [
     { reference: 'swordsmanship', labels: { en: 'Swordsmanship' }, category: 'combat', baseChance: 15 },
     {
@@ -66,6 +67,12 @@ describe('world from a JSON file', () => {
 
     expect(worldPayloadOf(draft)).toEqual(payload)
     expect(draft.skills.every(({ locked }) => !locked)).toBe(true)
+  })
+
+  test('a file with no power level, or an unknown one, opens at the normal level', () => {
+    expect(worldDraftFromJson({ reference: 'gotham' }).powerLevel).toBe('normal')
+    expect(worldDraftFromJson({ powerLevel: 'godlike' }).powerLevel).toBe('normal')
+    expect(worldDraftFromJson({ powerLevel: 'superhuman' }).powerLevel).toBe('superhuman')
   })
 
   test('leaves empty what is not of the right type, and keeps a new skill’s defaults', () => {

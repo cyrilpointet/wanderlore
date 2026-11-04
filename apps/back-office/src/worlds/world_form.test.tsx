@@ -11,6 +11,7 @@ const WORLD: WorldDetail = {
   reference: 'three_musketeers',
   labels: { en: 'The Three Musketeers' },
   narrativeTone: 'France, 1625.',
+  powerLevel: 'epic',
   skills: [
     {
       reference: 'dodge',
@@ -34,6 +35,28 @@ describe('WorldForm | skills', () => {
       expect(html).toContain(text)
     }
     expect(html).not.toContain('Attribute')
+  })
+})
+
+describe('WorldForm | power level', () => {
+  test('picks the level among the four of BRP, the saved one selected', () => {
+    const html = renderToStaticMarkup(
+      <WorldForm draft={worldDraftOf(WORLD)} onChange={() => {}} errors={{}} creating={false} />
+    )
+
+    expect(html).toContain('Power level')
+    for (const level of ['Normal', 'Heroic', 'Epic', 'Superhuman']) {
+      expect(html).toContain(level)
+    }
+    expect(html).toMatch(/<option value="epic" selected="">Epic<\/option>/)
+  })
+
+  test('is asked on creation too, with the names and tone', () => {
+    const html = renderToStaticMarkup(
+      <WorldForm draft={worldDraftOf(WORLD)} onChange={() => {}} errors={{}} creating />
+    )
+
+    expect(html).toContain('world-power-level')
   })
 })
 

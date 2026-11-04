@@ -77,3 +77,34 @@ export async function loadWorlds(
     return world
   }
 }
+
+/**
+ * A world on its own, without any scenario: what a character is made in,
+ * before they play any story. Its catalogues are the world's only.
+ */
+export async function loadWorldLevel(
+  worldId: string,
+  client?: QueryClientContract
+): Promise<WorldDefinition> {
+  return resolveWorld(await readWorldLevel(worldId, client), NO_SCENARIO)
+}
+
+const NO_SCENARIO: ScenarioContent = {
+  reference: '',
+  labels: { en: '' },
+  synopsis: '',
+  status: 'draft',
+  chapters: [],
+  quests: [],
+  startingKit: { items: [], resources: {} },
+  initialState: null,
+  startTime: '08:00',
+  startDate: null,
+  glossary: [],
+  flags: [],
+  events: [],
+  npcs: [],
+  locations: [],
+  items: [],
+  lore: [],
+}

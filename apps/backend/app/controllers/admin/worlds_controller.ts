@@ -11,12 +11,13 @@ import {
 import WorldTransformer from '#transformers/admin/world_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 
-import { storeCatalogues } from '#services/game/content/store'
+import { storeCatalogues, storeProfessions } from '#services/game/content/store'
 
 import { referenceTaken, refuseReferenceChange } from './content.js'
 import {
   importedCatalogues,
   refuseImportedCatalogues,
+  refuseProfession,
   refuseUnlessOneResolution,
 } from './catalogue_checks.js'
 
@@ -36,8 +37,8 @@ export default class WorldsController {
 
   /**
    * With what an imported file brings besides — catalogues, lore, categories
-   * of action: a world ready to play but for its scenarios. All written in one
-   * transaction, or nothing at all.
+   * of action, professions: a world ready to play but for its scenarios. All
+   * written in one transaction, or nothing at all.
    */
   async store({ request, response, auth, serialize }: HttpContext) {
     const {
@@ -46,6 +47,7 @@ export default class WorldsController {
       items,
       lore,
       actionTypes = [],
+      professions = [],
       ...payload
     } = await request.validateUsing(createWorldValidator)
 
@@ -67,6 +69,23 @@ export default class WorldsController {
       return resolved
     })
 
+    /** A profession names what the file itself declares: the world has nothing else yet. */
+    const professionScope = {
+      skills: new Set(payload.skills.map(({ reference }) => reference)),
+      resources: new Set(payload.resources.map(({ reference }) => reference)),
+      items: new Set(catalogues.items.map(({ reference }) => reference)),
+      scenarioItems: new Set<string>(),
+    }
+    const imported = professions.map((profession, index) => {
+      refuseProfession(profession, professionScope, `professions.${index}.`)
+
+      return {
+        ...profession,
+        startingItems: profession.startingItems ?? [],
+        startingResources: profession.startingResources ?? {},
+      }
+    })
+
     const world = await db.transaction(async (trx) => {
       const created = await World.create(
         { ...payload, createdBy: auth.getUserOrFail().id },
@@ -77,6 +96,7 @@ export default class WorldsController {
         rules.map((rule) => ({ ...rule, worldId: created.id })),
         { client: trx }
       )
+      await storeProfessions(created.id, imported, trx)
 
       return created
     })

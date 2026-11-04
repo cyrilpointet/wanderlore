@@ -201,3 +201,85 @@ export function importedCatalogues(payload: {
     })),
   }
 }
+
+/** What a profession may name: the world's skills, resources and items. */
+export type ProfessionScope = {
+  skills: Set<string>
+  resources: Set<string>
+  /** World items, by reference. */
+  items: Set<string>
+  /** Items of a scenario of the world only: a profession holds for every scenario, so never one of them. */
+  scenarioItems: Set<string>
+}
+
+export type ProfessionPayload = {
+  skills?: string[]
+  startingItems?: { definition: string }[]
+  startingResources?: Record<string, number>
+}
+
+/**
+ * A profession names skills, resources and items of its world — and an item
+ * of the world, never of a single scenario: the profession holds for all of
+ * them. Refused on the field at fault; `path` names the entry of an imported
+ * file.
+ */
+export function refuseProfession(profession: ProfessionPayload, scope: ProfessionScope, path = '') {
+  for (const skill of profession.skills ?? []) {
+    if (!scope.skills.has(skill)) {
+      throw new Refusal(422, 'unknown_skill', `"${skill}" is no skill of this world.`, {
+        field: `${path}skills`,
+        references: [skill],
+      })
+    }
+  }
+
+  for (const [index, item] of (profession.startingItems ?? []).entries()) {
+    const field = `${path}startingItems.${index}.definition`
+
+    if (scope.items.has(item.definition)) continue
+
+    throw scope.scenarioItems.has(item.definition)
+      ? new Refusal(
+          422,
+          'scenario_item_in_profession',
+          `"${item.definition}" belongs to a scenario: a profession gives items of its world only.`,
+          { field, references: [item.definition] }
+        )
+      : new Refusal(422, 'unknown_item', `"${item.definition}" is no item of this world.`, {
+          field,
+          references: [item.definition],
+        })
+  }
+
+  for (const resource of Object.keys(profession.startingResources ?? {})) {
+    if (!scope.resources.has(resource)) {
+      throw new Refusal(422, 'unknown_resource', `"${resource}" is no resource of this world.`, {
+        field: `${path}startingResources`,
+        references: [resource],
+      })
+    }
+  }
+}
+
+/** What the professions of a stored world may name, read from the database. */
+export async function professionScopeOf(world: {
+  id: string
+  skills: { reference: string }[]
+  resources: { reference: string }[]
+}): Promise<ProfessionScope> {
+  const items = await ItemDefinition.query()
+    .where('worldId', world.id)
+    .select('reference', 'scenarioId')
+
+  return {
+    skills: new Set(world.skills.map(({ reference }) => reference)),
+    resources: new Set(world.resources.map(({ reference }) => reference)),
+    items: new Set(
+      items.filter((item) => item.scenarioId === null).map(({ reference }) => reference)
+    ),
+    scenarioItems: new Set(
+      items.filter((item) => item.scenarioId !== null).map(({ reference }) => reference)
+    ),
+  }
+}

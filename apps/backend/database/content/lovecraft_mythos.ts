@@ -21,6 +21,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
   labels: { en: 'The Lovecraft Mythos', fr: 'Le Mythe de Lovecraft' },
   narrativeTone:
     '1920s cosmic horror: slow-building dread, knowledge that costs, and a universe vast, ancient and indifferent to mankind.',
+  /** Ordinary people against what they cannot understand: the book's normal level. */
+  powerLevel: 'normal',
   /**
    * Without tags: sent with every turn, the rules to arbitration, the ambiance
    * to the narrator.
@@ -789,6 +791,98 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
       initialHolder: null,
     },
   ],
+  /**
+   * The trades of the 1920s an investigator comes from. Each trains a
+   * handful of the world's skills and starts every game with the tools of
+   * the trade.
+   */
+  professions: [
+    {
+      reference: 'antiquarian',
+      labels: { en: 'Antiquarian', fr: 'Antiquaire' },
+      description:
+        'A dealer in old books and curiosities, at home in auction rooms, archives and dusty attics.',
+      skills: ['scholarship', 'occultism', 'observation', 'persuasion', 'deception', 'composure'],
+      startingItems: [
+        { definition: 'tool', descriptor: "a jeweller's loupe", quantity: 1, equipped: false },
+      ],
+      startingResources: { money: 60 },
+    },
+    {
+      reference: 'physician',
+      labels: { en: 'Physician', fr: 'Médecin' },
+      description:
+        'A doctor of medicine, trained to keep a steady hand and a cool head before blood and death.',
+      skills: ['first_aid', 'scholarship', 'observation', 'persuasion', 'composure', 'dodge'],
+      startingItems: [
+        {
+          definition: 'tool',
+          descriptor: "a doctor's black bag, with bandages, a stethoscope and morphine",
+          quantity: 1,
+          equipped: false,
+        },
+      ],
+      startingResources: { money: 80 },
+    },
+    {
+      reference: 'journalist',
+      labels: { en: 'Journalist', fr: 'Journaliste' },
+      description:
+        'A newspaper reporter who chases a story wherever it leads, and gets people to talk.',
+      skills: ['observation', 'persuasion', 'deception', 'stealth', 'scholarship', 'athletics'],
+      startingItems: [
+        {
+          definition: 'document',
+          descriptor: "a reporter's notebook and a press card",
+          quantity: 1,
+          equipped: false,
+        },
+      ],
+      startingResources: { money: 30 },
+    },
+    {
+      reference: 'private_investigator',
+      labels: { en: 'Private investigator', fr: 'Détective privé' },
+      description: 'A licensed private detective: tails, stake-outs and a gun in the coat pocket.',
+      skills: [
+        'firearms',
+        'observation',
+        'stealth',
+        'intimidation',
+        'deception',
+        'brawling',
+        'dodge',
+      ],
+      startingItems: [
+        { definition: 'revolver', descriptor: null, quantity: 1, equipped: true },
+        { definition: 'ammunition', descriptor: null, quantity: 12, equipped: false },
+      ],
+      startingResources: { money: 40 },
+    },
+    {
+      reference: 'professor',
+      labels: { en: 'Professor', fr: 'Professeur' },
+      description:
+        'A university scholar of languages, history or the sciences, more used to libraries than to danger.',
+      skills: [
+        'scholarship',
+        'occultism',
+        'persuasion',
+        'composure',
+        'observation',
+        'intimidation',
+      ],
+      startingItems: [
+        {
+          definition: 'document',
+          descriptor: 'a sheaf of lecture notes and a university letter of introduction',
+          quantity: 1,
+          equipped: false,
+        },
+      ],
+      startingResources: { money: 50 },
+    },
+  ],
   scenarios: [
     {
       reference: 'the_ward_inheritance',
@@ -820,21 +914,8 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         },
         { reference: 'stop_the_rite', labels: { en: 'Stop the rite', fr: 'Arrêter le rituel' } },
       ],
-      pregeneratedCharacter: {
-        name: 'Edmund Ward',
-        /** A Boston scholar, sharp and bookish, unused to hardship. */
-        characteristics: { STR: 10, CON: 11, SIZ: 12, INT: 16, POW: 14, DEX: 11, CHA: 12 },
-        skills: {
-          scholarship: 60,
-          observation: 45,
-          persuasion: 45,
-          occultism: 30,
-          composure: 30,
-          athletics: 30,
-          firearms: 30,
-        },
-        resources: { money: 40 },
-        /** What the heir brings from Boston: the attorney's letter, the keys he sent, a torch. */
+      /** What the heir brings from Boston, whatever their trade: the attorney's letter, the keys he sent, a torch. */
+      startingKit: {
         items: [
           {
             definition: 'document',
@@ -850,6 +931,7 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
           },
           { definition: 'tool', descriptor: 'an electric torch', quantity: 1, equipped: false },
         ],
+        resources: {},
       },
       /** The story opens as the heir lets himself into the house. */
       initialState: {

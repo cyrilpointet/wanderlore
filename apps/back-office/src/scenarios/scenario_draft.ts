@@ -16,9 +16,9 @@ import type { Scenario, ScenarioPayload } from './queries'
 export type QuestDraft = { key: string; reference: string; step: string; summary: string }
 
 /**
- * A scenario being edited. The pregenerated character, the flags and the
- * events are written as JSON; the initial state is picked from closed lists —
- * a place, a chapter, the quests under way.
+ * A scenario being edited. The starting kit, the flags and the events are
+ * written as JSON; the initial state is picked from closed lists — a place, a
+ * chapter, the quests under way.
  */
 export type ScenarioDraft = {
   labels: LabelRow[]
@@ -26,8 +26,10 @@ export type ScenarioDraft = {
   chapters: EntryDraft[]
   quests: EntryDraft[]
   glossary: EntryDraft[]
-  /** JSON text; empty for no character yet. */
-  pregeneratedCharacter: string
+  /** JSON text: the items every character starts with; empty for none. */
+  kitItems: string
+  /** JSON text: the resources every character starts with, by reference; empty for none. */
+  kitResources: string
   /** Empty for no initial state yet. */
   startLocation: string
   startChapter: string
@@ -44,15 +46,6 @@ export type ScenarioDraft = {
   events: string
 }
 
-/** What a new character looks like, to start from rather than from a blank page. */
-export const CHARACTER_TEMPLATE = {
-  name: '',
-  characteristics: { STR: 10, CON: 10, SIZ: 13, INT: 13, POW: 10, DEX: 10, CHA: 10 },
-  skills: {},
-  resources: {},
-  items: [],
-}
-
 export function scenarioDraftOf(scenario: Scenario): ScenarioDraft {
   const state = scenario.initialState
 
@@ -62,10 +55,8 @@ export function scenarioDraftOf(scenario: Scenario): ScenarioDraft {
     chapters: scenario.chapters.map(entryDraftOf),
     quests: scenario.quests.map(entryDraftOf),
     glossary: scenario.glossary.map(entryDraftOf),
-    pregeneratedCharacter:
-      scenario.pregeneratedCharacter === null
-        ? ''
-        : JSON.stringify(scenario.pregeneratedCharacter, null, 2),
+    kitItems: json(scenario.startingKit?.items ?? []),
+    kitResources: json(scenario.startingKit?.resources ?? {}),
     startLocation: state?.location ?? '',
     startChapter: state?.chapter ?? '',
     startQuests: (state?.quests ?? []).map((quest, index) => ({
@@ -99,7 +90,7 @@ export function scenarioDraftFromJson(scenario: Imported): {
   draft: ScenarioDraft
 } {
   const state = isImported(scenario.initialState) ? scenario.initialState : null
-  const character = scenario.pregeneratedCharacter
+  const kit = isImported(scenario.startingKit) ? scenario.startingKit : null
 
   return {
     reference: textOf(scenario.reference),
@@ -109,8 +100,8 @@ export function scenarioDraftFromJson(scenario: Imported): {
       chapters: listOf(scenario.chapters, importedEntryOf),
       quests: listOf(scenario.quests, importedEntryOf),
       glossary: listOf(scenario.glossary, importedEntryOf),
-      pregeneratedCharacter:
-        character === undefined || character === null ? '' : JSON.stringify(character, null, 2),
+      kitItems: json(Array.isArray(kit?.items) ? kit.items : []),
+      kitResources: json(isImported(kit?.resources) ? kit.resources : {}),
       startLocation: textOf(state?.location),
       startChapter: textOf(state?.chapter),
       startQuests: listOf(state?.quests, (quest) => ({
@@ -134,35 +125,32 @@ export type ScenarioUpdate =
 
 /**
  * The edit as the backend takes it. No starting place means no initial
- * state yet; an empty character means none yet — a draft may lack both,
- * publishing will not. JSON that does not parse is named and nothing is sent.
+ * state yet — a draft may lack one, publishing will not. An empty JSON field
+ * means none; JSON that does not parse is named on its field, as the backend
+ * names it, and nothing is sent.
  */
 export function scenarioUpdateOf(draft: ScenarioDraft): ScenarioUpdate {
-  let character: unknown = null
-
-  if (draft.pregeneratedCharacter.trim() !== '') {
-    try {
-      character = JSON.parse(draft.pregeneratedCharacter)
-    } catch {
-      return { errors: { pregeneratedCharacter: i18n.t('invalid_json', { ns: 'errors' }) } }
-    }
-  }
-
   const errors: FieldErrors = {}
-  const list = (field: 'flags' | 'events') => {
+  const parse = (
+    field: 'flags' | 'events' | 'kitItems' | 'kitResources',
+    path: string,
+    empty: unknown
+  ) => {
     if (draft[field].trim() === '') {
-      return []
+      return empty
     }
 
     try {
       return JSON.parse(draft[field]) as unknown
     } catch {
-      errors[field] = i18n.t('invalid_json', { ns: 'errors' })
+      errors[path] = i18n.t('invalid_json', { ns: 'errors' })
       return undefined
     }
   }
-  const flags = list('flags')
-  const events = list('events')
+  const items = parse('kitItems', 'startingKit.items', [])
+  const resources = parse('kitResources', 'startingKit.resources', {})
+  const flags = parse('flags', 'flags', [])
+  const events = parse('events', 'events', [])
 
   if (Object.keys(errors).length > 0) {
     return { errors }
@@ -175,7 +163,7 @@ export function scenarioUpdateOf(draft: ScenarioDraft): ScenarioUpdate {
       chapters: draft.chapters.map(entryPayloadOf),
       quests: draft.quests.map(entryPayloadOf),
       glossary: draft.glossary.map(entryPayloadOf),
-      pregeneratedCharacter: character,
+      startingKit: { items, resources },
       initialState:
         draft.startLocation === ''
           ? null

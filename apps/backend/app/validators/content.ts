@@ -10,6 +10,7 @@ import {
   ITEM_CONDITIONS,
   LORE_FRAGMENT_KINDS,
   NPC_DISPOSITIONS,
+  POWER_LEVELS,
   SKILL_CATEGORIES,
   SPECIAL_EFFECTS,
   WEAPON_KINDS,
@@ -22,8 +23,8 @@ import { FIXED_DURATIONS, MAX_DAYS, PERIODS } from '#services/game/game_time'
  * checked here, field by field: a game master's typo is refused with the
  * field at fault, never stored to break a game afterwards.
  *
- * Nested structures — combat profiles, item modifiers, the pregenerated
- * character, the initial state — arrive as JSON written by hand: they get the
+ * Nested structures — combat profiles, item modifiers, starting equipment,
+ * the initial state — arrive as JSON written by hand: they get the
  * same treatment, with the path of the faulty field.
  *
  * Whether the content holds together as a whole (a category of action naming
@@ -55,7 +56,7 @@ const labels = () =>
 
 const entry = () => vine.object({ reference: reference(), labels: labels() })
 
-/** Scores by reference: a character's resources. */
+/** Scores by reference: what a character starts a game with in each resource. */
 const scores = () => vine.record(vine.number().withoutDecimals().min(-20).max(99))
 
 /** Skill values in percent; past 100 is possible in BRP, not past 200. */
@@ -77,14 +78,6 @@ const isDice = vine.createRule((value: unknown, _options: undefined, field: Fiel
     field.report('The {{ field }} field must be a dice expression such as 1D6+1', 'dice', field)
   }
 })
-
-/** The seven characteristics of BRP, each between 3 and 21 — checked closer at publication. */
-const characteristics = () =>
-  vine.object(
-    Object.fromEntries(
-      CHARACTERISTICS.map((name) => [name, vine.number().withoutDecimals().min(1).max(99)])
-    ) as Record<(typeof CHARACTERISTICS)[number], ReturnType<typeof vine.number>>
-  )
 
 /** What stops a blow: a buff coat 1, a breastplate 6 — past 20 is a fortress. */
 const armor = () => vine.number().withoutDecimals().min(0).max(20)
@@ -246,8 +239,27 @@ const importedCatalogues = () => ({
     .optional(),
 })
 
+/** An item a character starts a game with: whether it exists is checked against the catalogues. */
+const startingItem = () =>
+  vine.object({
+    definition: reference(),
+    descriptor: vine.string().trim().maxLength(300).nullable(),
+    quantity: vine.number().withoutDecimals().min(1).max(999),
+    equipped: vine.boolean(),
+  })
+
+/** A profession of a world: the skills it trains, what it starts a game with. */
+const professionFields = {
+  labels: labels(),
+  description: sentence(300),
+  skills: vine.array(reference()).minLength(1).maxLength(20).distinct(),
+  startingItems: vine.array(startingItem()).maxLength(20),
+  startingResources: scores(),
+}
+
 const worldLists = {
   narrativeTone: sentence(500),
+  powerLevel: vine.enum(POWER_LEVELS),
   skills: vine
     .array(
       vine.object({
@@ -270,7 +282,20 @@ export const createWorldValidator = vine.create({
   reference: reference(),
   labels: labels(),
   ...worldLists,
+  /** Left out, a world is of the book's normal level. */
+  powerLevel: worldLists.powerLevel.optional(),
   ...importedCatalogues(),
+  professions: vine
+    .array(
+      vine.object({
+        reference: reference(),
+        ...professionFields,
+        startingItems: professionFields.startingItems.optional(),
+        startingResources: professionFields.startingResources.optional(),
+      })
+    )
+    .distinct('reference')
+    .optional(),
   actionTypes: vine
     .array(
       vine.object({
@@ -288,6 +313,7 @@ export const createWorldValidator = vine.create({
 export const updateWorldValidator = vine.create({
   labels: labels().optional(),
   narrativeTone: worldLists.narrativeTone.optional(),
+  powerLevel: worldLists.powerLevel.optional(),
   skills: worldLists.skills.optional(),
   resources: worldLists.resources.optional(),
   glossary: worldLists.glossary.optional(),
@@ -310,21 +336,22 @@ export const updateActionTypeValidator = vine.create({
   associatedCharacteristic: vine.enum(CHARACTERISTICS).nullable().optional(),
 })
 
-const pregeneratedCharacter = () =>
+/** What a scenario gives the character as a game starts, besides their profession's. */
+const startingKit = () =>
   vine.object({
-    name: sentence(100),
-    characteristics: characteristics(),
-    skills: percentages(),
+    items: vine.array(startingItem()).maxLength(20),
     resources: scores(),
-    items: vine.array(
-      vine.object({
-        definition: reference(),
-        descriptor: vine.string().trim().maxLength(300).nullable(),
-        quantity: vine.number().withoutDecimals().min(1).max(999),
-        equipped: vine.boolean(),
-      })
-    ),
   })
+
+/** A new profession: equipment and resources may be left out — a profession may bring none. */
+export const createProfessionValidator = vine.create({
+  reference: reference(),
+  ...professionFields,
+  startingItems: professionFields.startingItems.optional(),
+  startingResources: professionFields.startingResources.optional(),
+})
+
+export const updateProfessionValidator = vine.create(optional(professionFields))
 
 /** A time of day, as a scenario opens on it: `HH:MM`. */
 const timeOfDay = () =>
@@ -487,7 +514,7 @@ const scenarioFields = {
   synopsis: vine.string().trim().maxLength(4000),
   chapters: vine.array(entry()).distinct('reference'),
   quests: vine.array(entry()).distinct('reference'),
-  pregeneratedCharacter: pregeneratedCharacter().nullable(),
+  startingKit: startingKit(),
   initialState: initialState().nullable(),
   startTime: timeOfDay(),
   startDate: calendarDate().nullable(),
@@ -505,7 +532,7 @@ export const createScenarioValidator = vine.create({
   synopsis: scenarioFields.synopsis.optional(),
   chapters: scenarioFields.chapters.optional(),
   quests: scenarioFields.quests.optional(),
-  pregeneratedCharacter: scenarioFields.pregeneratedCharacter.optional(),
+  startingKit: scenarioFields.startingKit.optional(),
   initialState: scenarioFields.initialState.optional(),
   startTime: scenarioFields.startTime.optional(),
   startDate: scenarioFields.startDate.optional(),
@@ -520,7 +547,7 @@ export const updateScenarioValidator = vine.create({
   synopsis: scenarioFields.synopsis.optional(),
   chapters: scenarioFields.chapters.optional(),
   quests: scenarioFields.quests.optional(),
-  pregeneratedCharacter: scenarioFields.pregeneratedCharacter.optional(),
+  startingKit: scenarioFields.startingKit.optional(),
   initialState: scenarioFields.initialState.optional(),
   startTime: scenarioFields.startTime.optional(),
   startDate: scenarioFields.startDate.optional(),

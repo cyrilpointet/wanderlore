@@ -37,12 +37,20 @@ export type BaseChance = number | { characteristic: Characteristic; multiplier: 
 
 export type Skill = Entry & { category: SkillCategory; baseChance: BaseChance }
 
+/**
+ * How far above the ordinary a world's characters start, as BRP sets it: the
+ * points a player spends on skills at creation, and how high a skill may go.
+ */
+export const POWER_LEVELS = ['normal', 'heroic', 'epic', 'superhuman'] as const
+export type PowerLevel = (typeof POWER_LEVELS)[number]
+
 /** Everything a world holds itself; its scenarios, catalogues and lore have routes of their own. */
 export type WorldDetail = {
   id: string
   reference: string
   labels: Labels
   narrativeTone: string
+  powerLevel: PowerLevel
   skills: Skill[]
   resources: Entry[]
   glossary: Entry[]

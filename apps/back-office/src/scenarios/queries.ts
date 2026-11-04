@@ -3,6 +3,7 @@ import { queryOptions } from '@tanstack/react-query'
 import { api } from '@/api/client'
 import type { ImportedCatalogues } from '@/content/imports'
 import type { Labels } from '@/content/labels'
+import type { StartingItem } from '@/professions/queries'
 
 export type Entry = { reference: string; labels: Labels }
 
@@ -18,6 +19,16 @@ export type InitialState = {
 
 export type ScenarioStatus = 'draft' | 'published'
 
+/**
+ * What every character starting the scenario receives, besides what their
+ * profession gives: items of the world or the scenario, and resources by
+ * reference.
+ */
+export type StartingKit = {
+  items: StartingItem[]
+  resources: Record<string, number>
+}
+
 /** A scenario as the back-office edits it; its catalogues have routes of their own. */
 export type Scenario = {
   id: string
@@ -28,7 +39,7 @@ export type Scenario = {
   status: ScenarioStatus
   chapters: Entry[]
   quests: Entry[]
-  pregeneratedCharacter: unknown
+  startingKit: StartingKit
   initialState: InitialState | null
   /** When the story opens: `HH:MM`, and a `YYYY-MM-DD` date when it has one. */
   startTime: string
@@ -40,7 +51,11 @@ export type Scenario = {
   updatedAt: string | null
 }
 
-export type ScenarioPayload = Omit<Scenario, 'id' | 'worldId' | 'status' | 'updatedAt'>
+/** A scenario as it is sent: its starting kit as the JSON written, for the backend to judge. */
+export type ScenarioPayload = Omit<
+  Scenario,
+  'id' | 'worldId' | 'status' | 'updatedAt' | 'startingKit'
+> & { startingKit: { items: unknown; resources: unknown } }
 
 /** One thing that keeps a scenario from being published, as the backend names it. */
 export type CoherenceIssue = { code: string; location: string; reference?: string }
@@ -58,8 +73,10 @@ export const scenarioQuery = (scenarioId: string) =>
     queryFn: async () => (await api<{ data: Scenario }>(`/admin/scenarios/${scenarioId}`)).data,
   })
 
-/** A reference and a title at least; the rest of a scenario may come with them, from a file. */
-/** With the catalogues of an imported file, if any: created in the same go. */
+/**
+ * A reference and a title at least; the rest of a scenario may come with
+ * them, from a file, with the catalogues it carries: created in the same go.
+ */
 export async function createScenario(
   worldId: string,
   payload: Pick<ScenarioPayload, 'reference' | 'labels'> &

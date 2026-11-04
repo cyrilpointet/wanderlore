@@ -95,9 +95,20 @@ export default {
     worlds: {
       columns: {
         labels,
+        power_level: content('PowerLevel'),
         skills: content('SkillEntry[]', { array: true }),
         resources: content('LabelledEntry[]', { array: true }),
         glossary: content('GlossaryEntry[]', { array: true }),
+      },
+    },
+
+    professions: {
+      columns: {
+        labels,
+        /** References of world skills. */
+        skills: { tsType: 'string[]', decorators: arrayColumn },
+        starting_items: content('StartingItem[]', { array: true }),
+        starting_resources: numbersByKey,
       },
     },
 
@@ -107,7 +118,7 @@ export default {
         status: content('ScenarioStatus'),
         chapters: content('LabelledEntry[]', { array: true }),
         quests: content('LabelledEntry[]', { array: true }),
-        pregenerated_character: content('PregeneratedCharacter'),
+        starting_kit: content('StartingKit'),
         initial_state: content('InitialState'),
         glossary: content('GlossaryEntry[]', { array: true }),
         flags: content('ScenarioFlag[]', { array: true }),
@@ -191,7 +202,7 @@ export default {
     sessions: {
       columns: {
         status: {
-          tsType: "'in_progress' | 'paused' | 'completed'",
+          tsType: "'in_progress' | 'paused' | 'completed' | 'failed'",
           decorators: column,
         },
       },
@@ -205,10 +216,23 @@ export default {
 
     characters: {
       columns: {
+        gender: content('CharacterGender'),
         characteristics: content('Characteristics'),
         skills: numbersByKey,
-        resources: numbersByKey,
         progression: jsonObject,
+      },
+    },
+
+    character_states: {
+      columns: {
+        resources: numbersByKey,
+      },
+    },
+
+    /** The seven results of 3D6, in the order they were rolled. */
+    character_rolls: {
+      columns: {
+        values: { tsType: 'number[]', decorators: arrayColumn },
       },
     },
 

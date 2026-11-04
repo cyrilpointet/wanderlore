@@ -29,6 +29,7 @@ export function resolveWorld(world: WorldLevelContent, scenario: ScenarioContent
     label: world.labels.en,
     labels: world.labels,
     tone: world.narrativeTone,
+    powerLevel: world.powerLevel,
     skills: world.skills.map((skill) => ({
       ...entryOf(skill),
       category: skill.category,
@@ -45,6 +46,13 @@ export function resolveWorld(world: WorldLevelContent, scenario: ScenarioContent
     flags: scenario.flags,
     events: scenario.events,
     glossary: overlay(world.glossary, scenario.glossary).map(entryOf),
+    professions: world.professions.map((profession) => ({
+      ...entryOf(profession),
+      description: profession.description,
+      skills: profession.skills,
+      startingItems: profession.startingItems,
+      startingResources: profession.startingResources,
+    })),
   }
 }
 

@@ -2,11 +2,13 @@ import { useTranslation } from 'react-i18next'
 
 import { FieldError } from './field'
 import { errorUnder, type FieldErrors } from './form_errors'
-import { IMPORTED_CATALOGUES, type Imported, type ImportedCatalogue, textOf } from './imports'
+import { IMPORTED_CATALOGUES, type Imported, textOf } from './imports'
+
+import { SECTION } from './ui'
 
 /** Every list a file may carry, in the order they are shown. */
-const LISTS = ['actionTypes', ...IMPORTED_CATALOGUES] as const
-import { SECTION } from './ui'
+const LISTS = ['actionTypes', 'professions', ...IMPORTED_CATALOGUES] as const
+type List = (typeof LISTS)[number]
 
 /**
  * What an imported file will create besides the form: each catalogue and list
@@ -17,7 +19,7 @@ export function CatalogueSummary({
   catalogues,
   errors,
 }: {
-  catalogues: Partial<Record<ImportedCatalogue | 'actionTypes', Imported[]>>
+  catalogues: Partial<Record<List, Imported[]>>
   errors: FieldErrors
 }) {
   const { t } = useTranslation('content')

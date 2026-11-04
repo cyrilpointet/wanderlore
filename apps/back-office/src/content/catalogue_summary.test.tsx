@@ -28,6 +28,15 @@ describe('imported catalogues', () => {
 
     expect(content.actionTypes).toEqual([{ actionType: 'investigation', associatedSkill: 'deduction' }])
     expect(content.lore).toHaveLength(1)
+    expect(content.professions).toEqual([])
+  })
+
+  test('a world file also brings its professions, objects only', () => {
+    const content = worldContentOf({
+      professions: [{ reference: 'musketeer', skills: ['swordsmanship'] }, 'soldier'],
+    })
+
+    expect(content.professions).toEqual([{ reference: 'musketeer', skills: ['swordsmanship'] }])
   })
 
   test('names the unique ones, for the rest of the form', () => {
@@ -76,5 +85,21 @@ describe('CatalogueSummary', () => {
 
     expect(html).toContain('1 category of action')
     expect(html).toContain('investigation')
+  })
+
+  test('lists the professions of a world, with what the server found wrong in one', () => {
+    const html = renderToStaticMarkup(
+      <CatalogueSummary
+        catalogues={{
+          ...noCatalogues(),
+          professions: [{ reference: 'musketeer' }, { reference: 'priest' }],
+        }}
+        errors={{ 'professions.1.skills': 'A skill named here is no skill of this world.' }}
+      />
+    )
+
+    expect(html).toContain('2 professions')
+    expect(html).toContain('priest')
+    expect(html).toContain('A skill named here is no skill of this world.')
   })
 })

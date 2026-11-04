@@ -39,6 +39,7 @@ function sorted(content: WorldContent): WorldContent {
     locations: byReference(content.locations),
     items: byReference(content.items),
     lore: byReference(content.lore),
+    professions: byReference(content.professions),
     scenarios: byReference(content.scenarios).map((scenario) => ({
       ...scenario,
       npcs: byReference(scenario.npcs),
@@ -154,7 +155,10 @@ test.group('Content | seeder', (group) => {
       .firstOrFail()
 
     assert.equal(scenario.status, 'published')
-    assert.equal(scenario.pregenerated_character.name, "d'Artagnan")
+    assert.deepEqual(
+      scenario.starting_kit.items.map(({ definition }: { definition: string }) => definition),
+      ['rope', 'document']
+    )
     assert.equal(scenario.initial_state.location, 'rue_du_cherche_midi')
   })
 })

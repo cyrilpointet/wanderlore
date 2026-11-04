@@ -7,11 +7,18 @@ import { Field } from '@/content/field'
 import { errorUnder, type FieldErrors } from '@/content/form_errors'
 import { LabelsEditor } from '@/content/labels_editor'
 import { INPUT, SECTION, TEXTAREA } from '@/content/ui'
-import { CHARACTERISTICS, SKILL_CATEGORIES, type Characteristic, type SkillCategory } from './queries'
+import {
+  CHARACTERISTICS,
+  POWER_LEVELS,
+  SKILL_CATEGORIES,
+  type Characteristic,
+  type PowerLevel,
+  type SkillCategory,
+} from './queries'
 import { newSkillDraft, type SkillDraft, type WorldDraft } from './world_draft'
 
 /**
- * Everything a world holds itself: its names and tone, the skills and
+ * Everything a world holds itself: its names, tone and power level, the skills and
  * resources of a character sheet, and its glossary. Its rules and ambiance are
  * lore, edited with the lore. The characteristics are BRP's, the same in every
  * world: there is nothing to edit about them.
@@ -40,6 +47,7 @@ export function WorldForm({
     reference: set('reference'),
     labels: set('labels'),
     narrativeTone: set('narrativeTone'),
+    powerLevel: set('powerLevel'),
     skills: set('skills'),
     resources: set('resources'),
     glossary: set('glossary'),
@@ -81,6 +89,25 @@ export function WorldForm({
             onChange={(event) => on.narrativeTone(event.target.value)}
             className={TEXTAREA}
           />
+        </Field>
+        <Field
+          id="world-power-level"
+          label={t('form.powerLevel')}
+          hint={t('form.powerLevelHint')}
+          error={errors.powerLevel}
+        >
+          <select
+            id="world-power-level"
+            value={draft.powerLevel}
+            onChange={(event) => on.powerLevel(event.target.value as PowerLevel)}
+            className={INPUT}
+          >
+            {POWER_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {t(`powerLevels.${level}`)}
+              </option>
+            ))}
+          </select>
         </Field>
       </Section>
 

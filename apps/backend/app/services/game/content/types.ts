@@ -18,8 +18,8 @@
 import type {
   BaseChance,
   Characteristic,
-  Characteristics,
   DamageModifierUse,
+  PowerLevel,
   SpecialEffect,
   WeaponKind,
 } from '#services/rules/types'
@@ -28,12 +28,14 @@ import type { FixedDuration, Period } from '#services/game/game_time'
 export {
   CHARACTERISTICS,
   DAMAGE_MODIFIER_USES,
+  POWER_LEVELS,
   SPECIAL_EFFECTS,
   WEAPON_KINDS,
   type BaseChance,
   type Characteristic,
   type Characteristics,
   type DamageModifierUse,
+  type PowerLevel,
   type SpecialEffect,
   type WeaponKind,
 } from '#services/rules/types'
@@ -339,7 +341,7 @@ export type ActiveQuest = {
   summary: string
 }
 
-/** An item the pregenerated character starts with. */
+/** An item a character starts a game with, from their profession or from the scenario. */
 export type StartingItem = {
   definition: string
   /** Short English description, for the narrator only. */
@@ -349,21 +351,35 @@ export type StartingItem = {
 }
 
 /**
- * The character a scenario is played with, copied into every game started
- * from it. Guided creation comes in Phase 12.
+ * What a scenario gives the character as a game starts (roadmap, Phase 12),
+ * on top of their profession's equipment: the letter for Tréville, the keys
+ * of the house. Its resources add to the profession's.
  */
-export type PregeneratedCharacter = {
-  name: string
-  characteristics: Characteristics
-  /**
-   * Skill values in percent, for the skills the character trained. Any other
-   * skill of the world is worth its base chance. Hit points are no field:
-   * they derive from CON and SIZ.
-   */
-  skills: Record<string, number>
-  resources: Record<string, number>
+export type StartingKit = {
   items: StartingItem[]
+  resources: Record<string, number>
 }
+
+/**
+ * A profession of a world, which a player picks for their character
+ * (roadmap, Phase 12). No scenario overrides it: one holds for the whole
+ * world.
+ */
+export type ProfessionContent = LabelledEntry & {
+  /** One line of English, shown at creation and read by arbitration and the narrator. */
+  description: string
+  /** References of world skills: the only ones the professional points go to. */
+  skills: string[]
+  /** Items of the world — never of a single scenario — given at the start of every game. */
+  startingItems: StartingItem[]
+  /** Values by reference of a world resource, added to the scenario's. */
+  startingResources: Record<string, number>
+}
+
+/** The genders a player picks from: a closed list, for the narrator's pronouns and agreements. */
+export const CHARACTER_GENDERS = ['female', 'male', 'neutral'] as const
+
+export type CharacterGender = (typeof CHARACTER_GENDERS)[number]
 
 /** Where a game started from a scenario stands before its first turn. */
 export type InitialState = {
@@ -527,8 +543,9 @@ export type ScenarioContent = Catalogues & {
   status: ScenarioStatus
   chapters: LabelledEntry[]
   quests: LabelledEntry[]
-  /** Null until the game master writes them: a draft may lack both. */
-  pregeneratedCharacter: PregeneratedCharacter | null
+  /** What the scenario gives the character as a game starts, besides their profession's. */
+  startingKit: StartingKit
+  /** Null until the game master writes it: a draft may lack it. */
   initialState: InitialState | null
   /**
    * When the story opens: a time of day, `HH:MM`, always — and a Gregorian
@@ -548,9 +565,13 @@ export type WorldContent = Catalogues & {
   labels: Labels
   /** One line, handed to both arbitration and narration so they agree on register. */
   narrativeTone: string
+  /** The book's level of the world: what its characters are made with. */
+  powerLevel: PowerLevel
   skills: SkillEntry[]
   resources: LabelledEntry[]
   glossary: GlossaryEntry[]
   actionTypes: ActionTypeContent[]
+  /** What a character of the world may be; a world without one has no character to play. */
+  professions: ProfessionContent[]
   scenarios: ScenarioContent[]
 }

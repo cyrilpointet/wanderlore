@@ -86,20 +86,29 @@ export function noCatalogues(): ImportedCatalogues {
 }
 
 /**
- * What a world file brings besides the form: its catalogues and lore, and
- * its categories of action — a world ready to play, but for its scenarios.
+ * What a world file brings besides the form: its catalogues and lore, its
+ * categories of action and its professions — a world ready to play, but for
+ * its scenarios.
  */
-export type ImportedWorldContent = ImportedCatalogues & { actionTypes: Imported[] }
+export type ImportedWorldContent = ImportedCatalogues & {
+  actionTypes: Imported[]
+  professions: Imported[]
+}
 
 export function worldContentOf(value: Imported): ImportedWorldContent {
   return {
     ...cataloguesOf(value),
-    actionTypes: Array.isArray(value.actionTypes) ? value.actionTypes.filter(isImported) : [],
+    actionTypes: objectsOf(value.actionTypes),
+    professions: objectsOf(value.professions),
   }
 }
 
 export function noWorldContent(): ImportedWorldContent {
-  return { ...noCatalogues(), actionTypes: [] }
+  return { ...noCatalogues(), actionTypes: [], professions: [] }
+}
+
+function objectsOf(value: unknown): Imported[] {
+  return Array.isArray(value) ? value.filter(isImported) : []
 }
 
 /** The named entries of a file's catalogue: what the rest of the form may name before it exists. */

@@ -26,7 +26,15 @@ export type PlacedLocation = {
 }
 
 export type ContentKind =
-  'skill' | 'resource' | 'npc' | 'location' | 'location_archetype' | 'item' | 'chapter' | 'quest'
+  | 'skill'
+  | 'resource'
+  | 'npc'
+  | 'location'
+  | 'location_archetype'
+  | 'item'
+  | 'chapter'
+  | 'quest'
+  | 'profession'
 
 /**
  * A reference with no label is a bug — state written against a list it does
@@ -84,6 +92,7 @@ export class ContentLabels {
       item: index(world.items),
       chapter: index(world.chapters),
       quest: index(world.quests),
+      profession: index(world.professions),
     }
 
     const inNetwork = networkPlaces(world.locations)

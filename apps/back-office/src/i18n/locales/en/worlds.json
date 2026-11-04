@@ -18,6 +18,7 @@
     "locations": "Places",
     "items": "Items",
     "lore": "Lore",
+    "professions": "Professions",
     "scenarios": "Scenarios"
   },
   "form": {
@@ -26,6 +27,8 @@
     "referenceHint": "Lower-case letters, digits and underscores. It never changes once the world is created.",
     "tone": "Tone",
     "toneHint": "One line, in English, for both arbitration and narration.",
+    "powerLevel": "Power level",
+    "powerLevelHint": "How far above ordinary people the characters of this world start, as in BRP: it sets the points a player shares among the skills of their profession at creation, and how high a skill may then go.",
     "skills": "Skills",
     "skillsHint": "In percent, as in BRP. Each has a category and the chance an untrained character has in it: a fixed chance, or a characteristic times a multiplier (Dodge is DEX × 2).",
     "resources": "Resources",
@@ -67,5 +70,11 @@
     "DEX": "Dexterity",
     "CHA": "Charisma"
   },
-  "importHint": "A world as written in the game content, ready to play: its categories of action, places, people, items and lore are created with it. Its scenarios are left out: each is imported on its own."
+  "powerLevels": {
+    "normal": "Normal",
+    "heroic": "Heroic",
+    "epic": "Epic",
+    "superhuman": "Superhuman"
+  },
+  "importHint": "A world as written in the game content, ready to play: its categories of action, professions, places, people, items and lore are created with it. Its scenarios are left out: each is imported on its own."
 }

@@ -1,0 +1,17 @@
+{
+  "intro": "The professions a player picks from when creating a character in this world: the skills it trains, where the professional points of creation go, and what it starts every game with.",
+  "add": "Add a profession",
+  "empty": "No profession yet: no character could be created in this world.",
+  "skillCount_one": "{{count}} skill",
+  "skillCount_other": "{{count}} skills",
+  "description": "Description",
+  "descriptionHint": "One line in English, shown to the player who picks a profession.",
+  "skills": "Professional skills",
+  "skillsHint": "Among the skills of the world, at least one: the professional points of creation go to these alone.",
+  "noSkills": "The world has no skill yet: add some in the World tab first.",
+  "startingItems": "Starting equipment",
+  "startingItemsHint": "JSON list, empty for none. Each item names an item of the world (definition, never one of a scenario), with a line of English telling it apart (descriptor, or null), how many (quantity) and whether it is worn or wielded (equipped). Added to what each scenario gives.",
+  "startingResources": "Starting resources",
+  "startingResourcesHint": "JSON object, empty for none: a number for each resource of the world, by reference.",
+  "inUse": "Characters follow this profession: it cannot be removed."
+}

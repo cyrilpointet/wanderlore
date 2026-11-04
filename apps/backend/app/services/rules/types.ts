@@ -20,6 +20,15 @@ export type Characteristic = (typeof CHARACTERISTICS)[number]
 export type Characteristics = Record<Characteristic, number>
 
 /**
+ * The power levels of BRP (rules, section 3bis). A world picks one; what each
+ * gives a character at creation is fixed here, in the engine
+ * (`#services/rules/power_levels`).
+ */
+export const POWER_LEVELS = ['normal', 'heroic', 'epic', 'superhuman'] as const
+
+export type PowerLevel = (typeof POWER_LEVELS)[number]
+
+/**
  * A characteristic roll is the characteristic times this, before difficulty:
  * Effort, Stamina, Idea, Luck, Agility or Charm.
  */

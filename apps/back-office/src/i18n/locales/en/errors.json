@@ -35,5 +35,9 @@
   "account_suspended": "This account is suspended.",
   "cannot_suspend_self": "You cannot suspend your own account.",
   "last_superadmin": "The last active superadmin cannot be suspended.",
-  "one_resolution": "A category is rolled on a skill or on a characteristic: exactly one of them."
+  "one_resolution": "A category is rolled on a skill or on a characteristic: exactly one of them.",
+  "unknown_skill": "A skill named here is no skill of this world.",
+  "unknown_item": "An item named here is no item of this world.",
+  "scenario_item_in_profession": "This item belongs to a scenario: a profession gives items of its world only.",
+  "unknown_resource": "A resource named here is no resource of this world."
 }

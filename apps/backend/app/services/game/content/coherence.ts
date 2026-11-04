@@ -19,13 +19,14 @@ import {
   type NpcDefinitionContent,
   type ScenarioContent,
   type ScenarioEvent,
+  type StartingItem,
 } from './types.js'
 
 /**
  * Whether a world and one of its scenarios hold together well enough to be
  * played: every reference names something that exists, the model has the
- * generic archetypes it improvises from, and a game has a character to play
- * and a place to start in.
+ * generic archetypes it improvises from, a character can be made in the world
+ * and equipped for the story, and a game has a place to start in.
  *
  * Checked when a scenario is published, and again when a game is started
  * from it: content edited after publication cannot slip a broken scenario
@@ -35,7 +36,6 @@ import {
 export type CoherenceIssueCode =
   | 'missing_english_label'
   | 'unknown_characteristic'
-  | 'characteristic_out_of_range'
   | 'invalid_dice'
   | 'unknown_skill'
   | 'unknown_resource'
@@ -53,7 +53,8 @@ export type CoherenceIssueCode =
   | 'missing_generic_npc'
   | 'missing_location_archetype'
   | 'missing_generic_item'
-  | 'missing_character'
+  | 'no_profession'
+  | 'item_given_twice'
   | 'missing_initial_state'
   | 'not_equippable'
   | 'not_stackable'
@@ -154,6 +155,7 @@ export function checkScenario(
     ['items', items],
     ['chapters', scenario.chapters],
     ['quests', scenario.quests],
+    ['professions', world.professions],
   ]
   for (const [list, entries] of labelled) {
     for (const entry of entries) {
@@ -279,7 +281,7 @@ export function checkScenario(
   }
 
   checkEvents(scenario, { npcs, locations, items }, report)
-  checkCharacter(scenario, { skills, resources, itemsByReference }, report)
+  checkStartingEquipment(world, scenario, { skills, resources, itemsByReference }, report)
   checkInitialState(scenario, { uniqueLocations, uniqueNpcs }, report)
   checkNetworks(locations, scenario, report)
 
@@ -288,71 +290,93 @@ export function checkScenario(
 
 type Report = (code: CoherenceIssueCode, location: string, reference?: string) => void
 
-function checkCharacter(
+/**
+ * What a character starts a game with: their profession's equipment, then the
+ * scenario's (roadmap, Phase 12). Each item resolves on the world and the
+ * scenario together — a scenario definition overrides a profession's item of
+ * the same reference — and a unique item is given once at most, whatever
+ * profession the player picks.
+ */
+function checkStartingEquipment(
+  world: WorldLevelContent,
   scenario: ScenarioContent,
   known: {
     skills: Set<string>
     resources: Set<string>
-    itemsByReference: Map<string, ScenarioContent['items'][number]>
+    itemsByReference: Map<string, ItemDefinitionContent>
   },
   report: Report
 ) {
-  const character = scenario.pregeneratedCharacter
-
-  if (character === null) {
-    report('missing_character', 'pregeneratedCharacter')
-    return
+  /** A world without a profession has no character to play its scenarios with. */
+  if (world.professions.length === 0) {
+    report('no_profession', 'professions')
   }
 
-  for (const characteristic of CHARACTERISTICS) {
-    const score = character.characteristics?.[characteristic]
-    const [min, max] = CHARACTERISTIC_RANGE[characteristic] ?? HUMAN_RANGE
+  const checkItems = (path: string, items: StartingItem[]) => {
+    const uniques: string[] = []
 
-    if (typeof score !== 'number' || !Number.isInteger(score) || score < min || score > max) {
-      report(
-        'characteristic_out_of_range',
-        `pregeneratedCharacter.characteristics.${characteristic}`,
-        characteristic
-      )
+    items.forEach((entry, index) => {
+      const location = `${path}.${index}`
+      const item = known.itemsByReference.get(entry.definition)
+
+      if (!item) {
+        report('unknown_item', `${location}.definition`, entry.definition)
+        return
+      }
+      if (entry.equipped && !item.equippable) {
+        report('not_equippable', `${location}.equipped`, entry.definition)
+      }
+      if (entry.quantity > 1 && !(item.kind === 'archetype' && item.stackable)) {
+        report('not_stackable', `${location}.quantity`, entry.definition)
+      }
+      if (item.kind === 'unique') {
+        /** A unique item exists once: it cannot start with the character and with someone else. */
+        if (item.initialHolder !== null) {
+          report('item_held_elsewhere', `${location}.definition`, entry.definition)
+        }
+        uniques.push(entry.definition)
+      }
+    })
+
+    return uniques
+  }
+
+  const checkResources = (path: string, resources: Record<string, number>) => {
+    for (const reference of Object.keys(resources)) {
+      if (!known.resources.has(reference)) report('unknown_resource', path, reference)
     }
   }
-  for (const reference of Object.keys(character.characteristics ?? {})) {
-    if (!isCharacteristic(reference)) {
-      report('unknown_characteristic', 'pregeneratedCharacter.characteristics', reference)
+
+  const fromScenario = checkItems('startingKit.items', scenario.startingKit.items)
+  checkResources('startingKit.resources', scenario.startingKit.resources)
+
+  const twice = (path: string, uniques: string[]) => {
+    const seen = new Set<string>()
+
+    for (const reference of uniques) {
+      if (seen.has(reference)) report('item_given_twice', path, reference)
+      seen.add(reference)
     }
   }
+  twice('startingKit.items', fromScenario)
 
-  const scores: [keyof typeof character & string, Set<string>, CoherenceIssueCode][] = [
-    ['skills', known.skills, 'unknown_skill'],
-    ['resources', known.resources, 'unknown_resource'],
-  ]
-  for (const [field, references, code] of scores) {
-    for (const reference of Object.keys(character[field] as Record<string, number>)) {
-      if (!references.has(reference)) {
-        report(code, `pregeneratedCharacter.${field}`, reference)
+  for (const profession of world.professions) {
+    const path = `professions.${profession.reference}`
+
+    for (const skill of profession.skills) {
+      if (!known.skills.has(skill)) report('unknown_skill', `${path}.skills`, skill)
+    }
+    checkResources(`${path}.startingResources`, profession.startingResources)
+
+    const fromProfession = checkItems(`${path}.startingItems`, profession.startingItems)
+    twice(`${path}.startingItems`, fromProfession)
+    /** The same unique item from the profession and from the scenario: one of them gets nothing. */
+    for (const reference of new Set(fromProfession)) {
+      if (fromScenario.includes(reference)) {
+        report('item_given_twice', `${path}.startingItems`, reference)
       }
     }
   }
-
-  character.items.forEach((entry, index) => {
-    const location = `pregeneratedCharacter.items.${index}`
-    const item = known.itemsByReference.get(entry.definition)
-
-    if (!item) {
-      report('unknown_item', `${location}.definition`, entry.definition)
-      return
-    }
-    if (entry.equipped && !item.equippable) {
-      report('not_equippable', `${location}.equipped`, entry.definition)
-    }
-    if (entry.quantity > 1 && !(item.kind === 'archetype' && item.stackable)) {
-      report('not_stackable', `${location}.quantity`, entry.definition)
-    }
-    /** A unique item exists once: it cannot start with the character and with someone else. */
-    if (item.kind === 'unique' && item.initialHolder !== null) {
-      report('item_held_elsewhere', `${location}.definition`, entry.definition)
-    }
-  })
 }
 
 function checkInitialState(
@@ -695,13 +719,6 @@ export function eventCycle(events: ScenarioEvent[]): string[] {
 
 function holderKey(holder: { holder: string; reference?: string }): string {
   return holder.holder === 'character' ? 'character' : `${holder.holder}:${holder.reference}`
-}
-
-/** A human's characteristics: 3 to 21, INT and SIZ at least 8 (rules, section 3). */
-const HUMAN_RANGE: [number, number] = [3, 21]
-const CHARACTERISTIC_RANGE: Partial<Record<string, [number, number]>> = {
-  INT: [8, 21],
-  SIZ: [8, 21],
 }
 
 function isCharacteristic(value: string): boolean {

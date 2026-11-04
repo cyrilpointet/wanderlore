@@ -18,7 +18,8 @@ import {
 
 /**
  * The player front, where a game master tries a draft out before publishing
- * it: a game master sees drafts in its New game catalogue.
+ * it: from the page of one of their characters of the world, which lists the
+ * drafts too for a game master.
  */
 const PLAYER_FRONT: string = import.meta.env.VITE_PLAYER_URL ?? 'http://localhost:5173'
 
@@ -68,7 +69,7 @@ export function Publication({ scenario }: { scenario: Scenario }) {
           {published ? t('publication.unpublish') : t('publication.publish')}
         </button>
         <a
-          href={`${PLAYER_FRONT}/games/new`}
+          href={`${PLAYER_FRONT}/`}
           target="_blank"
           rel="noreferrer"
           className={SECONDARY}

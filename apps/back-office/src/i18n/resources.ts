@@ -5,6 +5,7 @@ import common from './locales/en/common.json'
 import content from './locales/en/content.json'
 import errors from './locales/en/errors.json'
 import lore from './locales/en/lore.json'
+import professions from './locales/en/professions.json'
 import scenarios from './locales/en/scenarios.json'
 import worlds from './locales/en/worlds.json'
 
@@ -23,5 +24,6 @@ export const en = {
   worlds,
   catalogues,
   lore,
+  professions,
   scenarios,
 }

@@ -4,6 +4,7 @@ import NpcDefinition from '#models/npc_definition'
 import ItemDefinition from '#models/item_definition'
 import LoreFragment from '#models/lore_fragment'
 import ResolutionRule from '#models/resolution_rule'
+import Profession from '#models/profession'
 import LocationDefinition from '#models/location_definition'
 import { WorldSchema } from '#database/schema'
 import { belongsTo, hasMany } from '@adonisjs/lucid/orm'
@@ -34,4 +35,8 @@ export default class World extends WorldSchema {
 
   @hasMany(() => ResolutionRule)
   declare resolutionRules: HasMany<typeof ResolutionRule>
+
+  /** What a character of the world may be: no scenario overrides them. */
+  @hasMany(() => Profession)
+  declare professions: HasMany<typeof Profession>
 }

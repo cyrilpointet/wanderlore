@@ -15,11 +15,13 @@ const SCENARIO: Scenario = {
   status: 'draft',
   chapters: [],
   quests: [],
-  pregeneratedCharacter: null,
+  startingKit: { items: [], resources: {} },
   initialState: null,
   startTime: '16:00',
   startDate: '1927-10-28',
   glossary: [],
+  flags: [],
+  events: [],
   updatedAt: null,
 }
 
@@ -69,6 +71,32 @@ describe('ScenarioForm', () => {
     expect(html).toContain('Names known from the start')
     expect(html).toMatch(/<input type="checkbox" checked=""\/><span class="font-mono">silas_ward/)
     expect(html).toMatch(/<input type="checkbox"\/><span class="font-mono">martha_pike/)
+  })
+})
+
+describe('ScenarioForm | starting kit', () => {
+  test('shows the kit as JSON, with no pregenerated character left', () => {
+    const html = render({
+      ...SCENARIO,
+      startingKit: {
+        items: [{ definition: 'ward_letter', descriptor: null, quantity: 1, equipped: false }],
+        resources: { dollars: 20 },
+      },
+    })
+
+    expect(html).toContain('Starting kit')
+    expect(html).toContain('ward_letter')
+    expect(html).toContain('dollars')
+    expect(html).not.toContain('Pregenerated')
+    expect(html).not.toContain('scenario-character')
+  })
+
+  test('shows what the backend refused in the kit on its field', () => {
+    const html = render(SCENARIO, {
+      'startingKit.items.0.definition': '“ward_lamp” is no item of this world.',
+    })
+
+    expect(html).toMatch(/scenario-kit-items[\s\S]*“ward_lamp” is no item of this world\.[\s\S]*scenario-kit-resources/)
   })
 })
 

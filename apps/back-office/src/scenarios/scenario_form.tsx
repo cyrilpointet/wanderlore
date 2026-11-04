@@ -8,11 +8,11 @@ import { Field } from '@/content/field'
 import { errorUnder, type FieldErrors } from '@/content/form_errors'
 import { LabelsEditor } from '@/content/labels_editor'
 import { CODE_AREA, ICON_BUTTON, INPUT, SECONDARY, SECTION, TEXTAREA } from '@/content/ui'
-import { CHARACTER_TEMPLATE, type QuestDraft, type ScenarioDraft } from './scenario_draft'
+import type { QuestDraft, ScenarioDraft } from './scenario_draft'
 
 /**
- * A scenario's story: its names and synopsis, chapters and quests, the
- * character it is played with, and where a game of it starts.
+ * A scenario's story: its names and synopsis, chapters and quests, what every
+ * character starts it with, and where a game of it starts.
  */
 export function ScenarioForm({
   reference,
@@ -45,7 +45,8 @@ export function ScenarioForm({
     chapters: set('chapters'),
     quests: set('quests'),
     glossary: set('glossary'),
-    pregeneratedCharacter: set('pregeneratedCharacter'),
+    kitItems: set('kitItems'),
+    kitResources: set('kitResources'),
     startLocation: set('startLocation'),
     startChapter: set('startChapter'),
     startQuests: set('startQuests'),
@@ -56,7 +57,8 @@ export function ScenarioForm({
     events: set('events'),
   }
   const labelsError = errorUnder(errors, 'labels')
-  const characterError = errorUnder(errors, 'pregeneratedCharacter')
+  const kitItemsError = errorUnder(errors, 'startingKit.items')
+  const kitResourcesError = errorUnder(errors, 'startingKit.resources')
   const knownNpcsError = errorUnder(errors, 'initialState.knownNpcs')
   const flagsError = errorUnder(errors, 'flags')
   const eventsError = errorUnder(errors, 'events')
@@ -137,27 +139,37 @@ export function ScenarioForm({
         />
       </Section>
 
-      <Section title={t('form.character')} hint={t('form.characterHint')}>
-        <Field id="scenario-character" label={t('form.characterJson')} error={characterError}>
+      <Section title={t('form.startingKit')} hint={t('form.startingKitHint')}>
+        <Field
+          id="scenario-kit-items"
+          label={t('form.kitItems')}
+          hint={t('form.kitItemsHint')}
+          error={kitItemsError}
+        >
           <textarea
-            id="scenario-character"
-            value={draft.pregeneratedCharacter}
+            id="scenario-kit-items"
+            value={draft.kitItems}
             spellCheck={false}
-            onChange={(event) => on.pregeneratedCharacter(event.target.value)}
-            className={`${CODE_AREA} min-h-72`}
+            placeholder={KIT_ITEMS_EXAMPLE}
+            onChange={(event) => on.kitItems(event.target.value)}
+            className={CODE_AREA}
           />
         </Field>
-        {draft.pregeneratedCharacter.trim() === '' && (
-          <div>
-            <button
-              type="button"
-              onClick={() => on.pregeneratedCharacter(JSON.stringify(CHARACTER_TEMPLATE, null, 2))}
-              className={SECONDARY}
-            >
-              {t('form.characterTemplate')}
-            </button>
-          </div>
-        )}
+        <Field
+          id="scenario-kit-resources"
+          label={t('form.kitResources')}
+          hint={t('form.kitResourcesHint')}
+          error={kitResourcesError}
+        >
+          <textarea
+            id="scenario-kit-resources"
+            value={draft.kitResources}
+            spellCheck={false}
+            placeholder={KIT_RESOURCES_EXAMPLE}
+            onChange={(event) => on.kitResources(event.target.value)}
+            className={`${CODE_AREA} min-h-24`}
+          />
+        </Field>
       </Section>
 
       <Section title={t('form.flags')} hint={t('form.flagsHint')}>
@@ -396,6 +408,23 @@ function Section({
     </section>
   )
 }
+
+/** What a starting kit's items look like: a letter to deliver. Data, not interface text. */
+const KIT_ITEMS_EXAMPLE = JSON.stringify(
+  [
+    {
+      definition: 'letter_of_introduction',
+      descriptor: 'sealed with red wax',
+      quantity: 1,
+      equipped: false,
+    },
+  ],
+  null,
+  2
+)
+
+/** What a starting kit's resources look like. Data, not interface text. */
+const KIT_RESOURCES_EXAMPLE = JSON.stringify({ purse: 5 }, null, 2)
 
 /** What a flag looks like. Data, not interface text. */
 const FLAGS_EXAMPLE = JSON.stringify(

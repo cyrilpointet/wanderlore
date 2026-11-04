@@ -11,6 +11,8 @@ import { labelsOf, rowsOf, type LabelRow } from '@/content/labels'
 import {
   CHARACTERISTICS,
   type Characteristic,
+  POWER_LEVELS,
+  type PowerLevel,
   type Skill,
   SKILL_CATEGORIES,
   type SkillCategory,
@@ -34,10 +36,14 @@ export type WorldDraft = {
   reference: string
   labels: LabelRow[]
   narrativeTone: string
+  powerLevel: PowerLevel
   skills: SkillDraft[]
   resources: EntryDraft[]
   glossary: EntryDraft[]
 }
+
+/** The level of a world that says none: the book's ordinary people. */
+const DEFAULT_POWER_LEVEL: PowerLevel = 'normal'
 
 /** A new world: an English name and a tone to start from, the rest added afterwards. */
 export function emptyWorldDraft(): WorldDraft {
@@ -45,6 +51,7 @@ export function emptyWorldDraft(): WorldDraft {
     reference: '',
     labels: [{ language: 'en', name: '' }],
     narrativeTone: '',
+    powerLevel: DEFAULT_POWER_LEVEL,
     skills: [],
     resources: [],
     glossary: [],
@@ -72,6 +79,7 @@ export function worldDraftOf(world: WorldDetail): WorldDraft {
     reference: world.reference,
     labels: rowsOf(world.labels),
     narrativeTone: world.narrativeTone,
+    powerLevel: world.powerLevel,
     skills: world.skills.map(skillDraftOf),
     resources: world.resources.map(entryDraftOf),
     glossary: world.glossary.map(entryDraftOf),
@@ -81,13 +89,16 @@ export function worldDraftOf(world: WorldDetail): WorldDraft {
 /**
  * A world read from a JSON file, as a new world: every reference may still
  * be changed. A skill of an unknown category or base chance keeps the
- * default of a new one.
+ * default of a new one; an unknown power level, the normal one. The
+ * professions of the file are not read here: they are created with the world
+ * as they are written, like its catalogues.
  */
 export function worldDraftFromJson(world: Imported): WorldDraft {
   return {
     reference: textOf(world.reference),
     labels: labelRowsOf(world.labels),
     narrativeTone: textOf(world.narrativeTone),
+    powerLevel: POWER_LEVELS.find((known) => known === world.powerLevel) ?? DEFAULT_POWER_LEVEL,
     skills: listOf(world.skills, importedSkillOf),
     resources: listOf(world.resources, importedEntryOf),
     glossary: listOf(world.glossary, importedEntryOf),
@@ -118,6 +129,7 @@ export function worldPayloadOf(draft: WorldDraft): WorldPayload {
     reference: draft.reference.trim(),
     labels: labelsOf(draft.labels),
     narrativeTone: draft.narrativeTone.trim(),
+    powerLevel: draft.powerLevel,
     skills: draft.skills.map((skill) => ({
       ...entryPayloadOf(skill),
       category: skill.category,

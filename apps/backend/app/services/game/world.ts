@@ -12,9 +12,10 @@ import type {
   ScenarioFlag,
   ScheduleEntry,
   SkillCategory,
+  StartingItem,
   WeaponProfile,
 } from './content/types.js'
-import type { BaseChance } from '#services/rules/types'
+import type { BaseChance, PowerLevel } from '#services/rules/types'
 
 export {
   ITEM_CONDITIONS,
@@ -68,6 +69,8 @@ export type WorldDefinition = {
   labels: Labels
   /** One line, handed to both steps so arbitration and narration agree on register. */
   tone: string
+  /** The book's level of the world: what its characters are made with. */
+  powerLevel: PowerLevel
   skills: WorldSkill[]
   resources: ContentEntry[]
   /**
@@ -108,6 +111,8 @@ export type WorldDefinition = {
    * scenario's. For the narrator only, in the game's language.
    */
   glossary: ContentEntry[]
+  /** What a character of the world may be, the world's own: no scenario overrides them. */
+  professions: Profession[]
 }
 
 type DescribedEntry = ContentEntry & {
@@ -160,6 +165,13 @@ export type ItemDefinition = DescribedEntry & {
     | { kind: 'unique'; initialHolder: ItemHolderReference | null }
     | { kind: 'archetype'; generic: boolean; stackable: boolean }
   )
+
+/** A profession of the world: the skills it trains, what it starts a game with. */
+export type Profession = DescribedEntry & {
+  skills: string[]
+  startingItems: StartingItem[]
+  startingResources: Record<string, number>
+}
 
 export function skillReferences(world: WorldDefinition): string[] {
   return world.skills.map((skill) => skill.reference)

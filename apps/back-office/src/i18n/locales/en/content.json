@@ -27,6 +27,8 @@
   "catalogueCount": {
     "actionTypes_one": "{{count}} category of action",
     "actionTypes_other": "{{count}} categories of action",
+    "professions_one": "{{count}} profession",
+    "professions_other": "{{count}} professions",
     "locations_one": "{{count}} place",
     "locations_other": "{{count}} places",
     "npcs_one": "{{count}} person",

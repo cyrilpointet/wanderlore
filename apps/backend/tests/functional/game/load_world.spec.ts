@@ -42,9 +42,18 @@ test.group('Loading a world', (group) => {
       [...list].sort((a, b) => a.reference.localeCompare(b.reference))
 
     assert.deepEqual(
-      { ...world, npcs: [], locations: [], items: [], lore: [], actionTypes: [] },
-      { ...THREE_MUSKETEERS, npcs: [], locations: [], items: [], lore: [], actionTypes: [] }
+      { ...world, npcs: [], locations: [], items: [], lore: [], actionTypes: [], professions: [] },
+      {
+        ...THREE_MUSKETEERS,
+        npcs: [],
+        locations: [],
+        items: [],
+        lore: [],
+        actionTypes: [],
+        professions: [],
+      }
     )
+    assert.deepEqual(byReference(world.professions), byReference(THREE_MUSKETEERS.professions))
     assert.deepEqual(byReference(world.lore), byReference(THREE_MUSKETEERS.lore))
     assert.deepEqual(byReference(world.npcs), byReference(THREE_MUSKETEERS.npcs))
     assert.deepEqual(byReference(world.locations), byReference(THREE_MUSKETEERS.locations))

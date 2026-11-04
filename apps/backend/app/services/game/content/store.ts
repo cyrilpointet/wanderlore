@@ -6,6 +6,7 @@ import NpcDefinition from '#models/npc_definition'
 import ItemDefinition from '#models/item_definition'
 import LoreFragment from '#models/lore_fragment'
 import ResolutionRule from '#models/resolution_rule'
+import Profession from '#models/profession'
 import LocationDefinition from '#models/location_definition'
 
 import type {
@@ -15,6 +16,7 @@ import type {
   LocationDefinitionContent,
   LoreFragmentContent,
   NpcDefinitionContent,
+  ProfessionContent,
   ScenarioContent,
   WorldContent,
 } from './types.js'
@@ -45,12 +47,15 @@ export async function storeWorldContent(
     {
       labels: content.labels,
       narrativeTone: content.narrativeTone,
+      powerLevel: content.powerLevel,
       skills: content.skills,
       resources: content.resources,
       glossary: content.glossary,
     },
     { client: trx }
   )
+
+  await storeProfessions(world.id, content.professions, trx)
 
   await ResolutionRule.updateOrCreateMany(
     ['worldId', 'actionType'],
@@ -78,7 +83,7 @@ export async function storeWorldContent(
         status: scenario.status,
         chapters: scenario.chapters,
         quests: scenario.quests,
-        pregeneratedCharacter: scenario.pregeneratedCharacter,
+        startingKit: scenario.startingKit,
         initialState: scenario.initialState,
         startTime: scenario.startTime,
         startDate: scenario.startDate,
@@ -94,6 +99,33 @@ export async function storeWorldContent(
   }
 
   return { world, scenarios }
+}
+
+/**
+ * The professions of a world, matched on references. One the content no
+ * longer declares is deleted, unless a character follows it: a character
+ * keeps their profession for good.
+ */
+export async function storeProfessions(
+  worldId: string,
+  professions: ProfessionContent[],
+  trx: TransactionClientContract
+): Promise<void> {
+  await Profession.updateOrCreateMany(
+    ['worldId', 'reference'],
+    professions.map((profession) => ({ worldId, ...profession })),
+    { client: trx }
+  )
+  await Profession.query({ client: trx })
+    .where('worldId', worldId)
+    .whereNotIn(
+      'reference',
+      professions.map(({ reference }) => reference)
+    )
+    .whereNotExists((characters) =>
+      characters.from('characters').whereColumn('characters.profession_id', 'professions.id')
+    )
+    .delete()
 }
 
 /** The catalogues of one level: the world's (`scenarioId` null) or a scenario's. */
@@ -183,16 +215,32 @@ export async function readWorldLevel(
   const rules = await ResolutionRule.query({ client })
     .where('worldId', worldId)
     .orderBy('actionType')
+  const professions = await Profession.query({ client })
+    .where('worldId', worldId)
+    .orderBy('reference')
 
   return {
     reference: world.reference,
     labels: world.labels,
     narrativeTone: world.narrativeTone,
+    powerLevel: world.powerLevel,
     skills: world.skills,
     resources: world.resources,
     glossary: world.glossary,
     actionTypes: rules.map(actionTypeOf),
+    professions: professions.map(professionContentOf),
     ...(await readCatalogues(worldId, null, client)),
+  }
+}
+
+export function professionContentOf(profession: Profession): ProfessionContent {
+  return {
+    reference: profession.reference,
+    labels: profession.labels,
+    description: profession.description,
+    skills: profession.skills,
+    startingItems: profession.startingItems,
+    startingResources: profession.startingResources,
   }
 }
 
@@ -207,7 +255,7 @@ export async function scenarioContentOf(
     status: scenario.status,
     chapters: scenario.chapters,
     quests: scenario.quests,
-    pregeneratedCharacter: scenario.pregeneratedCharacter,
+    startingKit: scenario.startingKit,
     initialState: scenario.initialState,
     startTime: scenario.startTime,
     startDate: scenario.startDate,
