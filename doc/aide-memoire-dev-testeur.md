@@ -19,9 +19,12 @@ Mot de passe commun : `password`.
 
 - **Un compte = un rôle** : le `game_master` ne voit pas les comptes, le `superadmin` ne voit
   pas le contenu, et un `player` est refusé par le back-office.
-- **Partie de démo** : *Les Trois Mousquetaires*, scénario *A Gascon in Paris*, d'Artagnan à
-  Meung-sur-Loire, rattachée à `player@wanderlore.test`. Recréée à chaque `db:seed` et
-  `game:reset`.
+- **Partie de démo** : *Les Trois Mousquetaires*, scénario *The Stolen Seal*, d'Artagnan rue du
+  Cherche-Midi, devant l'hôtel de Laffemas, à 23 h, rattachée à `player@wanderlore.test`.
+  Recréée à chaque `db:seed` et `game:reset`.
+- **Scénarios du seed** : *The Stolen Seal* (Trois Mousquetaires) et *The Ward Inheritance*
+  (Mythe de Lovecraft), seuls. *A Gascon in Paris* et *The Wreck of the Sovereign*, retirés du
+  seed, restent importables depuis `test-worlds/`.
 - **Hors local** (production), aucun de ces comptes n'existe : le premier superadmin se crée
   avec `node ace account:create-superadmin` (voir plus bas), puis les autres comptes depuis
   le back-office.
@@ -122,7 +125,13 @@ vider ces clés dans les outils de développement. La réduction des animations 
 Le contenu écrit pour les tests manuels vit dans **`test-worlds/`**, à la racine, ignoré par
 git : des fichiers JSON à la forme du contenu en code (`database/content/`), importés par le
 back-office avec le compte `gm@wanderlore.test`. Les seeders, eux, n'écrivent que ce dont les
-tests automatisés ont besoin.
+tests automatisés ont besoin. Un univers s'y nomme `<référence du monde>.world.json`, sans ses
+scénarios (`three_musketeers.world.json` et `lovecraft_mythos.world.json` sont l'export du
+contenu en code, ainsi que leurs scénarios). Un scénario s'y nomme
+`<référence du monde>.<référence du scénario>.scenario.json` : les quatre de démonstration sont
+`three_musketeers.the_grain_road.scenario.json`, `three_musketeers.the_drowned_anchor.scenario.json`,
+`three_musketeers.the_duel_at_the_carmes.scenario.json` et
+`three_musketeers.the_golden_lion.scenario.json`.
 
 - **Un univers clé en main** : *Worlds* → **New world** → **Fill in from a JSON file**. Le
   fichier remplit le formulaire ; ses catégories d'action (`actionTypes`), lieux (`locations`),

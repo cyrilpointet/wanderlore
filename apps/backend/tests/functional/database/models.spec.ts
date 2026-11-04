@@ -98,13 +98,13 @@ test.group('Lucid models', (group) => {
 
     const created = await WorldState.create({
       sessionId,
-      activeQuests: [{ reference: 'deliver_the_letter', step: 1 }],
+      activeQuests: [{ reference: 'recover_the_seal', step: 1 }],
       narrativeFlags: { queens_favour_earned: true },
     })
 
     const reloaded = await WorldState.findOrFail(created.id)
 
-    assert.deepEqual(reloaded.activeQuests, [{ reference: 'deliver_the_letter', step: 1 }])
+    assert.deepEqual(reloaded.activeQuests, [{ reference: 'recover_the_seal', step: 1 }])
     assert.deepEqual(reloaded.narrativeFlags, { queens_favour_earned: true })
   })
 

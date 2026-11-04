@@ -60,7 +60,7 @@ const SETTLED_TEXT = 'The courtyard is empty but for a stable boy brushing down 
 /** What extraction reads in it. */
 const SETTLED_EFFECTS = extracted({
   movement: 'hotel_de_treville',
-  scenario_flags: ['met_the_stranger'],
+  scenario_flags: ['alarm_raised'],
   hit_points_delta: 0,
 })
 
@@ -159,7 +159,7 @@ test.group('TurnService | a settled turn', (group) => {
 
     await worldState.refresh()
     await worldState.load('currentLocation')
-    assert.deepEqual(worldState.narrativeFlags, { met_the_stranger: true })
+    assert.deepEqual(worldState.narrativeFlags, { alarm_raised: true })
     assert.equal(worldState.currentLocation.handle, 'hotel_de_treville')
     assert.deepEqual(result.appliedEffects!.movement, {
       handle: 'hotel_de_treville',
@@ -473,7 +473,7 @@ test.group('TurnService | a turn with a roll', (group) => {
     const toLouvre = [
       SETTLED,
       streamed(SETTLED_TEXT),
-      extracted({ movement: 'louvre', scenario_flags: ['met_the_stranger'] }),
+      extracted({ movement: 'louvre', scenario_flags: ['alarm_raised'] }),
     ]
 
     await buildService(SETTLED_TURN).play({ sessionId, userId, playerInput: 'I go to Tréville.' })

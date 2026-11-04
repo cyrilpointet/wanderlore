@@ -30,7 +30,7 @@ export async function seedMusketeers(): Promise<SeededGameContent> {
   const world = await db.from('worlds').where('reference', 'three_musketeers').firstOrFail()
   const scenario = await db
     .from('scenarios')
-    .where({ world_id: world.id, reference: 'a_gascon_in_paris' })
+    .where({ world_id: world.id, reference: 'the_stolen_seal' })
     .firstOrFail()
 
   return { worldId: world.id, scenarioId: scenario.id }
@@ -38,7 +38,7 @@ export async function seedMusketeers(): Promise<SeededGameContent> {
 
 /**
  * The seeded *Three Musketeers*, with the house of the specs among the places
- * of *A Gascon in Paris*, its key among the items and its steward among the
+ * of *The Stolen Seal*, its key among the items and its steward among the
  * people — for a test that plays a turn inside a network.
  */
 export async function seedHouse(): Promise<SeededGameContent> {

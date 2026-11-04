@@ -136,7 +136,7 @@ export const STEWARD: NpcDefinitionContent = {
 const { scenarios, ...MUSKETEERS_WORLD } = THREE_MUSKETEERS_CONTENT
 
 /**
- * *A Gascon in Paris*, with the house among its places, the key among its
+ * *The Stolen Seal*, with the house among its places, the key among its
  * items, and the steward among its people.
  */
 export const HOUSE_SCENARIO: ScenarioContent = {

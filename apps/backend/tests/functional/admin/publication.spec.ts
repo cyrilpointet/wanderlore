@@ -54,7 +54,8 @@ test.group('Publication', (group) => {
         chapters: JSON.stringify(PUBLISHED.chapters),
         quests: JSON.stringify(PUBLISHED.quests),
         pregenerated_character: JSON.stringify(PUBLISHED.pregeneratedCharacter),
-        initial_state: JSON.stringify(PUBLISHED.initialState),
+        /** The draft has none of the published scenario's own places: it opens in one of the world. */
+        initial_state: JSON.stringify({ ...PUBLISHED.initialState, location: 'hotel_de_treville' }),
       })
 
     const response = await client

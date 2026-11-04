@@ -344,10 +344,7 @@ test.group('Content API | scenarios', (group) => {
 
   test('keeps a chapter a game stands in', async ({ client, assert }) => {
     const { scenarioId, sessionId } = await gameInMusketeers()
-    await db
-      .from('sessions')
-      .where('id', sessionId)
-      .update({ current_chapter: 'the_road_to_paris' })
+    await db.from('sessions').where('id', sessionId).update({ current_chapter: 'the_guards_house' })
     const user = await gameMaster()
 
     const response = await as(client, user).patch(`/scenarios/${scenarioId}`, { chapters: [] })
@@ -355,7 +352,7 @@ test.group('Content API | scenarios', (group) => {
     response.assertStatus(409)
     assert.deepEqual(bodyOf(response).error.details, {
       kind: 'chapter',
-      references: ['the_road_to_paris'],
+      references: ['the_guards_house'],
     })
   })
 

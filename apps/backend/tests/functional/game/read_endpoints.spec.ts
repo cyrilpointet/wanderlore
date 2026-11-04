@@ -37,7 +37,7 @@ async function arrangeGame(userId: string, lastActivityAt = DateTime.now()) {
     userId,
     ...(await seedMusketeers()),
     status: 'in_progress',
-    currentChapter: 'the_road_to_paris',
+    currentChapter: 'the_guards_house',
     lastActivityAt,
   })
 
@@ -59,7 +59,7 @@ async function arrangeGame(userId: string, lastActivityAt = DateTime.now()) {
     sessionId: session.id,
     currentLocationId: treville.id,
     activeQuests: [
-      { reference: 'deliver_the_letter', step: 1, summary: 'Carry the letter to Tréville.' },
+      { reference: 'recover_the_seal', step: 1, summary: 'Bring back the seal of Tréville.' },
     ],
     narrativeFlags: { letter_read: true },
     /** Half past seven in the evening, on the third day. */
@@ -107,7 +107,7 @@ function completedTurn(sessionId: string, turnNumber: number) {
     narratedText: `Narration ${turnNumber}`,
     appliedEffects: {
       movement: 'hotel_de_treville',
-      scenario_flags: ['letter_delivered'],
+      scenario_flags: ['seal_found'],
       hit_points_delta: -2,
     },
   })
@@ -158,7 +158,7 @@ test.group('GET /sessions', (group) => {
     const [game] = dataOf(response)
 
     assert.deepEqual(game.world, { reference: 'three_musketeers', label: 'The Three Musketeers' })
-    assert.deepEqual(game.chapter, { reference: 'the_road_to_paris', label: 'The Road to Paris' })
+    assert.deepEqual(game.chapter, { reference: 'the_guards_house', label: "The Guards' House" })
     assert.equal(game.status, 'in_progress')
     assert.deepEqual(game.character, { name: "d'Artagnan", hitPoints: 8, hitPointsMax: 10 })
   })
@@ -268,9 +268,9 @@ test.group('GET /sessions/:id', (group) => {
     assert.deepEqual(game.location, { reference: 'hotel_de_treville', label: 'Hôtel de Tréville' })
     assert.deepEqual(game.activeQuests, [
       {
-        reference: 'deliver_the_letter',
-        label: 'Deliver the letter',
-        summary: 'Carry the letter to Tréville.',
+        reference: 'recover_the_seal',
+        label: 'Recover the stolen seal',
+        summary: 'Bring back the seal of Tréville.',
       },
     ])
     assert.isNull(game.pendingTurn)

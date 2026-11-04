@@ -91,7 +91,11 @@ test.group('Passages | networks', () => {
   })
 
   test('the place around a network contains it without being part of it', ({ assert }) => {
-    assert.deepEqual([...networkContainers(HOUSE_WORLD.locations)], ['house'])
+    /** The house of the specs, beside the guards' house of *The Stolen Seal*. */
+    assert.sameMembers(
+      [...networkContainers(HOUSE_WORLD.locations)],
+      ['house', 'hotel_de_laffemas']
+    )
   })
 
   test('a world without exits has no network', ({ assert }) => {

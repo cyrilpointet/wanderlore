@@ -28,6 +28,10 @@ async function draftOf(worldId: string, playable: boolean): Promise<string> {
   if (playable) {
     const published = THREE_MUSKETEERS_CONTENT.scenarios[0]
 
+    /**
+     * The draft has none of the published scenario's own places: it opens in
+     * a place of the world instead.
+     */
     await db
       .from('scenarios')
       .where('id', scenarioId)
@@ -35,7 +39,7 @@ async function draftOf(worldId: string, playable: boolean): Promise<string> {
         chapters: JSON.stringify(published.chapters),
         quests: JSON.stringify(published.quests),
         pregenerated_character: JSON.stringify(published.pregeneratedCharacter),
-        initial_state: JSON.stringify(published.initialState),
+        initial_state: JSON.stringify({ ...published.initialState, location: 'hotel_de_treville' }),
       })
   }
 
@@ -63,22 +67,11 @@ test.group('New game | catalogue', (group) => {
     const stolenSeal = THREE_MUSKETEERS_CONTENT.scenarios.find(
       ({ reference }) => reference === 'the_stolen_seal'
     )!
-    const stolenSealRow = await db
-      .from('scenarios')
-      .where({ world_id: worldId, reference: stolenSeal.reference })
-      .firstOrFail()
 
-    /** The published scenarios only, the draft left out; in no particular order. */
-    assert.sameDeepMembers(musketeers, [
+    /** The published scenarios only, the draft left out. */
+    assert.deepEqual(musketeers, [
       {
         id: scenarioId,
-        title: 'A Gascon in Paris',
-        synopsis: THREE_MUSKETEERS_CONTENT.scenarios[0].synopsis,
-        status: 'published',
-        world,
-      },
-      {
-        id: stolenSealRow.id,
         title: 'The Stolen Seal',
         synopsis: stolenSeal.synopsis,
         status: 'published',
@@ -126,11 +119,14 @@ test.group('New game | starting', (group) => {
 
     assert.equal(game.status, 'in_progress')
     assert.deepEqual(game.world, { reference: 'three_musketeers', label: 'The Three Musketeers' })
-    assert.deepEqual(game.chapter, { reference: 'the_road_to_paris', label: 'The Road to Paris' })
-    assert.deepEqual(game.location, { reference: 'meung_sur_loire', label: 'Meung-sur-Loire' })
+    assert.deepEqual(game.chapter, { reference: 'the_guards_house', label: "The Guards' House" })
+    assert.deepEqual(game.location, {
+      reference: 'rue_du_cherche_midi',
+      label: 'Rue du Cherche-Midi',
+    })
     assert.deepEqual(
       game.activeQuests.map(({ reference }: { reference: string }) => reference),
-      ['deliver_the_letter']
+      ['recover_the_seal']
     )
     assert.equal(game.character.name, PREGENERATED.name)
     /** Derived from the sheet, the book's total hit points: CON 14 and SIZ 12 make 26. */
@@ -148,8 +144,10 @@ test.group('New game | starting', (group) => {
         quantity,
       ]),
       [
-        ['letter_to_treville', 'carried', 1],
+        ['dagger', 'carried', 1],
+        ['document', 'carried', 1],
         ['rapier', 'equipped', 1],
+        ['rope', 'carried', 1],
       ]
     )
   })
@@ -184,14 +182,14 @@ test.group('New game | starting', (group) => {
     await NpcDefinition.create({
       worldId,
       scenarioId,
-      reference: 'innkeeper_of_meung',
-      labels: { en: 'The innkeeper' },
-      description: 'The innkeeper of the Jolly Miller, at Meung.',
+      reference: 'night_watchman',
+      labels: { en: 'The night watchman' },
+      description: 'A watchman with a lantern, walking the rue du Cherche-Midi.',
       kind: 'unique',
       generic: false,
       defaultDisposition: 'neutral',
       combat: { skills: {}, hitPointsMax: 10, weapon: null, damageModifier: null, armor: 0 },
-      initialLocation: 'meung_sur_loire',
+      initialLocation: 'rue_du_cherche_midi',
       schedule: [],
     })
 
@@ -202,13 +200,13 @@ test.group('New game | starting', (group) => {
       .withCsrfToken()
 
     response.assertStatus(201)
-    const innkeeper = await NpcInstance.query()
+    const watchman = await NpcInstance.query()
       .where('sessionId', dataOf(response).id)
-      .where('handle', 'innkeeper_of_meung')
+      .where('handle', 'night_watchman')
       .preload('location')
       .firstOrFail()
-    assert.equal(innkeeper.status, 'present')
-    assert.equal(innkeeper.location.handle, 'meung_sur_loire')
+    assert.equal(watchman.status, 'present')
+    assert.equal(watchman.location.handle, 'rue_du_cherche_midi')
   })
 
   test('opens the clock at the time and on the date the story starts', async ({
@@ -225,9 +223,9 @@ test.group('New game | starting', (group) => {
 
     const game = await WorldState.findByOrFail('sessionId', dataOf(response).id)
 
-    /** 10:00 on the first day, the first Monday of April 1625. */
-    assert.equal(game.gameTime, 10 * 3600)
-    assert.equal(game.startDate, '1625-04-07')
+    /** 23:00 on the first day, the second of June 1625. */
+    assert.equal(game.gameTime, 23 * 3600)
+    assert.equal(game.startDate, '1625-06-02')
   })
 
   test('a story with no date keeps none, and editing the scenario leaves a game alone', async ({

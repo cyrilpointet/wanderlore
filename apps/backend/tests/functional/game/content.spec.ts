@@ -150,12 +150,12 @@ test.group('Content | seeder', (group) => {
 
     const scenario = await db
       .from('scenarios')
-      .where({ world_id: await musketeersId(), reference: 'a_gascon_in_paris' })
+      .where({ world_id: await musketeersId(), reference: 'the_stolen_seal' })
       .firstOrFail()
 
     assert.equal(scenario.status, 'published')
     assert.equal(scenario.pregenerated_character.name, "d'Artagnan")
-    assert.equal(scenario.initial_state.location, 'meung_sur_loire')
+    assert.equal(scenario.initial_state.location, 'rue_du_cherche_midi')
   })
 })
 

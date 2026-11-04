@@ -8,8 +8,8 @@ import type { WorldContent } from '#services/game/content/types'
  * the roadmap raises about borrowed settings does not apply.
  *
  * Everything is in English, labels included: only the narration is ever
- * produced in the player's language. Every definition lives at world level;
- * the one scenario adds none of its own.
+ * produced in the player's language. The world holds what any story of the
+ * novel may meet; *The Stolen Seal* brings its own house, cast and items.
  *
  * On the BRP rules: skills in percent, with the base chances of the book;
  * weapons with its damage dice. A world may name its skills its own way — one
@@ -1243,84 +1243,6 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
   ],
   scenarios: [
     {
-      reference: 'a_gascon_in_paris',
-      labels: { en: 'A Gascon in Paris' },
-      synopsis:
-        "1625. Young d'Artagnan leaves Gascony for Paris with his father's sword, fifteen écus and a letter for M. de Tréville, captain of the King's Musketeers. The road is long, tempers are short, and the Cardinal's men are everywhere.",
-      status: 'published',
-      chapters: [{ reference: 'the_road_to_paris', labels: { en: 'The Road to Paris' } }],
-      quests: [{ reference: 'deliver_the_letter', labels: { en: 'Deliver the letter' } }],
-      pregeneratedCharacter: {
-        name: "d'Artagnan",
-        /** Quick, hot-headed and charming: a young Gascon of eighteen. */
-        characteristics: { STR: 13, CON: 14, SIZ: 12, INT: 13, POW: 12, DEX: 16, CHA: 14 },
-        skills: {
-          swordsmanship: 60,
-          athletics: 30,
-          observation: 30,
-          persuasion: 45,
-          etiquette: 30,
-        },
-        resources: { purse: 15 },
-        /**
-         * What d'Artagnan leaves Gascony with: his father's letter for
-         * Tréville, and his father's old sword at his side. His purse is a
-         * resource, not an item.
-         */
-        items: [
-          { definition: 'letter_to_treville', descriptor: null, quantity: 1, equipped: false },
-          {
-            definition: 'rapier',
-            descriptor: "his father's old sword, long and a little out of fashion",
-            quantity: 1,
-            equipped: true,
-          },
-        ],
-      },
-      /** The story opens in Meung, the first place the game goes through. */
-      initialState: {
-        location: 'meung_sur_loire',
-        chapter: 'the_road_to_paris',
-        quests: [
-          {
-            reference: 'deliver_the_letter',
-            step: 1,
-            summary: 'Carry your father’s letter to Monsieur de Tréville.',
-          },
-        ],
-        /** The letter is for Tréville: d'Artagnan knows whom he rides to. */
-        knownNpcs: ['treville'],
-      },
-      /** What extraction may record of the story, for the steps that follow and the events. */
-      flags: [
-        {
-          reference: 'met_the_stranger',
-          description: "D'Artagnan has crossed the dark stranger with the scar, at Meung or since.",
-        },
-        {
-          reference: 'letter_delivered',
-          description: "D'Artagnan has handed his father's letter to Monsieur de Tréville.",
-        },
-        {
-          reference: 'letter_lost',
-          description: "D'Artagnan's letter for Tréville has been lost, stolen or destroyed.",
-        },
-        {
-          reference: 'duel_challenged',
-          description: "D'Artagnan has a duel to fight: a challenge given or accepted.",
-        },
-      ],
-      events: [],
-      /** Dumas: « le premier lundi du mois d'avril 1625 », as d'Artagnan rides into Meung. */
-      startTime: '10:00',
-      startDate: '1625-04-07',
-      glossary: [],
-      lore: [],
-      npcs: [],
-      locations: [],
-      items: [],
-    },
-    {
       reference: 'the_stolen_seal',
       labels: { en: 'The Stolen Seal' },
       synopsis:
@@ -1381,7 +1303,23 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
         /** Tréville sent him; Jussac crossed swords with him at the Carmes-Deschaux. */
         knownNpcs: ['treville', 'jussac'],
       },
-      flags: [],
+      /** What extraction may record of the night, for the steps that follow and the events. */
+      flags: [
+        {
+          reference: 'alarm_raised',
+          description:
+            'The guards of the Hôtel de Laffemas have been roused: they know someone is in the house.',
+        },
+        {
+          reference: 'seal_found',
+          description: "D'Artagnan has laid eyes on Monsieur de Tréville's seal, wherever it lies.",
+        },
+        {
+          reference: 'jussac_challenged',
+          description:
+            "D'Artagnan and Jussac have crossed swords tonight, or one has called the other out.",
+        },
+      ],
       events: [],
       /** Late at night: most of the guards are asleep, the post is not. */
       startTime: '23:00',

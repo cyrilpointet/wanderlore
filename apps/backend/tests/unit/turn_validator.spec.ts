@@ -59,7 +59,7 @@ const META: ValidationMeta = {
   ],
   hasLocation: true,
   /** The scenario's flags: the only ones extraction may set. */
-  flags: ['duel_survived', 'letter_delivered'],
+  flags: ['duel_survived', 'seal_found'],
   foreseeableEvents: [],
   awaitableNpcs: [],
   hitPointsMax: 10,

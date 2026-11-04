@@ -355,9 +355,9 @@ test.group('Coherence | names', () => {
   test('every name has an English version', ({ assert }) => {
     assert.deepEqual(
       issuesAfter((_world, scenario) => {
-        scenario.quests[0].labels = { en: ' ', fr: 'Remettre la lettre' }
+        scenario.quests[0].labels = { en: ' ', fr: 'Reprendre le sceau' }
       }),
-      [['missing_english_label', 'quests.deliver_the_letter', undefined]]
+      [['missing_english_label', 'quests.recover_the_seal', undefined]]
     )
   })
 })
@@ -504,7 +504,7 @@ test.group('Coherence | schedules and events', () => {
           when: {
             at: null,
             conditions: [
-              { type: 'flag', flag: 'alarm_raised' },
+              { type: 'flag', flag: 'guards_bribed' },
               { type: 'npc_at', npc: 'royal_guard', location: 'paris' },
             ],
             delay: null,
@@ -522,7 +522,7 @@ test.group('Coherence | schedules and events', () => {
       }),
       [
         ['unknown_location', 'events.guards_arrive.place', 'la_rochelle'],
-        ['unknown_flag', 'events.guards_arrive.when.conditions.0.flag', 'alarm_raised'],
+        ['unknown_flag', 'events.guards_arrive.when.conditions.0.flag', 'guards_bribed'],
         ['not_unique', 'events.guards_arrive.when.conditions.1.npc', 'royal_guard'],
         ['not_unique', 'events.guards_arrive.unless.0.item', 'rapier'],
         ['unknown_passage', 'events.guards_arrive.effects.1', 'paris|louvre'],
@@ -539,7 +539,7 @@ test.group('Coherence | schedules and events', () => {
           unless: [],
           place: null,
           description: 'Nothing.',
-          effects: [{ type: 'flag_set', flag: 'letter_lost' }],
+          effects: [{ type: 'flag_set', flag: 'seal_found' }],
           interrupts: false,
           foreseeable: null,
         })
@@ -563,8 +563,8 @@ test.group('Coherence | schedules and events', () => {
     assert.deepEqual(
       issuesAfter((_world, scenario) => {
         scenario.events.push(
-          chained('first', 'letter_lost', 'duel_challenged'),
-          chained('second', 'duel_challenged', 'letter_lost')
+          chained('first', 'seal_found', 'jussac_challenged'),
+          chained('second', 'jussac_challenged', 'seal_found')
         )
       }),
       [
@@ -578,18 +578,18 @@ test.group('Coherence | schedules and events', () => {
     assert.deepEqual(
       issuesAfter((_world, scenario) => {
         scenario.events.push({
-          reference: 'stranger_vanishes',
+          reference: 'rochefort_sent_for',
           when: {
             at: null,
-            conditions: [{ type: 'flag', flag: 'met_the_stranger' }],
+            conditions: [{ type: 'flag', flag: 'alarm_raised' }],
             delay: { label: 'hours' },
           },
           unless: [],
-          place: 'meung_sur_loire',
-          description: 'The stranger rides off towards Paris.',
+          place: 'laffemas_courtyard',
+          description: 'Rochefort rides in, sent for by the roused guards.',
           effects: [
-            { type: 'npc_moved', npc: 'rochefort', location: 'paris' },
-            { type: 'flag_set', flag: 'letter_lost' },
+            { type: 'npc_moved', npc: 'rochefort', location: 'laffemas_courtyard' },
+            { type: 'flag_set', flag: 'jussac_challenged' },
           ],
           interrupts: false,
           foreseeable: [],

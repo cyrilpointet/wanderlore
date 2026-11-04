@@ -1328,13 +1328,15 @@ test.group('Prompts | deadlines and events', () => {
         narration: 'Tréville reads the letter.',
         creatable_items: [],
         enterable_npcs: [],
-        flags: [{ reference: 'letter_delivered', description: 'The letter reached Tréville.' }],
+        flags: [
+          { reference: 'seal_found', description: "D'Artagnan has laid eyes on Tréville's seal." },
+        ],
         movement: FREE_MOVEMENT,
       })
     )
 
     assert.deepEqual(payload.flags, [
-      { flag: 'letter_delivered', description: 'The letter reached Tréville.' },
+      { flag: 'seal_found', description: "D'Artagnan has laid eyes on Tréville's seal." },
     ])
     assert.include(EXTRACTION_SYSTEM_PROMPT, 'never one that is not listed')
   })

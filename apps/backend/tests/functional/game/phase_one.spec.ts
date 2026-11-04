@@ -48,7 +48,7 @@ const NARRATION = 'Tréville breaks the seal, reads, and looks up at you with ne
 /** What extraction reads in that narration. */
 const EFFECTS = extracted({
   movement: 'hotel_de_treville',
-  scenario_flags: ['letter_delivered'],
+  scenario_flags: ['seal_found'],
   hit_points_delta: 0,
 })
 
@@ -128,8 +128,8 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
     }
 
     assert.deepEqual(labels.location(session.worldState.currentLocation), {
-      reference: 'meung_sur_loire',
-      label: 'Meung-sur-Loire',
+      reference: 'rue_du_cherche_midi',
+      label: 'Rue du Cherche-Midi',
     })
   })
 
@@ -149,7 +149,7 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
       .where('sessionId', sessionId)
       .preload('currentLocation')
       .firstOrFail()
-    assert.propertyVal(world.narrativeFlags, 'letter_delivered', true)
+    assert.propertyVal(world.narrativeFlags, 'seal_found', true)
     assert.equal(world.currentLocation.handle, 'hotel_de_treville')
 
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()

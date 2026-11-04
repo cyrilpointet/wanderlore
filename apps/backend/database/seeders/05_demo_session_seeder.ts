@@ -38,7 +38,7 @@ export default class extends BaseSeeder {
     const world = await World.findByOrFail('reference', 'three_musketeers')
     const scenario = await Scenario.query()
       .where('worldId', world.id)
-      .where('reference', 'a_gascon_in_paris')
+      .where('reference', 'the_stolen_seal')
       .firstOrFail()
 
     await startGame(player, scenario.id)

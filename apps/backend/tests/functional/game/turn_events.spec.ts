@@ -40,7 +40,7 @@ const SETTLED = {
 const SETTLED_TURN = [
   SETTLED,
   streamed('The street is quiet.'),
-  extracted({ movement: 'paris', scenario_flags: ['met_the_stranger'], hit_points_delta: 0 }),
+  extracted({ movement: 'paris', scenario_flags: ['alarm_raised'], hit_points_delta: 0 }),
 ]
 
 const NEEDS_ROLL = {
@@ -323,7 +323,7 @@ test.group('Turn events | what goes over the wire', (group) => {
       [...events.recorded, ...second.events.recorded].map(({ ref, event }) => toMessage(ref, event))
     )
 
-    for (const leak of ['appliedModifiers', 'origin', 'actionType', 'met_the_stranger']) {
+    for (const leak of ['appliedModifiers', 'origin', 'actionType', 'alarm_raised']) {
       assert.notInclude(wire, leak)
     }
   })
@@ -399,7 +399,7 @@ test.group('Turn events | the separated pipeline', (group) => {
   /** Proposed by extraction, never applied when the turn fails. */
   const HARMFUL = extracted({
     movement: 'louvre',
-    scenario_flags: ['duel_challenged'],
+    scenario_flags: ['jussac_challenged'],
     hit_points_delta: -3,
   })
 
@@ -481,7 +481,7 @@ test.group('Turn events | the separated pipeline', (group) => {
     await turn.refresh()
 
     assert.equal(turn.status, 'completed')
-    assert.deepEqual(turn.extractionOutput!.scenario_flags, ['duel_challenged'])
+    assert.deepEqual(turn.extractionOutput!.scenario_flags, ['jussac_challenged'])
   })
 
   test('a completed turn tells where the game now stands, labelled', async ({ assert }) => {
