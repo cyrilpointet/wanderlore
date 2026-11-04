@@ -6,7 +6,10 @@ import { MigrationRunner } from '@adonisjs/lucid/migration'
 type MigrationSource = { getMigrations(): Promise<{ name: string }[]> }
 import testUtils from '@adonisjs/core/services/test_utils'
 
-import { countRows, createSession, createUser } from '#tests/helpers/database'
+import { countRows, createLegacySession, createUser } from '#tests/helpers/database'
+import { rollBackPast } from '#tests/helpers/migrations'
+
+const DURABLE_CHARACTERS = 'database/migrations/1789917350000_make_characters_durable'
 
 const MIGRATION =
   'database/migrations/1789917090000_replace_visited_locations_with_current_location'
@@ -101,7 +104,7 @@ test.group('Migrations | current location', (group) => {
 
     /** Before Phase 5, a game had no world to name. */
     if (await db.connection().schema.hasColumn('sessions', 'world_id')) {
-      return createSession(userId)
+      return createLegacySession(userId)
     }
 
     const [row] = await db
@@ -170,6 +173,8 @@ test.group('Migrations | current location', (group) => {
   })
 
   test('a rollback rebuilds the list, where the game stands last', async ({ assert }) => {
+    /** Games as they were before characters outlived them (Phase 12), which a rollback goes through. */
+    await rollBackPast(DURABLE_CHARACTERS)
     const returned = await gameOf()
     const meung = await insertPlace(returned, 'meung_sur_loire', minutesLater(1))
     await insertPlace(returned, 'paris', minutesLater(2))

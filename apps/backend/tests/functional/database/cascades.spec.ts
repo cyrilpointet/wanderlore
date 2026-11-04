@@ -3,7 +3,8 @@ import db from '@adonisjs/lucid/services/db'
 
 import {
   countRows,
-  createCharacter,
+  characterOf,
+  createCharacterState,
   createInventoryItem,
   createLocationInstance,
   createNpcInstance,
@@ -26,7 +27,8 @@ test.group('Cascading deletes', (group) => {
   test('deleting a session removes everything that belongs to it', async ({ assert }) => {
     const userId = await createUser()
     const sessionId = await createSession(userId)
-    const characterId = await createCharacter(sessionId)
+    const characterId = await characterOf(sessionId)
+    await createCharacterState(sessionId)
     /**
      * The world state points at a place of the same game: both go in the same
      * statement, so the reference between them never blocks the delete.
@@ -43,7 +45,9 @@ test.group('Cascading deletes', (group) => {
 
     await db.from('sessions').where({ id: sessionId }).delete()
 
-    assert.equal(await countRows('characters', { session_id: sessionId }), 0)
+    assert.equal(await countRows('character_states', { session_id: sessionId }), 0)
+    /** The character outlives their games: only what the game held of them goes. */
+    assert.equal(await countRows('characters', { id: characterId }), 1)
     assert.equal(await countRows('world_states', { session_id: sessionId }), 0)
     assert.equal(await countRows('location_instances', { session_id: sessionId }), 0)
     assert.equal(await countRows('npc_instances', { session_id: sessionId }), 0)
@@ -52,10 +56,12 @@ test.group('Cascading deletes', (group) => {
     assert.equal(await countRows('narrative_summaries', { session_id: sessionId }), 0)
   })
 
-  test('deleting a user removes their sessions and everything below', async ({ assert }) => {
+  test('deleting a user removes their sessions, their characters and everything below', async ({
+    assert,
+  }) => {
     const userId = await createUser()
     const sessionId = await createSession(userId)
-    await createCharacter(sessionId)
+    await createCharacterState(sessionId)
     await createWorldState(sessionId)
     await createTurn(sessionId)
 
@@ -67,7 +73,8 @@ test.group('Cascading deletes', (group) => {
      * data had already been orphaned.
      */
     assert.equal(await countRows('sessions', { user_id: userId }), 0)
-    assert.equal(await countRows('characters', { session_id: sessionId }), 0)
+    assert.equal(await countRows('characters', { user_id: userId }), 0)
+    assert.equal(await countRows('character_states', { session_id: sessionId }), 0)
     assert.equal(await countRows('world_states', { session_id: sessionId }), 0)
     assert.equal(await countRows('turn_log', { session_id: sessionId }), 0)
   })
@@ -93,11 +100,11 @@ test.group('Cascading deletes', (group) => {
     const userId = await createUser()
     const deleted = await createSession(userId)
     const kept = await createSession(userId)
-    await createCharacter(kept)
+    await createCharacterState(kept)
 
     await db.from('sessions').where({ id: deleted }).delete()
 
     assert.equal(await countRows('sessions', { id: kept }), 1)
-    assert.equal(await countRows('characters', { session_id: kept }), 1)
+    assert.equal(await countRows('character_states', { session_id: kept }), 1)
   })
 })

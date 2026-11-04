@@ -7,6 +7,8 @@ import gameConfig from '#config/game'
 import TurnLog from '#models/turn_log'
 import Session from '#models/session'
 import type Character from '#models/character'
+import type CharacterState from '#models/character_state'
+import { GameEndedError, isOngoing, lockOwnGame } from '#services/game/game_lifecycle'
 import type WorldState from '#models/world_state'
 import LocationInstance from '#models/location_instance'
 import NpcInstance from '#models/npc_instance'
@@ -307,41 +309,54 @@ export class TurnService {
    * time the model takes to answer.
    */
   async record(submission: TurnSubmission): Promise<SubmittedTurn> {
-    const session = await Session.query()
-      .where('id', submission.sessionId)
-      .where('userId', submission.userId)
-      .withScopes((scopes) => scopes.listed())
-      .firstOrFail()
+    return db.transaction(async (trx) => {
+      /** Under the game's lock: abandoning it waits for this, and this for it. */
+      const session = await lockOwnGame(submission.sessionId, submission.userId, trx)
 
-    /**
-     * `ON CONFLICT DO NOTHING` rather than catching the unique violation: in
-     * PostgreSQL a failed insert aborts the surrounding transaction, and the
-     * lookup that follows would fail with it.
-     */
-    const [inserted] = await db
-      .table('turn_log')
-      .insert({
-        session_id: session.id,
-        idempotency_key: submission.idempotencyKey,
-        status: 'pending',
-        player_input: submission.playerInput,
-        language: submission.language ?? DEFAULT_LANGUAGE,
-        created_at: new Date(),
-      })
-      .onConflict(['session_id', 'idempotency_key'])
-      .ignore()
-      .returning('id')
+      /**
+       * `ON CONFLICT DO NOTHING` rather than catching the unique violation: in
+       * PostgreSQL a failed insert aborts the surrounding transaction, and the
+       * lookup that follows would fail with it.
+       */
+      const existing = await TurnLog.query({ client: trx })
+        .where('sessionId', session.id)
+        .where('idempotencyKey', submission.idempotencyKey)
+        .first()
 
-    if (inserted) {
-      return { turn: await TurnLog.findOrFail(inserted.id), replayed: false }
-    }
+      /** A repeated submission gets its turn as it stands, even once the game is over. */
+      if (existing) {
+        return { turn: existing, replayed: true }
+      }
 
-    const existing = await TurnLog.query()
-      .where('sessionId', session.id)
-      .where('idempotencyKey', submission.idempotencyKey)
-      .firstOrFail()
+      if (!isOngoing(session)) {
+        throw new GameEndedError()
+      }
 
-    return { turn: existing, replayed: true }
+      const [inserted] = await trx
+        .table('turn_log')
+        .insert({
+          session_id: session.id,
+          idempotency_key: submission.idempotencyKey,
+          status: 'pending',
+          player_input: submission.playerInput,
+          language: submission.language ?? DEFAULT_LANGUAGE,
+          created_at: new Date(),
+        })
+        .onConflict(['session_id', 'idempotency_key'])
+        .ignore()
+        .returning('id')
+
+      if (inserted) {
+        return { turn: await TurnLog.findOrFail(inserted.id, { client: trx }), replayed: false }
+      }
+
+      const raced = await TurnLog.query({ client: trx })
+        .where('sessionId', session.id)
+        .where('idempotencyKey', submission.idempotencyKey)
+        .firstOrFail()
+
+      return { turn: raced, replayed: true }
+    })
   }
 
   /**
@@ -390,7 +405,8 @@ export class TurnService {
       type: 'turn_completed',
       turn,
       character: scene.character,
-      inventory: await characterItems(scene.character.id),
+      characterState: scene.characterState,
+      inventory: await characterItems(scene.session.id, scene.character.id),
       location: await this.#whereItStands(scene.worldState),
       period: periodAt(scene.worldState.gameTime),
       labels,
@@ -496,7 +512,7 @@ export class TurnService {
       })),
       reachableLocations: scene.routes.map(({ to }) => to),
       hasLocation: scene.worldState.currentLocationId !== null,
-      hitPointsMax: scene.character.hitPointsMax,
+      hitPointsMax: scene.characterState.hitPointsMax,
       /** One set already sets nothing: refusing it would only cost a second call. */
       flags: world.flags.map(({ reference }) => reference),
       foreseeableEvents: foreseeable.map(({ reference }) => reference),
@@ -907,7 +923,13 @@ export class TurnService {
     const { opponent, provisional } = await this.#opponentOf(scene, engagement)
     const round = playRound(this.#rules, {
       world: scene.world,
-      character: scene.character,
+      character: {
+        characteristics: scene.character.characteristics,
+        skills: scene.character.skills,
+        hitPoints: scene.characterState.hitPoints,
+        hitPointsMax: scene.characterState.hitPointsMax,
+        bleeding: scene.characterState.bleeding,
+      },
       characterItems: scene.items.character,
       opponent,
       engagement,
@@ -992,7 +1014,7 @@ export class TurnService {
     const target = decision.intent.target
     const available =
       target === null
-        ? scene.character.firstAidAvailable
+        ? scene.characterState.firstAidAvailable
         : scene.npcs.find(({ handle }) => handle === target) !== undefined &&
           scene.tendable.has(target)
     const degree = outcome.degree ?? (outcome.result === 'success' ? 'success' : 'failure')
@@ -1045,17 +1067,18 @@ export class TurnService {
   async #loadScene(sessionId: string): Promise<LoadedScene> {
     const session = await Session.query()
       .where('id', sessionId)
-      .preload('characters')
+      .preload('character', (character) => character.preload('profession'))
+      .preload('characterState')
       .preload('worldState', (worldState) => worldState.preload('currentLocation'))
       .preload('locations', (locations) => locations.orderBy('createdAt', 'asc'))
       .firstOrFail()
 
     const world = await loadWorld(session)
 
-    const character = session.characters[0]
+    const { character, characterState } = session
 
-    if (!character) {
-      throw new Error(`Session ${sessionId} has no character to play.`)
+    if (!characterState) {
+      throw new Error(`Session ${sessionId} has no state for its character.`)
     }
 
     const items = await itemsInScene(sessionId, {
@@ -1111,6 +1134,7 @@ export class TurnService {
       session,
       world,
       character,
+      characterState,
       worldState: session.worldState,
       npcs: await presentNpcs(sessionId),
       npcDefinitions: await presentNpcDefinitions(sessionId),
@@ -1173,12 +1197,12 @@ export class TurnService {
           scene.worldState.gameTime = trace.time.after
         }
 
-        const hitPointsBefore = scene.character.hitPoints
+        const hitPointsBefore = scene.characterState.hitPoints
         const aside = trace.arbitration?.intent.type === OUT_OF_CHARACTER
         const combat = {
           world: scene.world,
           sessionId: scene.session.id,
-          character: scene.character,
+          characterState: scene.characterState,
           placeId: scene.worldState.currentLocationId,
         }
 
@@ -1217,7 +1241,7 @@ export class TurnService {
           {
             world: scene.world,
             sessionId: scene.session.id,
-            character: scene.character,
+            characterState: scene.characterState,
             worldState: scene.worldState,
             here: scene.here,
             travel: scene.travel,
@@ -1233,7 +1257,7 @@ export class TurnService {
           }
           await heal(
             this.#rules,
-            scene.character,
+            scene.characterState,
             { after: scene.worldState.gameTime },
             applied.hit_points_delta < 0,
             trx
@@ -1257,7 +1281,7 @@ export class TurnService {
            */
           appliedEffects: {
             ...applied,
-            hit_points_delta: scene.character.hitPoints - hitPointsBefore,
+            hit_points_delta: scene.characterState.hitPoints - hitPointsBefore,
           },
         })
 
@@ -1374,7 +1398,10 @@ type LoadedScene = {
   session: Session
   /** The world as it stood when the turn was picked up. */
   world: WorldDefinition
+  /** The sheet, with their profession: what they are and what they can do. */
   character: Character
+  /** What they live through in this game: hit points, wounds, resources. */
+  characterState: CharacterState
   worldState: WorldState
   npcs: PresentNpc[]
   /** Definition of each person present, by handle. */
@@ -1428,8 +1455,10 @@ function buildContext(
     world: scene.world,
     character: {
       name: scene.character.name,
-      hit_points: scene.character.hitPoints,
-      hit_points_max: scene.character.hitPointsMax,
+      gender: scene.character.gender,
+      profession: scene.character.profession.reference,
+      hit_points: scene.characterState.hitPoints,
+      hit_points_max: scene.characterState.hitPointsMax,
     },
     scene: {
       location: scene.worldState.currentLocation?.handle ?? null,

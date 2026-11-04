@@ -4,6 +4,8 @@ import type Session from '#models/session'
 import type { ContentLabels } from '#services/game/content_labels'
 import CharacterTransformer from '#transformers/character_transformer'
 import { periodAt } from '#services/game/game_time'
+import { inLanguage } from '#services/game/content_labels'
+import { heldItemOf } from '#services/game/inventory'
 
 /**
  * The labels of the world a game is played in. A function of the game, since a
@@ -14,8 +16,10 @@ export type LabelsOf = (session: Session) => ContentLabels
 /**
  * A game, as the player sees it.
  *
- * Expects `characters` and `worldState` preloaded — the latter with its
- * `currentLocation` — and `turns` preloaded with the pending ones only.
+ * Expects `scenario`, `character` (with its `profession`), `characterState`
+ * and `worldState` preloaded — the latter with its `currentLocation` — `items`
+ * preloaded with the character's only, gone ones left out, and `turns`
+ * preloaded with the pending ones only.
  */
 export default class SessionTransformer extends BaseTransformer<Session> {
   #labels: ContentLabels
@@ -33,7 +37,12 @@ export default class SessionTransformer extends BaseTransformer<Session> {
 
     return {
       ...this.#header(),
-      character: CharacterTransformer.transform(this.#character(), this.#labels),
+      character: new CharacterTransformer(
+        this.resource.character,
+        this.#state(),
+        this.#labels,
+        this.resource.items.map(heldItemOf)
+      ).toObject(),
       /** The handle and its label, whether the place is unique or improvised. */
       location: location ? this.#labels.location(location) : null,
       /** The period of the day, worked out here: the hour, the date and the day stay in the story. */
@@ -50,16 +59,6 @@ export default class SessionTransformer extends BaseTransformer<Session> {
     }
   }
 
-  /** A card of the game list. */
-  toSummary() {
-    return {
-      ...this.#header(),
-      character: CharacterTransformer.transform(this.#character(), this.#labels).useVariant(
-        'toSummary'
-      ),
-    }
-  }
-
   #header() {
     const chapter = this.resource.currentChapter
 
@@ -67,22 +66,25 @@ export default class SessionTransformer extends BaseTransformer<Session> {
       id: this.resource.id,
       status: this.resource.status,
       lastActivityAt: this.resource.lastActivityAt,
+      endedAt: this.resource.endedAt,
+      characterId: this.resource.characterId,
       world: this.#labels.world(),
+      /** Names in English until the player can pick a language (Phase 14). */
+      scenario: {
+        id: this.resource.scenarioId,
+        title: inLanguage(this.resource.scenario.labels, 'en'),
+      },
       chapter: chapter === null ? null : this.#labels.of('chapter', chapter),
     }
   }
 
-  /**
-   * A session is played by a single character today, although the schema
-   * does not enforce it — see the `characters` relation.
-   */
-  #character() {
-    const [character] = this.resource.characters
+  #state() {
+    const state = this.resource.characterState
 
-    if (!character) {
-      throw new Error(`Session ${this.resource.id} has no character.`)
+    if (!state) {
+      throw new Error(`Session ${this.resource.id} has no state for its character.`)
     }
 
-    return character
+    return state
   }
 }

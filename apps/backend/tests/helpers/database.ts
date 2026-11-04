@@ -123,9 +123,56 @@ export async function createScenario(
   return row.id
 }
 
+export async function createProfession(
+  worldId: string,
+  reference = unique('profession').replace(/-/g, '_')
+): Promise<string> {
+  const now = new Date()
+  const [row] = await db
+    .table('professions')
+    .insert({
+      world_id: worldId,
+      reference,
+      labels: { en: 'Test Profession' },
+      description: 'A trade written by a test.',
+      created_at: now,
+      updated_at: now,
+    })
+    .returning('id')
+
+  return row.id
+}
+
 /**
- * A game needs a world and one of its scenarios: given, or a fresh pair made
- * for it.
+ * A character of a player in a world (Phase 12): with a profession of that
+ * world, given or a fresh one made for it.
+ */
+export async function createCharacter(
+  userId: string,
+  worldId: string,
+  overrides: Partial<{ professionId: string; name: string; gender: string }> = {}
+): Promise<string> {
+  const professionId = overrides.professionId ?? (await createProfession(worldId))
+  const now = new Date()
+  const [row] = await db
+    .table('characters')
+    .insert({
+      user_id: userId,
+      world_id: worldId,
+      profession_id: professionId,
+      name: overrides.name ?? 'Test Character',
+      gender: overrides.gender ?? 'neutral',
+      created_at: now,
+      updated_at: now,
+    })
+    .returning('id')
+
+  return row.id
+}
+
+/**
+ * A game needs a world, one of its scenarios and a character of that world:
+ * given, or fresh ones made for it.
  */
 export async function createSession(
   userId: string,
@@ -134,7 +181,67 @@ export async function createSession(
     currentChapter: string
     worldId: string
     scenarioId: string
+    characterId: string
   }> = {}
+): Promise<string> {
+  const worldId = overrides.worldId ?? (await createWorld())
+  const scenarioId = overrides.scenarioId ?? (await createScenario(worldId))
+  const characterId = overrides.characterId ?? (await createCharacter(userId, worldId))
+
+  const now = new Date()
+  const [row] = await db
+    .table('sessions')
+    .insert({
+      user_id: userId,
+      world_id: worldId,
+      scenario_id: scenarioId,
+      character_id: characterId,
+      ...(overrides.status ? { status: overrides.status } : {}),
+      current_chapter: overrides.currentChapter ?? null,
+      created_at: now,
+      last_activity_at: now,
+    })
+    .returning('id')
+
+  return row.id
+}
+
+/** The game's character, as the session names them. */
+export async function characterOf(sessionId: string): Promise<string> {
+  const session = await db.from('sessions').where('id', sessionId).firstOrFail()
+
+  return session.character_id
+}
+
+/** What the character of a game lives through in it: one row per game. */
+export async function createCharacterState(
+  sessionId: string,
+  overrides: Partial<{ hitPoints: number; hitPointsMax: number; characterId: string }> = {}
+): Promise<string> {
+  const now = new Date()
+  const [row] = await db
+    .table('character_states')
+    .insert({
+      session_id: sessionId,
+      character_id: overrides.characterId ?? (await characterOf(sessionId)),
+      hit_points: overrides.hitPoints ?? 10,
+      hit_points_max: overrides.hitPointsMax ?? 10,
+      created_at: now,
+      updated_at: now,
+    })
+    .returning('id')
+
+  return row.id
+}
+
+/**
+ * Before Phase 12, a game named no character: a character belonged to a game.
+ * For the specs of the migrations of earlier phases, run on the schema they
+ * migrate.
+ */
+export async function createLegacySession(
+  userId: string,
+  overrides: Partial<{ worldId: string; scenarioId: string }> = {}
 ): Promise<string> {
   const worldId = overrides.worldId ?? (await createWorld())
   const scenarioId = overrides.scenarioId ?? (await createScenario(worldId))
@@ -146,8 +253,6 @@ export async function createSession(
       user_id: userId,
       world_id: worldId,
       scenario_id: scenarioId,
-      ...(overrides.status ? { status: overrides.status } : {}),
-      current_chapter: overrides.currentChapter ?? null,
       created_at: now,
       last_activity_at: now,
     })
@@ -156,7 +261,10 @@ export async function createSession(
   return row.id
 }
 
-export async function createCharacter(sessionId: string, name = 'Test Character'): Promise<string> {
+export async function createLegacyCharacter(
+  sessionId: string,
+  name = 'Test Character'
+): Promise<string> {
   const now = new Date()
   const [row] = await db
     .table('characters')

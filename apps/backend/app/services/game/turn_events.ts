@@ -1,4 +1,5 @@
 import type Character from '#models/character'
+import type CharacterState from '#models/character_state'
 import type TurnLog from '#models/turn_log'
 import type { RollResolution } from '#services/rules/types'
 import type { ContentLabels, PlacedLocation } from '#services/game/content_labels'
@@ -47,7 +48,10 @@ export type TurnEvent =
   | {
       type: 'turn_completed'
       turn: TurnLog
+      /** The sheet, with their profession preloaded. */
       character: Character
+      /** How they fare in this game once the turn is applied. */
+      characterState: CharacterState
       /** What the character holds once the turn is applied. */
       inventory: HeldItem[]
       location: PlacedLocation | null
@@ -106,6 +110,7 @@ export function toMessage(ref: TurnRef, event: TurnEvent) {
         turn: new TurnTransformer(event.turn, event.labels, event.opponents).toObject(),
         character: new CharacterTransformer(
           event.character,
+          event.characterState,
           event.labels,
           event.inventory
         ).toObject(),

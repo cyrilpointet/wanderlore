@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
+import { playAs } from '#tests/helpers/characters'
 import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 
 import TurnLog from '#models/turn_log'
 import Session from '#models/session'
-import Character from '#models/character'
 import WorldState from '#models/world_state'
 import LocationInstance from '#models/location_instance'
 import { DiceService } from '#services/dice'
@@ -91,13 +91,11 @@ async function arrangeScene() {
   const userId = await createUser()
   const sessionId = await createSession(userId, content)
 
-  const character = await Character.create({
-    sessionId,
+  const { character, state } = await playAs(sessionId, {
     name: "d'Artagnan",
     skills: { persuasion: 60, swordsmanship: 45 },
     characteristics: GASCON,
     resources: {},
-    progression: {},
     hitPoints: 10,
     hitPointsMax: 10,
   })
@@ -108,7 +106,7 @@ async function arrangeScene() {
     narrativeFlags: {},
   })
 
-  return { userId, sessionId, character, worldState }
+  return { userId, sessionId, character, state, worldState }
 }
 
 /**
@@ -407,7 +405,7 @@ test.group('TurnService | a turn with a roll', (group) => {
   })
 
   test('applies the hit point loss the narration described', async ({ assert }) => {
-    const { sessionId, userId, character } = await arrangeScene()
+    const { sessionId, userId, state } = await arrangeScene()
 
     await buildService([NEEDS_ROLL, ...NARRATED]).play({
       sessionId,
@@ -415,8 +413,8 @@ test.group('TurnService | a turn with a roll', (group) => {
       playerInput: 'I ask him to let me pass.',
     })
 
-    await character.refresh()
-    assert.equal(character.hitPoints, 9)
+    await state.refresh()
+    assert.equal(state.hitPoints, 9)
   })
 
   test('records the turn as completed and the session as active', async ({ assert }) => {
@@ -435,9 +433,9 @@ test.group('TurnService | a turn with a roll', (group) => {
   })
 
   test('records and returns the effects as applied, not as proposed', async ({ assert }) => {
-    const { sessionId, userId, character } = await arrangeScene()
-    character.hitPoints = 1
-    await character.save()
+    const { sessionId, userId, state } = await arrangeScene()
+    state.hitPoints = 1
+    await state.save()
 
     const result = await buildService([
       NEEDS_ROLL,
@@ -564,7 +562,7 @@ test.group('TurnService | a turn that fails', (group) => {
   })
 
   test('leaves the state untouched when extraction is refused twice', async ({ assert }) => {
-    const { sessionId, userId, character } = await arrangeScene()
+    const { sessionId, userId, state } = await arrangeScene()
     const refused = extracted({
       movement: 'noble_quarter',
       scenario_flags: [],
@@ -574,8 +572,8 @@ test.group('TurnService | a turn that fails', (group) => {
 
     await play({ sessionId, userId, playerInput: 'I ask him to let me pass.' }).catch(() => {})
 
-    await character.refresh()
-    assert.equal(character.hitPoints, 10)
+    await state.refresh()
+    assert.equal(state.hitPoints, 10)
   })
 })
 
@@ -701,7 +699,7 @@ test.group('TurnService | turns left pending', (group) => {
   })
 
   test('drops the outcome of a turn expired while it was being played', async ({ assert }) => {
-    const { sessionId, userId, character } = await arrangeScene()
+    const { sessionId, userId, state } = await arrangeScene()
     const { provider, service } = buildService([NEEDS_ROLL, ...NARRATED], undefined, undefined, 50)
     const { turn } = await service.record(submission(sessionId, userId))
 
@@ -726,8 +724,8 @@ test.group('TurnService | turns left pending', (group) => {
     assert.equal(turn.status, 'failed')
     assert.equal(turn.failure!.code, 'turn_expired')
 
-    await character.refresh()
-    assert.equal(character.hitPoints, 10)
+    await state.refresh()
+    assert.equal(state.hitPoints, 10)
   })
 })
 
@@ -1012,7 +1010,7 @@ test.group('TurnService | items and circumstances', (group) => {
   })
 
   test('refused twice, the turn fails and nothing moves', async ({ assert }) => {
-    const { sessionId, userId, character } = await arrangeArmedScene()
+    const { sessionId, userId, state } = await arrangeArmedScene()
     const { play } = buildService([LETTER_AS_CIRCUMSTANCE, LETTER_AS_CIRCUMSTANCE])
 
     const error = await play({ sessionId, userId, playerInput: 'I show the guard my letter.' })
@@ -1020,8 +1018,8 @@ test.group('TurnService | items and circumstances', (group) => {
       .catch((caught) => caught)
 
     assert.instanceOf(error, TurnValidationError)
-    await character.refresh()
-    assert.equal(character.hitPoints, 10)
+    await state.refresh()
+    assert.equal(state.hitPoints, 10)
     const turn = await TurnLog.query().where('sessionId', sessionId).firstOrFail()
     assert.equal(turn.status, 'failed')
     assert.isNull(turn.appliedEffects)
@@ -1393,5 +1391,34 @@ test.group('TurnService | the game clock', (group) => {
     for (const leak of ['gameTime', 'game_time', '18:00', '1625']) {
       assert.notInclude(JSON.stringify(message), leak)
     }
+  })
+})
+
+test.group('TurnService | the character', (group) => {
+  useTransaction(group)
+
+  test('arbitration and narration are told who the character is, extraction is not', async ({
+    assert,
+  }) => {
+    const { sessionId, userId } = await arrangeScene()
+    const { provider, play } = buildService(SETTLED_TURN)
+
+    await play({ sessionId, userId, playerInput: 'I look around.' })
+
+    const [arbitration, narration, extraction] = provider.requests.map(({ userMessage }) =>
+      JSON.parse(userMessage.slice(userMessage.indexOf('{'), userMessage.lastIndexOf('}') + 1))
+    )
+    assert.deepEqual(arbitration.character, {
+      name: "d'Artagnan",
+      profession: { label: 'Test Profession', description: 'A trade written by a test.' },
+      hit_points: 10,
+      hit_points_max: 10,
+    })
+    assert.deepEqual(narration.character, {
+      name: "d'Artagnan",
+      gender: 'neutral',
+      profession: { name: 'Test Profession', description: 'A trade written by a test.' },
+    })
+    assert.notInclude(JSON.stringify(extraction), 'Test Profession')
   })
 })

@@ -89,24 +89,25 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
 
   test('the demo character only knows skills the world defines', async ({ assert }) => {
     const { sessionId } = await seedGame()
-    const session = await Session.query().where('id', sessionId).preload('characters').firstOrFail()
+    const session = await Session.query().where('id', sessionId).preload('character').firstOrFail()
 
     /**
      * The closed list the validator enforces is only true if the seeded
      * character respects it too.
      */
     const known = THREE_MUSKETEERS.skills.map((skill) => skill.reference)
-    assert.containsSubset(known, Object.keys(session.characters[0].skills))
+    assert.containsSubset(known, Object.keys(session.character.skills))
   })
 
   test('every content reference of the seeded game has a label', async ({ assert }) => {
     const { sessionId } = await seedGame()
     const session = await Session.query()
       .where('id', sessionId)
-      .preload('characters')
+      .preload('character')
+      .preload('characterState')
       .preload('worldState', (worldState) => worldState.preload('currentLocation'))
       .firstOrFail()
-    const [character] = session.characters
+    const { character, characterState } = session
     const labels = new ContentLabels(THREE_MUSKETEERS)
 
     /**
@@ -116,7 +117,10 @@ test.group('Phase 1 | the seeded game is playable', (group) => {
     const references: [ContentKind, string][] = [
       ['chapter', session.currentChapter!],
       ...Object.keys(character.skills).map((ref): [ContentKind, string] => ['skill', ref]),
-      ...Object.keys(character.resources).map((ref): [ContentKind, string] => ['resource', ref]),
+      ...Object.keys(characterState.resources).map((ref): [ContentKind, string] => [
+        'resource',
+        ref,
+      ]),
       ...session.worldState.activeQuests.map((quest): [ContentKind, string] => [
         'quest',
         quest.reference as string,

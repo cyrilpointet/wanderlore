@@ -18,7 +18,7 @@ import {
 } from '#services/game/inventory'
 import {
   countRows,
-  createCharacter,
+  characterOf,
   createLocationInstance,
   createNpcInstance,
   createSession,
@@ -31,7 +31,7 @@ const world = THREE_MUSKETEERS
 /** A game with its character, someone in the scene, and the place it stands in. */
 async function scene() {
   const sessionId = await createSession(await createUser())
-  const character: Holder = { type: 'character', id: await createCharacter(sessionId) }
+  const character: Holder = { type: 'character', id: await characterOf(sessionId) }
   const npc: Holder = {
     type: 'npc',
     id: await createNpcInstance(sessionId, 'rochefort', { definitionReference: 'rochefort' }),
@@ -310,7 +310,7 @@ test.group('Inventory | where items start, and where they fall', (group) => {
     assert,
   }) => {
     const sessionId = await createSession(await createUser())
-    const character = await createCharacter(sessionId)
+    const character = await characterOf(sessionId)
 
     const palace = await visitUniqueLocation(world, sessionId, 'palais_cardinal')
     const seal = await InventoryItem.query()

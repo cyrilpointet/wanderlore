@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { playAs } from '#tests/helpers/characters'
 import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
@@ -6,7 +7,7 @@ import transmit from '@adonisjs/transmit/services/main'
 import type { HttpContext } from '@adonisjs/core/http'
 
 import User from '#models/user'
-import Character from '#models/character'
+import CharacterState from '#models/character_state'
 import WorldState from '#models/world_state'
 import { DiceService } from '#services/dice'
 import { LlmError } from '#services/llm/errors'
@@ -67,13 +68,11 @@ async function arrangeScene() {
   const userId = await createUser()
   const sessionId = await createSession(userId, content)
 
-  await Character.create({
-    sessionId,
+  await playAs(sessionId, {
     name: "d'Artagnan",
     skills: { persuasion: 60 },
     characteristics: GASCON,
     resources: {},
-    progression: {},
     hitPoints: 10,
     hitPointsMax: 10,
   })
@@ -406,7 +405,7 @@ test.group('Turn events | the separated pipeline', (group) => {
   const REFUSED = extracted({ movement: 'noble_quarter' })
 
   async function stateOf(sessionId: string) {
-    const character = await Character.query().where('sessionId', sessionId).firstOrFail()
+    const character = await CharacterState.findByOrFail('sessionId', sessionId)
     const world = await WorldState.query().where('sessionId', sessionId).firstOrFail()
 
     return {

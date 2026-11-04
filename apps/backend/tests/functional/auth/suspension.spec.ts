@@ -3,7 +3,7 @@ import { DateTime } from 'luxon'
 
 import User from '#models/user'
 import { seedMusketeers } from '#tests/helpers/content'
-import { createCharacter, createSession, useTransaction } from '#tests/helpers/database'
+import { characterOf, createSession, useTransaction } from '#tests/helpers/database'
 
 const LOGIN = '/api/v1/auth/login'
 const CREDENTIALS = { email: 'suspended@wanderlore.test', password: 'password' }
@@ -73,7 +73,7 @@ test.group('Suspension | a session already open', (group) => {
     const user = await createAccount()
     await suspend(user)
 
-    const response = await client.get('/api/v1/sessions').loginAs(user)
+    const response = await client.get('/api/v1/characters').loginAs(user)
 
     response.assertStatus(401)
     assert.equal(bodyOf(response).error.code, 'account_suspended')
@@ -106,16 +106,19 @@ test.group('Suspension | a session already open', (group) => {
   test('finds its games intact once reactivated', async ({ client, assert }) => {
     const user = await createAccount()
     const sessionId = await createSession(user.id, await seedMusketeers())
-    await createCharacter(sessionId)
+    const characterId = await characterOf(sessionId)
     await suspend(user)
     await reactivate(user)
 
-    const response = await client.get('/api/v1/sessions').loginAs(user)
+    const response = await client.get('/api/v1/characters').loginAs(user)
 
     response.assertStatus(200)
     assert.deepEqual(
-      bodyOf(response).data.map(({ id }: { id: string }) => id),
-      [sessionId]
+      bodyOf(response).data.map(({ id, game }: { id: string; game: { id: string } }) => [
+        id,
+        game.id,
+      ]),
+      [[characterId, sessionId]]
     )
   })
 })

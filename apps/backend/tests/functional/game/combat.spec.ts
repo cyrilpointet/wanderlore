@@ -1,7 +1,8 @@
 import { test } from '@japa/runner'
+import { playAs } from '#tests/helpers/characters'
 import db from '@adonisjs/lucid/services/db'
 
-import Character from '#models/character'
+import CharacterState from '#models/character_state'
 import NpcInstance from '#models/npc_instance'
 import WorldState from '#models/world_state'
 import { DiceService } from '#services/dice'
@@ -67,13 +68,11 @@ async function arrangeDuel(
   const userId = await createUser()
   const sessionId = await createSession(userId, content)
   const placeId = await createLocationInstance(sessionId, 'paris', { definitionReference: 'paris' })
-  const character = await Character.create({
-    sessionId,
+  const { character } = await playAs(sessionId, {
     name: "d'Artagnan",
     skills: { swordsmanship: 60 },
     characteristics: GASCON,
     resources: {},
-    progression: {},
     hitPoints: 26,
     hitPointsMax: 26,
   })
@@ -150,7 +149,7 @@ test.group('Combat | a round', (group) => {
     const guard = await guardOf(sessionId)
     assert.equal(guard.hitPoints, 13 - 6)
     /** The round is the backend's: the wound extraction read counts for nothing. */
-    const character = await Character.findOrFail(characterId)
+    const character = await CharacterState.findByOrFail('characterId', characterId)
     assert.equal(character.hitPoints, 26)
 
     const sent = rollsSent(events)
@@ -194,7 +193,7 @@ test.group('Combat | a round', (group) => {
 
     await play({ sessionId, userId, playerInput: 'I lunge at the guard.' })
 
-    const character = await Character.findOrFail(characterId)
+    const character = await CharacterState.findByOrFail('characterId', characterId)
     assert.equal(character.hitPoints, 26 - 4)
     const guard = await guardOf(sessionId)
     assert.equal(guard.hitPoints, 13)
@@ -282,7 +281,7 @@ test.group('Combat | a round', (group) => {
     assert,
   }) => {
     const { userId, sessionId, characterId } = await arrangeDuel()
-    await Character.query().where('id', characterId).update({ hitPoints: 3 })
+    await CharacterState.query().where('characterId', characterId).update({ hitPoints: 3 })
     const attacked = {
       ...SETTLED,
       combat: {
@@ -297,7 +296,7 @@ test.group('Combat | a round', (group) => {
 
     const turn = await play({ sessionId, userId, playerInput: 'I stand there.' })
 
-    const character = await Character.findOrFail(characterId)
+    const character = await CharacterState.findByOrFail('characterId', characterId)
     assert.equal(character.hitPoints, 1)
     assert.isTrue(character.firstAidAvailable)
     assert.equal(turn.gameTimeAfter! - turn.gameTimeBefore!, 12 + 3600)
@@ -330,7 +329,7 @@ test.group('Combat | a round', (group) => {
     assert.equal(guard.hitPoints, 13 - 4)
     /** One roll only: the character's shot. Nothing came back at them. */
     assert.lengthOf(rollsSent(events), 1)
-    const character = await Character.findOrFail(characterId)
+    const character = await CharacterState.findByOrFail('characterId', characterId)
     assert.equal(character.hitPoints, 26)
 
     const narration = JSON.parse(provider.requests[1].userMessage.split('\n\n')[1])
@@ -390,8 +389,8 @@ test.group('Combat | out of a fight', (group) => {
 
   test('a bleeding stops once the fight is over, and a week heals', async ({ assert }) => {
     const { userId, sessionId, characterId } = await arrangeDuel()
-    await Character.query()
-      .where('id', characterId)
+    await CharacterState.query()
+      .where('characterId', characterId)
       .update({ hitPoints: 20, bleeding: true, healingSince: 1000 })
     const resting = { ...SETTLED, duration: { label: 'days', count: 7, period: null } }
     /** 2 on the week's 1D3. */
@@ -399,7 +398,7 @@ test.group('Combat | out of a fight', (group) => {
 
     await play({ sessionId, userId, playerInput: 'I rest for a week.' })
 
-    const character = await Character.findOrFail(characterId)
+    const character = await CharacterState.findByOrFail('characterId', characterId)
     assert.isFalse(character.bleeding)
     assert.equal(character.hitPoints, 22)
   })

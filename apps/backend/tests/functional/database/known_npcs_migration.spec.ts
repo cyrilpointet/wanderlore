@@ -1,26 +1,12 @@
 import { test } from '@japa/runner'
-import app from '@adonisjs/core/services/app'
 import db from '@adonisjs/lucid/services/db'
-import { MigrationRunner } from '@adonisjs/lucid/migration'
 import testUtils from '@adonisjs/core/services/test_utils'
 
-import { createSession, createUser } from '#tests/helpers/database'
+import { BEFORE_DURABLE_CHARACTERS, migrate } from '#tests/helpers/migrations'
+
+import { createLegacySession, createUser } from '#tests/helpers/database'
 
 const MIGRATION = 'database/migrations/1789917260000_add_known_npcs_to_world_states'
-
-/**
- * Driven through the runner itself rather than through `node ace`: the
- * commands regenerate `database/schema.ts`, the runner does not.
- */
-async function migrate(options: { direction: 'up' } | { direction: 'down'; step: number }) {
-  const runner = new MigrationRunner(db, app, options)
-
-  await runner.run()
-
-  if (runner.error) {
-    throw runner.error
-  }
-}
 
 /** Back to just before the migration under test, whatever came after it. */
 async function rollBackPastIt() {
@@ -49,8 +35,8 @@ test.group('Migrations | known people', (group) => {
 
     const userId = await createUser()
     users.push(userId)
-    const sessionId = await createSession(userId)
-    const quiet = await createSession(userId)
+    const sessionId = await createLegacySession(userId)
+    const quiet = await createLegacySession(userId)
     const now = new Date()
     for (const session of [sessionId, quiet]) {
       await db
@@ -74,7 +60,7 @@ test.group('Migrations | known people', (group) => {
         person('cardinal_guard_1', 'cardinal_guard', 3),
       ])
 
-    await migrate({ direction: 'up' })
+    await migrate({ direction: 'up', until: BEFORE_DURABLE_CHARACTERS })
 
     const known = await db.from('world_states').where('session_id', sessionId).firstOrFail()
     const none = await db.from('world_states').where('session_id', quiet).firstOrFail()

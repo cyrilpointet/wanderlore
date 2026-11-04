@@ -4,6 +4,7 @@ import Scenario from '#models/scenario'
 import TurnLog from '#models/turn_log'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
+import CharacterState from '#models/character_state'
 import LocationInstance from '#models/location_instance'
 import NpcInstance from '#models/npc_instance'
 import InventoryItem from '#models/inventory_item'
@@ -23,10 +24,18 @@ export default class Session extends SessionSchema {
 
   /**
    * The games still in the player's list. A deleted one stays in the base,
-   * but reads everywhere as a game that does not exist.
+   * but reads everywhere as a game that does not exist — and so does a game
+   * whose character the player deleted.
    */
   static listed = scope((query) => {
-    query.whereNull('deletedAt')
+    query
+      .whereNull('sessions.deleted_at')
+      .whereNotExists((characters) =>
+        characters
+          .from('characters')
+          .whereColumn('characters.id', 'sessions.character_id')
+          .whereNotNull('characters.deleted_at')
+      )
   })
 
   @belongsTo(() => User)
@@ -38,14 +47,13 @@ export default class Session extends SessionSchema {
   @belongsTo(() => Scenario)
   declare scenario: BelongsTo<typeof Scenario>
 
-  /**
-   * `hasMany` although a session is played by a single character today: nothing
-   * in the schema enforces that. `worldState` below is a `hasOne` because
-   * `world_states.session_id` is unique — the relation mirrors the constraint,
-   * not the intention.
-   */
-  @hasMany(() => Character)
-  declare characters: HasMany<typeof Character>
+  /** The character the game is played by: their sheet outlives it. */
+  @belongsTo(() => Character)
+  declare character: BelongsTo<typeof Character>
+
+  /** What the character lives through in this game: one row, `session_id` being unique. */
+  @hasOne(() => CharacterState)
+  declare characterState: HasOne<typeof CharacterState>
 
   @hasOne(() => WorldState)
   declare worldState: HasOne<typeof WorldState>

@@ -1,6 +1,6 @@
 import { test } from '@japa/runner'
+import { playAs } from '#tests/helpers/characters'
 
-import Character from '#models/character'
 import EventState from '#models/event_state'
 import InventoryItem from '#models/inventory_item'
 import NpcDefinition from '#models/npc_definition'
@@ -118,13 +118,11 @@ async function arrangeHouse(
 
   const userId = await createUser()
   const sessionId = await createSession(userId, content)
-  const character = await Character.create({
-    sessionId,
+  const { character } = await playAs(sessionId, {
     name: "d'Artagnan",
     skills: {},
     characteristics: GASCON,
     resources: {},
-    progression: {},
     hitPoints: 26,
     hitPointsMax: 26,
   })

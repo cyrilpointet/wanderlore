@@ -6,10 +6,12 @@ import Session from '#models/session'
 import Character from '#models/character'
 import WorldState from '#models/world_state'
 import {
-  createCharacter,
+  createCharacterState,
+  createProfession,
   createSession,
   createTurn,
   createUser,
+  createWorld,
   createWorldState,
   useTransaction,
 } from '#tests/helpers/database'
@@ -23,10 +25,12 @@ import { GASCON } from '#tests/helpers/worlds'
 test.group('Lucid models', (group) => {
   useTransaction(group)
 
-  test('a session reaches its owner, characters, world state and turns', async ({ assert }) => {
+  test('a session reaches its owner, character, their state, world state and turns', async ({
+    assert,
+  }) => {
     const userId = await createUser()
     const sessionId = await createSession(userId)
-    await createCharacter(sessionId)
+    await createCharacterState(sessionId)
     await createWorldState(sessionId)
     await createTurn(sessionId, 1)
 
@@ -39,13 +43,16 @@ test.group('Lucid models', (group) => {
     const session = await Session.query()
       .where('id', sessionId)
       .preload('user')
-      .preload('characters')
+      .preload('character', (character) => character.preload('profession'))
+      .preload('characterState')
       .preload('worldState')
       .preload('turns')
       .firstOrFail()
 
     assert.equal(session.user.id, userId)
-    assert.lengthOf(session.characters, 1)
+    assert.equal(session.character.id, session.characterId)
+    assert.equal(session.character.profession.id, session.character.professionId)
+    assert.equal(session.characterState.sessionId, sessionId)
     assert.equal(session.worldState.sessionId, sessionId)
     assert.lengthOf(session.turns, 1)
   })
@@ -70,16 +77,17 @@ test.group('Lucid models', (group) => {
   })
 
   test('a jsonb object survives a write and a fresh read', async ({ assert }) => {
-    const sessionId = await createSession(await createUser())
+    const userId = await createUser()
+    const worldId = await createWorld()
 
     const created = await Character.create({
-      sessionId,
+      userId,
+      worldId,
+      professionId: await createProfession(worldId),
       name: "d'Artagnan",
-      hitPoints: 10,
-      hitPointsMax: 10,
+      gender: 'male',
       characteristics: GASCON,
       skills: { swordsmanship: 2 },
-      resources: {},
       progression: {},
     })
 

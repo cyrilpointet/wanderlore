@@ -1,6 +1,6 @@
 import { test } from '@japa/runner'
+import { playAs } from '#tests/helpers/characters'
 
-import Character from '#models/character'
 import TurnLog from '#models/turn_log'
 import NpcInstance from '#models/npc_instance'
 import LocationInstance from '#models/location_instance'
@@ -68,13 +68,11 @@ async function arrangeHall(
   const userId = await createUser()
   const sessionId = await createSession(userId, content)
 
-  const character = await Character.create({
-    sessionId,
+  const { character } = await playAs(sessionId, {
     name: "d'Artagnan",
     skills: { persuasion: 60 },
     characteristics: GASCON,
     resources: {},
-    progression: {},
     hitPoints: 10,
     hitPointsMax: 10,
   })

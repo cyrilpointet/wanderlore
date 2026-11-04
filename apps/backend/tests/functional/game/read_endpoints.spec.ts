@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { playAs } from '#tests/helpers/characters'
 import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
 
@@ -6,11 +7,12 @@ import User from '#models/user'
 import Session from '#models/session'
 import TurnLog from '#models/turn_log'
 import Character from '#models/character'
+import Profession from '#models/profession'
 import WorldState from '#models/world_state'
 import { THREE_MUSKETEERS, GASCON } from '#tests/helpers/worlds'
 import { improviseLocation, visitUniqueLocation } from '#services/game/locations'
 import { TURNS_PAGE_SIZE } from '#controllers/turns_controller'
-import { createUser, useTransaction } from '#tests/helpers/database'
+import { createCharacter, createUser, useTransaction } from '#tests/helpers/database'
 import { seedMusketeers } from '#tests/helpers/content'
 import { createItem, destroyItem, equipItem } from '#services/game/inventory'
 import { enterScene } from '#services/game/npcs'
@@ -24,6 +26,13 @@ import { enterScene } from '#services/game/npcs'
  * The typed test client cannot tell these routes apart from a path built by
  * interpolation, so the body is read untyped and asserted field by field.
  */
+
+/** The status a request answers with. */
+async function statusOf(request: PromiseLike<{ status(): number }>): Promise<number> {
+  const response = await request
+
+  return response.status()
+}
 function dataOf(response: { body(): unknown }): any {
   return (response.body() as { data: unknown }).data
 }
@@ -32,22 +41,31 @@ function metadataOf(response: { body(): unknown }): unknown {
   return (response.body() as { metadata: unknown }).metadata
 }
 
-async function arrangeGame(userId: string, lastActivityAt = DateTime.now()) {
+async function arrangeGame(
+  userId: string,
+  status: 'in_progress' | 'failed' = 'in_progress',
+  lastActivityAt = DateTime.now()
+) {
+  const content = await seedMusketeers()
+  const musketeer = await Profession.query()
+    .where('worldId', content.worldId)
+    .where('reference', 'musketeer')
+    .firstOrFail()
   const session = await Session.create({
     userId,
-    ...(await seedMusketeers()),
-    status: 'in_progress',
+    ...content,
+    characterId: await createCharacter(userId, content.worldId, { professionId: musketeer.id }),
+    status,
     currentChapter: 'the_guards_house',
     lastActivityAt,
   })
 
-  await Character.create({
-    sessionId: session.id,
+  await playAs(session.id, {
     name: "d'Artagnan",
+    gender: 'male',
     characteristics: GASCON,
     skills: { persuasion: 45, swordsmanship: 60 },
     resources: { purse: 15 },
-    progression: {},
     hitPoints: 8,
     hitPointsMax: 10,
   })
@@ -130,46 +148,6 @@ function failedTurn(sessionId: string) {
   })
 }
 
-test.group('GET /sessions', (group) => {
-  useTransaction(group)
-
-  test("lists the player's games only, most recently played first", async ({ client, assert }) => {
-    const player = await User.findOrFail(await createUser())
-    const older = await arrangeGame(player.id, DateTime.now().minus({ days: 2 }))
-    const newer = await arrangeGame(player.id)
-    await arrangeGame(await createUser())
-
-    const response = await client.get('/api/v1/sessions').loginAs(player)
-
-    response.assertStatus(200)
-    const games = dataOf(response)
-
-    assert.deepEqual(
-      games.map((game: { id: string }) => game.id),
-      [newer.id, older.id]
-    )
-  })
-
-  test('gives each card its labels and hit points', async ({ client, assert }) => {
-    const player = await User.findOrFail(await createUser())
-    await arrangeGame(player.id)
-
-    const response = await client.get('/api/v1/sessions').loginAs(player)
-    const [game] = dataOf(response)
-
-    assert.deepEqual(game.world, { reference: 'three_musketeers', label: 'The Three Musketeers' })
-    assert.deepEqual(game.chapter, { reference: 'the_guards_house', label: "The Guards' House" })
-    assert.equal(game.status, 'in_progress')
-    assert.deepEqual(game.character, { name: "d'Artagnan", hitPoints: 8, hitPointsMax: 10 })
-  })
-
-  test('refuses an anonymous request', async ({ client }) => {
-    const response = await client.get('/api/v1/sessions')
-
-    response.assertStatus(401)
-  })
-})
-
 test.group('GET /sessions/:id', (group) => {
   useTransaction(group)
 
@@ -197,6 +175,10 @@ test.group('GET /sessions/:id', (group) => {
       { reference: 'persuasion', label: 'Persuasion', value: 45, category: 'communication' },
     ])
     assert.deepEqual(character.resources, [{ reference: 'purse', label: 'Purse', value: 15 }])
+    assert.equal(character.gender, 'male')
+    assert.deepEqual(character.profession, { reference: 'musketeer', label: 'Musketeer' })
+    assert.equal(dataOf(response).characterId, session.characterId)
+    assert.deepEqual(dataOf(response).scenario.title, 'The Stolen Seal')
   })
 
   test("shows the character's inventory, labelled, without what items are worth", async ({
@@ -205,7 +187,7 @@ test.group('GET /sessions/:id', (group) => {
   }) => {
     const player = await User.findOrFail(await createUser())
     const session = await arrangeGame(player.id)
-    const character = await Character.findByOrFail('sessionId', session.id)
+    const character = await Character.findOrFail(session.characterId)
     const holder = { type: 'character' as const, id: character.id }
     const make = (definition: string, quantity = 1, descriptor: string | null = null) =>
       createItem(THREE_MUSKETEERS, session.id, { definition, descriptor, quantity }, holder)
@@ -684,8 +666,8 @@ test.group('DELETE /sessions/:id', (group) => {
     assert,
   }) => {
     const player = await User.findOrFail(await createUser())
-    const deleted = await arrangeGame(player.id)
-    const kept = await arrangeGame(player.id)
+    const deleted = await arrangeGame(player.id, 'failed')
+    const kept = await arrangeGame(player.id, 'failed')
     await completedTurn(deleted.id, 1)
 
     const response = await client
@@ -694,11 +676,8 @@ test.group('DELETE /sessions/:id', (group) => {
       .withCsrfToken()
 
     response.assertStatus(204)
-    const list = await client.get('/api/v1/sessions').loginAs(player)
-    assert.deepEqual(
-      dataOf(list).map((game: { id: string }) => game.id),
-      [kept.id]
-    )
+    assert.equal(await statusOf(client.get(`/api/v1/sessions/${deleted.id}`).loginAs(player)), 404)
+    assert.equal(await statusOf(client.get(`/api/v1/sessions/${kept.id}`).loginAs(player)), 200)
 
     /** Soft: the game and its turns stay, with what they cost. */
     await deleted.refresh()
@@ -708,7 +687,7 @@ test.group('DELETE /sessions/:id', (group) => {
 
   test('makes the game read as one that does not exist', async ({ client }) => {
     const player = await User.findOrFail(await createUser())
-    const session = await arrangeGame(player.id)
+    const session = await arrangeGame(player.id, 'failed')
     const turn = await completedTurn(session.id, 1)
 
     await client.delete(`/api/v1/sessions/${session.id}`).loginAs(player).withCsrfToken()
@@ -733,7 +712,7 @@ test.group('DELETE /sessions/:id', (group) => {
 
   test("answers 404 for someone else's game, and leaves it be", async ({ client, assert }) => {
     const player = await User.findOrFail(await createUser())
-    const session = await arrangeGame(await createUser())
+    const session = await arrangeGame(await createUser(), 'failed')
 
     const response = await client
       .delete(`/api/v1/sessions/${session.id}`)

@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
+import { playAs } from '#tests/helpers/characters'
 import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
 
 import TurnLog from '#models/turn_log'
-import Character from '#models/character'
 import WorldState from '#models/world_state'
 import { DiceService } from '#services/dice'
 import { LlmGateway } from '#services/llm/gateway'
@@ -54,13 +54,11 @@ async function arrangeScene() {
   const userId = await createUser()
   const sessionId = await createSession(userId, content)
 
-  await Character.create({
-    sessionId,
+  await playAs(sessionId, {
     name: "d'Artagnan",
     skills: { persuasion: 60 },
     characteristics: GASCON,
     resources: {},
-    progression: {},
     hitPoints: 10,
     hitPointsMax: 10,
   })

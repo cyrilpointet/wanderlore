@@ -2,7 +2,7 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import NpcInstance from '#models/npc_instance'
 import InventoryItem from '#models/inventory_item'
-import type Character from '#models/character'
+import type CharacterState from '#models/character_state'
 import type WorldState from '#models/world_state'
 import type LocationInstance from '#models/location_instance'
 
@@ -33,7 +33,8 @@ import type {
 export type DeltaTarget = {
   world: WorldDefinition
   sessionId: string
-  character: Character
+  /** What the character lives through in this game; `characterId` is the holder of their items. */
+  characterState: CharacterState
   /** With its `currentLocation` preloaded. */
   worldState: WorldState
   /** The named place the turn began in; null for an improvised one. */
@@ -70,7 +71,7 @@ export async function applyDelta(
   effects: TurnEffects,
   trx: TransactionClientContract
 ): Promise<AppliedEffects> {
-  const hitPointsDelta = await applyHitPoints(target.character, effects.hit_points_delta, trx)
+  const hitPointsDelta = await applyHitPoints(target.characterState, effects.hit_points_delta, trx)
   const startedIn = target.worldState.currentLocation as LocationInstance | null
   const passages = await applyPassages(target, effects, trx)
   const movement = await move(target, effects.movement, effects.npcs_following, trx)
@@ -195,7 +196,7 @@ async function applyItems(
 
     if (ref.holder === 'character') {
       resolved = {
-        holder: { type: 'character', id: target.character.id },
+        holder: { type: 'character', id: target.characterState.characterId },
         applied: { holder: 'character' },
       }
     } else if (ref.holder === 'npc') {
@@ -303,7 +304,7 @@ async function applyItems(
     })
   }
 
-  const character = { type: 'character' as const, id: target.character.id }
+  const character = { type: 'character' as const, id: target.characterState.characterId }
 
   for (const handle of effects.items_equipped) {
     const item = await find(handle, character)
@@ -332,7 +333,7 @@ function placed(place: LocationInstance): PlacedMovement {
 
 /** Clamped rather than trusted: validation bounds the size of the swing, not where it lands. */
 async function applyHitPoints(
-  character: Character,
+  character: CharacterState,
   delta: number,
   trx: TransactionClientContract
 ): Promise<number> {

@@ -482,12 +482,18 @@ export async function creatableItems(
     .map((definition) => definition.reference)
 }
 
-/** What the character holds now, oldest first — the sheet's inventory. */
+/**
+ * What the character holds now in this game, oldest first — the sheet's
+ * inventory. Never another game's: the character outlives their games, their
+ * items do not.
+ */
 export async function characterItems(
+  sessionId: string,
   characterId: string,
   client?: QueryClientContract
 ): Promise<HeldItem[]> {
   const items = await InventoryItem.query({ client })
+    .where('sessionId', sessionId)
     .where('characterId', characterId)
     .whereNot('state', 'gone')
     .orderBy('createdAt', 'asc')

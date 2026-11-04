@@ -4,7 +4,8 @@ import db from '@adonisjs/lucid/services/db'
 import { deleteAllGames } from '#services/game/reset'
 import {
   countRows,
-  createCharacter,
+  characterOf,
+  createCharacterState,
   createLocationInstance,
   createNpcInstance,
   createResolutionRule,
@@ -31,7 +32,7 @@ test.group('Resetting the games', (group) => {
 
     for (let game = 0; game < 2; game++) {
       const sessionId = await createSession(userId)
-      await createCharacter(sessionId)
+      await createCharacterState(sessionId)
       await createWorldState(sessionId, await createLocationInstance(sessionId))
       await createNpcInstance(sessionId)
       await createTurn(sessionId)
@@ -42,7 +43,7 @@ test.group('Resetting the games', (group) => {
     assert.deepEqual(removed, { games: 2, turns: 2 })
     for (const table of [
       'sessions',
-      'characters',
+      'character_states',
       'world_states',
       'turn_log',
       'location_instances',
@@ -52,16 +53,18 @@ test.group('Resetting the games', (group) => {
     }
   })
 
-  test('keeps the accounts and the game content', async ({ assert }) => {
+  test('keeps the accounts, their characters and the game content', async ({ assert }) => {
     const userId = await createUser()
     const worldId = await createWorld()
     const scenarioId = await createScenario(worldId)
-    await createSession(userId, { worldId, scenarioId })
+    const sessionId = await createSession(userId, { worldId, scenarioId })
+    const characterId = await characterOf(sessionId)
     await createResolutionRule(worldId, 'melee_combat')
 
     await deleteAllGames(db.connection())
 
     assert.equal(await countRows('users', { id: userId }), 1)
+    assert.equal(await countRows('characters', { id: characterId }), 1)
     assert.equal(await countRows('worlds', { id: worldId }), 1)
     assert.equal(await countRows('scenarios', { id: scenarioId }), 1)
     assert.equal(await countRows('resolution_rules', { world_id: worldId }), 1)

@@ -14,10 +14,10 @@ export async function countGames(client: QueryClientContract): Promise<GamesCoun
 }
 
 /**
- * Deletes every game, and with it everything a game owns: its character, its
- * world state, its turn log and its summaries, its places and its people — the foreign keys
- * cascade. Accounts and game content (worlds, scenarios, catalogues, rules)
- * are kept.
+ * Deletes every game, and with it everything a game owns: its character's
+ * state and items, its world state, its turn log and its summaries, its
+ * places and its people — the foreign keys cascade. Accounts, their
+ * characters and game content (worlds, scenarios, catalogues, rules) are kept.
  *
  * For manual testing only: the turn log is the cost record, and this wipes it.
  */

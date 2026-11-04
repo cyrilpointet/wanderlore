@@ -1,24 +1,30 @@
 import { BaseTransformer } from '@adonisjs/core/transformers'
 
 import type Character from '#models/character'
+import type CharacterState from '#models/character_state'
 import { CHARACTERISTICS } from '#services/rules/types'
 import type { ContentLabels } from '#services/game/content_labels'
-import { type HeldItem, heldItemOf } from '#services/game/inventory'
+import type { HeldItem } from '#services/game/inventory'
 
 /**
- * The character sheet. Its values are shown as they are — it is the player's
- * own sheet, as at the table — but every reference leaves with its label.
+ * The character sheet in a game: who they are — the durable sheet, with
+ * their profession preloaded — and how they fare in this game. Its values
+ * are shown as they are — it is the player's own sheet, as at the table — but
+ * every reference leaves with its label.
  */
 export default class CharacterTransformer extends BaseTransformer<Character> {
+  #state: CharacterState
   #labels: ContentLabels
-  #inventory: HeldItem[] | undefined
+  #inventory: HeldItem[]
 
-  /**
-   * The inventory is given when it is already at hand — a turn just applied —
-   * or read from the `items` relation, preloaded without the gone ones.
-   */
-  constructor(character: Character, labels: ContentLabels, inventory?: HeldItem[]) {
+  constructor(
+    character: Character,
+    state: CharacterState,
+    labels: ContentLabels,
+    inventory: HeldItem[]
+  ) {
     super(character)
+    this.#state = state
     this.#labels = labels
     this.#inventory = inventory
   }
@@ -27,45 +33,41 @@ export default class CharacterTransformer extends BaseTransformer<Character> {
     const character = this.resource
 
     return {
-      name: character.name,
-      hitPoints: character.hitPoints,
-      hitPointsMax: character.hitPointsMax,
-      /**
-       * The seven of BRP, always in the same order. A closed enum of the
-       * system: the front labels them itself.
-       */
-      characteristics: CHARACTERISTICS.map((reference) => ({
-        reference,
-        value: character.characteristics[reference],
-      })),
-      /**
-       * Only the skills the character trained. Each names its category, so the
-       * front can group them without knowing the world.
-       */
-      skills: this.#labels.valued('skill', character.skills).map((skill) => ({
-        ...skill,
-        category: this.#labels.categoryOf(skill.reference),
-      })),
-      resources: this.#labels.valued('resource', character.resources),
-      inventory: presentInventory(this.#heldItems(), this.#labels),
+      ...sheetOf(character, this.#labels),
+      hitPoints: this.#state.hitPoints,
+      hitPointsMax: this.#state.hitPointsMax,
+      resources: this.#labels.valued('resource', this.#state.resources),
+      inventory: presentInventory(this.#inventory, this.#labels),
     }
   }
+}
 
-  #heldItems(): HeldItem[] {
-    if (this.#inventory !== undefined) {
-      return this.#inventory
-    }
-
-    if (!('items' in this.resource.$preloaded)) {
-      throw new Error(`Character ${this.resource.id}: preload their items to show the sheet.`)
-    }
-
-    return this.resource.items.filter((item) => item.state !== 'gone').map(heldItemOf)
-  }
-
-  /** What a game card needs: who, and how they are faring. */
-  toSummary() {
-    return this.pick(this.resource, ['name', 'hitPoints', 'hitPointsMax'])
+/**
+ * The durable sheet: identity, characteristics and skills, the same in every
+ * game. Expects the profession preloaded.
+ */
+export function sheetOf(character: Character, labels: ContentLabels) {
+  return {
+    name: character.name,
+    /** A closed enum of the system: the front labels it itself. */
+    gender: character.gender,
+    profession: labels.of('profession', character.profession.reference),
+    /**
+     * The seven of BRP, always in the same order. A closed enum of the
+     * system: the front labels them itself.
+     */
+    characteristics: CHARACTERISTICS.map((reference) => ({
+      reference,
+      value: character.characteristics[reference],
+    })),
+    /**
+     * Only the skills the character trained. Each names its category, so the
+     * front can group them without knowing the world.
+     */
+    skills: labels.valued('skill', character.skills).map((skill) => ({
+      ...skill,
+      category: labels.categoryOf(skill.reference),
+    })),
   }
 }
 

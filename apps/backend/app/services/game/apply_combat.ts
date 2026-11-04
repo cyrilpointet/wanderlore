@@ -2,7 +2,7 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import NpcInstance from '#models/npc_instance'
 import InventoryItem from '#models/inventory_item'
-import type Character from '#models/character'
+import type CharacterState from '#models/character_state'
 import { HEALING_PERIOD, healingWeeks, type RulesEngine } from '#services/rules/engine'
 
 import { enterScene } from './npcs.js'
@@ -21,7 +21,8 @@ import type { WorldDefinition } from './world.js'
 export type CombatTarget = {
   world: WorldDefinition
   sessionId: string
-  character: Character
+  /** What the character lives through in this game: their hit points, their wounds. */
+  characterState: CharacterState
   /** Where the turn began: where a dropped weapon falls, and the dying die. */
   placeId: string | null
 }
@@ -78,11 +79,11 @@ export async function applyRound(
     .where('handle', round.opponent)
     .firstOrFail()
 
-  const { character } = target
-  character.hitPoints = Math.min(character.hitPointsMax, round.character.hitPoints)
-  character.bleeding = round.character.bleeding
-  if (round.character.damage > 0) character.firstAidAvailable = true
-  await character.useTransaction(trx).save()
+  const { characterState: state } = target
+  state.hitPoints = Math.min(state.hitPointsMax, round.character.hitPoints)
+  state.bleeding = round.character.bleeding
+  if (round.character.damage > 0) state.firstAidAvailable = true
+  await state.useTransaction(trx).save()
 
   const after = round.opponentAfter
   opponent.hitPoints = after.hitPoints
@@ -94,7 +95,7 @@ export async function applyRound(
   for (const lost of round.lostWeapons) {
     const holder: Holder =
       lost.holder === 'character'
-        ? { type: 'character', id: character.id }
+        ? { type: 'character', id: state.characterId }
         : { type: 'npc', id: opponent.id }
     const item = await heldCopy(target.sessionId, lost.item, holder, trx)
 
@@ -133,14 +134,11 @@ export async function applyFirstAid(
   }
 
   if (aid.target === null) {
-    const { character } = target
-    character.hitPoints = Math.max(
-      0,
-      Math.min(character.hitPointsMax, character.hitPoints + aid.healed)
-    )
-    character.firstAidAvailable = false
-    if (aid.saved) character.bleeding = false
-    await character.useTransaction(trx).save()
+    const { characterState: state } = target
+    state.hitPoints = Math.max(0, Math.min(state.hitPointsMax, state.hitPoints + aid.healed))
+    state.firstAidAvailable = false
+    if (aid.saved) state.bleeding = false
+    await state.useTransaction(trx).save()
 
     return
   }
@@ -171,9 +169,9 @@ export async function stopBleeding(
   target: CombatTarget,
   trx: TransactionClientContract
 ): Promise<void> {
-  if (target.character.bleeding) {
-    target.character.bleeding = false
-    await target.character.useTransaction(trx).save()
+  if (target.characterState.bleeding) {
+    target.characterState.bleeding = false
+    await target.characterState.useTransaction(trx).save()
   }
 
   await NpcInstance.query({ client: trx })
@@ -190,7 +188,7 @@ export async function stopBleeding(
  */
 export async function heal(
   rules: RulesEngine,
-  character: Character,
+  character: CharacterState,
   clock: { after: number },
   /** Hurt this turn by what extraction read — a fall, a burn — rather than by a blow. */
   harmed: boolean,

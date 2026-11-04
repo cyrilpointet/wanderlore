@@ -4,8 +4,12 @@ import {
   PG_CHECK_VIOLATION,
   PG_INVALID_TEXT_REPRESENTATION,
   PG_UNIQUE_VIOLATION,
+  characterOf,
   createCharacter,
+  createCharacterState,
   createInventoryItem,
+  createProfession,
+  createScenario,
   createLocationInstance,
   createNpcInstance,
   createResolutionRule,
@@ -18,6 +22,8 @@ import {
   expectDbError,
   useTransaction,
 } from '#tests/helpers/database'
+
+const PG_FOREIGN_KEY_VIOLATION = '23503'
 
 /**
  * The constraints that encode a modelling decision, rather than the ones
@@ -162,7 +168,7 @@ test.group('Schema constraints', (group) => {
 
   test('an item has exactly one holder while it exists', async ({ assert }) => {
     const sessionId = await createSession(await createUser())
-    const characterId = await createCharacter(sessionId)
+    const characterId = await characterOf(sessionId)
     const npcInstanceId = await createNpcInstance(sessionId)
 
     const nobody = await expectDbError(() => createInventoryItem(sessionId, {}))
@@ -191,7 +197,7 @@ test.group('Schema constraints', (group) => {
 
   test('an item that exists counts at least one', async ({ assert }) => {
     const sessionId = await createSession(await createUser())
-    const characterId = await createCharacter(sessionId)
+    const characterId = await characterOf(sessionId)
 
     const empty = await expectDbError(() =>
       createInventoryItem(sessionId, { characterId }, { quantity: 0 })
@@ -206,7 +212,7 @@ test.group('Schema constraints', (group) => {
 
   test('a handle names one item per game, whoever holds it', async ({ assert }) => {
     const sessionId = await createSession(await createUser())
-    const characterId = await createCharacter(sessionId)
+    const characterId = await characterOf(sessionId)
     const locationInstanceId = await createLocationInstance(sessionId)
     await createInventoryItem(sessionId, { characterId })
 
@@ -217,7 +223,7 @@ test.group('Schema constraints', (group) => {
 
   test('a holder keeps one stack per definition', async ({ assert }) => {
     const sessionId = await createSession(await createUser())
-    const characterId = await createCharacter(sessionId)
+    const characterId = await characterOf(sessionId)
     const npcInstanceId = await createNpcInstance(sessionId)
     const stack = { handle: null, definitionReference: 'lead_shot', quantity: 5 }
     await createInventoryItem(sessionId, { characterId }, stack)
@@ -231,7 +237,7 @@ test.group('Schema constraints', (group) => {
 
   test('an item state is one of three, nothing else', async ({ assert }) => {
     const sessionId = await createSession(await createUser())
-    const characterId = await createCharacter(sessionId)
+    const characterId = await characterOf(sessionId)
 
     const error = await expectDbError(() =>
       createInventoryItem(sessionId, { characterId }, { state: 'broken' })
@@ -292,5 +298,87 @@ test.group('Schema constraints', (group) => {
      */
     const sessionId = await createSession(userId)
     assert.isString(sessionId)
+  })
+
+  test('a character follows a profession of their own world', async ({ assert }) => {
+    const userId = await createUser()
+    const worldId = await createWorld()
+    const elsewhere = await createProfession(await createWorld())
+
+    const error = await expectDbError(() =>
+      createCharacter(userId, worldId, { professionId: elsewhere })
+    )
+
+    assert.equal(error.code, PG_FOREIGN_KEY_VIOLATION)
+  })
+
+  test('a game is played by a character of its own world', async ({ assert }) => {
+    const userId = await createUser()
+    const worldId = await createWorld()
+    const stranger = await createCharacter(userId, await createWorld())
+
+    const error = await expectDbError(() =>
+      createSession(userId, { worldId, characterId: stranger })
+    )
+
+    assert.equal(error.code, PG_FOREIGN_KEY_VIOLATION)
+  })
+
+  test('a gender is one of three, nothing else', async ({ assert }) => {
+    const userId = await createUser()
+    const worldId = await createWorld()
+
+    const error = await expectDbError(() => createCharacter(userId, worldId, { gender: 'other' }))
+
+    assert.equal(error.code, PG_INVALID_TEXT_REPRESENTATION)
+  })
+
+  test('a game holds one state of its character', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    await createCharacterState(sessionId)
+
+    const error = await expectDbError(() => createCharacterState(sessionId))
+
+    assert.equal(error.code, PG_UNIQUE_VIOLATION)
+  })
+
+  test('a character plays one game at a time, and any number of ended ones', async ({ assert }) => {
+    const userId = await createUser()
+    const worldId = await createWorld()
+    const scenarioId = await createScenario(worldId)
+    const characterId = await createCharacter(userId, worldId)
+    const game = { worldId, scenarioId, characterId }
+    await createSession(userId, game)
+
+    const second = await expectDbError(() => createSession(userId, game))
+    const paused = await expectDbError(() => createSession(userId, { ...game, status: 'paused' }))
+
+    assert.equal(second.code, PG_UNIQUE_VIOLATION)
+    assert.equal(paused.code, PG_UNIQUE_VIOLATION)
+    assert.isString(await createSession(userId, { ...game, status: 'failed' }))
+    assert.isString(await createSession(userId, { ...game, status: 'failed' }))
+    assert.isString(await createSession(userId, { ...game, status: 'completed' }))
+  })
+
+  test('the character keeps one stack per definition in each of their games', async ({
+    assert,
+  }) => {
+    const userId = await createUser()
+    const worldId = await createWorld()
+    const scenarioId = await createScenario(worldId)
+    const characterId = await createCharacter(userId, worldId)
+    const ended = await createSession(userId, {
+      worldId,
+      scenarioId,
+      characterId,
+      status: 'failed',
+    })
+    const playing = await createSession(userId, { worldId, scenarioId, characterId })
+    const stack = { handle: null, definitionReference: 'lead_shot', quantity: 5 }
+    await createInventoryItem(ended, { characterId }, stack)
+
+    assert.isString(await createInventoryItem(playing, { characterId }, stack))
+    const error = await expectDbError(() => createInventoryItem(playing, { characterId }, stack))
+    assert.equal(error.code, PG_UNIQUE_VIOLATION)
   })
 })

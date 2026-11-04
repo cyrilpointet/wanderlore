@@ -1,7 +1,8 @@
 import { test } from '@japa/runner'
+import { playAs } from '#tests/helpers/characters'
 import db from '@adonisjs/lucid/services/db'
 
-import Character from '#models/character'
+import type CharacterState from '#models/character_state'
 import NpcInstance from '#models/npc_instance'
 import WorldState from '#models/world_state'
 import LocationInstance from '#models/location_instance'
@@ -51,13 +52,11 @@ const NOWHERE_IN_PARTICULAR = {
 /** A game standing in Paris. */
 async function arrangeScene() {
   const sessionId = await createSession(await createUser())
-  const character = await Character.create({
-    sessionId,
+  const { character, state } = await playAs(sessionId, {
     name: "d'Artagnan",
     characteristics: GASCON,
     skills: {},
     resources: {},
-    progression: {},
     hitPoints: 10,
     hitPointsMax: 10,
   })
@@ -69,11 +68,11 @@ async function arrangeScene() {
     narrativeFlags: {},
   })
 
-  return { sessionId, character, paris }
+  return { sessionId, character, state, paris }
 }
 
 /** Applies a delta the way a turn does: inside a transaction, on the state as loaded. */
-async function apply(scene: { sessionId: string; character: Character }, effects: TurnEffects) {
+async function apply(scene: { sessionId: string; state: CharacterState }, effects: TurnEffects) {
   const worldState = await WorldState.query()
     .where('sessionId', scene.sessionId)
     .preload('currentLocation')
@@ -84,7 +83,7 @@ async function apply(scene: { sessionId: string; character: Character }, effects
       {
         world: THREE_MUSKETEERS,
         sessionId: scene.sessionId,
-        character: scene.character,
+        characterState: scene.state,
         worldState,
         ...NOWHERE_IN_PARTICULAR,
       },
@@ -325,14 +324,14 @@ test.group('Applying a delta | the character', (group) => {
 
   test('hit points stop at zero, and the log says what was lost', async ({ assert }) => {
     const scene = await arrangeScene()
-    scene.character.hitPoints = 2
-    await scene.character.save()
+    scene.state.hitPoints = 2
+    await scene.state.save()
 
     const applied = await apply(scene, delta({ hit_points_delta: -5 }))
 
     assert.equal(applied.hit_points_delta, -2)
-    await scene.character.refresh()
-    assert.equal(scene.character.hitPoints, 0)
+    await scene.state.refresh()
+    assert.equal(scene.state.hitPoints, 0)
   })
 })
 
@@ -524,7 +523,7 @@ test.group('Applying a delta | items', (group) => {
           {
             world: THREE_MUSKETEERS,
             sessionId: scene.sessionId,
-            character: scene.character,
+            characterState: scene.state,
             worldState,
             ...NOWHERE_IN_PARTICULAR,
           },

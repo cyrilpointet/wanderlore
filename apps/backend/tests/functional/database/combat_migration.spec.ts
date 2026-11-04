@@ -1,13 +1,13 @@
 import { test } from '@japa/runner'
-import app from '@adonisjs/core/services/app'
 import db from '@adonisjs/lucid/services/db'
-import { MigrationRunner } from '@adonisjs/lucid/migration'
 import testUtils from '@adonisjs/core/services/test_utils'
 
+import { BEFORE_DURABLE_CHARACTERS, migrate, rollBackPast } from '#tests/helpers/migrations'
+
 import {
-  createCharacter,
+  createLegacyCharacter,
   createNpcInstance,
-  createSession,
+  createLegacySession,
   createUser,
   createWorld,
   createWorldState,
@@ -16,16 +16,6 @@ import {
 const MIGRATION = 'database/migrations/1789917320000_add_combat_to_content_and_state'
 
 /** Through the runner, as the other migration specs: `node ace` would rewrite the schema file. */
-async function migrate(options: { direction: 'up' } | { direction: 'down'; step: number }) {
-  const runner = new MigrationRunner(db, app, options)
-
-  await runner.run()
-
-  if (runner.error) {
-    throw runner.error
-  }
-}
-
 async function rollBackPastIt() {
   while (await db.from('adonis_schema').where('name', MIGRATION).first()) {
     await migrate({ direction: 'down', step: 1 })
@@ -59,16 +49,16 @@ test.group('Migrations | combat', (group) => {
 
     const userId = await createUser()
     users.push(userId)
-    const sessionId = await createSession(userId)
+    const sessionId = await createLegacySession(userId)
     await createWorldState(sessionId)
     await db.from('world_states').where('session_id', sessionId).update({ game_time: 5000 })
-    const characterId = await createCharacter(sessionId)
+    const characterId = await createLegacyCharacter(sessionId)
     await db
       .from('characters')
       .where('id', characterId)
       .update({ characteristics: JSON.stringify(SHEET), hit_points: 8, hit_points_max: 13 })
 
-    await migrate({ direction: 'up' })
+    await migrate({ direction: 'up', until: BEFORE_DURABLE_CHARACTERS })
 
     const after = await db.from('characters').where('id', characterId).firstOrFail()
     assert.equal(after.hit_points_max, 26)
@@ -123,7 +113,7 @@ test.group('Migrations | combat', (group) => {
       combat: JSON.stringify({ skills: {}, hitPointsMax: 12, weapon: 'rapier' }),
     })
 
-    await migrate({ direction: 'up' })
+    await migrate({ direction: 'up', until: BEFORE_DURABLE_CHARACTERS })
 
     const items = await db.from('item_definitions').where('world_id', worldId).orderBy('reference')
     assert.deepEqual(
@@ -152,10 +142,12 @@ test.group('Migrations | combat', (group) => {
   test('a rollback brings back half hit points, and a dying person is present again', async ({
     assert,
   }) => {
+    /** A game as it stood before characters outlived their games (Phase 12). */
+    await rollBackPast('database/migrations/1789917350000_make_characters_durable')
     const userId = await createUser()
     users.push(userId)
-    const sessionId = await createSession(userId)
-    const characterId = await createCharacter(sessionId)
+    const sessionId = await createLegacySession(userId)
+    const characterId = await createLegacyCharacter(sessionId)
     await db
       .from('characters')
       .where('id', characterId)
