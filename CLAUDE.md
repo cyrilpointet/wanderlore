@@ -428,8 +428,8 @@ données, `event_states`, `place_notes`) :
   tour sur la démonstration, dans la variation d'un scénario à l'autre ;
 - démonstration : *The Golden Lion* dans `test-worlds/`.
 
-**Phase 12, premier lot (création du personnage et parties d'un personnage) livré** — epic
-Jira `KAN-151`, en recette. Ses choix restent en vigueur (détail : roadmap Phase 12, « Décisions
+**Phase 12, premier lot (création du personnage et parties d'un personnage) terminé** — epic
+Jira `KAN-151`. Ses choix restent en vigueur (détail : roadmap Phase 12, « Décisions
 de cadrage — création du personnage… » et ce qui a été tranché à l'implémentation ; règles §3bis ;
 base de données, `characters`, `character_states`, `professions`, `character_rolls` ;
 architecture 8bis ; cahier du front 5.6) :
