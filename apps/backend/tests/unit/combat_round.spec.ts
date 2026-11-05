@@ -60,6 +60,7 @@ function round(overrides: Partial<RoundInput> = {}): RoundInput {
       dying: false,
       items: [],
     },
+    others: [],
     engagement: {
       opponent: 'cardinal_guard_1',
       character_attacks: true,
@@ -229,6 +230,128 @@ test.group('Combat | the round', () => {
     assert.deepEqual(
       played.lostWeapons.map(({ holder, fate }) => [holder, fate]),
       [['character', 'dropped']]
+    )
+  })
+})
+
+test.group('Combat | several opponents', () => {
+  /** A passer-by turned hostile, fists only, untrained: 15 to hit. */
+  const bystander = {
+    handle: 'commoner_1',
+    definition: commoner,
+    hitPoints: 10,
+    bleeding: false,
+    dying: false,
+    items: [],
+  }
+  const secondGuard = { ...round().opponent, handle: 'cardinal_guard_2' }
+
+  test('another hostile may strike back in the opponent’s place', ({ assert }) => {
+    /**
+     * The guard's parry 90, the rapier 4 and the modifier 2; the draw 2 of 2
+     * falls on the passer-by, whose fists land on 10 against the character's
+     * parry 80, for 3.
+     */
+    const played = playRound(buildEngine([90, 4, 2, 2, 10, 80, 3]), round({ others: [bystander] }))
+
+    assert.equal(played.opponentAfter.damage, 6)
+    assert.equal(played.riposte?.by, 'commoner_1')
+    assert.isNull(played.riposte?.weapon)
+    assert.equal(played.character.damage, 3)
+    assert.deepEqual(played.riposterAfter, { hitPoints: 10, damage: 0, state: 'fighting' })
+    assert.equal(narratedRound(played).opponent_blow_by, 'commoner_1')
+  })
+
+  test('the draw may fall on the opponent', ({ assert }) => {
+    /** The draw 1 of 2: the guard himself, who misses on 95. */
+    const played = playRound(buildEngine([90, 4, 2, 1, 95]), round({ others: [bystander] }))
+
+    assert.equal(played.riposte?.by, 'cardinal_guard_1')
+    assert.isNull(played.riposterAfter)
+    assert.equal(narratedRound(played).opponent_blow_by, 'cardinal_guard_1')
+  })
+
+  test('a blow the opponent never sees coming: no one strikes back', ({ assert }) => {
+    /** No defence, no draw: the rapier 4 and the modifier 2, and nothing more is rolled. */
+    const played = playRound(
+      buildEngine([4, 2]),
+      round({
+        others: [bystander],
+        engagement: { ...round().engagement, opponent_aware: false },
+      })
+    )
+
+    assert.isNull(played.riposte)
+    assert.isNull(narratedRound(played).opponent_blow_by)
+  })
+
+  test('the opponent down or out of reach, another still strikes — with no draw', ({ assert }) => {
+    /** 12 − 10 leaves the guard down; the passer-by alone can strike, and misses on 95. */
+    const down = playRound(
+      buildEngine([90, 6, 4, 95]),
+      round({ opponent: { ...round().opponent, hitPoints: 12 }, others: [bystander] })
+    )
+
+    assert.equal(down.opponentAfter.state, 'down')
+    assert.equal(down.riposte?.by, 'commoner_1')
+
+    const outOfReach = playRound(
+      buildEngine([90, 4, 2, 95]),
+      round({
+        others: [bystander],
+        engagement: { ...round().engagement, riposte_possible: false },
+      })
+    )
+
+    assert.isTrue(outOfReach.opponentOutOfReach)
+    assert.equal(outOfReach.riposte?.by, 'commoner_1')
+  })
+
+  test('someone already down or dying never strikes', ({ assert }) => {
+    const played = playRound(
+      buildEngine([90, 4, 2]),
+      round({
+        others: [
+          { ...bystander, hitPoints: 2 },
+          { ...secondGuard, dying: true },
+        ],
+        engagement: { ...round().engagement, riposte_possible: false },
+      })
+    )
+
+    assert.isNull(played.riposte)
+  })
+
+  test('a riposter’s fumble is their own: their wound, their weapon', ({ assert }) => {
+    /**
+     * The second guard alone can strike, and fumbles on 100: table 80, he
+     * hurts himself with his rapier, 3 + 1 less his coat.
+     */
+    const hurt = playRound(
+      buildEngine([90, 4, 2, 100, 80, 3]),
+      round({
+        others: [secondGuard],
+        engagement: { ...round().engagement, riposte_possible: false },
+      })
+    )
+
+    assert.equal(hurt.riposte?.by, 'cardinal_guard_2')
+    assert.equal(hurt.riposte?.fumble, 'self_injury')
+    assert.deepEqual(hurt.riposterAfter, { hitPoints: 10, damage: 3, state: 'fighting' })
+    assert.equal(hurt.opponentAfter.damage, 6)
+
+    /** Table 60: the dagger he held falls. */
+    const disarmed = playRound(
+      buildEngine([90, 4, 2, 100, 60]),
+      round({
+        others: [{ ...secondGuard, items: [held('dagger')] }],
+        engagement: { ...round().engagement, riposte_possible: false },
+      })
+    )
+
+    assert.deepEqual(
+      disarmed.lostWeapons.map(({ holder, item, fate }) => [holder, item.definition, fate]),
+      [['riposter', 'dagger', 'dropped']]
     )
   })
 })

@@ -220,10 +220,11 @@ test.group('Combat | a round', (group) => {
     }
     /**
      * The attack 20; the commoner's dodge — bare hands do not parry — 90;
-     * the rapier 4 and the modifier 2, no armour; then their riposte at their
-     * untrained 15 misses on 50.
+     * the rapier 4 and the modifier 2, no armour; then the draw 1 of 2 — the
+     * commoner, then the hostile guard — and their riposte at their untrained
+     * 15 misses on 50.
      */
-    const { play, events } = buildService([struck, ...STAGED], [20, 90, 4, 2, 50])
+    const { play, events } = buildService([struck, ...STAGED], [20, 90, 4, 2, 1, 50])
 
     await play({ sessionId, userId, playerInput: 'I strike the passer-by.' })
 
@@ -238,6 +239,57 @@ test.group('Combat | a round', (group) => {
     const commoner = await guardOf(sessionId, 'commoner_1')
     assert.equal(commoner.status, 'present')
     assert.equal(commoner.hitPoints, 10 - 7)
+  })
+
+  test('another hostile present strikes back in the place of the one attacked', async ({
+    assert,
+  }) => {
+    const { userId, sessionId, characterId } = await arrangeDuel()
+    const struck = { ...RULING, combat: { ...RULING.combat, opponent: 'commoner' } }
+    /**
+     * The attack 20, the commoner's dodge 90, the rapier 4 and the modifier 2;
+     * the draw 2 of 2 falls on the guard: his riposte 20, the character's
+     * parry 80 fails, the rapier 3 + 1.
+     */
+    const { play, events, provider } = buildService(
+      [struck, ...STAGED],
+      [20, 90, 4, 2, 2, 20, 80, 3]
+    )
+
+    await play({ sessionId, userId, playerInput: 'I strike the passer-by.' })
+
+    const character = await CharacterState.findByOrFail('characterId', characterId)
+    assert.equal(character.hitPoints, 26 - 4)
+    const commoner = await guardOf(sessionId, 'commoner_1')
+    assert.equal(commoner.hitPoints, 10 - 7)
+
+    /** The character's defence is against the guard, not the one they struck. */
+    const sent = rollsSent(events)
+    assert.deepEqual(
+      sent.map((event) => event.type === 'roll_resolved' && event.combat?.opponent.reference),
+      ['commoner_1', 'cardinal_guard_1']
+    )
+
+    const narration = JSON.parse(provider.requests[1].userMessage.split('\n\n')[1])
+    assert.equal(narration.resolution_to_narrate.combat.opponent, 'commoner_1')
+    assert.equal(narration.resolution_to_narrate.combat.opponent_blow_by, 'cardinal_guard_1')
+  })
+
+  test('the fumble of another hostile who struck back hurts them', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeDuel()
+    const struck = { ...RULING, combat: { ...RULING.combat, opponent: 'commoner' } }
+    /**
+     * As before; the guard's riposte fumbles on 100, table 80: he cuts himself
+     * with his rapier, 3 + 1 less his coat.
+     */
+    const { play } = buildService([struck, ...STAGED], [20, 90, 4, 2, 2, 100, 80, 3])
+
+    await play({ sessionId, userId, playerInput: 'I strike the passer-by.' })
+
+    const guard = await guardOf(sessionId)
+    assert.equal(guard.hitPoints, 13 - 3)
+    assert.isTrue(guard.firstAidAvailable)
+    assert.equal(guard.status, 'present')
   })
 
   test('brought to 0, a person is dying, and dies at the end of the next turn', async ({
@@ -360,8 +412,11 @@ test.group('Combat | a round', (group) => {
       intent: { ...RULING.intent, target: 'rochefort' },
       combat: { ...RULING.combat, opponent: 'rochefort' },
     }
-    /** The attack 80 (failure); his riposte 20, the character's parry 50 holds. */
-    const { play, events } = buildService([duel, ...STAGED], [80, 20, 50])
+    /**
+     * The attack 80 (failure); the draw 1 of 2 — Rochefort, then the guard —
+     * falls on him: his riposte 20, the character's parry 50 holds.
+     */
+    const { play, events } = buildService([duel, ...STAGED], [80, 1, 20, 50])
 
     await play({ sessionId, userId, playerInput: 'I lunge at the gentleman.' })
 

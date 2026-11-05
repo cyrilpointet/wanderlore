@@ -372,8 +372,10 @@ sur l'anglais faute de traductions.
 roadmap Phase 10, « Décisions de cadrage » ; règles §7, §8 ; architecture §3, §6ter, §8bis) :
 - **un tour de combat = un round de 12 s**, déduit à chaque tour de l'arbitrage (`combat` :
   adversaire présent ou archétype attaqué, parade et esquive possibles, circonstances de la
-  défense), sans état en base ; **avantage au joueur** : son attaque d'abord, puis la riposte de
-  la seule cible si elle tient debout ;
+  défense), sans état en base ; **avantage au joueur** : son attaque d'abord, puis une seule
+  riposte, d'un adversaire **tiré au hasard** parmi la cible (si elle tient debout, l'a vu venir
+  et l'atteint) et les autres hostiles présents debout — aucune sur une attaque surprise
+  (révisé hors phase, novembre 2026) ;
 - **compétence d'attaque par la catégorie d'action**, jamais par l'arme (`kind` : `melee`,
   `thrown`, `projectile`) ; `melee_combat`, `ranged_combat`, `first_aid` et `dodge` sont des
   références du système, exigées par `checkScenario` ;

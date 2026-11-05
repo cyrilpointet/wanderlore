@@ -282,6 +282,20 @@ export class RulesEngine {
     return fumble
   }
 
+  /**
+   * One of several, each as likely: who strikes back among those who can. A
+   * single one is no draw — no die is rolled for them.
+   */
+  pickOne<T>(candidates: T[]): T {
+    if (candidates.length === 0) {
+      throw new RangeError('There is no one to pick among.')
+    }
+
+    return candidates.length === 1
+      ? candidates[0]
+      : candidates[this.#dice.rollDie(candidates.length) - 1]
+  }
+
   /** A fumbler's own blow: the weapon's dice, without the modifier, less their armour. */
   selfInjury(weapon: Weapon, armor: number): number {
     return Math.max(0, this.#rollModifier(weapon.damage) - armor)

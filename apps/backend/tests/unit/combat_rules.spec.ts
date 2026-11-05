@@ -242,6 +242,25 @@ test.group('Combat | fumbles', () => {
   })
 })
 
+test.group('Combat | who strikes back', () => {
+  test('one of several, on a die of as many faces', ({ assert }) => {
+    const source = FakeRandomSource.fromFaces([3])
+    const engine = new RulesEngine(new DiceService(source))
+
+    assert.equal(engine.pickOne(['a', 'b', 'c']), 'c')
+    assert.deepEqual(source.calls, [3])
+  })
+
+  test('a single one is no draw', ({ assert }) => {
+    const source = FakeRandomSource.fromFaces([])
+    const engine = new RulesEngine(new DiceService(source))
+
+    assert.equal(engine.pickOne(['a']), 'a')
+    assert.deepEqual(source.calls, [])
+    assert.throws(() => engine.pickOne([]))
+  })
+})
+
 test.group('Combat | healing', () => {
   test('first aid by its degree', ({ assert }) => {
     assert.equal(buildEngine([]).firstAid('fumble'), -1)

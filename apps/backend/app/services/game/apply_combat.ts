@@ -56,8 +56,9 @@ export async function letTheDyingDie(
 
 /**
  * The round, as played: an improvised opponent brought in under the handle
- * the round gave them, hit points and bleeding on both sides, a person
- * dying or dead, the weapons dropped or broken.
+ * the round gave them, hit points and bleeding on both sides — and of another
+ * hostile who struck back in the opponent's place — a person dying or dead,
+ * the weapons dropped or broken.
  */
 export async function applyRound(
   target: CombatTarget,
@@ -92,11 +93,27 @@ export async function applyRound(
   if (after.state === 'dying' || after.state === 'dead') opponent.status = after.state
   await opponent.useTransaction(trx).save()
 
+  /** Another hostile who struck back in the opponent's place, hurt by their own fumble. */
+  const riposter =
+    round.riposte !== null && round.riposte.by !== round.opponent
+      ? await NpcInstance.query({ client: trx })
+          .where('sessionId', target.sessionId)
+          .where('handle', round.riposte.by)
+          .firstOrFail()
+      : null
+
+  if (riposter !== null && round.riposterAfter !== null) {
+    riposter.hitPoints = round.riposterAfter.hitPoints
+    if (round.riposterAfter.damage > 0) riposter.firstAidAvailable = true
+    if (round.riposterAfter.state === 'dying') riposter.status = 'dying'
+    await riposter.useTransaction(trx).save()
+  }
+
   for (const lost of round.lostWeapons) {
     const holder: Holder =
       lost.holder === 'character'
         ? { type: 'character', id: state.characterId }
-        : { type: 'npc', id: opponent.id }
+        : { type: 'npc', id: lost.holder === 'riposter' ? riposter!.id : opponent.id }
     const item = await heldCopy(target.sessionId, lost.item, holder, trx)
 
     if (item === null) continue

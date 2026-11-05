@@ -30,8 +30,9 @@ import type { CombatEngagement } from './prompts/types.js'
 
 /**
  * A round of combat (roadmap, Phase 10), worked out by the backend alone: one
- * turn, the character first, then the riposte of the one they fight — the
- * advantage always goes to the player. Pure: the scene comes in loaded, the
+ * turn, the character first, then a single riposte — from the one they fight
+ * or another hostile person standing by, drawn at random among those who can
+ * strike — the advantage always goes to the player. Pure: the scene comes in loaded, the
  * dice through the rules engine, and what happened goes out for the turn's
  * transaction to apply. The model never sees a number of it.
  */
@@ -88,6 +89,12 @@ export type RoundInput = {
   /** What the character holds: their weapon, their armour, the modifiers of their defence. */
   characterItems: HeldItem[]
   opponent: Opponent
+  /**
+   * The other hostile people present: any of them still standing may strike
+   * back in the opponent's place. Arbitration's judgements — surprise, reach —
+   * are about the opponent alone; a surprise holds for the whole round.
+   */
+  others: Opponent[]
   engagement: CombatEngagement
   /**
    * The character's attack as already rolled on its category, with the
@@ -99,9 +106,12 @@ export type RoundInput = {
 /** A defence rolled, and which one. */
 export type RolledDefense = { defense: Defense; resolution: RollResolution }
 
-/** An item that left its holder's hand: dropped where the fight is, or broken. */
+/**
+ * An item that left its holder's hand: dropped where the fight is, or broken.
+ * `riposter` is another hostile who struck back in the opponent's place.
+ */
 export type LostWeapon = {
-  holder: 'character' | 'opponent'
+  holder: 'character' | 'opponent' | 'riposter'
   item: HeldItem
   fate: 'dropped' | 'broken'
 }
@@ -126,8 +136,16 @@ export type Round = {
   opponent: string
   /** The character's blow; null when they only met an attack. */
   characterBlow: Blow | null
-  /** The riposte, rolled by the backend, never shown; null when the opponent could not strike. */
-  riposte: (Blow & { attack: RollResolution }) | null
+  /**
+   * The riposte, rolled by the backend, never shown: by whom — the opponent or
+   * another hostile, by handle — and how it went; null when no one could strike.
+   */
+  riposte: (Blow & { by: string; attack: RollResolution }) | null
+  /**
+   * How another hostile who struck back stands after their own blow — a
+   * fumble can hurt them; null when the riposte was the opponent's, or none.
+   */
+  riposterAfter: { hitPoints: number; damage: number; state: CombatantState } | null
   /** The opponent never saw the blow coming: no defence against it, and no riposte this round. */
   opponentCaughtUnaware: boolean
   /**
@@ -157,10 +175,12 @@ export type Round = {
 /**
  * The round, end to end: the character's blow if they strike, the hidden
  * defence it meets — none when the opponent never saw it coming — its
- * damage; then, if the opponent still stands, was neither stopped nor caught
- * unaware, and can reach the character, their hidden riposte and the
- * character's defence — the better of what the scene allows, rolled for
- * them. Then the bleeding of earlier rounds.
+ * damage; then one hidden riposte, by someone drawn at random among those
+ * who can strike — the opponent if they still stand, were not stopped and
+ * can reach the character, and every other hostile person standing — and the
+ * character's defence, the better of what the scene allows, rolled for them.
+ * A blow the opponent never saw coming leaves the whole round without a
+ * riposte. Then the bleeding of earlier rounds.
  */
 export function playRound(rules: RulesEngine, input: RoundInput): Round {
   const { world, opponent, engagement } = input
@@ -250,20 +270,40 @@ export function playRound(rules: RulesEngine, input: RoundInput): Round {
 
   const opponentStands = !opponent.dying && opponentHp > DOWN_AT && !stopped
   let riposte: Round['riposte'] = null
+  let riposterAfter: Round['riposterAfter'] = null
 
-  if (opponentStands && !caughtUnaware && engagement.riposte_possible) {
-    const category = opponentWeapon.weapon.kind === 'melee' ? MELEE_COMBAT : RANGED_COMBAT
+  /** The opponent first, then the others as the scene lists them: the draw reads them in a fixed order. */
+  const strikers: Opponent[] = caughtUnaware
+    ? []
+    : [
+        ...(opponentStands && engagement.riposte_possible
+          ? [{ ...opponent, hitPoints: opponentHp }]
+          : []),
+        ...input.others.filter(
+          (other) => other.handle !== opponent.handle && !other.dying && other.hitPoints > DOWN_AT
+        ),
+      ]
+
+  if (strikers.length > 0) {
+    const striker = rules.pickOne(strikers)
+    const isOpponent = striker.handle === opponent.handle
+    const strikerWeapon = isOpponent ? opponentWeapon : opponentWeaponOf(world, striker)
+    const strikerArmor = isOpponent ? opponentArmor : opponentArmorOf(world, striker)
+    const strikerHolder: LostWeapon['holder'] = isOpponent ? 'opponent' : 'riposter'
+    let strikerHp = striker.hitPoints
+
+    const category = strikerWeapon.weapon.kind === 'melee' ? MELEE_COMBAT : RANGED_COMBAT
     const attack = rules.resolve(
-      npcBase(world, opponent.definition, skillOf(world, category)),
+      npcBase(world, striker.definition, skillOf(world, category)),
       characterFell ? 'easy' : 'average',
-      { contextual: [], items: modifierSources(world, opponent.items) }
+      { contextual: [], items: modifierSources(world, striker.items) }
     )
     const characterMelee = characterWeaponOf(world, input.characterItems, MELEE_COMBAT)
     const defense =
       attack.result === 'success'
         ? rollDefense(
             rules,
-            defenseOptions(opponentWeapon.weapon.kind, {
+            defenseOptions(strikerWeapon.weapon.kind, {
               parry:
                 engagement.parry_possible && characterMelee.item !== null
                   ? rollBaseFor(world, resolutionFor(world, MELEE_COMBAT), input.character)
@@ -283,8 +323,8 @@ export function playRound(rules: RulesEngine, input: RoundInput): Round {
       landed === null
         ? null
         : rules.resolveHit({
-            weapon: opponentWeapon.weapon,
-            damageModifier: profile.damageModifier,
+            weapon: strikerWeapon.weapon,
+            damageModifier: striker.definition.combat.damageModifier,
             degree: landed,
             armor: characterArmor,
           })
@@ -296,10 +336,9 @@ export function playRound(rules: RulesEngine, input: RoundInput): Round {
     }
 
     const fumble =
-      attack.degree === 'fumble' ? rollFumbleOf(rules, world, opponentWeapon.item) : null
-    if (fumble === 'self_injury')
-      opponentHp -= rules.selfInjury(opponentWeapon.weapon, opponentArmor)
-    if (fumble !== null) lostWeapons.push(...lost(fumble, 'opponent', opponentWeapon.item))
+      attack.degree === 'fumble' ? rollFumbleOf(rules, world, strikerWeapon.item) : null
+    if (fumble === 'self_injury') strikerHp -= rules.selfInjury(strikerWeapon.weapon, strikerArmor)
+    if (fumble !== null) lostWeapons.push(...lost(fumble, strikerHolder, strikerWeapon.item))
 
     const defenderFumble =
       defense?.resolution.degree === 'fumble'
@@ -308,9 +347,20 @@ export function playRound(rules: RulesEngine, input: RoundInput): Round {
     if (defenderFumble !== null)
       lostWeapons.push(...lost(defenderFumble, 'character', characterMelee.item))
 
+    if (isOpponent) {
+      opponentHp = strikerHp
+    } else {
+      riposterAfter = {
+        hitPoints: strikerHp,
+        damage: striker.hitPoints - strikerHp,
+        state: strikerHp <= 0 ? 'dying' : strikerHp <= DOWN_AT ? 'down' : 'fighting',
+      }
+    }
+
     riposte = {
+      by: striker.handle,
       attack,
-      weapon: opponentWeapon.weapon.reference,
+      weapon: strikerWeapon.weapon.reference,
       defense,
       landed,
       hit,
@@ -330,6 +380,7 @@ export function playRound(rules: RulesEngine, input: RoundInput): Round {
     opponent: opponent.handle,
     characterBlow,
     riposte,
+    riposterAfter,
     opponentCaughtUnaware: caughtUnaware,
     opponentOutOfReach: opponentStands && !caughtUnaware && !engagement.riposte_possible,
     character: {
@@ -546,8 +597,10 @@ export type NarratedBlow = {
 export type NarratedRound = {
   opponent: string
   character_blow: NarratedBlow | null
-  /** Null when the opponent could not strike back: down, stopped, dying, unaware or out of reach. */
+  /** The one blow struck back at the character; null when no one could strike. */
   opponent_blow: NarratedBlow | null
+  /** Handle of who struck it: the opponent, or another hostile present; null with no blow. */
+  opponent_blow_by: string | null
   /** They never saw the character's blow coming: no defence, and no answer this round. */
   opponent_caught_unaware: boolean
   /** They could not reach the character this round: out of reach, or out of their line of fire. */
@@ -577,6 +630,7 @@ export function narratedRound(round: Round): NarratedRound {
     opponent: round.opponent,
     character_blow: blow(round.characterBlow),
     opponent_blow: blow(round.riposte),
+    opponent_blow_by: round.riposte?.by ?? null,
     opponent_caught_unaware: round.opponentCaughtUnaware,
     opponent_out_of_reach: round.opponentOutOfReach,
     opponent_state: round.opponentAfter.state,

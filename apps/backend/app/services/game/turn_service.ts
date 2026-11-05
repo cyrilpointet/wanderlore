@@ -113,7 +113,7 @@ import { loreFor, loreReferences, loreSceneOf } from './lore.js'
 import { type Memory, coveredUpTo, sceneToSummarise, storySoFar } from './narrative_memory.js'
 import { loadOpponents } from './npcs.js'
 import { SUMMARISE_QUEUE, type SummariseJob, loadMemory } from './summary_service.js'
-import { type WorldDefinition, locationArchetypeReferences } from './world.js'
+import { type NpcDefinition, type WorldDefinition, locationArchetypeReferences } from './world.js'
 import {
   OUT_OF_CHARACTER,
   ARBITRATION_SCHEMA,
@@ -922,6 +922,7 @@ export class TurnService {
 
     const { opponent, provisional } = await this.#opponentOf(scene, engagement)
     const round = playRound(this.#rules, {
+      others: await this.#otherHostiles(scene, opponent.handle),
       world: scene.world,
       character: {
         characteristics: scene.character.characteristics,
@@ -947,38 +948,13 @@ export class TurnService {
     scene: LoadedScene,
     engagement: CombatEngagement
   ): Promise<{ opponent: Opponent; provisional: { definition: string } | null }> {
-    const { world } = scene
-    const definitionOf = (reference: string) => {
-      const definition = world.npcs.find((npc) => npc.reference === reference)
-
-      if (definition === undefined) {
-        throw new Error(`"${reference}" is not a person of the ${world.reference} world.`)
-      }
-
-      return definition
-    }
-
     if (scene.npcs.some(({ handle }) => handle === engagement.opponent)) {
-      const instance = await NpcInstance.query()
-        .where('sessionId', scene.session.id)
-        .where('handle', engagement.opponent)
-        .firstOrFail()
-      const definition = definitionOf(instance.definitionReference)
+      const [opponent] = await this.#presentOpponents(scene, [engagement.opponent])
 
-      return {
-        opponent: {
-          handle: instance.handle,
-          definition,
-          hitPoints: instance.hitPoints ?? definition.combat.hitPointsMax,
-          bleeding: instance.bleeding,
-          dying: instance.status === 'dying',
-          items: scene.items.npcs.find(({ handle }) => handle === instance.handle)?.items ?? [],
-        },
-        provisional: null,
-      }
+      return { opponent, provisional: null }
     }
 
-    const definition = definitionOf(engagement.opponent)
+    const definition = npcDefinitionOf(scene.world, engagement.opponent)
 
     return {
       opponent: {
@@ -991,6 +967,48 @@ export class TurnService {
       },
       provisional: { definition: definition.reference },
     }
+  }
+
+  /**
+   * The hostile people present and standing, but the opponent: any of them
+   * may strike back in the round, in the opponent's place.
+   */
+  async #otherHostiles(scene: LoadedScene, opponent: string): Promise<Opponent[]> {
+    const handles = scene.npcs
+      .filter(
+        ({ handle, disposition, condition }) =>
+          handle !== opponent && disposition === 'hostile' && condition === 'standing'
+      )
+      .map(({ handle }) => handle)
+
+    return handles.length === 0 ? [] : this.#presentOpponents(scene, handles)
+  }
+
+  /** People present as a round reads them, in the order given: hit points, wounds, what they hold. */
+  async #presentOpponents(scene: LoadedScene, handles: string[]): Promise<Opponent[]> {
+    const instances = await NpcInstance.query()
+      .where('sessionId', scene.session.id)
+      .whereIn('handle', handles)
+    const byHandle = new Map(instances.map((instance) => [instance.handle, instance]))
+
+    return handles.map((handle) => {
+      const instance = byHandle.get(handle)
+
+      if (instance === undefined) {
+        throw new Error(`No one in session ${scene.session.id} goes by "${handle}".`)
+      }
+
+      const definition = npcDefinitionOf(scene.world, instance.definitionReference)
+
+      return {
+        handle,
+        definition,
+        hitPoints: instance.hitPoints ?? definition.combat.hitPointsMax,
+        bleeding: instance.bleeding,
+        dying: instance.status === 'dying',
+        items: scene.items.npcs.find((npc) => npc.handle === handle)?.items ?? [],
+      }
+    })
   }
 
   /**
@@ -1770,6 +1788,16 @@ function withArrivals(
       },
     },
   }
+}
+
+function npcDefinitionOf(world: WorldDefinition, reference: string): NpcDefinition {
+  const definition = world.npcs.find((npc) => npc.reference === reference)
+
+  if (definition === undefined) {
+    throw new Error(`"${reference}" is not a person of the ${world.reference} world.`)
+  }
+
+  return definition
 }
 
 /**

@@ -50,7 +50,7 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
 
   /**
    * The character's rolls, in the order they were made: their action or
-   * attack, then their defence against the riposte. Each carries what the
+   * attack, then their defence against the riposte — whoever struck it. Each carries what the
    * backend derived from its category: a skill or a characteristic. The
    * people's rolls stay in the log. Every logged turn is on the BRP rules —
    * the switch deleted the games played before it.
@@ -130,11 +130,14 @@ export function characterRolls(
   const defense = round?.riposte?.defense ?? null
 
   if (defense !== null) {
+    /** Against whoever struck back; a round logged before any other could, the opponent. */
+    const by = round!.riposte!.by ?? round!.opponent
+
     rolls.push({
       resolution: defense.resolution,
       combat: {
         role: 'defense',
-        opponent: opponent!,
+        opponent: by === round!.opponent ? opponent! : opponents.of(by),
         defense: defense.defense,
         outcome: round!.riposte!.landed === null ? 'avoided' : 'struck',
       },
