@@ -13,13 +13,13 @@ const ROLL = {
   id: 'roll-1',
   values: [14, 9, 6, 12, 17, 10, 5],
   dice: [
-    [6, 5, 3],
-    [1, 4, 4],
-    [2, 2, 2],
-    [6, 3, 3],
-    [6, 6, 5],
-    [5, 4, 1],
-    [1, 1, 3],
+    { faces: [6, 5, 3, 2], dropped: 3 },
+    { faces: [1, 4, 4, 1], dropped: 0 },
+    { faces: [2, 2, 1, 2], dropped: 2 },
+    { faces: [6, 3, 3, 3], dropped: 1 },
+    { faces: [6, 6, 5, 4], dropped: 3 },
+    { faces: [5, 4, 1, 1], dropped: 2 },
+    { faces: [1, 1, 3, 1], dropped: 0 },
   ],
 }
 
@@ -100,14 +100,17 @@ describe('DiceStep', () => {
     expect(html).not.toContain('animate-dice-spin')
   })
 
-  test('animated: each of the 21 d6 runs past its faces and stops on its own, one after the other', () => {
+  test('animated: each of the 28 d6 runs past its faces and stops on its own, one after the other', () => {
     const html = render(ROLL, true)
 
-    expect(html.match(/animate-dice-spin/g)).toHaveLength(21)
+    expect(html.match(/animate-dice-spin/g)).toHaveLength(28)
     // The first die stops on its 6: two turns of six faces, then the sixth.
     expect(html).toContain('transform:translateY(-38.25rem);animation-duration:600ms')
-    // The last one, the 3 of the seventh result, settles last.
-    expect(html).toContain('transform:translateY(-31.5rem);animation-duration:2400ms')
+    // The last one, the 1 of the seventh result, settles last.
+    expect(html).toContain('transform:translateY(-27rem);animation-duration:3030ms')
+    // The die each result sets aside greys out once it has landed: the first result's fourth.
+    expect(html.match(/animate-dice-set-aside/g)).toHaveLength(7)
+    expect(html).toContain('animation-delay:870ms')
     expect(textOf(html)).toContain('14')
     expect(html).toContain('Reroll')
     expect(html).toContain('clears their placement')
@@ -117,9 +120,12 @@ describe('DiceStep', () => {
     const html = render(ROLL, false)
 
     expect(html).not.toContain('animate-dice-spin')
-    // Each result shows its three faces as drawn, then its total.
+    // Each result shows its four faces as drawn, then its total.
     const faces = [...html.matchAll(/data-face="(\d)"/g)].map(([, face]) => Number(face))
-    expect(faces).toEqual(ROLL.dice.flat())
+    expect(faces).toEqual(ROLL.dice.flatMap(({ faces: drawn }) => drawn))
+    // One die per result greyed out, the one the backend set aside.
+    expect(html.match(/data-set-aside="true"/g)).toHaveLength(7)
+    expect(html).not.toContain('animate-dice-set-aside')
     expect(textOf(html)).toContain('14 9 6 12 17 10 5')
     // The list is joined in the interface language: only the order is checked.
     expect(textOf(html)).toMatch(/Results: 14, 9, 6, 12, 17, 10,? \S+ 5/)

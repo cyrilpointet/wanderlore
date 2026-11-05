@@ -2,9 +2,9 @@ import { BaseSchema } from '@adonisjs/lucid/schema'
 
 /**
  * The characteristics a player rolled to create a character (roadmap,
- * Phase 12): seven times 3D6, by the backend. One series per player, replaced
- * by every reroll and consumed by the creation — which places nothing but
- * what was rolled.
+ * Phase 12): seven times four d6, the best three kept, by the backend. One
+ * series per player, replaced by every reroll and consumed by the creation —
+ * which places nothing but what was rolled.
  */
 export default class extends BaseSchema {
   protected tableName = 'character_rolls'

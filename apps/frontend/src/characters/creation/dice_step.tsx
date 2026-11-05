@@ -27,11 +27,15 @@ const PIPS: Record<number, number[]> = {
   6: [0, 2, 3, 5, 6, 8],
 }
 
+/** Four d6 for each result: the backend keeps the best three. */
+const DICE = [0, 1, 2, 3]
+
 /**
- * The seven results of 3D6, drawn by the backend and only revealed here: no
- * throw by hand, the draw is not a roll of the game (front spec, section
- * 5.6). Each result shows its three d6, as the backend drew them, and their
- * total, which is what the placement works on.
+ * The seven results, drawn by the backend and only revealed here: no throw
+ * by hand, the draw is not a roll of the game (front spec, section 5.6).
+ * Each result shows its four d6 as the backend drew them, the one it set
+ * aside greyed out, and the total of the others, which is what the
+ * placement works on.
  */
 export function DiceStep({
   roll,
@@ -60,23 +64,24 @@ export function DiceStep({
         {roll ? t('creation.dice.results', { values: roll.values.map(String) }) : ''}
       </p>
 
-      <ul aria-hidden className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
+      <ul aria-hidden className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
         {Array.from({ length: 7 }, (_, index) => (
           <li
             key={roll ? `${roll.id}-${index}` : index}
-            className="flex flex-col items-center gap-2 rounded-lg border border-border bg-surface-1 p-3"
+            className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 p-3"
           >
-            <div className="flex gap-1.5">
-              {[0, 1, 2].map((die) => (
+            <div className="flex gap-1">
+              {DICE.map((die) => (
                 <Die
                   key={die}
-                  face={roll?.dice[index]?.[die] ?? null}
+                  face={roll?.dice[index]?.faces[die] ?? null}
+                  setAside={roll?.dice[index]?.dropped === die}
                   animated={animated}
-                  ms={FIRST_MS + (index * 3 + die) * STAGGER_MS}
+                  ms={FIRST_MS + (index * DICE.length + die) * STAGGER_MS}
                 />
               ))}
             </div>
-            <span className="text-xl font-medium text-text tabular-nums">
+            <span className="min-w-8 text-end text-xl font-medium text-text tabular-nums">
               {roll?.values[index] ?? t('creation.unknown')}
             </span>
           </li>
@@ -110,19 +115,35 @@ export function DiceStep({
 
 const TILE =
   'box-content size-9 overflow-hidden rounded-md border border-border-strong bg-surface-2 text-text shadow-[inset_0_-2px_0_var(--color-border)]'
+/** The die set aside: greyed out, it no longer counts. */
+const SET_ASIDE = 'opacity-35 grayscale'
 
 /**
  * One d6: a column of faces that runs past and stops on the face drawn, or
- * stands still on it. Blank before the first roll.
+ * stands still on it. Blank before the first roll. The die set aside greys
+ * out once it has landed, or stands greyed out.
  */
-function Die({ face, animated, ms }: { face: number | null; animated: boolean; ms: number }) {
+function Die({
+  face,
+  setAside,
+  animated,
+  ms,
+}: {
+  face: number | null
+  setAside: boolean
+  animated: boolean
+  ms: number
+}) {
   if (face === null || !PIPS[face]) {
     return <div className={TILE} />
   }
 
   if (!animated) {
     return (
-      <div className={TILE}>
+      <div
+        data-set-aside={setAside || undefined}
+        className={setAside ? `${TILE} ${SET_ASIDE}` : TILE}
+      >
         <Face value={face} />
       </div>
     )
@@ -132,7 +153,11 @@ function Die({ face, animated, ms }: { face: number | null; animated: boolean; m
   const stop = TURNS * FACES.length + FACES.indexOf(face)
 
   return (
-    <div className={TILE}>
+    <div
+      data-set-aside={setAside || undefined}
+      className={setAside ? `${TILE} ${SET_ASIDE} animate-dice-set-aside` : TILE}
+      style={setAside ? { animationDelay: `${ms}ms` } : undefined}
+    >
       <div
         className="animate-dice-spin"
         style={{ transform: `translateY(-${stop * FACE_REM}rem)`, animationDuration: `${ms}ms` }}

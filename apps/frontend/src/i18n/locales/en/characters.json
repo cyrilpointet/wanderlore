@@ -80,7 +80,7 @@
       "identity": "Identity"
     },
     "dice": {
-      "intro": "Seven times three six-sided dice, one result for each characteristic. Roll again as often as you like.",
+      "intro": "Seven times four six-sided dice, the best three kept: one result for each characteristic. Roll again as often as you like.",
       "results": "Results: {{values, list}}",
       "roll": "Roll the dice",
       "reroll": "Reroll",

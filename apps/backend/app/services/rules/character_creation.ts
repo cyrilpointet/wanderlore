@@ -21,6 +21,33 @@ import {
  * placement, before the floor of 8, without rewriting the rest.
  */
 
+/**
+ * Each result of the series is four d6, the lowest set aside and the three
+ * best added up (a departure from the book's 3D6, common at real tables):
+ * still 3 to 18, but weighted towards the middle and above.
+ */
+export const DICE_PER_RESULT = 4
+export const DICE_KEPT = 3
+
+/** One result of the series: the four d6 as drawn, the one set aside, and the total of the others. */
+export type ResultDice = {
+  faces: number[]
+  /** The position, in `faces`, of the die set aside. */
+  dropped: number
+  value: number
+}
+
+/**
+ * Keeps the best three of four d6. Of equal lowest faces, the first is set
+ * aside: which one does not change the total, only which die is greyed out.
+ */
+export function keepBestThree(faces: number[]): ResultDice {
+  const dropped = faces.indexOf(Math.min(...faces))
+  const value = faces.reduce((total, face, index) => (index === dropped ? total : total + face), 0)
+
+  return { faces, dropped, value }
+}
+
 /** The floor of SIZ and INT: a lower result placed there is raised to it. */
 export const CHARACTERISTIC_FLOOR = 8
 const FLOORED: Characteristic[] = ['SIZ', 'INT']

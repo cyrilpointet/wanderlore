@@ -5,6 +5,7 @@ import {
   type CreationWorld,
   createCharacter,
   isValidName,
+  keepBestThree,
 } from '#services/rules/character_creation'
 import { POWER_LEVEL_SCALE } from '#services/rules/power_levels'
 
@@ -49,6 +50,18 @@ test.group('Character creation | the power levels', () => {
       epic: { professionalPoints: 400, skillCap: 101 },
       superhuman: { professionalPoints: 500, skillCap: null },
     })
+  })
+})
+
+test.group('Character creation | the dice of a result', () => {
+  test('four d6, the lowest set aside, the best three added up', ({ assert }) => {
+    assert.deepEqual(keepBestThree([4, 1, 6, 3]), { faces: [4, 1, 6, 3], dropped: 1, value: 13 })
+    assert.deepEqual(keepBestThree([6, 6, 6, 6]).value, 18)
+    assert.deepEqual(keepBestThree([1, 1, 1, 1]).value, 3)
+  })
+
+  test('of equal lowest faces, the first is set aside', ({ assert }) => {
+    assert.deepEqual(keepBestThree([5, 2, 4, 2]), { faces: [5, 2, 4, 2], dropped: 1, value: 11 })
   })
 })
 

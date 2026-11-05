@@ -229,7 +229,7 @@ export default {
       },
     },
 
-    /** The seven results of 3D6, in the order they were rolled. */
+    /** The seven results, four d6 the best three kept, in the order they were rolled. */
     character_rolls: {
       columns: {
         values: { tsType: 'number[]', decorators: arrayColumn },

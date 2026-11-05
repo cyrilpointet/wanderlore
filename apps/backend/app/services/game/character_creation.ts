@@ -11,8 +11,11 @@ import {
   type CharacterDraft,
   type CreationResult,
   type CreationWorld,
+  DICE_PER_RESULT,
+  type ResultDice,
   createCharacter,
   isComplete,
+  keepBestThree,
 } from '#services/rules/character_creation'
 
 import { canPlayDrafts } from './new_game.js'
@@ -23,7 +26,7 @@ import { canPlayDrafts } from './new_game.js'
  * consumes the series (roadmap, Phase 12).
  */
 
-/** Seven times 3D6, one for each characteristic, in the order of the series. */
+/** Seven results, one for each characteristic, in the order of the series. */
 export const SERIES_LENGTH = 7
 
 /**
@@ -61,20 +64,19 @@ export async function creationWorldOf(world: World): Promise<{
 }
 
 /**
- * Rolls a new series for the player, replacing the one they had. The three
- * dice of each result come back too, for the front to show them landing;
- * only the totals are kept, which is all the creation places.
+ * Rolls a new series for the player, replacing the one they had: four d6 for
+ * each result, the three best kept. The dice come back too, with the one set
+ * aside, for the front to show them landing; only the totals are kept, which
+ * is all the creation places.
  */
 export async function rollSeries(
   user: User,
   dice: DiceService
-): Promise<{ roll: CharacterRoll; dice: number[][] }> {
-  const rolled = Array.from({ length: SERIES_LENGTH }, () => [
-    dice.rollDie(6),
-    dice.rollDie(6),
-    dice.rollDie(6),
-  ])
-  const values = rolled.map((faces) => faces.reduce((total, face) => total + face, 0))
+): Promise<{ roll: CharacterRoll; dice: ResultDice[] }> {
+  const rolled = Array.from({ length: SERIES_LENGTH }, () =>
+    keepBestThree(Array.from({ length: DICE_PER_RESULT }, () => dice.rollDie(6)))
+  )
+  const values = rolled.map(({ value }) => value)
 
   const roll = await db.transaction(async (trx) => {
     await CharacterRoll.query({ client: trx }).where('userId', user.id).delete()

@@ -47,7 +47,7 @@ function draft(worldId: string, overrides: Record<string, unknown> = {}): any {
 test.group('Creating a character | the series', (group) => {
   useTransaction(group)
 
-  test('seven times 3D6, rolled again at will: each roll replaces the last', async ({
+  test('seven times four d6, the best three kept, rolled again at will: each roll replaces the last', async ({
     client,
     assert,
   }) => {
@@ -62,10 +62,15 @@ test.group('Creating a character | the series', (group) => {
     for (const [index, value] of roll.values.entries()) {
       assert.isAtLeast(value, 3)
       assert.isAtMost(value, 18)
-      /** Three d6 for each result, adding up to it. */
-      assert.lengthOf(roll.dice[index], 3)
+      /** Four d6 for each result, the lowest set aside, the others adding up to it. */
+      const { faces, dropped } = roll.dice[index]
+      assert.lengthOf(faces, 4)
+      assert.equal(faces[dropped], Math.min(...faces))
       assert.equal(
-        roll.dice[index].reduce((total: number, face: number) => total + face, 0),
+        faces.reduce(
+          (total: number, face: number, die: number) => (die === dropped ? total : total + face),
+          0
+        ),
         value
       )
     }

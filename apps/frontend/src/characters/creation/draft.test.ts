@@ -13,8 +13,8 @@ import {
   type StepDefinition,
 } from './draft'
 
-/** The three d6 of each result only matter to the dice step: the draft keeps them as drawn. */
-const DICE = Array.from({ length: 7 }, () => [1, 2, 3])
+/** The dice of each result only matter to the dice step: the draft keeps them as drawn. */
+const DICE = Array.from({ length: 7 }, () => ({ faces: [1, 2, 3, 4], dropped: 0 }))
 const ROLL = { id: 'roll-1', values: [14, 9, 6, 12, 17, 10, 8], dice: DICE }
 const REROLL = { id: 'roll-2', values: [11, 11, 13, 5, 15, 7, 16], dice: DICE }
 

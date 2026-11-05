@@ -4,7 +4,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 /**
  * The characteristics a player rolls to create a character: seven times
- * 3D6, by the backend. As often as they like — each roll replaces the last.
+ * four d6, the three best kept, by the backend. As often as they like — each roll replaces the last.
  */
 export default class CharacterRollsController {
   async store({ auth, response }: HttpContext) {
@@ -12,7 +12,13 @@ export default class CharacterRollsController {
 
     response.status(201)
 
-    /** Each result with the three dice it was rolled with, in the same order. */
-    return { data: { id: roll.id, values: roll.values, dice: faces } }
+    /** Each result with its four dice and the one set aside, in the same order. */
+    return {
+      data: {
+        id: roll.id,
+        values: roll.values,
+        dice: faces.map(({ faces: drawn, dropped }) => ({ faces: drawn, dropped })),
+      },
+    }
   }
 }

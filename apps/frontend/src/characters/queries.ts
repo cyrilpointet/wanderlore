@@ -146,15 +146,22 @@ export const creationQuery = (worldId: string) =>
   })
 
 /**
- * Seven times 3D6, drawn by the backend; each series replaces the last. The
- * three d6 of each result are only in the answer to the draw, to show them:
- * the preview and the creation work on the totals, by their position.
+ * Seven times four d6, the best three kept, drawn by the backend; each series
+ * replaces the last. The dice of each result are only in the answer to the
+ * draw, to show them: the preview and the creation work on the totals, by
+ * their position.
  */
 export type CharacteristicRoll = {
   id: string
   values: number[]
-  /** `dice[i]`: the three d6 of `values[i]`, which they add up to. */
-  dice: number[][]
+  /** `dice[i]`: the four d6 of `values[i]`, and which one the backend set aside. */
+  dice: ResultDice[]
+}
+
+export type ResultDice = {
+  faces: number[]
+  /** The position, in `faces`, of the die set aside: the others add up to the result. */
+  dropped: number
 }
 
 export async function rollCharacteristics(): Promise<CharacteristicRoll> {

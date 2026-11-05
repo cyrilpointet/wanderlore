@@ -105,6 +105,8 @@
   --animate-fade-in: fade-in 450ms ease-out both;
   /* The live roll (front spec, section 5.3.7): each die's duration is set where it is drawn. */
   --animate-dice-spin: dice-spin 1s cubic-bezier(0.15, 0.6, 0.25, 1) both;
+  /* The die a result sets aside greys out once it has landed; its delay is set where it is drawn. */
+  --animate-dice-set-aside: dice-set-aside 350ms ease-out both;
   --animate-shake: shake 400ms ease-in-out;
 
   @keyframes fade-in {
@@ -117,6 +119,14 @@
   @keyframes dice-spin {
     from {
       transform: translateY(0);
+    }
+  }
+
+  /* From a die like the others to whatever the element itself is set to look like. */
+  @keyframes dice-set-aside {
+    from {
+      opacity: 1;
+      filter: none;
     }
   }
 
