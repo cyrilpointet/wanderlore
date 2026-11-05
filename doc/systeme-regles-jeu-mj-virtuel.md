@@ -98,7 +98,7 @@ Un personnage ne peut posséder que des compétences existant dans la définitio
 
 Le joueur crée son personnage dans un univers, avant d'y choisir un scénario. La création suit le livre (*Step One*, option *Choosing Characteristic Values* ; *Step Seven*), sans ses autres options. Tout est tiré ou vérifié par le backend ; le front ne calcule rien.
 
-1. **Tirage** : sept fois **3D6**, par le backend (`dice`). La série est gardée en base : le joueur ne peut placer que ce qui a été tiré. **Relance à volonté** de toute la série (*écart au livre*, qui la soumet à l'accord du MJ).
+1. **Tirage** : sept fois **4D6 dont on garde les trois meilleurs**, par le backend (`dice`) — *écart au livre*, qui tire 3D6 : méthode courante en jeu réel, toujours de 3 à 18 mais tirée vers le haut. Le backend désigne le dé écarté (le premier des plus faibles en cas d'égalité, sans effet sur le total). La série est gardée en base : le joueur ne peut placer que ce qui a été tiré. **Relance à volonté** de toute la série (*écart au livre*, qui la soumet à l'accord du MJ).
 2. **Placement** : le joueur répartit les sept résultats entre les sept caractéristiques, une permutation exacte de la série. `SIZ` et `INT` ne descendent jamais sous **8** : un résultat plus bas placé là est relevé à 8. Pas de redistribution de 3 points.
 3. **Profession**, dans le catalogue de l'univers : une liste de compétences professionnelles, un équipement et des ressources de départ.
 4. **Compétences** : deux réserves de points, ajoutés à la chance de base (calculée sur les caractéristiques placées) :

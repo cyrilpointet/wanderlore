@@ -1265,24 +1265,27 @@ porte que l'identifiant de la partie ; un échec est journalisé, sans nouvelle 
 
 ### Personnages et parties d'un personnage (Phase 12)
 
-Routes synchrones, hors du tour, en `{ reference, label }` pour toute référence de contenu (`ContentLabels`). Esquisse, à affiner à l'implémentation :
+Routes synchrones, hors du tour, en `{ reference, label }` pour toute référence de contenu (`ContentLabels`). Telles que livrées (KAN-151) ; `GET /scenarios`, `GET /sessions` et `POST /sessions` ont disparu — un scénario se choisit depuis la page d'un personnage, qui seule lance une partie :
 
 ```
 GET    /worlds                         univers où le joueur peut créer un personnage (au moins un scénario jouable)
 GET    /worlds/:id/creation            de quoi créer : niveau de puissance, réserves et plafond, professions, compétences et leur chance de base
-POST   /character-rolls                tire (ou retire) la série courante : sept fois 3D6
+POST   /character-rolls                tire (ou retire) la série courante : sept fois 4D6, les trois meilleurs gardés ; renvoie les totaux et, pour l'affichage, les dés de chacun et celui qu'il écarte (`dice: { faces, dropped }[]`)
 POST   /characters/preview             calcule la fiche d'un brouillon, sans rien écrire : caractéristiques relevées, valeurs, restes des réserves, refus par champ
-POST   /characters                     crée le personnage : univers, placement de la série, profession, points, nom, genre
+POST   /characters                     crée le personnage : univers, placement de la série, profession, points, nom, genre, et `rollId`, la série sur laquelle il a été bâti
 GET    /characters                     ses personnages, les engagés d'abord, avec leur partie en cours
-GET    /characters/:id                 la fiche, la partie en cours, les parties passées, les scénarios disponibles
+GET    /characters/:id                 la fiche, la partie en cours, les parties passées, les scénarios disponibles (chacun marqué `failed` s'il a déjà échoué)
 DELETE /characters/:id                 suppression douce, refusée s'il est engagé (character_engaged)
 POST   /characters/:id/sessions        lance une partie sur un scénario de son univers (character_engaged, scenario_completed)
-POST   /sessions/:id/abandon           la partie passe failed, refusé pendant un tour en cours
+GET    /sessions/:id                   une partie, close comprise : en-tête (`status`, `endedAt`, `characterId`, `scenario`), personnage, tour en attente
+POST   /sessions/:id/abandon           la partie passe failed, refusé pendant un tour en cours (turn_already_in_progress) ou si elle est close (game_ended)
 DELETE /sessions/:id                   suppression douce, d'une partie failed seulement (game_not_failed)
 ```
 
 - **Le front ne calcule rien, même à la création** : l'aperçu et la création partagent un même calcul pur, l'aperçu sans écriture.
-- **La création est une seule soumission** : le front tient le brouillon des étapes, le backend revérifie tout (permutation de la série, planchers de SIZ et INT, compétences de la profession, réserves, plafond, nom, genre) et consomme la série. Un refus nomme le champ fautif.
+- **La création est une seule soumission** : le front tient le brouillon des étapes, le backend revérifie tout (permutation de la série, planchers de SIZ et INT, compétences de la profession, réserves, plafond, nom, genre) et consomme la série, sous verrou. Un refus nomme le champ fautif (`{ code, field }` dans `details.issues`). Sans série, `no_characteristic_roll` ; une série relancée depuis (un autre onglet), `stale_characteristic_roll`. La fiche n'enregistre que les compétences qui ont reçu des points ; les autres valent leur chance de base, calculée à la lecture.
+- **Lancer et abandonner prennent le verrou de la partie** (`lockOwnGame`, `forUpdate`), comme la soumission d'un tour : un abandon ne croise jamais un tour qui démarre. Deux lancements simultanés d'un même personnage : l'index unique partiel en laisse passer un, l'autre reçoit `character_engaged`.
+- **Back-office** : `GET|POST /admin/worlds/:worldId/professions`, `PATCH|DELETE /admin/professions/:professionId` (`content_in_use` si un personnage la suit) ; `powerLevel` sur l'univers, `startingKit` sur le scénario.
 - **Une partie `failed` se relit** (`GET /sessions/:id`, son journal) mais n'accepte plus de tour (`game_ended`).
 - `GET /sessions/:id` porte le personnage (fiche durable et état de la partie) sous la même forme que `turn_completed.character`.
 

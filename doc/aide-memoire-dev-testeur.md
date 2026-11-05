@@ -13,18 +13,24 @@ Mot de passe commun : `password`.
 
 | Compte | Rôle | Où se connecter | Ce qu'il fait |
 |---|---|---|---|
-| `player@wanderlore.test` | `player` | front joueur — http://localhost:5173 | joue ; reçoit la partie de démo |
+| `player@wanderlore.test` | `player` | front joueur — http://localhost:5173 | joue ; reçoit le personnage et la partie de démo |
 | `gm@wanderlore.test` | `game_master` | back-office — http://localhost:5174 | écrit univers et scénarios ; voit et joue les brouillons dans le front joueur |
 | `admin@wanderlore.test` | `superadmin` | back-office — http://localhost:5174 | gère les comptes (liste, création, suspension, réactivation) |
 
 - **Un compte = un rôle** : le `game_master` ne voit pas les comptes, le `superadmin` ne voit
   pas le contenu, et un `player` est refusé par le back-office.
-- **Partie de démo** : *Les Trois Mousquetaires*, scénario *The Stolen Seal*, d'Artagnan rue du
-  Cherche-Midi, devant l'hôtel de Laffemas, à 23 h, rattachée à `player@wanderlore.test`.
-  Recréée à chaque `db:seed` et `game:reset`.
+- **Personnage de démo** (Phase 12) : d'Artagnan, mousquetaire, *male*, dans *Les Trois
+  Mousquetaires*, à `player@wanderlore.test`. `db:seed` le crée, ou le remet d'aplomb s'il
+  existe ; `game:reset` le garde (les personnages survivent à leurs parties).
+- **Partie de démo** : d'Artagnan dans *The Stolen Seal*, rue du Cherche-Midi, devant l'hôtel
+  de Laffemas, à 23 h. `db:seed` supprime d'abord les parties de `player@wanderlore.test`, puis
+  la recrée ; `game:reset` aussi.
+- **Tout autre personnage se crée depuis le front** : accueil → un univers → **Create a
+  character** (dés, placement, profession, compétences, identité), puis un scénario depuis sa
+  page. Un `game_master` suit le même parcours, brouillons compris.
 - **Scénarios du seed** : *The Stolen Seal* (Trois Mousquetaires) et *The Ward Inheritance*
-  (Mythe de Lovecraft), seuls. *A Gascon in Paris* et *The Wreck of the Sovereign*, retirés du
-  seed, restent importables depuis `test-worlds/`.
+  (Mythe de Lovecraft), seuls. *The Grain Road* et *The Wreck of the Sovereign* s'importent
+  depuis `test-worlds/`.
 - **Hors local** (production), aucun de ces comptes n'existe : le premier superadmin se crée
   avec `node ace account:create-superadmin` (voir plus bas), puis les autres comptes depuis
   le back-office.
@@ -128,27 +134,33 @@ back-office avec le compte `gm@wanderlore.test`. Les seeders, eux, n'écrivent q
 tests automatisés ont besoin. Un univers s'y nomme `<référence du monde>.world.json`, sans ses
 scénarios (`three_musketeers.world.json` et `lovecraft_mythos.world.json` sont l'export du
 contenu en code, ainsi que leurs scénarios). Un scénario s'y nomme
-`<référence du monde>.<référence du scénario>.scenario.json` : les quatre de démonstration sont
-`three_musketeers.the_grain_road.scenario.json`, `three_musketeers.the_drowned_anchor.scenario.json`,
-`three_musketeers.the_duel_at_the_carmes.scenario.json` et
-`three_musketeers.the_golden_lion.scenario.json`.
+`<référence du monde>.<référence du scénario>.scenario.json`. Il y en a quatre :
+`three_musketeers.the_stolen_seal`, `three_musketeers.the_grain_road`,
+`lovecraft_mythos.the_ward_inheritance` et `lovecraft_mythos.the_wreck_of_the_sovereign`
+(les deux premiers de chaque univers sont aussi dans le seed).
+
+Depuis la Phase 12, un univers porte son niveau de puissance (`powerLevel`) et ses professions
+(`professions` : compétences, équipement et ressources de départ), et un scénario son
+équipement de départ (`startingKit`, objets et ressources) à la place du prétiré : au
+lancement, le personnage reçoit l'équipement de sa profession puis celui du scénario.
 
 - **Un univers clé en main** : *Worlds* → **New world** → **Fill in from a JSON file**. Le
-  fichier remplit le formulaire ; ses catégories d'action (`actionTypes`), lieux (`locations`),
-  PNJ (`npcs`), objets (`items`) et fragments de lore (`lore`) sont résumés sous le formulaire
+  fichier remplit le formulaire ; ses catégories d'action (`actionTypes`), professions
+  (`professions`), lieux (`locations`), PNJ (`npcs`), objets (`items`) et fragments de lore
+  (`lore`) sont résumés sous le formulaire
   (*Created with it*) et créés avec l'univers. Ses scénarios s'importent à part.
 - **Un scénario complet** : ouvrir l'univers → onglet *Scenarios* → **New scenario** → **Fill
-  in from a JSON file**. Mêmes catalogues, sans `actionTypes`. Les scénarios de
-  `test-worlds/` (*The Grain Road*, *The Drowned Anchor*, pour le combat de la Phase 10
-  *The Duel at the Carmes*, et pour les événements de la Phase 11 *The Golden Lion*)
-  s'importent dans **Les Trois Mousquetaires** — une fois l'univers re-seedé après la migration
-  de la Phase 10, qui lui donne Esquive et Premiers soins. Depuis la Phase 11, un scénario
-  déclare ses `flags` : l'import refuse un flag employé sans être déclaré.
+  in from a JSON file**. Mêmes catalogues, sans `actionTypes` ni `professions`. *The Grain
+  Road* s'importe dans **Les Trois Mousquetaires**, *The Wreck of the Sovereign* dans **Le
+  Mythe de Lovecraft**. Un scénario déclare ses `flags` (Phase 11) : l'import refuse un flag
+  employé sans être déclaré.
 - **Tout ou rien** : le serveur vérifie chaque entrée, et la première fautive refuse tout le
   fichier ; l'erreur s'affiche sous l'entrée concernée (chemin du type `lore.2.tags`). Un tag
   peut nommer une définition du même fichier.
-- Le scénario arrive en **brouillon** : **Try it in the game** le lance pour le `game_master`
-  dans le front joueur, **Publish** l'ouvre aux joueurs après la vérification de cohérence.
+- Le scénario arrive en **brouillon** : **Try it in the game** ouvre l'accueil du front joueur,
+  où le `game_master` le lance depuis la page d'un de ses personnages de cet univers (à créer
+  au besoin) ; **Publish** l'ouvre aux joueurs après la vérification de cohérence (kit et
+  professions compris : `no_profession`, `item_given_twice`).
 
 **Quel lore a reçu un tour** : `turn_log.lore_sent` donne, par étape, les références des
 fragments envoyés.

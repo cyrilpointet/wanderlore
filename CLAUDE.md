@@ -208,13 +208,13 @@ de données, section 2) :
   glossaire réduit aux noms propres non-entités, univers complété par le scénario ; seule la
   narration reçoit des noms traduits ;
 - **scénario `draft` / `published`**, cohérence vérifiée à la publication et au lancement de
-  chaque partie (`checkScenario`) ; une partie se lance en copiant le **personnage prétiré**
-  et l'**état initial** du scénario ; un `game_master` voit et joue les brouillons ;
+  chaque partie (`checkScenario`) ; une partie se lance en copiant l'**état initial** du
+  scénario (le prétiré a disparu en Phase 12) ; un `game_master` voit et joue les brouillons ;
 - **référence immuable**, suppression refusée (`content_in_use`) si une partie emploie le
   contenu ; le reste est modifiable et vaut dès le tour suivant ;
 - **back-office** (`apps/back-office`) sur la stack du front, routes `/api/v1/admin` réservées
   au `game_master` ; JSON brut validé pour les structures imbriquées (profil de combat,
-  modificateurs, prétiré) ;
+  modificateurs, équipement de départ) ;
 - front, back-office et API sur **trois sous-domaines** d'un domaine à nous (`CORS_ORIGINS`,
   `COOKIE_DOMAIN`) ; premier `game_master` par seeder.
 
@@ -428,7 +428,39 @@ données, `event_states`, `place_notes`) :
   tour sur la démonstration, dans la variation d'un scénario à l'autre ;
 - démonstration : *The Golden Lion* dans `test-worlds/`.
 
-Phase suivante : **Phase 12 (progression du personnage et cycle de vie complet de la partie)**.
+**Phase 12, premier lot (création du personnage et parties d'un personnage) livré** — epic
+Jira `KAN-151`, en recette. Ses choix restent en vigueur (détail : roadmap Phase 12, « Décisions
+de cadrage — création du personnage… » et ce qui a été tranché à l'implémentation ; règles §3bis ;
+base de données, `characters`, `character_states`, `professions`, `character_rolls` ;
+architecture 8bis ; cahier du front 5.6) :
+- **le personnage appartient au joueur et à un univers**, plus à une partie ; le prétiré
+  disparaît. Fiche durable (`characters` : nom, genre, profession, caractéristiques,
+  compétences), état d'une partie dans `character_states` (PV, saignement, premiers soins,
+  guérison, ressources), inventaire de la partie avec le personnage pour détenteur ; rien ne
+  passe d'une partie à l'autre pour l'instant ;
+- **création selon le livre, avec un écart** : sept fois **4D6, les trois meilleurs gardés**,
+  tirés par le backend (`character_rolls`, une série par joueur, relance à volonté), placés en
+  permutation exacte, SIZ et INT relevées à 8, profession du catalogue de l'univers, réserves
+  professionnelle et personnelle (INT × 10) et plafond selon le **niveau de puissance** de
+  l'univers (`worlds.power_level`) ; nom de 1 à 35 caractères, genre `female` / `male` /
+  `neutral` ;
+- **le front ne calcule rien, même à la création** : un aperçu sans écriture
+  (`POST /characters/preview`) et la création partagent le calcul pur `createCharacter` ;
+- **professions en catalogue d'univers** (`professions`, sans surcharge par scénario) ;
+  **équipement de départ = profession + scénario** (`scenarios.starting_kit`), ressources
+  additionnées ;
+- **une partie à la fois par personnage** (index unique partiel, `character_engaged`) ; statut
+  `failed` et `ended_at` ; abandon (refusé pendant un tour), rejeu d'un scénario échoué, jamais
+  d'un scénario réussi ; seule une partie `failed` se supprime, un personnage seulement hors
+  partie ;
+- **ce que voient les étapes** : l'arbitrage le nom et la profession, la narration le nom, le
+  genre et la profession traduite ; l'extraction rien de plus. Le nom est un texte du joueur,
+  introduit comme donnée de jeu ;
+- **front** : accueil par personnages et univers, page d'un personnage, création en cinq étapes,
+  bandeau d'une partie close ; **back-office** : niveau de puissance, onglet *Professions*,
+  équipement de départ du scénario.
+
+Lots suivants de la Phase 12 : conditions de fin de partie, progression, pause et reprise.
 
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
@@ -579,8 +611,25 @@ serverless pour le backend).
   (`TAGGED_LORE_CAP`) est dans le code, pas par univers.
 - **Une partie se lit par le scope `listed`** (`Session.query().withScopes((scopes) =>
   scopes.listed())`) dans toute route de jeu et à la soumission d'un tour : une partie
-  supprimée par le joueur (`deleted_at`) répond comme une partie inexistante. Seul le worker
-  la relit sans le scope, pour finir un tour déjà en cours.
+  supprimée par le joueur (`deleted_at`), ou dont le personnage est supprimé, répond comme une
+  partie inexistante. Seul le worker la relit sans le scope, pour finir un tour déjà en cours.
+  Un personnage se lit de même par le scope `listed` de `Character`.
+- **Le personnage d'une partie se lit en deux morceaux** : la fiche durable (`Character` :
+  caractéristiques, compétences, profession, genre), jamais copiée, et l'état de la partie
+  (`CharacterState` : PV, blessures, ressources). Tout ce qui ne dure qu'une partie s'écrit sur
+  `character_states`, jamais sur `characters` — la progression seule écrira sur la fiche. Les
+  objets ont pour détenteur `character_states.character_id`, dans la partie.
+- **Une partie se lance par `startGame`** (`#services/game/new_game`) et se clôt par
+  `#services/game/game_lifecycle` (`lockOwnGame`, `abandonGame`) : l'abandon et la soumission
+  d'un tour prennent le même verrou (`forUpdate`) sur la partie. Une partie close
+  (`isOngoing` faux) refuse tout tour (`game_ended`).
+- **La création d'un personnage se calcule par `createCharacter`**
+  (`#services/rules/character_creation`), pur, une suite d'étapes (placement, puis la place de
+  l'espèce de la Phase 13bis, plancher de 8, profession, points, identité) — jamais un calcul au
+  front ni dans un contrôleur. Le tirage, l'aperçu et l'écriture passent par
+  `#services/game/character_creation` (`rollSeries`, `previewCharacter`,
+  `createCharacterFrom`) ; les réserves et plafonds par niveau vivent dans
+  `#services/rules/power_levels`, pas en base.
 - **Seule la narration reçoit des noms traduits** (`names`, `items_in_scene`), dans la seule
   langue du tour, et le glossaire réduit à ses entrées traduites dans cette langue. Arbitrage
   et extraction ne lisent que l'anglais (`label`) — jamais `labels` ni le glossaire.
@@ -693,7 +742,7 @@ node ace db:seed                  # contenu de jeu, puis compte et partie de tes
 node ace llm:ping                 # vérifie que le provider LLM répond
 node ace llm:cost --input-per-million=… --output-per-million=…
                                   # coût réel par tour, partie, étape, langue (lecture seule)
-node ace game:reset               # supprime parties et turn_log, re-seed une partie neuve (hors prod)
+node ace game:reset               # supprime parties et turn_log (personnages gardés), re-seed la partie de démo (hors prod)
 node ace game:reset --no-seed     # supprime sans re-seeder (avant une migration qui refuse les parties)
 node ace account:create-superadmin  # crée un superadmin hors de l'interface, production comprise
 

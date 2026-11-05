@@ -488,14 +488,19 @@ qu'afficher et tenir le brouillon de la création.
 
 **Création — `/worlds/:worldId/new-character`**, cinq étapes, avec retour en arrière possible
 jusqu'à la soumission ; le brouillon vit dans le composant (perdu si l'on quitte la page) :
-1. **Dés** : sept fois 3D6, tirés par le backend et révélés à l'écran comme un jet en direct
-   (5.3.7, préférence d'animation *Dés*, `prefers-reduced-motion` en plancher). **Reroll**
-   à volonté, qui remplace toute la série (et défait le placement).
+1. **Dés** : sept fois 4D6, les trois meilleurs gardés, tirés par le backend et révélés à
+   l'écran comme un jet en direct ; le dé écarté, désigné par le backend, se grise une fois posé
+   (5.3.7, préférence d'animation *Dés*, `prefers-reduced-motion` en plancher). Le premier
+   tirage part du bouton **Roll the dice**, jamais à l'arrivée sur la page. **Reroll** à
+   volonté, qui remplace toute la série (et défait le placement). Les sept résultats sont
+   empilés sur une colonne au téléphone, deux au-delà : quatre dés et leur total par ligne.
 2. **Placement** : glisser ou attribuer chaque résultat à une caractéristique, chaque résultat
    une seule fois. Une mention signale que SIZ et INT ne descendent pas sous 8 ; la valeur
    relevée s'affiche telle que la renvoie l'aperçu.
 3. **Profession** : les professions de l'univers, avec leur description, leurs compétences
-   professionnelles et leur équipement de départ.
+   professionnelles et leur équipement de départ. Changer de profession efface les points
+   professionnels déjà répartis (ils allaient aux compétences de l'ancienne), pas les points
+   personnels.
 4. **Compétences** : deux réserves affichées avec leur reste (professionnelle, sur les seules
    compétences de la profession ; personnelle, sur toutes), chaque compétence avec sa chance
    de base et sa valeur, le plafond de l'univers rappelé. Un reliquat est signalé, pas bloquant.
@@ -540,13 +545,12 @@ disponible.
 | `POST` | `/auth/login` | Existe, **à passer en cookie de session** | Connexion |
 | `POST` | `/account/logout` | Existe, à adapter | Déconnexion |
 | `GET` | `/account/profile` | Existe | Nom et initiales dans le menu du compte |
-| `GET` | `/sessions` | Existe (KAN-16) | Liste des parties (5.2) |
-| `GET` | `/sessions/:id` | Existe (KAN-16) | Partie : personnage, libellés, tour en cours éventuel |
+| `GET` | `/sessions/:id` | Existe (KAN-16), en-tête complété en Phase 12 | Partie, close comprise : statut, `endedAt`, personnage (fiche et état de la partie), scénario, libellés, tour en cours éventuel |
 | `GET` | `/sessions/:id/turns` | Existe (KAN-16), paginée en Phase 9 (KAN-133) | Historique des tours aboutis, par pages de 20 (`?before=` un numéro de tour), `metadata.hasEarlier` |
 | `GET` | `/sessions/:id/turns/:turnId` | Existe (KAN-16) | État et résultat d'un tour (rattrapage) |
 | `POST` | `/sessions/:id/turns` | Existe, **à passer en `202` + clé d'idempotence** | Soumission |
 | SSE | canal Transmit de la partie | **À créer** | Progression du tour (architecture, 8bis) |
-| — | personnages, création, lancement, abandon | **Phase 12** | Écrans 5.6 ; routes esquissées dans l'architecture, 8bis (« Personnages et parties d'un personnage ») |
+| — | personnages, création, lancement, abandon | Existe (Phase 12, KAN-151) | Écrans 5.6 ; routes dans l'architecture, 8bis (« Personnages et parties d'un personnage »). `GET /sessions` a disparu : l'accueil lit `GET /characters` |
 
 **Authentification** : cookie de session `httpOnly` ; aucun jeton stocké côté front. En
 développement, le serveur Vite proxifie `/api` et `/__transmit` vers le backend (même

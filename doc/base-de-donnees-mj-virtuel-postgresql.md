@@ -242,7 +242,7 @@ prétiré du scénario ; ce qui ne dure qu'une partie vit désormais dans `chara
 | Colonne | Type | Contenu |
 |---|---|---|
 | `id` | uuid | identifiant |
-| `user_id` | FK → users | joueur propriétaire |
+| `user_id` | FK → users (cascade) | joueur propriétaire |
 | `world_id` | FK → worlds (restrict) | univers du personnage, pour toujours |
 | `profession_id` | uuid | profession ; clé étrangère composite `(profession_id, world_id)` → `professions(id, world_id)`, restrict |
 | `name` | varchar(35) | nom choisi par le joueur : lettres, espaces, apostrophe, trait d'union, point |
@@ -261,13 +261,17 @@ prétiré du scénario ; ce qui ne dure qu'une partie vit désormais dans `chara
   diverger ; la progression écrira sur la fiche à la fin d'un scénario.
 - **Le personnage ne garde rien d'une partie à l'autre** (pour l'instant) : points de vie,
   ressources et inventaire repartent à neuf à chaque lancement.
-- Un personnage supprimé disparaît des routes du joueur avec ses parties, qui restent en base.
+- Un personnage supprimé disparaît des routes du joueur avec ses parties, qui restent en base
+  (le scope `listed` de `sessions` écarte aussi les parties d'un personnage supprimé).
+- Unicité sur `(id, world_id)` : cible de la clé étrangère composite de `sessions`.
 
 ### `character_rolls`
 
-La série de caractéristiques tirée pour la création d'un personnage (Phase 12) : sept fois 3D6,
-tirés par le backend. Une série courante par joueur, remplacée à chaque relance (à volonté) et
-consommée par la création, qui n'accepte qu'une permutation exacte de cette série.
+La série de caractéristiques tirée pour la création d'un personnage (Phase 12) : sept fois 4D6,
+les trois meilleurs gardés, tirés par le backend. Seuls les totaux sont gardés, jamais les dés.
+Une série courante par joueur, remplacée à chaque relance (à volonté) et consommée par la
+création, qui n'accepte qu'une permutation exacte de cette série ; une série remplacée entre
+l'aperçu et la soumission fait refuser la création (`stale_characteristic_roll`).
 
 | Colonne | Type | Contenu |
 |---|---|---|
@@ -286,7 +290,7 @@ Une partie : un personnage engagé dans un scénario.
 | `user_id` | FK → users | joueur propriétaire |
 | `world_id` | FK → worlds (restrict), non null | univers de la partie (Phase 5) |
 | `scenario_id` | uuid, non null | scénario d'où la partie est lancée ; clé étrangère composite `(scenario_id, world_id)` → `scenarios(id, world_id)`, restrict |
-| `character_id` | uuid, non null | personnage engagé (Phase 12) ; clé étrangère composite `(character_id, world_id)` → `characters(id, world_id)`, restrict |
+| `character_id` | uuid, non null | personnage engagé (Phase 12) ; clé étrangère composite `(character_id, world_id)` → `characters(id, world_id)`, sans action : supprimer un joueur emporte ses parties et ses personnages dans la même instruction, dans n'importe quel ordre |
 | `status` | enum `session_status` | `in_progress` / `paused` / `completed` (réussie) / `failed` (Phase 12) |
 | `ended_at` | timestamptz, nullable | fin de la partie (`completed` ou `failed`) |
 | `current_chapter` | varchar, nullable | référence du chapitre courant, parmi `scenarios.chapters` |
@@ -318,7 +322,7 @@ lancement. Ces colonnes vivaient sur `characters` jusqu'à la Phase 11.
 |---|---|---|
 | `id` | uuid | identifiant |
 | `session_id` | FK → sessions (cascade), unique | partie |
-| `character_id` | FK → characters | personnage engagé |
+| `character_id` | FK → characters (sans action, comme `sessions`) | personnage engagé, détenteur des objets de la partie |
 | `hit_points` | int | PV courants |
 | `hit_points_max` | int | PV maximum, dérivés de la fiche au lancement : `CON + SIZ` depuis la Phase 10 (provisoire, Phase 13) |
 | `bleeding` | bool | saigne d'un coup reçu : 1 PV par round de combat, jusqu'aux premiers soins ou la fin du combat (Phase 10) |
