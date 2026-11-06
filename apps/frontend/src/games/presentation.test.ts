@@ -1,14 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import {
-  filledPips,
-  groupSkills,
-  paragraphs,
-  percentileDice,
-  restingRoll,
-  showsQuantity,
-} from './presentation'
-import type { Roll } from './queries'
+import { filledPips, groupSkills, paragraphs, percentileDice, showsQuantity } from './presentation'
 
 describe('groupSkills', () => {
   test('puts each skill under its BRP category, in the order of the categories', () => {
@@ -74,21 +66,5 @@ describe('percentileDice', () => {
 
   test('reads a hundred as 00 and 0, as on the table', () => {
     expect(percentileDice(100)).toEqual({ tens: 0, units: 0 })
-  })
-})
-
-describe('restingRoll', () => {
-  const roll = (value: number) => ({ roll: value }) as Roll
-
-  test("the turn in flight's last roll comes first", () => {
-    expect(restingRoll([{ rolls: [roll(10)] }], [roll(20), roll(30)])).toEqual(roll(30))
-  })
-
-  test('else the last roll of the latest turn that had one', () => {
-    expect(restingRoll([{ rolls: [roll(10), roll(11)] }, { rolls: [] }], [])).toEqual(roll(11))
-  })
-
-  test('none before the first roll', () => {
-    expect(restingRoll([{ rolls: [] }], null)).toBeNull()
   })
 })

@@ -1,5 +1,5 @@
 import { SKILL_CATEGORIES, type SkillCategory } from '@/api/enums'
-import type { Character, InventoryItem, LabelledValue, Roll, Turn } from './queries'
+import type { Character, InventoryItem, LabelledValue } from './queries'
 
 /**
  * Purely visual derivations — layout, never game logic (front spec,
@@ -53,20 +53,4 @@ export function showsQuantity(item: Pick<InventoryItem, 'handle' | 'quantity'>):
  */
 export function percentileDice(roll: number): { tens: number; units: number } {
   return { tens: Math.floor((roll % 100) / 10), units: roll % 10 }
-}
-
-/**
- * The roll the dice tray shows at rest: the last one already on the sheet —
- * of the turn in flight first, else of the latest turn that had one. Null
- * before the first roll of the game.
- */
-export function restingRoll(turns: Pick<Turn, 'rolls'>[], inFlight: Roll[] | null): Roll | null {
-  const current = inFlight?.at(-1)
-  if (current) return current
-
-  for (let index = turns.length - 1; index >= 0; index--) {
-    const last = turns[index]?.rolls.at(-1)
-    if (last) return last
-  }
-  return null
 }

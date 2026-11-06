@@ -474,8 +474,8 @@ epic KAN-167, hors roadmap, front seul, sans changement d'API (détail : cahier 
   ni barre d'onglets ;
 - **thème clair par défaut**, le sombre devient « la table la nuit », *System* reste un choix
   (stocké comme tel) ;
-- le **jet en direct se joue dans le plateau de dés**, puis rejoint la feuille en carte ; le
-  plateau garde le dernier jet au repos ;
+- le **jet en direct se joue dans le plateau de dés**, puis rejoint la feuille en carte ; une
+  fois révélé, le plateau ne le garde pas (il ne porte que la saisie) ;
 - **pas de points de vie sur la fiche d'un personnage hors partie** : ils n'existent que dans
   une partie.
 

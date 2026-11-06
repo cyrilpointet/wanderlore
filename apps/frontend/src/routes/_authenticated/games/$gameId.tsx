@@ -18,7 +18,6 @@ import type { SheetTab } from '@/games/sheet_tabs'
 import { Composer } from '@/games/composer'
 import { GameOver } from '@/games/game_over'
 import { heldInFlight } from '@/games/held_turn'
-import { restingRoll } from '@/games/presentation'
 import { lastRevealed, liveRollOf, locksInput } from '@/games/roll_reveal'
 import { rollLine, rollText } from '@/games/roll_text'
 import { SceneTag } from '@/games/scene_tag'
@@ -75,10 +74,6 @@ function GameScreen() {
   const shown = state.status !== 'idle' ? state : turn.held ? heldInFlight(turn.held) : null
   const liveRoll = liveRollOf(reveal, shown?.submission.turnId ?? null)
   const announced = lastRevealed(reveal)
-  const resting = restingRoll(
-    journal.turns,
-    shown && (shown.status === 'in_progress' || shown.status === 'failed') ? shown.rolls : null
-  )
 
   function edit() {
     const text = turn.edit()
@@ -138,7 +133,6 @@ function GameScreen() {
 
       <DiceTray
         live={liveRoll}
-        last={resting}
         onThrow={turn.throwDice}
         onDiceStopped={turn.diceStopped}
         onFolded={turn.folded}

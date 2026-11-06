@@ -100,7 +100,6 @@ function render(state: Exclude<TurnState, { status: 'idle' }>, revealState: Reve
       <TurnInFlight state={state} reveal={revealState} onRetry={() => {}} onEdit={() => {}} />
       <DiceTray
         live={liveRollOf(revealState, state.submission.turnId)}
-        last={null}
         onThrow={() => {}}
         onDiceStopped={() => {}}
         onFolded={() => {}}

@@ -403,7 +403,8 @@ Trois temps :
    dizaines s'arrêtent d'abord, les unités ensuite, sur le d100 transmis.
 3. **Révélation** — le d100 et le degré tamponné apparaissent, avec un accent pour `critical`
    et `fumble` ; le jet rejoint la feuille en carte (5.3.2), puis la narration retenue apparaît
-   en fondu et poursuit son écriture. Le plateau garde le dernier jet au repos.
+   en fondu et poursuit son écriture. Le plateau ne garde pas le jet : il n'est plus que sur la
+   feuille, et le plateau ne porte plus que la saisie.
 
 **Plusieurs jets par tour** (Phase 10, KAN-141) : un round de combat apporte jusqu'à deux
 `roll_resolved`, dans l'ordre — l'attaque du personnage, puis sa défense contre la riposte ;
@@ -781,10 +782,11 @@ inclinée** ; les fiches sous la pile dépassent de quelques pixels, 1° au plus
 - *Étiquette du lieu* : petite étiquette percée, épinglée sur le bord haut de la feuille : le
   lieu et la période (« Hôtel de Laffemas · Paris — Dusk »), puis l'univers et le scénario. Jamais
   d'heure, de date ni de sorties. Le récit défile sous elle sans jamais passer dessous.
-- *Plateau de dés* : creusé dans la table, glissé sous le bord bas de la feuille. Deux d10
-  (dizaines, unités) **dessinés comme de vrais dés à dix faces**, ivoire, chiffres en *Inter* ;
-  il montre le dernier jet et son tampon. Au jet en direct (5.3.7), il grandit : la carte du jet
-  se construit, les dés montrent « ? », le bouton *Roll the dice* les lance.
+- *Plateau de dés* : creusé dans la table, glissé sous le bord bas de la feuille ; il porte la
+  saisie. Au jet en direct (5.3.7), il grandit : la carte du jet se construit, deux d10
+  (dizaines, unités) **dessinés comme de vrais dés à dix faces**, ivoire, chiffres en *Inter*,
+  montrent « ? », le bouton *Roll the dice* les lance. Une fois révélé, le jet rejoint la feuille
+  et ne reste pas dans le plateau (tranché le 2026-11-06 : il y faisait doublon).
 - *Pile de fiches* : la fiche du personnage, onglets *Character*, *Inventory*, *Quests*. Sur
   mobile, la carte du personnage en haut de l'écran (nom, pastilles) porte les trois onglets
   accrochés sous elle, et la pile se lève au-dessus de la table assombrie ; sur desktop, la pile

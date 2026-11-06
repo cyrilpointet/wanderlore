@@ -75,5 +75,8 @@ traduction du front (`src/i18n/locales/en/`) et du contenu des Trois Mousquetair
 - **Icônes** : dessinées à la main dans `src/screens.js` (sprite SVG), dans le style de Lucide.
   À remplacer par Lucide (section 8). Les dés (d10, d6) ne sont pas des icônes : ils se
   dessinent en SVG, comme dans la maquette.
+- **Dernier jet au repos dans le plateau** (`g1`, `g4` à `g8`) : retiré à l'intégration (tranché
+  le 2026-11-06). Une fois révélé, le jet n'est plus que sur la feuille ; le plateau ne porte que
+  la saisie, et ne montre les d10 que pendant un jet en direct.
 - **Formulaire de connexion pré-rempli** (`s1`) : pour la maquette seulement.
 - **Page introuvable** (`s6`) : deux d10 sur 00 et 0, le pire jet (100). Décor seulement.
