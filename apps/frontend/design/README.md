@@ -63,9 +63,6 @@ traduction du front (`src/i18n/locales/en/`) et du contenu des Trois Mousquetair
 
 - **Libellé nouveau** : « Chance » devant le total de la carte du jet en direct (`g2`, `g3`).
   Il demande une clé de traduction.
-- **Points de vie d'un personnage hors partie** (`s3`, `s3b` : « Hit points 23 ») : le front ne
-  les calcule pas. Le total doit venir de l'API du personnage ; s'il n'y est pas, l'ajouter côté
-  backend ou retirer la ligne (principe 1).
 - **Lien de retour** sur desktop et dans la fiche mobile : la maquette affiche le nom du
   personnage (« ‹ Armand de Lisle »), le front actuel « Character page ». Le nom vient du
   contenu ; garder « Character page » comme libellé accessible.

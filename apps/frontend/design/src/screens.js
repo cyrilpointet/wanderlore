@@ -209,17 +209,16 @@ const home = (menu = false) => `<div class="app">${appTop(menu)}
   ${CREDIT}
 </div>`;
 
-const sheetCard = (c, world, hpTotal) => `<article class="char"><span class="tab on">${world}</span><div class="card sheetcard">
+const sheetCard = (c, world) => `<article class="char"><span class="tab on">${world}</span><div class="card sheetcard">
   <div class="who"><h1 class="h1">${c.name}</h1><p>${c.sub}</p></div>
-  <div class="block"><div class="lead">Hit points<b>${hpTotal}</b></div></div>
-  <div class="block"><span class="label">Characteristics</span>${stats(c)}</div>
+    <div class="block"><span class="label">Characteristics</span>${stats(c)}</div>
   <div class="block"><span class="label">Skills</span>${skills(c)}</div>
 </div></article>`;
 
 const eleanorPage = () => `<div class="app">${appTop()}
   <a class="back" href="#">${ic('back')}My characters</a>
   <div class="charpage">
-    ${sheetCard(ELEANOR, 'The Lovecraft Mythos', 23)}
+    ${sheetCard(ELEANOR, 'The Lovecraft Mythos')}
     <div class="section" style="gap:28px">
       <section class="section"><h2 class="h2">Scenarios</h2>
         <article class="card scen"><div class="head"><h3 class="h3">The Ward Inheritance</h3></div>
@@ -241,7 +240,7 @@ const eleanorPage = () => `<div class="app">${appTop()}
 const armandPage = () => `<div class="app">${appTop()}
   <a class="back" href="#">${ic('back')}My characters</a>
   <div class="charpage">
-    ${sheetCard(ARMAND, 'The Three Musketeers', 14)}
+    ${sheetCard(ARMAND, 'The Three Musketeers')}
     <div class="section" style="gap:28px">
       <section class="section"><h2 class="h2">Current game</h2>
         <div class="card scen"><div class="playing" style="background:none;border:0;padding:0">
