@@ -36,10 +36,10 @@ describe('preferences | reading', () => {
   test('a browser that never chose has the defaults', () => {
     expect(readPreferences(memoryStorage().storage)).toEqual(DEFAULT_PREFERENCES)
     expect(DEFAULT_PREFERENCES).toMatchObject({
-      theme: 'system',
+      theme: 'light',
       narrationVoice: true,
       autoRoll: false,
-      animations: { dice: true, narration: true, hitPoints: true },
+      animations: { dice: true, narration: true, hitPoints: true, transitions: true },
     })
   })
 
@@ -50,17 +50,17 @@ describe('preferences | reading', () => {
 
   test('reads the choices already made, under their keys of before', () => {
     const { storage } = memoryStorage({
-      'wanderlore.theme': 'light',
+      'wanderlore.theme': 'dark',
       'wanderlore.narrationVoice': 'off',
       'wanderlore.autoRoll': 'on',
       'wanderlore.animations.dice': 'off',
     })
 
     expect(readPreferences(storage)).toEqual({
-      theme: 'light',
+      theme: 'dark',
       narrationVoice: false,
       autoRoll: true,
-      animations: { dice: false, narration: true, hitPoints: true },
+      animations: { dice: false, narration: true, hitPoints: true, transitions: true },
     })
   })
 
@@ -95,14 +95,14 @@ describe('preferences | the store', () => {
     expect(readPreferences(storage)).toEqual(store.get())
   })
 
-  test('following the system again forgets the theme, as the first-paint script expects', () => {
-    const { storage, map } = memoryStorage({ 'wanderlore.theme': 'light' })
+  test('following the system is a choice of its own, kept as the first-paint script expects', () => {
+    const { storage, map } = memoryStorage({ 'wanderlore.theme': 'dark' })
     const store = new PreferenceStore(() => storage)
 
     store.setTheme('system')
 
-    expect(map.has('wanderlore.theme')).toBe(false)
-    expect(store.get().theme).toBe('system')
+    expect(map.get('wanderlore.theme')).toBe('system')
+    expect(readPreferences(storage).theme).toBe('system')
   })
 
   test('every reader hears of a change, wherever it was made', () => {
@@ -140,7 +140,7 @@ describe('preferences | the store', () => {
 describe('preferences | animations', () => {
   const allOff = {
     ...DEFAULT_PREFERENCES,
-    animations: { dice: false, narration: false, hitPoints: false },
+    animations: { dice: false, narration: false, hitPoints: false, transitions: false },
   }
 
   test('play as the player chose while the system says nothing', () => {

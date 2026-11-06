@@ -166,7 +166,7 @@ describe('Journal | the roll in full', () => {
   test('a plain roll: the skill at its value, the d100 and the degree', () => {
     const text = textOf(renderToStaticMarkup(<RollChip roll={PERSUASION} />))
 
-    expect(text).toBe('Persuasion 60% · rolled 42 · Success')
+    expect(text).toBe('Persuasion 60% · rolled 42 Success')
   })
 
   test('every modifier with its value, a circumstance by its label, then the chance', () => {
@@ -193,7 +193,7 @@ describe('Journal | the roll in full', () => {
     )
 
     expect(text).toBe(
-      'Persuasion 60% · Difficult · Advantage +10 · Letter for M. de Tréville +10 · → 50% · rolled 8 · Special success'
+      'Persuasion 60% · Difficult · Advantage +10 · Letter for M. de Tréville +10 · → 50% · rolled 8 Special success'
     )
   })
 
@@ -216,7 +216,7 @@ describe('Journal | the roll in full', () => {
       )
     )
 
-    expect(text).toBe('Charisma 14 ×5 · → 70% · rolled 100 · Fumble')
+    expect(text).toBe('Charisma 14 ×5 · → 70% · rolled 100 Fumble')
   })
 })
 
@@ -297,7 +297,7 @@ describe('CharacterSheet | the BRP sheet', () => {
   test('shows the seven characteristics, then the skills in percent by category', () => {
     const text = textOf(renderToStaticMarkup(<CharacterSheet game={game([])} />))
 
-    for (const shown of ['Characteristics', 'Strength13', 'Dexterity16', 'Charisma14']) {
+    for (const shown of ['Characteristics', 'STR13', 'DEX16', 'CHA14']) {
       expect(text.replace(/\s+/g, '')).toContain(shown)
     }
     expect(text).toContain('Communication')

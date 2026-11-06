@@ -1,13 +1,20 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, CircleAlert, Trash2 } from 'lucide-react'
+import { BookOpen, ChevronLeft, CircleAlert, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { DANGER_ACTION, PRIMARY_ACTION, SECONDARY_ACTION } from '@/components/actions'
+import {
+  DANGER_TEXT_ACTION,
+  ICON_BUTTON,
+  PRIMARY_ACTION,
+  SECONDARY_ACTION,
+  SMALL,
+} from '@/components/actions'
+import { Stamp } from '@/components/stamp'
+import { CARD } from '@/components/surfaces'
 import { relativeTime } from '@/format/relative_time'
 import { CharacterStats } from '@/games/character_sheet'
-import { GameStatusBadge } from '@/games/game_status_badge'
-import { IdentityLine, OngoingGame } from './character_card'
+import { IdentityLine, OngoingGame, TabbedCard } from './character_card'
 import type { CharacterDetail, PastGame } from './queries'
 import { ScenarioCard } from './scenario_card'
 
@@ -16,6 +23,10 @@ import { ScenarioCard } from './scenario_card'
  * play, the scenarios of their world they may start, the games they played.
  * Shows what it is given; the page that holds it sends the requests and asks
  * for confirmation.
+ *
+ * The sheet is a tabbed card — the world on its tab — beside the rest from a
+ * wide screen up. No hit points on it: they belong to a game, and only show
+ * on the current game's card.
  */
 export function CharacterView({
   character,
@@ -43,138 +54,149 @@ export function CharacterView({
     <>
       <Link
         to="/"
-        className="mb-6 inline-flex items-center gap-1.5 text-label text-muted transition-colors hover:text-text"
+        className="inline-flex items-center gap-1 self-start rounded-sm text-sm leading-none font-medium text-muted transition-colors hover:text-text"
       >
-        <ArrowLeft aria-hidden className="size-4" />
+        <ChevronLeft aria-hidden className="size-4" />
         {t('page.back')}
       </Link>
-      <h1 className="font-serif text-[1.75rem] leading-tight font-medium text-text lg:text-[2rem]">
-        {character.name}
-      </h1>
-      <p className="mt-1.5 text-body text-muted">
-        <IdentityLine character={character} withGender />
-      </p>
 
-      {game && (
-        <Section title={t('game.title')}>
-          <OngoingGame game={game}>
-            <button type="button" onClick={onAbandon} className={SECONDARY_ACTION}>
-              {t('game.abandon')}
-            </button>
-            <Link to="/games/$gameId" params={{ gameId: game.id }} className={PRIMARY_ACTION}>
-              {t('game.continue')}
-            </Link>
-          </OngoingGame>
-        </Section>
-      )}
+      <div className="grid gap-[22px] lg:grid-cols-[400px_minmax(0,1fr)] lg:items-start lg:gap-10">
+        <section aria-label={t('page.sheet')}>
+          <TabbedCard world={character.world.label} className="flex flex-col gap-5 p-5">
+            <div>
+              <h1 className="font-serif text-[1.625rem] leading-tight font-semibold text-balance text-text">
+                {character.name}
+              </h1>
+              <p className="mt-0.5 text-[0.84375rem] text-muted">
+                <IdentityLine character={character} withGender withWorld={false} />
+              </p>
+            </div>
+            <CharacterStats character={character} />
+          </TabbedCard>
+        </section>
 
-      {!character.engaged && (
-        <Section title={t('scenarios.title')}>
-          {startError && (
-            <p
-              role="alert"
-              className="mb-4 flex items-center gap-2 rounded-lg border border-danger/60 p-4 text-body text-text"
-            >
-              <CircleAlert aria-hidden className="size-4 shrink-0 text-danger" />
-              {startError}
-            </p>
+        <div className="flex min-w-0 flex-col gap-7">
+          {game && (
+            <Section title={t('game.title')}>
+              <OngoingGame game={game} actionsBelow className={`${CARD} p-4`}>
+                <button type="button" onClick={onAbandon} className={SECONDARY_ACTION}>
+                  {t('game.abandon')}
+                </button>
+                <Link to="/games/$gameId" params={{ gameId: game.id }} className={PRIMARY_ACTION}>
+                  {t('game.continue')}
+                </Link>
+              </OngoingGame>
+            </Section>
           )}
-          {character.scenarios.length === 0 ? (
-            <p className="text-body text-muted">{t('scenarios.empty')}</p>
-          ) : (
-            <ul className="flex flex-col gap-4">
-              {character.scenarios.map((scenario) => (
-                <li key={scenario.id}>
-                  <ScenarioCard
-                    scenario={scenario}
-                    starting={starting === scenario.id}
-                    disabled={starting !== null}
-                    onStart={() => onStart(scenario.id)}
-                  />
-                </li>
-              ))}
-            </ul>
+
+          {!character.engaged && (
+            <Section title={t('scenarios.title')}>
+              {startError && (
+                <p
+                  role="alert"
+                  className={`${CARD} flex items-center gap-2 border-l-4 border-l-hp p-4 text-body text-text`}
+                >
+                  <CircleAlert aria-hidden className="size-4 shrink-0 text-danger" />
+                  {startError}
+                </p>
+              )}
+              {character.scenarios.length === 0 ? (
+                <p className="font-serif text-body text-muted italic">{t('scenarios.empty')}</p>
+              ) : (
+                <ul className="flex flex-col gap-3.5">
+                  {character.scenarios.map((scenario) => (
+                    <li key={scenario.id}>
+                      <ScenarioCard
+                        scenario={scenario}
+                        starting={starting === scenario.id}
+                        disabled={starting !== null}
+                        onStart={() => onStart(scenario.id)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Section>
           )}
-        </Section>
-      )}
 
-      <Section title={t('page.sheet')}>
-        <div className="flex flex-col gap-8 rounded-lg border border-border bg-surface-1 px-5 pb-6 sm:px-6 [&>section:first-child]:border-t-0">
-          <CharacterStats character={character} />
+          {character.pastGames.length > 0 && (
+            <Section title={t('pastGames.title')}>
+              <ul className="flex flex-col">
+                {character.pastGames.map((past) => (
+                  <li key={past.id}>
+                    <PastGameRow game={past} onDelete={() => onDeleteGame(past)} />
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+
+          {!character.engaged && (
+            <div>
+              <button type="button" onClick={onDeleteCharacter} className={DANGER_TEXT_ACTION}>
+                <Trash2 aria-hidden className="size-[18px]" />
+                {t('page.deleteCharacter')}
+              </button>
+            </div>
+          )}
         </div>
-      </Section>
-
-      {character.pastGames.length > 0 && (
-        <Section title={t('pastGames.title')}>
-          <ul className="flex flex-col gap-3">
-            {character.pastGames.map((past) => (
-              <li key={past.id}>
-                <PastGameRow game={past} onDelete={() => onDeleteGame(past)} />
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
-      {!character.engaged && (
-        <div className="mt-12 border-t border-border pt-6">
-          <button type="button" onClick={onDeleteCharacter} className={DANGER_ACTION}>
-            <Trash2 aria-hidden className="size-4" />
-            {t('page.deleteCharacter')}
-          </button>
-        </div>
-      )}
+      </div>
     </>
   )
 }
 
-/** A game over: read again, and — failed — taken off the page. */
+/** A game over, stamped with its outcome: read again, and — failed — taken off the page. */
 function PastGameRow({ game, onDelete }: { game: PastGame; onDelete: () => void }) {
   const { t } = useTranslation('characters')
   const ended = game.endedAt ? relativeTime(new Date(game.endedAt)) : null
 
   return (
-    <article className="flex items-center gap-3 rounded-lg border border-border-strong bg-surface-1 p-4">
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-serif text-body text-text">{game.scenario.title}</p>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-label text-subtle">
-          <GameStatusBadge status={game.status} />
-          {ended && game.endedAt && (
-            <time dateTime={game.endedAt}>
-              {t('pastGames.ended', {
-                value: ended.value,
-                formatParams: { value: { range: ended.unit, numeric: 'auto' } },
-              })}
-            </time>
-          )}
-        </div>
+    <article className="flex flex-wrap items-center gap-3 border-b border-border py-3">
+      <div className="flex min-w-45 flex-1 flex-col gap-0.5">
+        <p className="font-serif text-[0.96875rem] leading-snug font-semibold text-text">
+          {game.scenario.title}
+        </p>
+        {ended && game.endedAt && (
+          <time dateTime={game.endedAt} className="text-[0.78125rem] text-subtle">
+            {t('pastGames.ended', {
+              value: ended.value,
+              formatParams: { value: { range: ended.unit, numeric: 'auto' } },
+            })}
+          </time>
+        )}
       </div>
-      <Link
-        to="/games/$gameId"
-        params={{ gameId: game.id }}
-        className="shrink-0 text-label text-accent underline-offset-2 hover:underline"
-      >
-        {t('pastGames.read')}
-      </Link>
-      {game.status === 'failed' && (
-        <button
-          type="button"
-          onClick={onDelete}
-          aria-label={t('pastGames.delete', { scenario: game.scenario.title })}
-          title={t('pastGames.delete', { scenario: game.scenario.title })}
-          className="-mr-1.5 grid size-8 shrink-0 place-items-center rounded-full text-subtle transition-colors hover:bg-danger/10 hover:text-danger"
+      <Stamp tone={game.status === 'failed' ? 'failure' : 'success'}>
+        {t(`gameStatus.${game.status}`, { ns: 'enums' })}
+      </Stamp>
+      <div className="flex items-center gap-2">
+        <Link
+          to="/games/$gameId"
+          params={{ gameId: game.id }}
+          className={`${SECONDARY_ACTION} ${SMALL}`}
         >
-          <Trash2 aria-hidden className="size-4" />
-        </button>
-      )}
+          <BookOpen aria-hidden className="size-4" />
+          {t('pastGames.read')}
+        </Link>
+        {game.status === 'failed' && (
+          <button
+            type="button"
+            onClick={onDelete}
+            aria-label={t('pastGames.delete', { scenario: game.scenario.title })}
+            title={t('pastGames.delete', { scenario: game.scenario.title })}
+            className={`${ICON_BUTTON} hover:text-danger`}
+          >
+            <Trash2 aria-hidden className="size-4" />
+          </button>
+        )}
+      </div>
     </article>
   )
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mt-10">
-      <h2 className="mb-4 text-meta text-subtle uppercase">{title}</h2>
+    <section className="flex flex-col gap-3.5">
+      <h2 className="font-serif text-xl leading-tight font-semibold text-text">{title}</h2>
       {children}
     </section>
   )

@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next'
 
+import { PRIMARY_ACTION, SECONDARY_ACTION, SMALL } from '@/components/actions'
+import { CARD } from '@/components/surfaces'
 import { errorMessage } from '@/i18n/errors'
 import { useAnimates } from '@/preferences'
 import { Narration, PlayerAction, RollChips } from './journal'
-import { RollCard } from './roll_card'
 import { liveRollOf, type RevealState } from './roll_reveal'
 import { emphasisOf } from './turn_errors'
 import type { Failure, TurnState } from './turn_machine'
@@ -15,24 +16,19 @@ import { waitingText } from './waiting'
  * written — then, if it goes wrong, what happened and how to go on, the
  * provisional narration withdrawn. Gone once the turn joins the journal.
  *
- * A roll received live is played out on its card, the narration kept back
- * until the dice are thrown — those of every roll of the turn, one after the
- * other (front spec, section 5.3.7).
+ * A roll received live is played out in the dice tray (`DiceTray`), the
+ * narration kept back here until the dice are thrown — those of every roll of
+ * the turn, one after the other (front spec, section 5.3.7). Each roll joins
+ * the sheet as a card once its dice have landed.
  */
 export function TurnInFlight({
   state,
   reveal,
-  onThrow,
-  onDiceStopped,
-  onFolded,
   onRetry,
   onEdit,
 }: {
   state: Exclude<TurnState, { status: 'idle' }>
   reveal: RevealState
-  onThrow: () => void
-  onDiceStopped: () => void
-  onFolded: () => void
   onRetry: () => void
   onEdit: () => void
 }) {
@@ -41,25 +37,17 @@ export function TurnInFlight({
   const liveRoll = liveRollOf(reveal, state.submission.turnId)
 
   return (
-    <article className="flex flex-col gap-6">
+    <article className="flex flex-col gap-3.5">
       <div>
         <PlayerAction text={state.submission.playerInput} />
         {state.status === 'submitting' && (
-          <p className="mt-2 pl-4.5 text-meta text-subtle">{t('journal.sending')}</p>
+          <p className="mt-1.5 pl-[18px] text-meta text-subtle">{t('journal.sending')}</p>
         )}
       </div>
 
       {liveRoll ? (
-        // The rolls already thrown, then the one on its card: those still to come stay hidden.
-        <RollChips rolls={liveRoll.done}>
-          <RollCard
-            key={liveRoll.done.length}
-            live={liveRoll}
-            onThrow={onThrow}
-            onDiceStopped={onDiceStopped}
-            onFolded={onFolded}
-          />
-        </RollChips>
+        // The rolls already thrown: the one in the tray and those still to come stay off the sheet.
+        <RollChips rolls={liveRoll.done} />
       ) : (
         (state.status === 'in_progress' || state.status === 'failed') && (
           <RollChips rolls={state.rolls} />
@@ -81,14 +69,13 @@ export function TurnInFlight({
   )
 }
 
-const PRIMARY =
-  'h-9 rounded-lg bg-accent px-4 text-label font-medium text-on-accent transition-colors hover:bg-accent-hover'
-const SECONDARY =
-  'h-9 rounded-lg border border-border-strong px-4 text-label font-medium text-text transition-colors hover:border-accent'
+const PRIMARY = `${PRIMARY_ACTION} ${SMALL}`
+const SECONDARY = `${SECONDARY_ACTION} ${SMALL}`
 
 /**
- * In place of the narration: what went wrong, in the player's language, and
- * the two ways on. The one more likely to work comes first, filled.
+ * In place of the narration, a note pinned on the sheet: what went wrong, in
+ * the player's language, and the two ways on. The one more likely to work
+ * comes first, filled.
  */
 function FailureCard({
   failure,
@@ -114,9 +101,12 @@ function FailureCard({
   )
 
   return (
-    <div role="alert" className="border-l-2 border-danger py-1 pl-4">
-      <p className="text-body text-text">{errorMessage(failure)}</p>
-      <div className="mt-4 flex gap-3">
+    <div
+      role="alert"
+      className={`${CARD} ml-3 flex flex-col gap-3 border-l-4 border-l-hp py-3.5 pr-3.5 pl-4 lg:ml-10 lg:max-w-[560px]`}
+    >
+      <p className="text-sm leading-normal text-text">{errorMessage(failure)}</p>
+      <div className="flex gap-2.5">
         {editFirst ? edit : retry}
         {editFirst ? retry : edit}
       </div>
@@ -127,9 +117,9 @@ function FailureCard({
 /** Italic is reserved for waiting states (front spec, section 8). */
 function Waiting({ text }: { text: string }) {
   return (
-    <p className="font-serif text-narration text-muted italic lg:text-narration-lg">
+    <p className="font-serif text-[0.96875rem] leading-relaxed text-subtle italic lg:text-narration">
       {text}
-      <span aria-hidden className="ml-2 inline-flex translate-y-[-0.2em] gap-1 align-middle">
+      <span aria-hidden className="ml-2 inline-flex translate-y-[-0.2em] gap-[3px] align-middle">
         {[0, 200, 400].map((delay) => (
           <span
             key={delay}

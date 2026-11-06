@@ -45,6 +45,15 @@ const TURN: Turn = {
 
 const IDLE: EarlierTurns = { remain: true, load: () => {}, loading: false, error: null }
 
+describe('Journal | on the sheet', () => {
+  test('its scroll area is positioned, so the text kept for screen readers scrolls with the story', () => {
+    const markup = renderToStaticMarkup(<Journal game={GAME} turns={[TURN]} />)
+
+    // Positioned anywhere higher, that text would stretch the page below the table.
+    expect(markup).toMatch(/<div class="relative h-full overflow-y-auto/)
+  })
+})
+
 describe('Journal | earlier turns', () => {
   test('offers to load earlier turns while some remain', () => {
     const markup = renderToStaticMarkup(<Journal game={GAME} turns={[TURN]} earlier={IDLE} />)
@@ -106,12 +115,14 @@ describe('Journal | a round of combat read back', () => {
       />
     )
 
-    expect(markup).toContain('Swordsmanship 60% · rolled 23 · Success · Hit')
+    expect(markup).toContain('<span> · Swordsmanship 60%</span><span> · rolled 23</span>')
+    expect(markup).toContain('>Success · Hit</span>')
     // The modifier left out when it is nought; the damage on a line of its own.
     expect(markup).toContain('>Damage 5 · Armor −2 · → 3 dealt · Bleeding<')
     expect(markup).toContain(
-      'Dodge against unknown opponent 2 · Dodge 35% · rolled 90 · Failure · Blow taken'
+      '>Dodge against unknown opponent 2</span><span> · Dodge 35%</span><span> · rolled 90</span>'
     )
+    expect(markup).toContain('>Failure · Blow taken</span>')
     expect(markup.indexOf('rolled 23')).toBeLessThan(markup.indexOf('rolled 90'))
     expect(markup).not.toContain('Roll the dice')
   })

@@ -1,12 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import {
-  gaugePercent,
-  groupSkills,
-  paragraphs,
-  percentileDice,
-  showsQuantity,
-} from './presentation'
+import { filledPips, groupSkills, paragraphs, percentileDice, showsQuantity } from './presentation'
 
 describe('groupSkills', () => {
   test('puts each skill under its BRP category, in the order of the categories', () => {
@@ -42,15 +36,15 @@ describe('paragraphs', () => {
   })
 })
 
-describe('gaugePercent', () => {
+describe('filledPips', () => {
   test.each([
-    [8, 10, 80],
+    [8, 10, 8],
     [0, 10, 0],
-    [12, 10, 100],
+    [12, 10, 10],
     [-2, 10, 0],
     [3, 0, 0],
-  ])('%i / %i fills %i%%', (current, max, percent) => {
-    expect(gaugePercent(current, max)).toBe(percent)
+  ])('%i / %i fills %i pips', (current, max, pips) => {
+    expect(filledPips(current, max)).toBe(pips)
   })
 })
 

@@ -25,6 +25,7 @@
     "dice": "Rolling dice",
     "narration": "Story fading in",
     "hitPoints": "Hit point gauge",
+    "transitions": "Panels and pages",
     "reducedBySystem": "Your device asks for less motion: animations stay off."
   }
 }

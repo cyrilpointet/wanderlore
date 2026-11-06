@@ -70,6 +70,15 @@
     "DEX": "Dexterity",
     "CHA": "Charisma"
   },
+  "characteristicShort": {
+    "STR": "STR",
+    "CON": "CON",
+    "SIZ": "SIZ",
+    "INT": "INT",
+    "POW": "POW",
+    "DEX": "DEX",
+    "CHA": "CHA"
+  },
   "itemChange": {
     "gained": "You gain {{item}}",
     "gained_counterpart": "You get {{item}} from {{counterpart}}",

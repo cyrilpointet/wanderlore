@@ -4,8 +4,10 @@ import { describe, expect, test } from 'vitest'
 import '@/i18n'
 import { heldInFlight, waitsForDice, type Completion } from './held_turn'
 import type { Roll, Turn } from './queries'
+import { DiceTray } from './dice_tray'
 import {
   initialRevealState,
+  liveRollOf,
   revealReducer,
   type RevealAction,
   type RevealState,
@@ -91,17 +93,20 @@ const thrown: RevealAction[] = [{ type: 'throw' }, { type: 'dice_stopped' }, { t
 const STAGED = reveal(received())
 const REVEALED = reveal(received(), { type: 'throw' }, { type: 'dice_stopped' }, { type: 'folded' })
 
+/** The turn on the sheet and the dice tray, as the game screen lays them out. */
 function render(state: Exclude<TurnState, { status: 'idle' }>, revealState: RevealState): string {
   return renderToStaticMarkup(
-    <TurnInFlight
-      state={state}
-      reveal={revealState}
-      onThrow={() => {}}
-      onDiceStopped={() => {}}
-      onFolded={() => {}}
-      onRetry={() => {}}
-      onEdit={() => {}}
-    />
+    <>
+      <TurnInFlight state={state} reveal={revealState} onRetry={() => {}} onEdit={() => {}} />
+      <DiceTray
+        live={liveRollOf(revealState, state.submission.turnId)}
+        onThrow={() => {}}
+        onDiceStopped={() => {}}
+        onFolded={() => {}}
+      >
+        {null}
+      </DiceTray>
+    </>
   )
 }
 
@@ -118,7 +123,8 @@ describe('live roll | the turn in flight', () => {
     const markup = render(TOLD, REVEALED)
 
     expect(markup).not.toContain('Roll the dice')
-    expect(markup).toContain('Persuasion 60% · rolled 42 · Success')
+    expect(markup).toContain('>Persuasion 60%</span><span> · rolled 42</span>')
+    expect(markup).toContain('>Success</span>')
     expect(markup).toContain(NARRATION)
     expect(markup).toContain('animate-fade-in')
   })
@@ -204,7 +210,8 @@ describe('live roll | a round of combat', () => {
   test('the attack thrown, it folds into its chip with its damage, and the parry is set out', () => {
     const markup = render(FOUGHT, reveal(BOTH, ...thrown))
 
-    expect(markup).toContain('Swordsmanship 60% · rolled 23 · Success · Hit')
+    expect(markup).toContain('<span> · Swordsmanship 60%</span><span> · rolled 23</span>')
+    expect(markup).toContain('>Success · Hit</span>')
     expect(markup).toContain('Damage 5 · Damage modifier +2 · → 7 dealt')
     expect(markup).toContain('Parry')
     expect(markup).toContain('Roll the dice')
@@ -217,7 +224,10 @@ describe('live roll | a round of combat', () => {
 
     expect(markup).not.toContain('Roll the dice')
     expect(markup.indexOf('rolled 23')).toBeLessThan(markup.indexOf('rolled 88'))
-    expect(markup).toContain('Parry against unknown opponent 2 · Swordsmanship 60% · rolled 88 · Failure · Blow taken')
+    expect(markup).toContain(
+      '>Parry against unknown opponent 2</span><span> · Swordsmanship 60%</span><span> · rolled 88</span>'
+    )
+    expect(markup).toContain('>Failure · Blow taken</span>')
     expect(markup).toContain(NARRATION)
   })
 

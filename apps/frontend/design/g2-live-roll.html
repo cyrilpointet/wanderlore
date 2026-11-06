@@ -1,0 +1,87 @@
+<!doctype html>
+<!DOCTYPE html>
+<html lang="en" data-theme="light"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wanderlore screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&amp;display=swap">
+<link rel="stylesheet" href="table.css">
+</head>
+<body><svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></symbol>
+<symbol id="i-next" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></symbol>
+<symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"></path><path d="M15.5 8.5a5 5 0 010 7"></path><path d="M18.5 5.5a9 9 0 010 13"></path></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0014 0"></path><path d="M12 18v3"></path></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 018 0v4"></path></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"></path></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"></path></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"></path></symbol>
+<symbol id="i-reroll" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-3-6.7L21 8"></path><path d="M21 3v5h-5"></path></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M2 5h7a3 3 0 013 3v12a2 2 0 00-2-2H2z"></path><path d="M22 5h-7a3 3 0 00-3 3v12a2 2 0 012-2h8z"></path></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></symbol>
+<symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></symbol>
+</svg>
+<div id="app"><div class="game is-live">
+  <div class="topbar">
+    <div class="left"><a class="back" href="#"><svg class="i" aria-hidden="true"><use href="#i-back"></use></svg>Armand de Lisle</a><span class="hp"><span class="pips" role="img" aria-label="Hit points: 14 of 14"><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i></span><span class="hp-val">14 / 14</span></span></div>
+    <div class="acts"><button class="icon-btn" aria-label="Read the story aloud"><svg class="i" aria-hidden="true"><use href="#i-speaker"></use></svg></button><span class="chip">CP</span></div>
+  </div>
+  <header class="hero">
+    <span class="tab">Character sheet</span>
+    <div class="under u2"></div><div class="under u1"></div>
+    <div class="card">
+      <div class="row1"><button class="icon-btn ghost" aria-label="Character page"><svg class="i" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="name">Armand de Lisle</span>
+      <button class="icon-btn ghost" aria-label="Read the story aloud"><svg class="i" aria-hidden="true"><use href="#i-speaker"></use></svg></button><span class="chip">CP</span></div>
+      <div class="row2"><span class="label">Hit points</span><span class="hp"><span class="pips" role="img" aria-label="Hit points: 14 of 14"><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i></span><span class="hp-val">14 / 14</span></span></div>
+    </div>
+  </header>
+  <main class="board"><div class="place"><b>Hôtel de Laffemas · Paris — Dusk</b><span>The Three Musketeers · The Stolen Seal</span></div>
+    <div class="sheet"><div class="scroll" data-bottom=""><div class="story"><div class="turn">
+  <p class="you">I step between the two guards and ask, as politely as my Gascon pride allows, who sent them.</p>
+  <div class="rolls"><div class="roll"><span><b>Persuasion 45%</b> · Difficult · Advantage +10 · → 32% · rolled <b>27</b></span><span class="stamp ok">Success</span></div></div>
+  <div class="narr"><p>The taller guard looks you up and down, as one weighs a horse he has no intention of buying. Then he laughs, and the laugh is not unkind. “Jussac sent us,” he says, “and Jussac will want to know why a Gascon is asking.”</p>
+  <p>Behind him a door opens on candlelight and the smell of wine. Someone inside has stopped talking.</p></div>
+</div><div class="turn"><p class="you">I draw my rapier and lunge at Jussac before he can call for help.</p></div></div></div></div>
+  </main>
+  <section class="dock tray live"><div class="card builder">
+  <h3 class="h3">Attack on Jussac</h3>
+  <div class="line"><span>Swordsmanship</span><b>55%</b></div>
+  <div class="line"><span>Strong advantage</span><span class="plus">+20</span></div>
+  <div class="total"><span class="label">Chance</span><b>→ 75%</b></div>
+</div><div class="throw"><div class="dice"><div class="die"><svg class="d10 big" viewBox="0 0 64 68" aria-hidden="true">
+<g style="stroke:var(--die-line);stroke-width:1.2;stroke-linejoin:round">
+<path d="M32 3L4 27L17 31Z" style="fill:var(--die-side)"></path>
+<path d="M32 3L60 27L47 31Z" style="fill:var(--die-dark)"></path>
+<path d="M4 27L10 45L32 65L32 46L17 31Z" style="fill:var(--die-side)"></path>
+<path d="M60 27L54 45L32 65L32 46L47 31Z" style="fill:var(--die-dark)"></path>
+<path d="M32 3L47 31L32 46L17 31Z" style="fill:var(--die)"></path>
+</g><text x="32" y="29" text-anchor="middle" dominant-baseline="middle">?</text></svg><span class="label">Tens</span></div><div class="die"><svg class="d10 big" viewBox="0 0 64 68" aria-hidden="true">
+<g style="stroke:var(--die-line);stroke-width:1.2;stroke-linejoin:round">
+<path d="M32 3L4 27L17 31Z" style="fill:var(--die-side)"></path>
+<path d="M32 3L60 27L47 31Z" style="fill:var(--die-dark)"></path>
+<path d="M4 27L10 45L32 65L32 46L17 31Z" style="fill:var(--die-side)"></path>
+<path d="M60 27L54 45L32 65L32 46L47 31Z" style="fill:var(--die-dark)"></path>
+<path d="M32 3L47 31L32 46L17 31Z" style="fill:var(--die)"></path>
+</g><text x="32" y="29" text-anchor="middle" dominant-baseline="middle">?</text></svg><span class="label">Units</span></div></div><button class="btn primary block">Roll the dice</button></div><div class="slip locked"><svg class="i" aria-hidden="true"><use href="#i-lock"></use></svg><span class="field">The game master is answering…</span><button class="icon-btn ghost" disabled="" aria-label="Dictate your action"><svg class="i" aria-hidden="true"><use href="#i-mic"></use></svg></button><button class="send" disabled="" aria-label="Send"><svg class="i" aria-hidden="true"><use href="#i-send"></use></svg></button></div></section>
+  
+  <aside class="stack" aria-label="Character sheet">
+    <div class="tabs" role="tablist"><span class="tab on" role="tab">Character</span><span class="tab" role="tab">Inventory</span><span class="tab" role="tab">Quests</span>
+      <button class="icon-btn close" aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-x"></use></svg></button></div>
+    <div class="cards"><div class="under u2"></div><div class="under u1"></div><section class="card top">
+  <div class="who"><h2 class="h1">Armand de Lisle</h2><p>Gascon gentleman · Male</p></div>
+  <div class="hpbox"><div class="top-row"><span class="label">Hit points</span><span class="hp-val">14 / 14</span></div><span class="pips big" role="img" aria-label="Hit points: 14 of 14"><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i></span></div>
+  <div class="block"><span class="label">Characteristics</span><div class="stats"><div class="stat"><small>STR</small><b>13</b></div><div class="stat"><small>CON</small><b>6</b></div><div class="stat"><small>SIZ</small><b>8</b></div><div class="stat"><small>INT</small><b>15</b></div><div class="stat"><small>POW</small><b>11</b></div><div class="stat"><small>DEX</small><b>16</b></div><div class="stat"><small>CHA</small><b>14</b></div></div></div>
+  <div class="block"><span class="label">Skills</span><div class="skills"><div><h4>Combat</h4><div class="lead">Swordsmanship<b>55%</b></div><div class="lead">Marksmanship<b>30%</b></div></div><div><h4>Communication</h4><div class="lead">Persuasion<b>45%</b></div><div class="lead">Etiquette<b>35%</b></div><div class="lead">Deception<b>25%</b></div></div><div><h4>Manipulation</h4><div class="lead">First Aid<b>30%</b></div></div><div><h4>Perception</h4><div class="lead">Observation<b>40%</b></div></div><div><h4>Physical</h4><div class="lead">Athletics<b>45%</b></div><div class="lead">Dodge<b>42%</b></div><div class="lead">Stealth<b>30%</b></div></div></div></div>
+  <div class="block"><span class="label">Resources</span><div class="lead">Purse<b>3</b></div></div></section></div>
+  </aside>
+</div></div>
+
+
+
+<script>document.querySelectorAll("[data-bottom]").forEach((s)=>{s.scrollTop=s.scrollHeight})</script></body></html>

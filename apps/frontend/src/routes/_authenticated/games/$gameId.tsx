@@ -1,24 +1,26 @@
 import { useCallback, useState } from 'react'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { createFileRoute, Link, notFound } from '@tanstack/react-router'
+import { createFileRoute, notFound } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { ApiError } from '@/api/client'
 import { isOver } from '@/api/enums'
-import { PRIMARY_ACTION } from '@/components/actions'
 import { errorMessage } from '@/i18n/errors'
-import { AppHeader } from '@/components/app_header'
+import { NotFoundMessage } from '@/components/system_pages'
+import { SHEET } from '@/components/surfaces'
 import { CharacterSheet } from '@/games/character_sheet'
+import { DiceTray } from '@/games/dice_tray'
 import { GameHeader } from '@/games/game_header'
 import { Journal } from '@/games/journal'
 import { gameQuery, turnsQuery } from '@/games/queries'
 import { SheetDialog } from '@/games/sheet_dialog'
+import type { SheetTab } from '@/games/sheet_tabs'
 import { Composer } from '@/games/composer'
 import { GameOver } from '@/games/game_over'
 import { heldInFlight } from '@/games/held_turn'
 import { lastRevealed, liveRollOf, locksInput } from '@/games/roll_reveal'
 import { rollLine, rollText } from '@/games/roll_text'
-import { SceneBar } from '@/games/scene_bar'
+import { SceneTag } from '@/games/scene_tag'
 import { TurnInFlight } from '@/games/turn_in_flight'
 import { isBusy, progressKey } from '@/games/turn_machine'
 import { waitingText } from '@/games/waiting'
@@ -49,8 +51,17 @@ function GameScreen() {
   const { data: game } = useSuspenseQuery(gameQuery(gameId))
   const { data: journal } = useSuspenseQuery(turnsQuery(gameId))
   const earlier = useEarlierTurns(gameId)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const closeSheet = useCallback(() => setSheetOpen(false), [])
+  // The card the sheet was last opened on stays while it is put back down.
+  const [sheet, setSheet] = useState<{ open: boolean; tab: SheetTab; opening: number }>({
+    open: false,
+    tab: 'character',
+    opening: 0,
+  })
+  const openSheet = useCallback(
+    (tab: SheetTab) => setSheet((current) => ({ open: true, tab, opening: current.opening + 1 })),
+    []
+  )
+  const closeSheet = useCallback(() => setSheet((current) => ({ ...current, open: false })), [])
   const [draft, setDraft] = useDraft(gameId)
   // The draft is cleared once the turn is accepted, never before: a failed POST keeps it.
   const turn = useTurn(game, { onAccepted: () => setDraft('') })
@@ -70,12 +81,21 @@ function GameScreen() {
   }
 
   return (
-    <div className="flex h-dvh flex-col">
-      <GameHeader game={game} onOpenSheet={() => setSheetOpen(true)} voice={voice} />
+    /*
+     * The game table (front spec, section 8). On a phone, from top to bottom:
+     * the character's card, the sheet of the story with its place tag, the
+     * dice tray with the input. From `lg`, the sheet and the tray on the left,
+     * the stack of the character's cards on the right.
+     */
+    <div className="flex h-dvh flex-col px-2.5 lg:mx-auto lg:grid lg:max-w-[1240px] lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:gap-x-11 lg:px-9 lg:pt-[18px] lg:pb-[26px] lg:[grid-template-areas:'top_top'_'board_stack'_'dock_stack']">
+      <GameHeader game={game} onOpenSheet={openSheet} voice={voice} />
 
-      <div className="flex min-h-0 flex-1">
-        <main className="flex min-w-0 flex-1 flex-col">
-          <SceneBar game={game} />
+      <main className="relative z-10 mt-6 flex min-h-0 flex-1 flex-col lg:mt-0 lg:[grid-area:board]">
+        <SceneTag
+          game={game}
+          className="absolute -top-4 left-1/2 z-20 max-w-[calc(100%-40px)] -translate-x-1/2"
+        />
+        <div className={`${SHEET} flex min-h-0 flex-1 flex-col pt-9 lg:pt-10`}>
           <Journal
             game={game}
             turns={journal.turns}
@@ -89,60 +109,66 @@ function GameScreen() {
             revealedTurnId={turn.released}
             inFlight={
               shown && (
-                <TurnInFlight
-                  state={shown}
-                  reveal={reveal}
-                  onThrow={turn.throwDice}
-                  onDiceStopped={turn.diceStopped}
-                  onFolded={turn.folded}
-                  onRetry={turn.retry}
-                  onEdit={edit}
-                />
+                <TurnInFlight state={shown} reveal={reveal} onRetry={turn.retry} onEdit={edit} />
               )
             }
           />
-          {isOver(game.status) ? (
-            <GameOver characterId={game.characterId} name={game.character.name} />
-          ) : (
-            <Composer
-              value={draft}
-              onChange={(value) => {
-                setDraft(value)
-                turn.inputChanged()
-              }}
-              onSubmit={turn.submit}
-              locked={isBusy(state) || locksInput(reveal)}
-              ready={turn.subscribed}
-              error={
-                state.status === 'idle' && state.inputError
-                  ? errorMessage(state.inputError)
-                  : undefined
-              }
-            />
-          )}
-          {/*
-           * Waiting messages, then the narration, told once to screen readers.
-           * Silent while the dice wait: the card's button speaks for itself.
-           */}
-          <p aria-live="polite" className="sr-only">
-            {liveRoll
-              ? ''
-              : state.status === 'in_progress'
-                ? waitingText(state, t)
-                : (turn.narrated ?? '')}
-          </p>
-          {/* Each roll in full, once its dice are thrown. */}
-          <p aria-live="polite" className="sr-only">
-            {announced ? rollLine(rollText(announced, t)) : ''}
-          </p>
-        </main>
+        </div>
+        {/*
+         * Waiting messages, then the narration, told once to screen readers.
+         * Silent while the dice wait: the card's button speaks for itself.
+         */}
+        <p aria-live="polite" className="sr-only">
+          {liveRoll
+            ? ''
+            : state.status === 'in_progress'
+              ? waitingText(state, t)
+              : (turn.narrated ?? '')}
+        </p>
+        {/* Each roll in full, once its dice are thrown. */}
+        <p aria-live="polite" className="sr-only">
+          {announced ? rollLine(rollText(announced, t)) : ''}
+        </p>
+      </main>
 
-        <aside className="hidden w-80 shrink-0 overflow-y-auto border-l border-border bg-surface-1 px-6 py-8 lg:block">
-          <CharacterSheet game={game} />
-        </aside>
-      </div>
+      <DiceTray
+        live={liveRoll}
+        onThrow={turn.throwDice}
+        onDiceStopped={turn.diceStopped}
+        onFolded={turn.folded}
+      >
+        {isOver(game.status) ? (
+          <GameOver characterId={game.characterId} name={game.character.name} />
+        ) : (
+          <Composer
+            value={draft}
+            onChange={(value) => {
+              setDraft(value)
+              turn.inputChanged()
+            }}
+            onSubmit={turn.submit}
+            locked={isBusy(state) || locksInput(reveal)}
+            ready={turn.subscribed}
+            error={
+              state.status === 'idle' && state.inputError
+                ? errorMessage(state.inputError)
+                : undefined
+            }
+          />
+        )}
+      </DiceTray>
 
-      <SheetDialog game={game} open={sheetOpen} onClose={closeSheet} />
+      <aside className="hidden min-h-0 pb-2 lg:block lg:[grid-area:stack]">
+        <CharacterSheet game={game} />
+      </aside>
+
+      <SheetDialog
+        game={game}
+        open={sheet.open}
+        tab={sheet.tab}
+        opening={sheet.opening}
+        onClose={closeSheet}
+      />
     </div>
   )
 }
@@ -150,15 +176,5 @@ function GameScreen() {
 function GameNotFound() {
   const { t } = useTranslation('game')
 
-  return (
-    <>
-      <AppHeader />
-      <main className="mx-auto flex max-w-xl flex-col items-center px-4 py-24 text-center">
-        <p className="font-serif text-narration-lg text-text">{t('notFound')}</p>
-        <Link to="/" className={`mt-8 ${PRIMARY_ACTION}`}>
-          {t('backHome')}
-        </Link>
-      </main>
-    </>
-  )
+  return <NotFoundMessage message={t('notFound')} />
 }

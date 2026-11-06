@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { D10Icon } from '@/components/d10_icon'
+import { PRIMARY_ACTION } from '@/components/actions'
+import { D10 } from '@/components/dice'
+import { Stamp } from '@/components/stamp'
+import { CARD, LABEL } from '@/components/surfaces'
 import { percentileDice } from './presentation'
 import type { LiveRoll } from './roll_reveal'
-import { DEGREE_EMPHASIS, ROLL_TONE, damageLine, rollText } from './roll_text'
+import { damageLine, rollText, stampText } from './roll_text'
 
 /** Between two parts of the roll as it is set out. */
 const STEP_MS = 250
@@ -15,25 +18,27 @@ const TENS_MS = 800
 const UNITS_MS = 1300
 /** A hidden tab may never report the end of the animation: the dice stop anyway. */
 const STOP_FALLBACK_MS = UNITS_MS + 700
-/** The degree in view, before the card folds into its chip. */
+/** The degree in view, before the roll joins the sheet as a card. */
 const LANDED_MS = 1500
 /** Faces run past before the die settles: two full turns, then the face it stops on. */
 const TURNS = 2
+/** The height of the top face of a large d10, where its faces run past. */
+const FACE_PX = 21
 
 /**
- * A live roll, played out (front spec, section 5.3.7): set out part by part,
- * thrown — by the player, or on its own — and read on two d10. The d100 was
- * drawn by the backend before the card ever showed: the throw reveals it,
- * nothing the player does changes it.
+ * A live roll, played out in the dice tray (front spec, section 5.3.7): its
+ * card set out part by part, then two d10 thrown — by the player, or on their
+ * own — and read. The d100 was drawn by the backend before the card ever
+ * showed: the throw reveals it, nothing the player does changes it.
  *
- * In combat, the roll says from the start what it is — the attack, or which
- * defence — and against whom; once the dice have stopped, the outcome shows
- * with the degree — and the damage a blow dealt, in full, never thrown by
- * hand.
+ * In combat, the card says from the start what the roll is — the attack, or
+ * which defence — and against whom; once the dice have stopped, the outcome
+ * is stamped with the degree — and the damage a blow dealt, in full, never
+ * thrown by hand.
  *
  * Its timing is its own: it tells the reveal machine when the dice stop and
- * when it has folded. The dice are hidden from screen readers;
- * the roll is announced once revealed, with the turn.
+ * when it has folded. The dice are hidden from screen readers; the roll is
+ * announced once revealed, with the turn.
  */
 export function RollCard({
   live,
@@ -49,9 +54,11 @@ export function RollCard({
   const { t } = useTranslation('game')
   const { status, roll, animated, autoRoll } = live
   const text = rollText(roll, t)
-  const parts = [...text.setup, ...(text.chance ? [text.chance] : [])]
+  const [title, ...lines] = text.heading ? [text.heading, ...text.setup] : text.setup
   const dice = percentileDice(roll.roll)
   const button = useRef<HTMLButtonElement>(null)
+  // The parts set out one after the other: what is rolled, the lines, then the chance.
+  const steps = lines.length + 2
 
   // Waiting for the player: the button takes the focus, the input being locked anyway.
   useEffect(() => {
@@ -60,9 +67,9 @@ export function RollCard({
 
   useEffect(() => {
     if (status !== 'staged' || !autoRoll) return
-    const timer = setTimeout(onThrow, parts.length * STEP_MS + SETTLE_MS)
+    const timer = setTimeout(onThrow, steps * STEP_MS + SETTLE_MS)
     return () => clearTimeout(timer)
-  }, [status, autoRoll, parts.length, onThrow])
+  }, [status, autoRoll, steps, onThrow])
 
   useEffect(() => {
     if (status !== 'rolling') return
@@ -78,64 +85,92 @@ export function RollCard({
 
   const thrown = status !== 'staged'
   const spinning = status === 'rolling'
+  const appear = (index: number) =>
+    animated
+      ? { className: 'animate-fade-in', style: { animationDelay: `${index * STEP_MS}ms` } }
+      : {}
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-border-strong bg-surface-2 px-5 py-4">
-      {text.heading && <p className="-mb-2 text-meta text-subtle uppercase">{text.heading}</p>}
-      <p className="flex flex-wrap justify-center gap-x-2 text-center text-label text-text">
-        {parts.map((part, index) => (
-          <span
-            key={index}
-            className={`after:ml-2 after:text-subtle after:content-['·'] last:after:content-none ${animated ? 'animate-fade-in' : ''}`}
-            style={animated ? { animationDelay: `${index * STEP_MS}ms` } : undefined}
-          >
-            {part}
+    <>
+      <div className={`${CARD} flex flex-col gap-1.5 px-4 py-3.5`}>
+        <h3
+          {...appear(0)}
+          // The class of `appear` would replace this one: the title keeps its own.
+        >
+          <span className="mb-0.5 block font-serif text-[1.0625rem] leading-snug font-semibold text-text">
+            {title}
           </span>
+        </h3>
+        {lines.map((line, index) => (
+          <p key={index} {...appear(index + 1)}>
+            <span className="text-sm text-muted tabular-nums">{line}</span>
+          </p>
         ))}
-      </p>
-
-      <div aria-hidden className="flex gap-3">
-        <Die
-          face={(n) => `${n}0`}
-          stop={dice.tens}
-          shown={thrown}
-          spinning={spinning}
-          ms={TENS_MS}
-        />
-        <Die
-          face={(n) => `${n}`}
-          stop={dice.units}
-          shown={thrown}
-          spinning={spinning}
-          ms={UNITS_MS}
-          onStopped={onDiceStopped}
-        />
+        <p
+          {...appear(lines.length + 1)}
+          // The chance in full, even when no modifier moved it: it is what the dice are read against.
+        >
+          <span className="mt-1 flex items-baseline justify-between border-t border-dashed border-border pt-2">
+            <span className={LABEL}>{t('journal.roll.chanceLabel')}</span>
+            <span className="text-[1.75rem] leading-none font-semibold text-text tabular-nums">
+              {t('journal.roll.chance', { chance: roll.chance })}
+            </span>
+          </span>
+        </p>
       </div>
 
-      {status === 'staged' && !autoRoll && (
-        <button
-          ref={button}
-          type="button"
-          onClick={onThrow}
-          className="flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-label font-medium text-on-accent transition-colors hover:bg-accent-hover"
-        >
-          <D10Icon aria-hidden className="size-4" />
-          {t('journal.roll.throw')}
-        </button>
-      )}
+      <div className="flex flex-col items-center gap-3">
+        <div aria-hidden className="flex gap-7">
+          <Die
+            label={t('journal.roll.tens')}
+            face={(n) => `${n}0`}
+            stop={dice.tens}
+            shown={thrown}
+            spinning={spinning}
+            ms={TENS_MS}
+          />
+          <Die
+            label={t('journal.roll.units')}
+            face={(n) => `${n}`}
+            stop={dice.units}
+            shown={thrown}
+            spinning={spinning}
+            ms={UNITS_MS}
+            onStopped={onDiceStopped}
+          />
+        </div>
 
-      {status === 'landed' && (
-        <p
-          className={`rounded-sm border px-3 py-1 text-label ${ROLL_TONE[roll.result]} ${DEGREE_EMPHASIS[roll.degree]} ${LANDING[roll.degree]}`}
-        >
-          {[text.rolled, text.degree, ...(text.outcome ? [text.outcome] : [])].join(' · ')}
-        </p>
-      )}
+        {status === 'staged' && !autoRoll && (
+          <button
+            ref={button}
+            type="button"
+            onClick={onThrow}
+            className={`${PRIMARY_ACTION} w-full`}
+          >
+            {t('journal.roll.throw')}
+          </button>
+        )}
 
-      {status === 'landed' && text.damage.length > 0 && (
-        <p className="-mt-2 animate-fade-in text-center text-label text-text">{damageLine(text)}</p>
-      )}
-    </div>
+        {status === 'landed' && (
+          <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-2">
+            <span className="text-lg font-semibold text-text tabular-nums">
+              {t('journal.roll.rolled', { roll: roll.roll })}
+            </span>
+            <Stamp
+              tone={roll.result === 'success' ? 'success' : 'failure'}
+              className={LANDING[roll.degree]}
+            >
+              {stampText(text)}
+            </Stamp>
+            {text.damage.length > 0 && (
+              <span className="basis-full animate-fade-in text-center text-[0.78125rem] text-muted">
+                {damageLine(text)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 
@@ -149,10 +184,11 @@ const LANDING: Record<LiveRoll['roll']['degree'], string> = {
 }
 
 /**
- * One d10: a column of faces that runs past and stops on its own. Before the
- * throw, a die icon stands in for the face.
+ * One d10, its name under it. Before the throw it shows `?`; thrown, a column
+ * of faces runs past on its top face and stops on its own.
  */
 function Die({
+  label,
   face,
   stop,
   shown,
@@ -160,6 +196,7 @@ function Die({
   ms,
   onStopped,
 }: {
+  label: string
   face: (n: number) => string
   stop: number
   shown: boolean
@@ -170,27 +207,31 @@ function Die({
   const faces = Array.from({ length: (TURNS + 1) * 10 }, (_, index) => face(index % 10))
 
   return (
-    <div className="h-12 w-14 overflow-hidden rounded-md border border-border-strong bg-surface-1 text-xl font-medium text-text tabular-nums">
-      {shown ? (
-        <div
-          className={spinning ? 'animate-dice-spin' : undefined}
-          style={{
-            transform: `translateY(-${(TURNS * 10 + stop) * 3}rem)`,
-            animationDuration: `${ms}ms`,
-          }}
-          onAnimationEnd={onStopped}
-        >
-          {faces.map((label, index) => (
-            <div key={index} className="grid h-12 place-items-center">
-              {label}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid h-full place-items-center text-subtle">
-          <D10Icon className="size-5" />
-        </div>
-      )}
+    <div className="flex flex-col items-center gap-1">
+      <D10
+        size="large"
+        face={
+          shown ? (
+            <span
+              className={`self-start ${spinning ? 'animate-dice-spin' : ''}`}
+              style={{
+                transform: `translateY(-${(TURNS * 10 + stop) * FACE_PX}px)`,
+                animationDuration: `${ms}ms`,
+              }}
+              onAnimationEnd={onStopped}
+            >
+              {faces.map((value, index) => (
+                <span key={index} className="grid place-items-center" style={{ height: FACE_PX }}>
+                  {value}
+                </span>
+              ))}
+            </span>
+          ) : (
+            '?'
+          )
+        }
+      />
+      <span className={`${LABEL} text-[0.625rem]`}>{label}</span>
     </div>
   )
 }

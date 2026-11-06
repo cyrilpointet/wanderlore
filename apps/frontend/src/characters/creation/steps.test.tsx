@@ -105,9 +105,9 @@ describe('DiceStep', () => {
 
     expect(html.match(/animate-dice-spin/g)).toHaveLength(28)
     // The first die stops on its 6: two turns of six faces, then the sixth.
-    expect(html).toContain('transform:translateY(-38.25rem);animation-duration:600ms')
+    expect(html).toContain('transform:translateY(-31.875rem);animation-duration:600ms')
     // The last one, the 1 of the seventh result, settles last.
-    expect(html).toContain('transform:translateY(-27rem);animation-duration:3030ms')
+    expect(html).toContain('transform:translateY(-22.5rem);animation-duration:3030ms')
     // The die each result sets aside greys out once it has landed: the first result's fourth.
     expect(html.match(/animate-dice-set-aside/g)).toHaveLength(7)
     expect(html).toContain('animation-delay:870ms')
@@ -126,7 +126,7 @@ describe('DiceStep', () => {
     // One die per result greyed out, the one the backend set aside.
     expect(html.match(/data-set-aside="true"/g)).toHaveLength(7)
     expect(html).not.toContain('animate-dice-set-aside')
-    expect(textOf(html)).toContain('14 9 6 12 17 10 5')
+    expect(textOf(html)).toContain('= 14 = 9 = 6 = 12 = 17 = 10 = 5')
     // The list is joined in the interface language: only the order is checked.
     expect(textOf(html)).toMatch(/Results: 14, 9, 6, 12, 17, 10,? \S+ 5/)
   })
@@ -159,7 +159,7 @@ describe('PlacementStep', () => {
     expect(text).toContain('Strength')
     expect(text).toContain('Strength score: 14')
     expect(text).toContain('Charisma score: —')
-    expect(text).toContain('Hit points: 17')
+    expect(text).toContain('Hit points 17')
   })
 
   test('says SIZ and INT have a floor, and which one the backend raised', () => {
@@ -288,8 +288,10 @@ describe('IdentityStep', () => {
 
     expect(text).toContain('4 / 35')
     for (const gender of ['Female', 'Male', 'Neutral']) expect(text).toContain(gender)
-    expect(text).toContain('Musketeer · Female · The Three Musketeers')
+    expect(text).toContain('Musketeer · Female')
+    expect(text).toContain('Hit points: 17 of 17')
     expect(text).toContain('Fencing 65%')
+    expect(text).toMatch(/Starts with: Rapier \(equipped\), Pistol shot ×6,? \S+ Purse 15/)
     expect(text).not.toContain('Ride')
   })
 

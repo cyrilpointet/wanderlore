@@ -96,7 +96,7 @@ describe('RollCard | set out', () => {
     const markup = render(live('staged'))
     const text = textOf(markup)
 
-    expect(text).toContain('Persuasion 60% Difficult Letter of introduction +10 → 40%')
+    expect(text).toContain('Persuasion 60% Difficult Letter of introduction +10 Chance → 40%')
     expect(markup.match(/animate-fade-in/g)).toHaveLength(4)
     expect(markup).toContain('animation-delay:750ms')
   })
@@ -133,9 +133,9 @@ describe('RollCard | thrown', () => {
   test('each die stops on its face of the d100: 40 and 5', () => {
     const markup = render(live('rolling'))
 
-    // Two full turns of ten faces, then the face it stops on, three rem apart.
-    expect(markup).toContain('translateY(-72rem)')
-    expect(markup).toContain('translateY(-75rem)')
+    // Two full turns of ten faces, then the face it stops on, a face's height apart.
+    expect(markup).toContain('translateY(-504px)')
+    expect(markup).toContain('translateY(-525px)')
     expect(markup).toContain('>40<')
     expect(markup).toContain('>5<')
   })
@@ -143,7 +143,7 @@ describe('RollCard | thrown', () => {
   test('the dice are hidden from screen readers', () => {
     const markup = render(live('rolling'))
 
-    expect(markup).toMatch(/<div aria-hidden="true" class="flex gap-3">/)
+    expect(markup).toMatch(/<div aria-hidden="true" class="flex gap-7">/)
   })
 })
 
@@ -151,10 +151,10 @@ describe('RollCard | landed', () => {
   test('tells the d100 and the degree, the dice still', () => {
     const markup = render(live('landed'))
 
-    expect(textOf(markup)).toContain('rolled 45 · Failure')
+    expect(textOf(markup)).toContain('rolled 45 Failure')
     expect(markup).toContain('text-danger')
     expect(markup).not.toContain('animate-dice-spin')
-    expect(markup).toContain('translateY(-75rem)')
+    expect(markup).toContain('translateY(-525px)')
   })
 
   test('a critical glows and a fumble shakes', () => {
@@ -184,7 +184,7 @@ describe('RollCard | in combat', () => {
   test('landed, an attack tells its outcome and the damage it dealt, in full', () => {
     const text = textOf(render(live('landed', { roll: ATTACK })))
 
-    expect(text).toContain('rolled 12 · Special success · Hit')
+    expect(text).toContain('rolled 12 Special success · Hit')
     expect(text).toContain('Damage 6 · Damage modifier +2 · Armor −1 · → 7 dealt · Impaling')
   })
 
@@ -204,7 +204,7 @@ describe('RollCard | in combat', () => {
     const text = textOf(render(live('landed', { roll: missed })))
 
     expect(text).toMatch(/^Attack on Jussac /)
-    expect(text).toContain('rolled 80 · Failure · Missed')
+    expect(text).toContain('rolled 80 Failure · Missed')
     expect(text).not.toContain('dealt')
   })
 
@@ -214,6 +214,6 @@ describe('RollCard | in combat', () => {
 
     expect(staged).toMatch(/^Dodge against unknown opponent 2 Dodge 40%/)
     expect(staged).not.toContain('Blow avoided')
-    expect(landed).toContain('rolled 30 · Success · Blow avoided')
+    expect(landed).toContain('rolled 30 Success · Blow avoided')
   })
 })

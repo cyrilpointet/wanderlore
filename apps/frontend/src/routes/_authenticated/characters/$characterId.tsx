@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
-import { createFileRoute, Link, notFound, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, notFound, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { ApiError } from '@/api/client'
-import { PRIMARY_ACTION } from '@/components/actions'
 import { AppHeader } from '@/components/app_header'
+import { PAGE } from '@/components/layout'
+import { NotFoundMessage } from '@/components/system_pages'
 import { CharacterView } from '@/characters/character_view'
 import { AbandonGameDialog, DeleteCharacterDialog, DeleteGameDialog } from '@/characters/dialogs'
 import {
@@ -101,7 +102,7 @@ function CharacterPage() {
   return (
     <>
       <AppHeader />
-      <main className="mx-auto w-full max-w-xl px-4 pt-8 pb-12 sm:px-6 lg:pt-16">
+      <main className={`${PAGE} flex flex-col gap-[26px] pt-[26px] pb-12 lg:gap-9 lg:pt-9`}>
         <CharacterView
           character={character}
           starting={start.isPending ? (start.variables ?? null) : null}
@@ -144,15 +145,5 @@ function CharacterPage() {
 function CharacterNotFound() {
   const { t } = useTranslation('characters')
 
-  return (
-    <>
-      <AppHeader />
-      <main className="mx-auto flex max-w-xl flex-col items-center px-4 py-24 text-center">
-        <p className="font-serif text-narration-lg text-text">{t('page.notFound')}</p>
-        <Link to="/" className={`mt-8 ${PRIMARY_ACTION}`}>
-          {t('page.back')}
-        </Link>
-      </main>
-    </>
-  )
+  return <NotFoundMessage message={t('page.notFound')} />
 }

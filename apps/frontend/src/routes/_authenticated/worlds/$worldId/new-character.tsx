@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
-import { ArrowLeft } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { ApiError } from '@/api/client'
@@ -29,24 +29,26 @@ function NewCharacter() {
   const { t } = useTranslation('characters')
 
   return (
-    <>
-      <AppHeader />
-      <main className="mx-auto w-full max-w-xl px-4 pt-8 pb-12 sm:px-6 lg:pt-16">
-        <Link
-          to="/"
-          className="mb-6 inline-flex items-center gap-1.5 text-label text-muted transition-colors hover:text-text"
-        >
-          <ArrowLeft aria-hidden className="size-4" />
-          {t('page.back')}
-        </Link>
-        <p className="text-meta text-subtle uppercase">{creation.world.label}</p>
-        <h1 className="mt-1 mb-8 font-serif text-[1.75rem] leading-tight font-medium text-text lg:text-[2rem]">
+    // On the table itself, without the app bar: the page is one sheet of work.
+    <main className="mx-auto flex w-full max-w-[920px] flex-col gap-[22px] px-4 pt-6 pb-12 lg:pt-8">
+      <Link
+        to="/"
+        className="inline-flex items-center gap-1 self-start text-[0.875rem] font-medium text-muted transition-colors hover:text-text"
+      >
+        <ChevronLeft aria-hidden className="size-4" />
+        {t('page.back')}
+      </Link>
+      <header>
+        <h1 className="font-serif text-[1.625rem] leading-tight font-semibold text-balance text-text">
           {t('creation.title')}
         </h1>
-        {/* A fresh draft per world: the draft never outlives the page. */}
-        <CharacterCreation key={worldId} creation={creation} />
-      </main>
-    </>
+        <p className="font-serif text-[0.96875rem] leading-relaxed text-muted italic">
+          {creation.world.label}
+        </p>
+      </header>
+      {/* A fresh draft per world: the draft never outlives the page. */}
+      <CharacterCreation key={worldId} creation={creation} />
+    </main>
   )
 }
 

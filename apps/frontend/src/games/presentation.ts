@@ -33,10 +33,9 @@ export function paragraphs(narration: string): string[] {
     .filter(Boolean)
 }
 
-/** How full a gauge is drawn, as a percentage between 0 and 100. */
-export function gaugePercent(current: number, max: number): number {
-  if (max <= 0) return 0
-  return Math.min(100, Math.max(0, (current / max) * 100))
+/** How many hit-point pips are drawn filled: the points left, within the pips there are. */
+export function filledPips(current: number, max: number): number {
+  return Math.min(Math.max(current, 0), Math.max(max, 0))
 }
 
 /**

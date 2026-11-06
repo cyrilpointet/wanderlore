@@ -1,6 +1,5 @@
 import type { TFunction } from 'i18next'
 
-import type { Degree } from '@/api/enums'
 import type { Damage, Opponent, Roll } from './queries'
 
 /**
@@ -113,17 +112,21 @@ export function rollLine(text: RollText): string {
   return [rollSummary(text), ...(text.damage.length > 0 ? [damageLine(text)] : [])].join(' · ')
 }
 
-/** The tint of a roll by its outcome: it doubles the words, never carries the outcome alone. */
-export const ROLL_TONE = {
-  success: 'border-success/40 bg-success/10 text-success',
-  failure: 'border-danger/40 bg-danger/10 text-danger',
+/**
+ * The roll as its card reads it: in combat, which roll and against whom; what
+ * is rolled at how much, the difficulty, each modifier, the chance when it
+ * moved, and the d100. The degree and what it did go on the stamp.
+ */
+export function cardLine(text: RollText): string[] {
+  return [
+    ...(text.heading ? [text.heading] : []),
+    ...text.setup,
+    ...(text.chance ? [text.chance] : []),
+    text.rolled,
+  ]
 }
 
-/** A critical or a fumble stands out; the other degrees read plainly. */
-export const DEGREE_EMPHASIS: Record<Degree, string> = {
-  critical: 'font-semibold',
-  special: '',
-  success: '',
-  failure: '',
-  fumble: 'font-semibold',
+/** What is stamped on a roll's card: the degree, and in combat what it did. */
+export function stampText(text: RollText): string {
+  return [text.degree, ...(text.outcome ? [text.outcome] : [])].join(' · ')
 }

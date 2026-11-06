@@ -10,15 +10,15 @@ n'est pas couvert ici.
 1. **Référence** pour implémenter le front, phase par phase. La Phase 2 est spécifiée en
    détail ; les phases suivantes sont décrites comme des évolutions, pour que la structure
    des écrans les accueille sans refonte.
-2. **Base de génération des maquettes** avec Google Stitch. La section 10 fournit le
-   préambule de style, le contenu d'exemple et un prompt prêt à l'emploi par écran.
+2. **Base des maquettes** (section 10), versionnées dans `apps/frontend/design/`, et de la
+   direction visuelle (section 8).
 
 **Documents complémentaires** : roadmap (Phase 2, décisions de cadrage), architecture
 (section 8bis, contrat SSE), système de règles (section 4, marges). En cas de divergence,
 ces documents font foi sur le fond ; celui-ci fait foi sur l'interface.
 
 > **⚠️ Convention de langue** : ce document est en français. Tous les textes d'interface
-> qu'il cite sont en **anglais**, langue par défaut de l'application, et les prompts Stitch
+> qu'il cite sont en **anglais**, langue par défaut de l'application, et les maquettes
 > aussi. Les routes, clés JSON et valeurs d'enum restent en anglais.
 
 > **Vocabulaire** : l'interface parle de **game** (partie). Côté backend, une partie est une
@@ -139,7 +139,8 @@ authentifié.
 
 - Nom de l'application (wordmark **Wanderlore**) et une accroche d'une ligne :
   *« Your solo tabletop adventure, with a game master who never cancels. »* (à affiner).
-- Champs **Email** et **Password**, bouton **Sign in**.
+- Champs **Email** et **Password** sur une carte posée sur la table, bouton **Sign in** ; sur
+  desktop, deux d10 posés à côté, pour le décor.
 - Aucun lien d'inscription ni de mot de passe oublié.
 
 **États** : envoi en cours (bouton désactivé, indicateur) ; identifiants refusés
@@ -173,39 +174,46 @@ carte quitte la liste. La suppression est douce côté backend, mais définitive
 **États** : chargement (squelettes de cartes) ; aucune partie (*« No game yet. »* — pas de
 bouton de création en Phase 2) ; erreur de chargement avec **Try again**.
 
-L'en-tête porte le wordmark et le menu du compte (nom ou initiales, **Preferences**,
-**Sign out**).
+En tête de page, posés sur la table, le wordmark et le jeton du compte (initiales), qui déplie
+une petite carte : email, **Preferences**, **Sign out**.
 
 ### 5.3 Partie — `/games/:gameId`
 
-L'écran principal. Trois zones : **en-tête**, **journal**, **fiche du personnage**, plus la
-**zone de saisie** en pied du journal.
+L'écran principal, une table de jeu (section 8) : la **carte du personnage** (en-tête), la
+**feuille du récit** (journal) avec l'**étiquette du lieu**, le **plateau de dés** qui porte la
+**zone de saisie**, et la **pile de fiches** du personnage.
 
 **Disposition**
-- **Desktop (≥ 1024 px)** : journal au centre, colonne de lecture limitée à ~70 caractères
-  par ligne ; fiche en colonne latérale droite fixe (~320 px).
-- **Tablette et mobile** : journal plein écran. La fiche s'ouvre dans un panneau (tiroir
-  latéral ou *bottom sheet*) depuis un bouton de l'en-tête. Les points de vie restent
-  visibles en permanence dans l'en-tête.
-- La zone de saisie reste collée en bas de l'écran ; sur mobile, elle reste visible au-dessus
-  du clavier virtuel.
+- **Desktop (≥ 1024 px)** : une barre en haut ; la feuille au centre-gauche, colonne de lecture
+  limitée à ~70 caractères par ligne, le plateau sous elle ; la pile de fiches à droite
+  (~400 px), toujours visible.
+- **Tablette et mobile** : la carte du personnage en haut de l'écran, la feuille au milieu, le
+  plateau ferme l'écran. Sous la carte pendent les trois onglets de la fiche (*Character*,
+  *Inventory*, *Quests*) : chacun lève la pile au-dessus de la table assombrie, ouverte sur sa
+  fiche. Les points de vie restent visibles en
+  permanence sur la carte.
+- Le plateau et la saisie restent collés en bas de l'écran ; sur mobile, ils restent visibles
+  au-dessus du clavier virtuel.
 
-#### 5.3.1 En-tête
+#### 5.3.1 Carte du personnage (en-tête)
 
-- Retour à **My games**.
-- Nom du personnage et, en dessous, univers · chapitre.
-- Jauge compacte de points de vie (`8 / 10`) — visible sur toutes les tailles d'écran.
-- Bouton d'ouverture de la fiche (mobile et tablette uniquement).
+- Retour à la page du personnage.
+- Nom du personnage (sur desktop, porté par le lien de retour).
+- Pastilles de points de vie (`11 / 14`) — visibles sur toutes les tailles d'écran ; sur desktop
+  dans la barre du haut, quel que soit l'onglet ouvert de la pile.
+- Les trois onglets de la fiche, accrochés sous la carte, qui lèvent la pile ouverte sur la fiche
+  choisie (mobile et tablette uniquement).
 - Bouton de lecture à voix haute (icône, toutes tailles d'écran), si le navigateur sait lire :
   il reste sur l'écran de jeu pour couper ou rétablir la voix d'un geste, et double le réglage
   des préférences (5.5) — un seul réglage, deux accès, toujours d'accord.
-- Menu du compte.
+- Jeton du compte (initiales), qui ouvre le menu du compte.
 
-**Bandeau de scène**, sous l'en-tête et au-dessus du journal, à toutes les tailles d'écran :
-le lieu courant (épingle) et la période de la journée (*Meung-sur-Loire · Dusk*), alignés sur
-la colonne de lecture. Fixe, il ne défile pas avec le journal : le joueur sait toujours où et
-quand se passe la scène sans ouvrir la fiche. Comme la fiche, il ne suit un tour qu'à sa
-révélation (5.3.7). Jamais l'heure, la date ni les sorties (5.3.4).
+**Étiquette du lieu**, épinglée sur le bord haut de la feuille, à toutes les tailles d'écran :
+le lieu courant et la période de la journée (*Hôtel de Laffemas · Paris — Dusk*), puis l'univers
+et le scénario. Fixe, elle ne défile pas avec le journal, qui passe sous elle sans jamais la
+traverser : le joueur sait toujours où et quand se passe la scène sans ouvrir la fiche. Comme la
+fiche, elle ne suit un tour qu'à sa révélation (5.3.7). Jamais l'heure, la date ni les sorties
+(5.3.4).
 
 #### 5.3.2 Journal
 
@@ -218,7 +226,7 @@ Le journal se lit comme un livre, pas comme une messagerie. Types d'éléments :
 | Élément | Contenu | Rendu |
 |---|---|---|
 | **Action du joueur** | Texte saisi, tel quel | Bloc compact, discret, marqué « You » ; typographie d'interface ; retrait ou teinte légère pour le distinguer du récit |
-| **Jet** | Le jet en entier : *« Persuasion 60% · Difficult · Advantage +10 · → 40% · rolled 12 · Special success »* | Pastille centrée entre l'action et la narration, couleur selon l'issue, petite icône de dé ; la chance n'est montrée que quand elle diffère de la valeur, la difficulté que quand elle n'est pas `average`. Pendant le tour en cours, carte de jet en direct (5.3.7), repliée en pastille une fois le résultat révélé. **Une pastille par jet** du personnage, dans l'ordre où ils ont été faits (jusqu'à deux en combat). En combat, la pastille dit aussi ce que le jet a fait : une attaque son issue (*Hit*, *Blocked*, *Missed*) et, si elle porte, ses dégâts sur une seconde ligne (*« Damage 6 · Damage modifier +2 · Armor −1 · → 7 dealt · Impaling »*) ; une défense, laquelle (*Parry*, *Dodge*, en tête) et si elle a tenu (*Blow avoided*, *Blow taken*) |
+| **Jet** | Le jet en entier : *« Persuasion 60% · Difficult · Advantage +10 · → 40% · rolled 12 · Special success »* | **Carte de jet** posée droite sur la feuille entre l'action et la narration, décalée vers la droite, bord gauche à la couleur de l'issue : la ligne du jet en entier, puis le degré **tamponné** (à droite sur desktop, sous la ligne sur mobile) ; la chance n'est montrée que quand elle diffère de la valeur, la difficulté que quand elle n'est pas `average`. Pendant le tour en cours, le jet se joue dans le plateau de dés (5.3.7) et rejoint la feuille une fois révélé. **Une carte par jet** du personnage, dans l'ordre où ils ont été faits (jusqu'à deux en combat). En combat, le tampon dit aussi ce que le jet a fait : une attaque son issue (*Hit*, *Blocked*, *Missed*) et, si elle porte, ses dégâts sur une seconde ligne (*« Damage 6 · Damage modifier +2 · Armor −1 · → 7 dealt · Impaling »*) ; une défense, laquelle (*Parry*, *Dodge*, en tête) et si elle a tenu (*Blow avoided*, *Blow taken*) |
 | **Narration** | Texte du MJ, un ou plusieurs paragraphes | Pleine largeur de la colonne, **typographie serif de lecture**, sans bulle, interligne généreux |
 | **Effets** | Conséquences appliquées : *« −2 HP »*, *« You arrive at Paris »* | Ligne discrète sous la narration, icônes ; absente si aucun effet visible |
 | **Attente** | Message d'étape (voir 5.3.5) | Ligne animée sous l'action en cours |
@@ -257,6 +265,9 @@ d'après son `code`.
 
 #### 5.3.3 Zone de saisie
 
+Un bordereau de papier posé dans le plateau de dés (section 8) : le champ, la dictée, le bouton
+d'envoi bleu encre ; verrouillé, un cadenas.
+
 - Champ multiligne, hauteur auto de 1 à ~6 lignes, placeholder *« What do you do? »*.
 - **Entrée** envoie, **Maj+Entrée** passe à la ligne. Sur mobile, bouton d'envoi explicite.
 - Limite de **1000 caractères** (bornée par le backend). Un compteur n'apparaît qu'à
@@ -274,17 +285,18 @@ d'après son `code`.
 Contenu Phase 2, tout fourni par le backend avec les libellés :
 
 - **Identité** : nom du personnage, univers.
-- **Points de vie** : jauge et valeur `8 / 10`. Couleur qui se dégrade en dessous du tiers.
-  Quand la valeur change à la fin d'un tour, gain ou perte, la jauge rebondit et pulse brièvement.
-- **Caractéristiques** : les sept du BRP, *Strength 13 · Constitution 14 · Size 12…*
-  (Phase 6 ; elles remplacent les attributs).
+- **Points de vie** : une pastille par point, pleines pour les points restants, cerclées pour
+  les points perdus, et la valeur `11 / 14`. Quand la valeur change à la fin d'un tour, gain ou
+  perte, les pastilles rebondissent et pulsent brièvement.
+- **Caractéristiques** : les sept du BRP en tuiles, *STR 13 · CON 14 · SIZ 12…* — l'abréviation
+  libellée par l'i18n, le nom complet en infobulle (Phase 6 ; elles remplacent les attributs).
 - **Compétences**, groupées sous leur catégorie du BRP, en pourcentage. Seules les
   compétences que le personnage a entraînées.
 - **Ressources** : *Purse 15*.
 - **Quêtes** : les quêtes en cours avec leur résumé, ou un message quand il n'y en a aucune.
   Le lieu et la période de la journée, longtemps dans un onglet *Situation* avec les quêtes,
-  vivent depuis dans le **bandeau de scène** (5.3.1), toujours visible.
-- **Lieu et période** (bandeau de scène) : retenus en Phase 2 (KAN-15), l'état d'accueil d'une
+  vivent depuis sur l'**étiquette du lieu** (5.3.1), toujours visible.
+- **Lieu et période** (étiquette du lieu) : retenus en Phase 2 (KAN-15), l'état d'accueil d'une
   partie neuve exigeant déjà ces données et la reprise après interruption s'en servant. Depuis
   la Phase 7, la **période de la journée** (*Dusk*) à côté du lieu — jamais l'heure, la date
   ni le numéro de jour, et jamais les sorties du lieu : le joueur les apprend par le récit, par
@@ -352,7 +364,8 @@ traduction de l'i18n : les codes forment une liste fermée, connue à la compila
 autres enums du système (principe 2). Le `message` textuel de l'API ne sert qu'au **débogage**
 et de **repli** pour un code que le front ne connaît pas encore — jamais comme texte principal,
 puisqu'il reste en anglais quelle que soit la langue de l'interface. Le front choisit aussi la
-présentation et l'action proposée.
+présentation et l'action proposée. L'**encadré d'échec** est une note épinglée sur la feuille à
+la place de la narration, bord brique (section 8).
 
 | Situation | Source | Présentation | Action |
 |---|---|---|---|
@@ -381,22 +394,23 @@ au bon moment…) ne doit laisser croire le contraire.
 
 Trois temps :
 
-1. **Préparation** — à `roll_resolved`, une carte de jet prend la place de la pastille : la
-   compétence ou la caractéristique et sa valeur, la difficulté si elle n'est pas `average`,
-   puis chaque modificateur, qui s'ajoute l'un après l'autre, et la chance finale. Pas de
-   jauge : la chance chiffrée suffit. Un bouton **Roll the dice** reçoit le focus (Entrée ou
-   Espace le déclenchent).
-2. **Lancer** — deux d10, dizaines et unités, défilent environ une seconde ; les dizaines
-   s'arrêtent d'abord, les unités ensuite, sur le d100 transmis.
-3. **Révélation** — le degré apparaît, avec un accent pour `critical` et `fumble` ; la carte
-   se replie en pastille (5.3.2), puis la narration retenue apparaît en fondu et poursuit son
-   écriture.
+1. **Préparation** — à `roll_resolved`, le plateau de dés grandit et la carte du jet s'y
+   construit : la compétence ou la caractéristique et sa valeur, la difficulté si elle n'est pas
+   `average`, puis chaque modificateur, qui s'ajoute l'un après l'autre, et la chance finale
+   (*Chance → 75%*). Pas de jauge : la chance chiffrée suffit. Les deux d10 montrent « ? ». Un
+   bouton **Roll the dice** reçoit le focus (Entrée ou Espace le déclenchent).
+2. **Lancer** — les faces des deux d10, dizaines et unités, défilent environ une seconde ; les
+   dizaines s'arrêtent d'abord, les unités ensuite, sur le d100 transmis.
+3. **Révélation** — le d100 et le degré tamponné apparaissent, avec un accent pour `critical`
+   et `fumble` ; le jet rejoint la feuille en carte (5.3.2), puis la narration retenue apparaît
+   en fondu et poursuit son écriture. Le plateau ne garde pas le jet : il n'est plus que sur la
+   feuille, et le plateau ne porte plus que la saisie.
 
 **Plusieurs jets par tour** (Phase 10, KAN-141) : un round de combat apporte jusqu'à deux
 `roll_resolved`, dans l'ordre — l'attaque du personnage, puis sa défense contre la riposte ;
 un personnage attaqué pendant une action sûre n'a que sa défense. Chaque jet se lance à la
-main, l'un après l'autre, sur la même carte : le second attend, hors de vue, que le premier
-soit replié en pastille, puis se prépare à son tour. Les jets des PNJ ne sont jamais envoyés.
+main, l'un après l'autre, dans le plateau : le second attend, hors de vue, que le premier ait
+rejoint la feuille, puis se prépare à son tour. Les jets des PNJ ne sont jamais envoyés.
 La carte porte en tête ce qu'est le jet et contre qui : *Attack on Jussac*, *Parry against
 Jussac* — la défense choisie par le backend. Un unique dont le personnage ignore le nom n'est
 jamais nommé : *Parry against unknown opponent 2*, d'un rang que le backend tient fixe ; à
@@ -413,13 +427,13 @@ fiche et dans les effets du tour (`hitPointsDelta`, total du tour).
 `turn_completed` peut arriver avant le clic : le tour est alors **retenu** à la place du tour en
 cours, la même carte à l'écran, et la saisie reste verrouillée (5.3.3). Il ne rejoint le
 journal, la fiche et la lecture à voix haute qu'à la révélation du **dernier** jet du tour : sinon les points de vie de
-l'en-tête ou la voix trahiraient l'issue avant les dés. Sur `turn_failed`, la révélation a
+la carte du personnage ou la voix trahiraient l'issue avant les dés. Sur `turn_failed`, la révélation a
 lieu aussitôt, pour tous les jets du tour, puis l'encadré d'échec remplace la narration comme
 d'ordinaire.
 
 **Jamais rejoué** : un tour relu (réouverture de l'écran, rattrapage, historique) affiche
-directement ses pastilles et sa narration ; la lecture du tour en porte la liste (`rolls`). Seul un `roll_resolved` reçu en direct ouvre la
-carte.
+directement ses cartes de jet et sa narration ; la lecture du tour en porte la liste (`rolls`).
+Seul un `roll_resolved` reçu en direct ouvre le jet dans le plateau.
 
 **Préférences** (5.5) : avec le **lancer automatique**, la carte enchaîne seule la
 préparation et le lancer, sans bouton, pour chaque jet du tour ; avec l'**animation des dés** coupée, la révélation est
@@ -438,14 +452,15 @@ carte en HTML statique.
 
 ### 5.4 Pages système
 
-- **Introuvable** (route inconnue ou partie inaccessible) : message court, retour à
-  **My games**.
+- **Introuvable** (route inconnue ou partie inaccessible) : une carte sur la table, message
+  court, deux d10 sur 00 et 0 pour le décor, retour à **My characters**.
 - **Erreur inattendue** : message générique, bouton de rechargement. Jamais de trace
   technique à l'écran.
 
 ### 5.5 Préférences
 
-Ouvertes depuis le menu du compte (**Preferences**), dans une feuille de dialogue. Ce sont
+Ouvertes depuis le menu du compte (**Preferences**), sur une carte soulevée au-dessus de la
+table : elle monte du bas sur mobile, centrée sur desktop. Ce sont
 des **choix d'interface propres à un appareil** : stockés dans le navigateur (section 7,
 *Stockage local*), **jamais en base**, jamais transmis au backend. Ils ne suivent donc pas le
 joueur d'un appareil à l'autre, et un appareil partagé par plusieurs comptes les partage.
@@ -453,12 +468,13 @@ Une modification prend effet immédiatement, sans bouton d'enregistrement.
 
 | Groupe | Réglage | Valeurs | Défaut |
 |---|---|---|---|
-| Apparence | Thème | *System* / *Dark* / *Light* | *System* (sombre si le système n'exprime rien) |
-| Narration | Lecture à voix haute | on / off | on — si le navigateur sait lire ; doublé par le bouton de l'en-tête de l'écran de jeu (5.3.1) |
+| Apparence | Thème | *Light* / *Dark* / *System* | *Light* (refonte visuelle, KAN-160) |
+| Narration | Lecture à voix haute | on / off | on — si le navigateur sait lire ; doublé par le bouton de la carte du personnage (5.3.1) |
 | Dés | Lancer automatique | on / off | off |
 | Animations | Dés | on / off | on |
 | Animations | Apparition de la narration | on / off | on |
 | Animations | Jauge de points de vie | on / off | on |
+| Animations | Panneaux et pages (*Panels and pages*) : ouverture et fermeture des boîtes de dialogue et de la fiche sur mobile, fondu entre deux pages | on / off | on |
 
 **Animations et `prefers-reduced-motion`** : le réglage du système est un **plancher**. Quand il
 demande moins de mouvement, toutes les animations sont coupées quoi qu'indiquent les
@@ -478,15 +494,17 @@ cet univers. Un personnage ne joue qu'une partie à la fois. Ces écrans remplac
 qu'afficher et tenir le brouillon de la création.
 
 **Accueil — `/`** (après connexion)
-- **Mes personnages** : une carte par personnage, les engagés d'abord (avec leur partie en
-  cours : scénario, chapitre, points de vie, bouton **Continue**), puis par dernière activité ;
-  nom, univers, profession. La carte mène à la page du personnage.
-- **Univers** : une carte par univers où le joueur peut créer un personnage (libellé, ton),
-  bouton **Create a character**.
+- **Mes personnages** : une fiche à onglet par personnage (l'univers sur l'onglet), les engagés
+  d'abord (avec leur partie en cours : *Playing*, pastilles de points de vie, étiquette
+  scénario · chapitre, bouton **Continue**), puis par dernière activité ; nom, profession. La
+  fiche mène à la page du personnage.
+- **Univers** : un couvercle de boîte vu d'en haut par univers où le joueur peut créer un
+  personnage (libellé, ton), bouton **Create a character**.
 - **États** : chargement (squelettes) ; aucun personnage (*« No character yet. »*, invitation à
   choisir un univers) ; erreur de chargement avec **Try again**.
 
-**Création — `/worlds/:worldId/new-character`**, cinq étapes, avec retour en arrière possible
+**Création — `/worlds/:worldId/new-character`**, cinq étapes en intercalaires posés sur la
+feuille de l'étape (faites cochées, en cours relevée), avec retour en arrière possible
 jusqu'à la soumission ; le brouillon vit dans le composant (perdu si l'on quitte la page) :
 1. **Dés** : sept fois 4D6, les trois meilleurs gardés, tirés par le backend et révélés à
    l'écran comme un jet en direct ; le dé écarté, désigné par le backend, se grise une fois posé
@@ -513,8 +531,9 @@ caractéristiques relevées, chance de base et valeur de chaque compétence, res
 points de vie — et les refus par champ. C'est le même calcul que la création, sans écriture.
 
 **Page d'un personnage — `/characters/:characterId`**
-- Sa fiche (comme 5.3.4, sans l'état de partie quand il n'est pas engagé) : nom, genre,
-  profession, univers, caractéristiques, compétences.
+- Sa fiche (comme 5.3.4, sans l'état de partie) : nom, genre, profession, univers (sur
+  l'onglet), caractéristiques, compétences. **Pas de points de vie** : ils n'existent que dans
+  une partie, et s'affichent sur la carte de la partie en cours (tranché le 2026-11-06).
 - **Partie en cours**, s'il y en a une : **Continue** (vers `/games/:gameId`) et **Abandon**,
   derrière une modale de confirmation (*« Abandon this scenario? »*, la partie passe en échec et
   ne se reprend pas) ; refusé pendant un tour en cours.
@@ -527,9 +546,9 @@ points de vie — et les refus par champ. C'est le même calcul que la création
   partie.
 
 **Écran de jeu d'une partie close** (`failed`, et plus tard `completed`) : le journal se relit,
-la zone de saisie laisse place à un bandeau (*« This game is over. »*) et un retour à la page
-du personnage. L'en-tête de l'écran de jeu mène à la page du personnage plutôt qu'à
-**My games**.
+la zone de saisie laisse place, dans le plateau de dés, à une carte (*« This game is over. »*) et
+un retour à la page du personnage. La carte du personnage de l'écran de jeu mène à la page du
+personnage plutôt qu'à **My games**.
 
 **Fiche (5.3.4)** : profession et genre s'ajoutent à l'identité.
 
@@ -634,8 +653,8 @@ Exemple indicatif de la vue d'une partie :
 **Responsive** : de 360 px à l'écran large. Points de rupture Tailwind par défaut ; la
 disposition à deux colonnes n'apparaît qu'à partir de `lg` (1024 px).
 
-**Thèmes** : clair et sombre, sombre par défaut, choix mémorisé ; suit le système si le
-joueur n'a rien choisi. Le choix se fait dans les préférences (5.5).
+**Thèmes** : clair et sombre, **clair par défaut** depuis la refonte visuelle (KAN-160), choix
+mémorisé ; *System* reste un choix possible. Le choix se fait dans les préférences (5.5).
 
 **Internationalisation** : posée dès la Phase 2 avec **react-i18next** (i18next), même si elle
 ne contient au départ que l'anglais. Ajouter une langue ne doit être qu'un travail de
@@ -692,80 +711,114 @@ projet : on ne teste pas le framework.
 
 ## 8. Direction visuelle
 
-Validée sur les maquettes de la Phase 2 (KAN-20, `apps/frontend/design/`). Les valeurs
-ci-dessous font foi ; les exports Stitch en sont une illustration, avec des écarts listés dans
-`apps/frontend/design/README.md`.
+**« La table de jeu »**, validée le 2026-11-05 (epic KAN-160) sur les maquettes de
+`apps/frontend/design/`. Elle remplace la direction de la Phase 2 (« un livre lu à la lampe »,
+sombre par défaut). Les valeurs ci-dessous et `apps/frontend/design/table.css` font foi ; les
+écarts des maquettes sont listés dans `apps/frontend/design/README.md`.
 
-**Intention** : *un livre qu'on lit à la lueur d'une lampe, avec la feuille de personnage
-posée à côté*. Calme, lisible, concentré sur le texte. Inspiré de la table de jeu, sans
-folklore : ni parchemin texturé, ni dragons, ni polices gothiques — l'univers change d'une
-partie à l'autre, l'habillage ne doit pas en choisir un.
+**Intention** : *une table de jeu*. Les éléments du jeu sont des objets posés sur la table :
+le récit est écrit sur une feuille de papier, chaque jet tombe sur une petite carte tamponnée,
+les points de vie sont des pastilles, les dés reposent dans un plateau creusé, le personnage est
+une pile de fiches à onglets, le lieu une étiquette de papier. Ludique et tactile — c'est un
+jeu, ni un livre ni un blog — mais calme et lisible : le récit reste au centre (principe 4).
+Neutre vis-à-vis de l'univers (principe 6) : ni bois, ni cuir, ni feutre, ni parchemin, ni
+ornement d'époque.
 
 **Typographie**
-- Narration : *Literata*, 18 px / interligne 29 px sur desktop, 16 px / interligne 26 px
-  sur mobile, sans espacement de lettres négatif. Colonne de lecture limitée à ~70 caractères
-  (~680 px). L'italique est réservé aux états d'attente et aux murmures narratifs.
-- Interface : *Inter* — corps 15 px, libellés 13 px, métadonnées 11 px (capitales espacées).
-- Titres (nom du personnage, « My games ») : *Literata*, 20 à 32 px selon le niveau.
-- Actions du joueur : *Inter*, jamais la serif — c'est ce qui les distingue de la narration.
-- Wordmark **Wanderlore** : *Literata* 16 px, capitales, espacement 0,22 em.
+- *Literata* pour le récit (16,5 px / 1,68 sur mobile, 18 px / 1,7 sur desktop, sans espacement
+  de lettres négatif, colonne de ~70 caractères), les noms, les titres et le wordmark
+  **WANDERLORE** (capitales, espacement 0,24 em).
+- *Inter* pour tout ce qui est interactif ou mécanique : boutons, libellés, **les mots du
+  joueur**, cartes de jet, tampons, nombres (chiffres tabulaires), valeurs de la fiche.
+- Petits libellés en *Inter* 11 px, capitales espacées, encre atténuée. L'italique de la serif
+  est réservé aux états d'attente et aux textes d'ambiance (ton d'un univers).
 
-**Couleurs** — thème sombre (par défaut)
+**Couleurs** — thème clair (par défaut)
 
 | Rôle | Valeur |
 |---|---|
-| Fond (niveau 0) | `#15130F` |
-| Surfaces : header, saisie, fiche (niveau 1) | `#1E1B16` |
-| Cartes, puces (niveau 2) | `#28241E` |
-| Feuille ouverte, popovers (niveau 3) | `#332E27` |
-| Bordures fines / actives | `#2E2922` / `#3A342C` |
-| Texte principal / secondaire / métadonnées | `#EDE6D6` / `#A89F91` / `#787063` |
-| Accent laiton (survol) | `#D49B44` (`#C88D37`) |
-| Réussite — vert sauge | `#7A9A7B` |
-| Échec et points de vie — rouge brique | `#B85C50` |
+| Table (fond) | `#EFE9DE`, lueur radiale et grain fin |
+| Feuille du récit | `#FAF6EE` |
+| Carte (fiche, carte de jet, étiquette) / carte dessous | `#FDFBF7` / `#F2ECE1` |
+| Plateau de dés (creusé) | `#E5DFD3`, ombre intérieure |
+| Encre principale / secondaire / atténuée | `#1C1917` / `#57534E` / `#736B63` |
+| Accent — bleu encre (actions seulement) | `#1F3A5F` (survol `#162A45`), texte `#FFFFFF` |
+| Points de vie — brique | `#B83A2E` |
+| Réussite (tampon) | `#2D6A4F` sur `#E8F3ED` |
+| Échec (tampon) | `#99382C` sur `#F8EBEA` |
 
-- Un seul accent, réservé aux actions : envoyer, *Retry*, liens, anneau de focus. Jamais
-  pour un libellé, un indicateur d'attente ou une décoration.
-- Les points de vie sont **toujours** en rouge brique — jamais en vert, qui signifie une
-  réussite de jet. Dégradé vers l'ambre quand ils baissent (à confirmer à l'intégration).
-- Thème clair : fond papier (proche de `#F6F1E7`), texte encre — non maquetté en Phase 2.
-- **Texture du fond** (niveau 0 seulement, jamais sur une surface) : un grain fin et un
-  dégradé radial, figés à l'écran — ils ne défilent pas avec le journal. Thème sombre : une
-  lueur de bougie, ton chaud propre à la texture (pas l'accent), derrière la page, et des
-  bords qui s'assombrissent. Thème clair : un vieux papier, le centre plus clair, les bords
-  légèrement jaunis, le grain de sa fibre. Opacités de quelques pour cent, contraste WCAG AA
-  du texte inchangé ; jetons `--wl-glow`, `--wl-edge`, `--wl-grain`, `--wl-grain-opacity`.
+**Thème sombre — « la table la nuit »** : table `#191612` sous une lueur de lampe, feuilles
+`#2A2620`, cartes `#322D26`, plateau `#120F0C`, encre `#EDE6D6` / `#B5AB9B` / `#958B7B`, accent
+`#8FB3E0` (texte `#10131A`), points de vie `#E0705F`, réussite `#7FBF9A`, échec `#E58A7C`. Les
+dés restent ivoire. Jetons complets dans `table.css` (`:root[data-theme='dark']`).
 
-**Formes et mouvement** : coins faiblement arrondis — 4 px pour les puces et badges, 6 à
-8 px pour les champs, cartes et boutons ; pas de pilule, sauf les petits boutons-icônes
-ronds. Bordures fines plutôt qu'ombres, la profondeur venant des niveaux de surface ; seule
-la feuille ouverte porte une ombre ambiante. Beaucoup d'espace. Animations brèves :
-apparition en fondu de la narration, rebond et pulsation de la jauge de points de vie quand elle
-change, points de suspension animés pour l'attente, et le jet en direct (5.3.7), en 2D — pas
-de dés en trois dimensions ni de moteur physique. Chacune se coupe dans les préférences
-(5.5).
+- Un seul accent, réservé aux actions : envoyer, *Roll the dice*, *Retry*, *Continue*, liens,
+  anneau de focus. Jamais pour un libellé, un indicateur d'attente ou une décoration.
+- Les points de vie sont **toujours** en brique, jamais en vert, qui signifie une réussite.
+- **Texture de la table** (fond seulement, jamais sur une feuille ou une carte) : une lueur
+  radiale, des bords légèrement assombris et un grain fin, figés à l'écran. Opacités de
+  quelques pour cent, contraste WCAG AA inchangé.
 
-**Composants récurrents** (tels que maquettés)
-- *Action du joueur* : libellé « You » en métadonnée neutre, texte en *Inter*, filet laiton
-  de 2 px à gauche.
-- *Puce de jet* : centrée entre l'action et la narration, icône de dé, le jet en entier
-  (« Compétence 60% · modificateurs · d100 · Degré »), teinte sémantique sur fond atténué.
-- *Carte de jet en direct* (5.3.7) : même emplacement, surface légèrement relevée ; la ligne
-  du jet qui se construit, deux tuiles de d10 (dizaines, unités) en chiffres de l'interface,
-  icône de d10 au repos, le bouton *Roll the dice*
-  (plein), puis le degré. Se replie en puce.
-- *Ligne d'effets* : sous la narration, discrète, icône et couleur sémantique (« −2 HP »).
-- *Carte d'erreur* : à la place de la narration, liseré rouge brique sans fond rouge,
-  message et boutons *Retry* (plein) / *Edit* (contour).
-- *Bandeau de scène* : ligne fine sous l'en-tête, filet en bas, épingle et lieu, puis
-  période de la journée, en libellé discret.
-- *Fiche* : caractéristiques, compétences en retrait sous leur catégorie, ressources, onglet
-  « Quests » ;
-  colonne de 320 px sur desktop, feuille couvrant les deux tiers de l'écran sur mobile.
+**Profondeur et formes** : papier sur papier — chaque objet porte une ombre douce et réaliste
+(la feuille la plus marquée, les cartes moins), le plateau une ombre intérieure, une boîte de
+dialogue une ombre forte au-dessus de la table assombrie. Coins faiblement arrondis : 3 à 4 px
+pour les feuilles, cartes et tampons, 6 px pour les boutons et champs, 7 px en haut des onglets ;
+pilules pour les seuls jetons d'effet (« −3 HP ») et interrupteurs. **Aucune carte de jet n'est
+inclinée** ; les fiches sous la pile dépassent de quelques pixels, 1° au plus.
 
-**Iconographie** : jeu d'icônes linéaire (Lucide, courant avec React). Une icône de dé pour
-les jets, un cœur pour les points de vie, une épingle de carte pour les lieux. Les exports
-Stitch utilisent Material Symbols, à remplacer.
+**Objets** (le vocabulaire de tous les écrans)
+- *Feuille du récit* : une feuille continue portant les mots du joueur et la narration. Sur
+  mobile, presque bord à bord avec un liseré de table autour.
+- *Mots du joueur* : *Inter* 15–16 px medium, précédés d'un « › » à l'accent.
+- *Carte de jet* : posée droite entre les mots du joueur et la narration, décalée vers la
+  droite, bord gauche de 4 px à la couleur de l'issue, le jet en entier en *Inter*
+  (« Persuasion 45% · Difficult · Advantage +10 · → 32% · rolled 27 ») et un **tampon** (issue,
+  et en combat ce que le jet a fait : « Success · Hit », « Failure · Blow taken »). Les dégâts
+  infligés sur une seconde ligne. Le tampon est à droite sur desktop, sous la ligne sur mobile.
+- *Jeton d'effet* : brique pour les points de vie (« −3 HP »), carte de papier pour les autres
+  effets (« You arrive at… »).
+- *Pastilles de points de vie* : une pastille par point, pleines pour les points restants,
+  cerclées pour les points perdus, suivies de « 11 / 14 ».
+- *Étiquette du lieu* : petite étiquette percée, épinglée sur le bord haut de la feuille : le
+  lieu et la période (« Hôtel de Laffemas · Paris — Dusk »), puis l'univers et le scénario. Jamais
+  d'heure, de date ni de sorties. Le récit défile sous elle sans jamais passer dessous.
+- *Plateau de dés* : creusé dans la table, glissé sous le bord bas de la feuille ; il porte la
+  saisie. Au jet en direct (5.3.7), il grandit : la carte du jet se construit, deux d10
+  (dizaines, unités) **dessinés comme de vrais dés à dix faces**, ivoire, chiffres en *Inter*,
+  montrent « ? », le bouton *Roll the dice* les lance. Une fois révélé, le jet rejoint la feuille
+  et ne reste pas dans le plateau (tranché le 2026-11-06 : il y faisait doublon).
+- *Pile de fiches* : la fiche du personnage, onglets *Character*, *Inventory*, *Quests*. Sur
+  mobile, la carte du personnage en haut de l'écran (nom, pastilles) porte les trois onglets
+  accrochés sous elle, et la pile se lève au-dessus de la table assombrie ; sur desktop, la pile
+  reste à droite (~400 px).
+- *Bordereau de saisie* : « What do you do? », dictée, bouton d'envoi bleu encre ; verrouillé, un
+  cadenas et « The game master is answering… ».
+- *Note d'échec* : épinglée à la place de la narration, bord brique, message et *Retry* (plein) /
+  *Edit* (contour).
+- Hors partie : le wordmark et le jeton du compte (initiales) posés sur la table, sans barre
+  d'application ; les personnages en fiches à onglet (l'univers sur l'onglet), les univers en
+  couvercles de boîte vus d'en haut, la création en intercalaires numérotés.
+
+**Correspondance avec l'avant-refonte** (intégrée en KAN-167, section 5 reprise) : l'en-tête
+(5.3.1) est devenu la carte du personnage qui dépasse (mobile) et la barre du haut (desktop) ; le
+bandeau de scène, l'étiquette du lieu ; la pastille de jet, la carte de jet ; la jauge de points
+de vie, les pastilles (son animation : rebond et pulsation des pastilles) ; la carte de jet en
+direct vit dans le plateau de dés. Hors partie, la barre d'application a disparu : le wordmark
+et le jeton du compte sont posés sur la table.
+
+**Mise en page** : mobile d'abord (390 px), sans barre de navigation en bas ni barre d'onglets.
+Desktop à partir de 1024 px : la feuille au centre-gauche, le plateau et la saisie sous elle,
+la pile de fiches à droite ; les points de vie aussi dans la barre du haut, pour rester visibles
+quel que soit l'onglet ouvert.
+
+**Mouvement** : animations brèves et en 2D — apparition en fondu de la narration, rebond des
+pastilles quand les points de vie changent, points d'attente, lancer des dés (5.3.7), une boîte
+de dialogue qui se soulève au-dessus de la table (ou la fiche qui monte du bas sur mobile) et
+redescend en se refermant, un fondu discret à l'arrivée sur une page. Chacune se coupe dans les
+préférences (5.5).
+
+**Iconographie** : Lucide pour les icônes d'interface (retour, haut-parleur, micro, envoi,
+cadenas, fermeture, corbeille). Les dés ne sont pas des icônes : d10 et d6 se dessinent en SVG.
 
 ---
 
@@ -828,205 +881,47 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
 
 ---
 
-## 10. Génération des maquettes avec Stitch
+## 10. Maquettes
 
 ### Méthode
 
-- **Un écran par prompt**, et un état par écran quand l'état change la mise en page (attente,
-  échec, partie neuve). Stitch produit mieux un écran précis qu'un parcours entier.
-- **Toujours coller le préambule** ci-dessous en tête du prompt, pour garder un système
-  visuel cohérent d'un écran à l'autre.
-- **Mobile d'abord** : générer la version téléphone, puis demander la déclinaison desktop.
-- **Contenu réel** : utiliser le contenu d'exemple ci-dessous plutôt que du *lorem ipsum* —
-  la narration est l'élément principal, sa longueur réelle conditionne la mise en page.
-- **Itérer par petites retouches** (« make the roll chip smaller ») plutôt que de réécrire
-  le prompt.
-- **Vérifier chaque maquette contre les principes de la section 1.** Stitch invente
-  volontiers ce qui manque : chiffres de dés, inventaire, bouton d'inscription, avatars
-  générés, barre de navigation à onglets. Tout cela est à retirer en Phase 2.
-- Générer d'abord les écrans de la Phase 2. Les écrans des phases suivantes ne se génèrent
-  qu'en exploration, clairement étiquetés comme tels.
+Depuis la refonte visuelle (KAN-160), les maquettes sont **écrites en HTML/CSS**, plus générées
+par Google Stitch. Stitch a servi à explorer quatre directions sur l'écran de jeu ; décliné sur
+tous les écrans, il redessinait chaque écran à partir de zéro, et le même objet (étiquette,
+dés, onglets, saisie) changeait d'un écran à l'autre. Les maquettes reposent désormais sur une
+feuille de styles commune et des fonctions partagées : un objet est identique partout.
+
+- **Contenu réel** : textes d'interface repris des fichiers de traduction du front, contenu
+  repris des univers en code — jamais de *lorem ipsum* ni de libellé inventé.
+- **Vérifier chaque maquette contre les principes de la section 1** et lister les écarts dans
+  le README des maquettes.
+- Les maquettes d'une phase à venir sont étiquetées comme des explorations.
 
 ### Livrables et dépôt
 
-Les maquettes validées sont versionnées dans **`apps/frontend/design/`**, pour que
-l'intégration se fasse depuis le dépôt plutôt que depuis Stitch : le projet Stitch peut encore
-évoluer ou être retouché, le dépôt fige la version validée. Stitch est accessible depuis Claude
-Code par son serveur MCP (génération, lecture et export des écrans), mais l'intégration ne s'y
-réfère pas.
+Les maquettes validées sont versionnées dans **`apps/frontend/design/`** :
+- `table.css` : la feuille de styles commune (jetons des deux thèmes, composants) ;
+- `<écran>.html` : chaque écran en page statique, une seule page pour le mobile et le desktop
+  (bascule à 1024 px) ;
+- `<écran>-mobile.webp` et `<écran>-desktop.webp` : les captures du rendu attendu (390 px en
+  densité 2x, 1440 × 900) ;
+- `src/` : les sources (`screens.js`, `screen.html#<écran>`, `#<écran>-dark` pour la nuit, et la
+  page de revue `review.html`), d'où les exports se régénèrent.
 
-Pour chaque écran et chaque format, deux fichiers au même nom :
-- **l'export HTML de Stitch** (option *Code*) : la source de référence pour les couleurs,
-  espacements, tailles et structure ;
-- **une capture PNG** : le rendu attendu, pour vérifier l'intégration à l'œil.
+Nommage : identifiant de l'écran puis nom court — `g1-game`, `s2-home`, `c4-skills`. Les
+captures sont en WebP : le grain de la texture rend le PNG dix à quinze fois plus lourd.
 
-Nommage : identifiant de l'écran, nom court, format — `s1-login-mobile.html`,
-`s1-login-mobile.png`, `s3-game-desktop.html`… Un écran généré dans un seul format ne porte
-que celui-là. L'export Figma n'est pas un livrable : il n'est pas lisible depuis le dépôt.
-
-**Ces fichiers sont une référence visuelle, pas du code à reprendre.** Le HTML exporté est une
-page statique : sans états, sans données réelles, avec des images de remplacement et souvent
-des icônes Material Symbols. À l'intégration :
-- les couleurs et polices alimentent la configuration Tailwind du socle ;
-- chaque écran est redécoupé en composants React branchés sur les vraies données et sur la
-  machine d'état du tour (5.3.5) ;
+**Ces fichiers sont une référence visuelle, pas du code à reprendre.** À l'intégration :
+- les jetons de `table.css` alimentent la configuration Tailwind du socle ;
+- chaque écran est redécoupé en composants React branchés sur les vraies données et sur les
+  machines d'état du tour (5.3.5) et du jet en direct ;
 - les icônes sont remplacées par Lucide (section 8) ;
 - tout ce qui contredit la section 1 est retiré, même présent sur une maquette validée.
-
-### Préambule de style (à coller en tête de chaque prompt)
-
-```
-Design system for "Wanderlore", a web app for playing solo tabletop role-playing games with
-an AI game master, in a chat-like interface. Audience: experienced pen-and-paper RPG players.
-
-Mood: a book read by lamplight, with a character sheet lying next to it. Calm, literary,
-focused on reading. Tabletop-inspired but setting-neutral: no parchment textures, no dragons,
-no gothic fonts, no fantasy ornaments — the app hosts many different settings.
-
-Theme: dark by default. Background warm ink (#15130F), slightly lighter surfaces, cream text
-(#EDE6D6). Single accent colour, brass/amber, used only for actions. Muted semantic colours:
-sage green for success, brick red for failure and hit points.
-
-Typography: narration in a readable serif (Literata), 18px, line-height 1.6, max ~70
-characters per line. Interface in a neutral sans-serif (Inter), 14–16px. The "Wanderlore"
-wordmark in the serif, small caps, letter-spaced.
-
-Shapes: subtle 4–8px radius, thin borders rather than shadows, generous whitespace. Linear
-icons (Lucide style). All interface text in English.
-
-Never show dice numbers, target numbers or roll totals. Never show an inventory. Never show a
-sign-up link.
-```
-
-### Contenu d'exemple
-
-```
-Game: d'Artagnan — The Three Musketeers · The Road to Paris — In progress — 2 hours ago
-Character: d'Artagnan. Hit points 8 / 10.
-Characteristics: Strength 13, Constitution 14, Size 12, Intelligence 13, Power 12,
-                 Dexterity 16, Charisma 14.
-Skills — Combat: Swordsmanship 60%. Physical: Athletics 30%. Perception: Observation 30%.
-         Communication: Persuasion 45%, Etiquette 30%.
-Resources: Purse 15.
-Location: Meung-sur-Loire.
-Quest: Deliver the letter — Carry your father's letter to Monsieur de Tréville.
-
-Turn 1
-You: I ride into the courtyard of the Jolly Miller inn and look around.
-Narration: The courtyard of the Jolly Miller smells of wet straw and woodsmoke. A few
-townsmen idle by the well; one of them points at your yellow horse and laughs. Near a
-window on the ground floor, a gentleman in a dark cloak watches you with open contempt, a
-thin scar running along his temple.
-
-Turn 2
-You: I ask the innkeeper who the gentleman in the dark cloak is.
-Roll: Persuasion 45% · rolled 23 · Success
-Narration: The innkeeper glances toward the courtyard, then leans across the counter and
-lowers his voice. "A gentleman who pays well and asks no questions, monsieur. He came from
-Paris this morning and speaks of nobody but a certain milady." Beyond the window, the
-stranger folds a letter and slides it into his doublet, his scarred face turned your way.
-
-Turn 3
-You: I walk up to him and demand that he apologise for laughing at my horse.
-Roll: Etiquette · Failure
-Narration: Your words come out sharper than you meant. The stranger does not even turn his
-head. Two of his servants step between you, and one of them shoves you hard against the
-doorframe. By the time you steady yourself, the gentleman has gone back inside.
-Effects: −2 HP
-
-Turn in progress
-You: I draw my sword and follow him inside.
-Roll: Swordsmanship 60% · rolled 58 · Success
-Status: The game master tells what happens…
-
-Failed turn
-You: I challenge him to a duel in the name of my father.
-Error: The game master took too long to answer. Try your action again.
-Actions: Retry, Edit
-```
-
-### Prompts par écran
-
-Chaque prompt ci-dessous se colle **après** le préambule, avec le contenu d'exemple utile.
-
-**S1 — Connexion (mobile, puis desktop)**
-```
-Mobile sign-in screen. Centered column: the "Wanderlore" wordmark, a one-line tagline
-"Your solo tabletop adventure, with a game master who never cancels.", then an Email field,
-a Password field and a full-width "Sign in" button in the accent colour. Below the form, an
-inline error message "Invalid email or password." in muted brick red. Nothing else: no
-sign-up link, no forgot-password link, no social login.
-```
-
-**S2 — Mes parties (mobile, puis desktop)**
-```
-Mobile "My games" screen. Top bar: "Wanderlore" wordmark on the left, account initials
-button on the right. Page title "My games". A vertical list of game cards; each card shows
-the character name as title, "The Three Musketeers · The Road to Paris" underneath, a small
-status badge "In progress", "2 hours ago", and a compact hit points indicator "8 / 10" with
-a heart icon. The whole card is clickable. No "new game" button. Show two cards, the second
-one "Paused".
-```
-
-**S3 — Partie, desktop, état normal**
-```
-Desktop game screen, 1440px wide. Header: back link "My games", then "d'Artagnan" with
-"The Three Musketeers · The Road to Paris" underneath, a compact hit points bar "8 / 10" on
-the right, and account initials. Under the header, a thin scene bar: map pin "Meung-sur-Loire · Dusk". Main area: a centered reading column (max ~70 characters
-per line) showing the story log from the sample content, turns 1 to 3. Player actions are
-compact, discreet blocks labelled "You", in the sans-serif, slightly tinted. Narration is
-full-width serif prose with no bubble, like a book page. Between action and narration, a
-small centered chip with a dice icon and the roll in full: "Persuasion 45% · rolled 23 ·
-Success" in sage green, "Etiquette 30% · rolled 71 · Failure" in brick red. Under the narration of turn 3, a discreet effects
-line: heart icon "−2 HP". At the bottom, a sticky multi-line input with placeholder
-"What do you do?" and a send button in the accent colour.
-Right sidebar, 320px, the read-only character sheet: name, hit points bar 8 / 10, the seven
-characteristics in two columns (Strength 13…), skills in percent grouped under their category,
-"Purse 15", then a "Quests" tab with the quest "Deliver the letter" and its one-line
-summary.
-```
-
-**S4 — Partie, mobile, état normal et fiche ouverte**
-```
-Mobile version of the game screen. Header: back arrow, "d'Artagnan" with "The Road to Paris"
-underneath, a compact hit points indicator "8 / 10", and a character-sheet button. Full-width
-story log with turns 2 and 3 from the sample content, same styles as desktop. Sticky input
-at the bottom with a send button.
-Second screen: the same view with the character sheet open as a bottom sheet covering two
-thirds of the screen, with a drag handle and a close button, showing the full sheet.
-```
-
-**S5 — Partie, tour en cours**
-```
-Mobile game screen while a turn is being played. The last player action "I draw my sword
-and follow him inside." is shown, then the roll chip "Swordsmanship 60% · rolled 58 · Success"
-(sage green), then an animated waiting line in italic: "The game master tells what
-happens…" with three pulsing dots. The input at the bottom is disabled and dimmed, with the
-hint "The game master is answering…".
-```
-
-**S6 — Partie, tour échoué**
-```
-Mobile game screen after a failed turn. The last player action "I challenge him to a duel in
-the name of my father." is followed, instead of narration, by a sober alert card with a thin
-brick-red border: the message "The game master took too long to answer. Try your action
-again." and two buttons, "Retry" (accent colour) and "Edit" (secondary). The input at the
-bottom is enabled and empty.
-```
-
-**S7 — Partie neuve**
-```
-Mobile game screen for a game with no turn yet. The story log shows a centered welcome
-state: the character name "d'Artagnan", the starting location "Meung-sur-Loire" with a map
-pin icon, the quest "Deliver the letter — Carry your father's letter to Monsieur de
-Tréville.", and the serif line "Your story begins. What do you do?". The input at the bottom
-is focused.
-```
 
 ---
 
 ## 11. Points ouverts
 
 - **Délai de rattrapage** sans événement SSE avant relecture de l'état du tour (5.3.5).
-- **Direction visuelle** (section 8) : validée sur les maquettes de la Phase 2 (KAN-20). Reste
-  ouvert : le dégradé des points de vie vers l'ambre, et le thème clair, non maquetté.
+- **Direction visuelle** (section 8) : « la table de jeu », validée le 2026-11-05 (KAN-160),
+  à intégrer. Les écarts des maquettes sont listés dans `apps/frontend/design/README.md`.

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Table de jeu Wanderlore</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
+<style>
+/* Review board: screens laid out like proofs on a light table; mobile frame then desktop frame per screen. */
+:root {
+  --bg: #e9e3d8; --panel: #f7f3ec; --ink: #1c1917; --ink-2: #57534e; --ink-3: #736b63;
+  --line: #d8cfbf; --accent: #1f3a5f; --on-accent: #fff; --frame: #2b2722;
+  --serif: 'Literata', Georgia, serif; --sans: 'Inter', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15130f; --panel: #211d18; --ink: #ede6d6; --ink-2: #b5ab9b; --ink-3: #958b7b;
+  --line: #3a342c; --accent: #8fb3e0; --on-accent: #10131a; --frame: #000; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #15130f; --panel: #211d18; --ink: #ede6d6; --ink-2: #b5ab9b; --ink-3: #958b7b;
+  --line: #3a342c; --accent: #8fb3e0; --on-accent: #10131a; --frame: #000; color-scheme: dark; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 32px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+h1 { margin: 0; font: 600 34px/1.1 var(--serif); text-wrap: balance; }
+.intro { margin: 8px 0 0; max-width: 62ch; color: var(--ink-2); }
+.switch { display: inline-flex; padding: 3px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); }
+.switch button { border: 0; background: none; color: var(--ink-2); font: 600 13px/1 var(--sans); padding: 9px 14px; border-radius: 6px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 18px 0 0; font-size: 13.5px; }
+nav.toc a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+section.group { margin-top: 44px; }
+section.group > h2 { margin: 0 0 4px; font: 600 24px/1.2 var(--serif); }
+section.group > p { margin: 0 0 18px; color: var(--ink-2); max-width: 70ch; }
+.screens { display: flex; flex-direction: column; gap: 18px; }
+article.screen { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px 18px; }
+article.screen h3 { margin: 0; font: 600 17px/1.3 var(--serif); }
+article.screen h3 small { font: 500 11.5px/1 var(--sans); color: var(--ink-3); letter-spacing: .06em; margin-left: 8px; text-transform: uppercase; }
+article.screen p { margin: 4px 0 14px; color: var(--ink-2); font-size: 14px; max-width: 80ch; }
+.frames { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+figure { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+figcaption { font: 600 11px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.viewport { position: relative; overflow: hidden; border-radius: 8px; background: var(--frame); box-shadow: 0 0 0 1px var(--line); cursor: zoom-in; max-width: 100%; }
+.viewport iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; pointer-events: none; background: #efe9de; }
+.viewport:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.box { position: fixed; inset: 0; z-index: 50; background: rgb(10 8 6 / .82); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; }
+.box[hidden] { display: none !important; }
+.box .bar { display: flex; gap: 12px; align-items: center; color: #ede6d6; font: 600 14px/1 var(--sans); }
+.box .bar button { border: 1px solid #5a5248; background: #2a2620; color: #ede6d6; border-radius: 6px; padding: 8px 12px; font: 600 13px/1 var(--sans); cursor: pointer; }
+.box .stage { position: relative; overflow: hidden; border-radius: 8px; box-shadow: 0 30px 80px rgb(0 0 0 / .5); }
+.box iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; background: #efe9de; }
+footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 13px; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Table de jeu</h1>
+      <p class="intro">Les maquettes du front joueur, direction D. Chaque écran en mobile (390 px) et en desktop (1440 px), construits avec un seul jeu de composants : un objet est identique d'un écran à l'autre. Clique sur un cadre pour l'agrandir. Les écrans sont interactifs au défilement dans l'agrandissement.</p>
+    </div>
+    <div class="switch" role="group" aria-label="Thème des maquettes">
+      <button type="button" id="day" aria-pressed="true">Jour (défaut)</button>
+      <button type="button" id="night" aria-pressed="false">La table la nuit</button>
+    </div>
+  </header>
+  <nav class="toc" id="toc"></nav>
+  <div id="groups"></div>
+  <footer>Textes d'interface repris des fichiers de traduction du front et du contenu des Trois Mousquetaires. Seul ajout : le mot « Chance » sur la carte du jet en direct.</footer>
+</div>
+
+<div class="box" id="box" hidden>
+  <div class="bar"><span id="boxTitle"></span><button type="button" id="boxSwap">Voir en desktop</button><button type="button" id="boxClose">Fermer</button></div>
+  <div class="stage" id="stage"><iframe id="boxFrame" title="Écran agrandi"></iframe></div>
+</div>
+
+<script>
+const GROUPS = [
+  { id: 'jeu', title: 'En partie', intro: "L'écran de jeu dans tous ses états. Sur mobile, la fiche du personnage dépasse en haut, l'étiquette du lieu est épinglée sur la feuille, le plateau de dés est glissé sous la feuille avec la saisie. Sur desktop, la pile d'intercalaires reste à droite.", screens: [
+    ['g1', 'Partie', "Deux tours joués : jets sur des cartes droites tamponnées, jeton −3 HP, dernier jet dans le plateau."],
+    ['g2', 'Jet en direct', "Le plateau grandit : la carte du jet se construit, les deux d10 attendent le lancer. Saisie verrouillée."],
+    ['g3', 'Jet révélé', "Les dés sont tombés sur 10 et 8 : 18, réussite, dégâts détaillés. La narration suit."],
+    ['g4', 'Fiche — Personnage', "Sur mobile, la pile d'intercalaires se lève au-dessus de la table assombrie. Sur desktop, elle est toujours là."],
+    ['g4b', 'Fiche — Inventaire', "Objets du contenu réel : rapière équipée, corde, billet de Tréville, bourse."],
+    ['g4c', 'Fiche — Quêtes', "La quête en cours et son résumé."],
+    ['g5', 'Tour en cours', "Le MJ arbitre l'action ; points d'attente, saisie verrouillée."],
+    ['g6', 'Tour échoué', "Une note épinglée à la place de la narration, avec Retry et Edit. La saisie reste libre."],
+    ['g7', 'Nouvelle partie', "Première page : monde et scénario, chapitre, invitation à agir. PV pleins, dés au repos."],
+    ['g8', 'Partie terminée', "Le plateau cède la place à une carte de fin et au retour vers le personnage."],
+  ]},
+  { id: 'hors', title: 'Hors partie', intro: "La table hors d'une partie : le mot-symbole et le jeton du compte posés sur la table, pas de barre d'application. Les personnages sont des fiches à onglet, les mondes des couvercles de boîte vus d'en haut.", screens: [
+    ['s1', 'Connexion', "Deux dés posés sur la table en desktop. Ni inscription ni mot de passe oublié."],
+    ['s2', 'Accueil', "Mes personnages (l'un en partie, l'autre libre), puis les mondes."],
+    ['s3', "Page d'un personnage", "Eleanor Marsh, hors partie : fiche, scénarios (dont un échoué à retenter), parties passées."],
+    ['s3b', "Abandon d'une partie", "Page d'Armand de Lisle en partie, boîte de confirmation soulevée au-dessus de la table."],
+  ]},
+  { id: 'creation', title: 'Création du personnage', intro: "Cinq étapes en intercalaires : faites (cochées), en cours (relevée), à venir. Les valeurs suivent pas à pas jusqu'au personnage d'Armand de Lisle.", screens: [
+    ['c1', '1 · Dés', "Sept rangées de quatre d6, le plus faible écarté et grisé."],
+    ['c2', '2 · Caractéristiques', "Les résultats sont des jetons à poser dans les emplacements ; le 14 reste libre pour CHA."],
+    ['c3', '3 · Profession', "Quatre cartes ; la carte choisie se soulève, bord bleu encre."],
+    ['c4', '4 · Compétences', "Deux réserves en piles de jetons, crans Prof. et Pers. par compétence."],
+    ['c5', '5 · Identité', "Nom, genre, et la fiche terminée à côté."],
+  ]},
+  { id: 'systeme', title: 'Système', intro: "Préférences, compte et écrans d'exception. Le thème clair devient le défaut.", screens: [
+    ['s4', 'Préférences', "Feuille montante sur mobile, boîte centrée sur desktop. Clair sélectionné."],
+    ['s4b', 'Préférences, animations réduites', "L'appareil demande moins de mouvement : les trois réglages d'animation sont désactivés."],
+    ['s5', 'Menu du compte', "Une petite carte dépliée sous le jeton CP."],
+    ['s6', 'Page introuvable', "Deux d10 sur 00 et 0 : le pire jet possible, 100."],
+    ['s7', 'Erreur inattendue', "Une carte, un bouton pour recharger."],
+  ]},
+];
+const SIZES = { m: { w: 390, h: 844, scale: 0.56, label: 'Mobile · 390' }, d: { w: 1440, h: 900, scale: 0.47, label: 'Desktop · 1440' } };
+let night = false;
+const src = (id) => `screen.html#${id}${night ? '-dark' : ''}`;
+
+function frame(id, kind, title) {
+  const s = SIZES[kind];
+  return `<figure><figcaption>${s.label}</figcaption>
+    <div class="viewport" tabindex="0" role="button" aria-label="Agrandir ${title}, ${s.label}" data-id="${id}" data-kind="${kind}" data-title="${title}" data-w="${s.w}" data-h="${s.h}" data-scale="${s.scale}">
+      <iframe loading="lazy" tabindex="-1" title="${title} — ${s.label}" width="${s.w}" height="${s.h}" data-id="${id}"></iframe></div></figure>`;
+}
+document.getElementById('toc').innerHTML = GROUPS.map((g) => `<a href="#${g.id}">${g.title}</a>`).join('');
+document.getElementById('groups').innerHTML = GROUPS.map((g) => `<section class="group" id="${g.id}"><h2>${g.title}</h2><p>${g.intro}</p><div class="screens">${
+  g.screens.map(([id, t, n]) => `<article class="screen"><h3>${t}<small>${id}</small></h3><p>${n}</p><div class="frames">${frame(id, 'm', t)}${frame(id, 'd', t)}</div></article>`).join('')
+}</div></section>`).join('');
+
+function fit() {
+  document.querySelectorAll('.viewport').forEach((v) => {
+    const w = +v.dataset.w, h = +v.dataset.h;
+    const avail = v.closest('.frames').clientWidth;
+    const scale = Math.min(+v.dataset.scale, avail / w);
+    v.style.width = `${w * scale}px`; v.style.height = `${h * scale}px`;
+    v.firstElementChild.style.transform = `scale(${scale})`;
+  });
+}
+function load() { document.querySelectorAll('.viewport iframe').forEach((f) => { f.src = src(f.dataset.id); }); }
+fit(); load();
+addEventListener('resize', fit);
+
+function setNight(on) {
+  night = on;
+  document.getElementById('day').setAttribute('aria-pressed', String(!on));
+  document.getElementById('night').setAttribute('aria-pressed', String(on));
+  load();
+  if (!box.hidden) openBox(cur.id, cur.kind, cur.title);
+}
+document.getElementById('day').onclick = () => setNight(false);
+document.getElementById('night').onclick = () => setNight(true);
+
+const box = document.getElementById('box'), stage = document.getElementById('stage'), bf = document.getElementById('boxFrame');
+let cur = {};
+function openBox(id, kind, title) {
+  cur = { id, kind, title };
+  const s = SIZES[kind];
+  const scale = Math.min(1, (innerWidth - 32) / s.w, (innerHeight - 90) / s.h);
+  stage.style.width = `${s.w * scale}px`; stage.style.height = `${s.h * scale}px`;
+  bf.width = s.w; bf.height = s.h; bf.style.transform = `scale(${scale})`;
+  bf.src = src(id);
+  document.getElementById('boxTitle').textContent = `${title} · ${s.label}`;
+  document.getElementById('boxSwap').textContent = kind === 'm' ? 'Voir en desktop' : 'Voir en mobile';
+  box.hidden = false;
+  document.getElementById('boxClose').focus();
+}
+document.addEventListener('click', (e) => {
+  const v = e.target.closest('.viewport');
+  if (v) openBox(v.dataset.id, v.dataset.kind, v.dataset.title);
+});
+document.addEventListener('keydown', (e) => {
+  const v = e.target.closest && e.target.closest('.viewport');
+  if (v && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openBox(v.dataset.id, v.dataset.kind, v.dataset.title); }
+  if (e.key === 'Escape' && !box.hidden) box.hidden = true;
+});
+document.getElementById('boxClose').onclick = () => { box.hidden = true; };
+document.getElementById('boxSwap').onclick = () => openBox(cur.id, cur.kind === 'm' ? 'd' : 'm', cur.title);
+box.addEventListener('click', (e) => { if (e.target === box) box.hidden = true; });
+</script>
+</body>
+
+</html>

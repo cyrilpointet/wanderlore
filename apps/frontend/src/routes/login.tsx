@@ -5,7 +5,10 @@ import { CircleAlert, LoaderCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { currentUserQuery, redirectTarget, signIn, signInErrorMessage } from '@/auth/session'
+import { PRIMARY_ACTION } from '@/components/actions'
+import { D10 } from '@/components/dice'
 import { RulesCredit } from '@/components/rules_credit'
+import { CARD } from '@/components/surfaces'
 import { Wordmark } from '@/components/wordmark'
 
 type LoginSearch = {
@@ -27,7 +30,9 @@ export const Route = createFileRoute('/login')({
 })
 
 const FIELD =
-  'h-11 w-full rounded-lg border border-border-strong bg-surface-1 px-3 text-body text-text transition-colors focus:border-accent focus:outline-none'
+  'h-11 w-full rounded-md border border-border-strong bg-paper px-3 text-body text-text shadow-[inset_0_1px_2px_rgb(0_0_0/0.06)] transition-colors focus:border-accent focus:outline-none'
+
+const FIELD_LABEL = 'text-[0.78125rem] leading-none font-semibold text-muted'
 
 function Login() {
   const { t } = useTranslation('auth')
@@ -52,18 +57,28 @@ function Login() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center px-4 py-10">
-      <div className="w-full max-w-90">
-        <header className="mb-8 text-center">
+    <main className="px-4 pt-[6vh] pb-10">
+      <div className="relative mx-auto flex w-full max-w-100 flex-col gap-[22px]">
+        {/* Two dice left lying on the table, from a wide screen up. Decoration only. */}
+        <span className="absolute top-[120px] -left-[150px] hidden -rotate-[14deg] leading-none lg:block">
+          <D10 face={7} size="small" />
+        </span>
+        <span className="absolute top-[330px] -right-[130px] hidden rotate-[18deg] leading-none lg:block">
+          <D10 face={30} size="small" />
+        </span>
+
+        <header className="flex flex-col items-center gap-3 text-center">
           <h1>
             <Wordmark size="large" />
           </h1>
-          <p className="mt-3 font-serif text-body text-muted">{t('tagline')}</p>
+          <p className="font-serif text-[0.96875rem] leading-relaxed text-muted italic">
+            {t('tagline')}
+          </p>
         </header>
 
-        <form onSubmit={submit} className="flex flex-col gap-4">
+        <form onSubmit={submit} className={`${CARD} flex flex-col gap-4 p-[22px]`}>
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="email" className="text-label font-medium text-muted">
+            <label htmlFor="email" className={FIELD_LABEL}>
               {t('email')}
             </label>
             <input
@@ -80,7 +95,7 @@ function Login() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-label font-medium text-muted">
+            <label htmlFor="password" className={FIELD_LABEL}>
               {t('password')}
             </label>
             <input
@@ -98,7 +113,7 @@ function Login() {
           <button
             type="submit"
             disabled={signInMutation.isPending}
-            className="mt-2 flex h-11 items-center justify-center gap-2 rounded-lg bg-accent text-body font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-wait disabled:opacity-70"
+            className={`${PRIMARY_ACTION} w-full disabled:cursor-wait`}
           >
             {signInMutation.isPending && (
               <LoaderCircle aria-hidden className="size-4 animate-spin" />
@@ -106,9 +121,10 @@ function Login() {
             {signInMutation.isPending ? t('signingIn') : t('signIn')}
           </button>
 
-          <div aria-live="polite" className="min-h-5">
+          {/* Pulled into the gap while empty, so the card keeps its padding. */}
+          <div aria-live="polite" className="-mt-4">
             {signInMutation.error && (
-              <p className="flex items-center justify-center gap-1.5 text-label text-danger">
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-label text-danger">
                 <CircleAlert aria-hidden className="size-4 shrink-0" />
                 {signInErrorMessage(signInMutation.error)}
               </p>

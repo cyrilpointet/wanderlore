@@ -1,6 +1,5 @@
 {
   "backToCharacter": "Character page",
-  "backHome": "My characters",
   "openSheet": "Character sheet",
   "closeSheet": "Close",
   "voice": {
@@ -16,8 +15,11 @@
       "characteristic": "{{name}} {{value, number}} ×5",
       "modifier": "{{label}} {{value, number(signDisplay: always)}}",
       "chance": "→ {{chance, number}}%",
+      "chanceLabel": "Chance",
       "rolled": "rolled {{roll, number}}",
       "throw": "Roll the dice",
+      "tens": "Tens",
+      "units": "Units",
       "attackOn": "Attack on {{opponent}}",
       "defenseAgainst": "{{defense}} against {{opponent}}",
       "unknownOpponent": "unknown opponent {{rank, number}}",

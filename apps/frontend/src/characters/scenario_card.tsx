@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next'
 
+import { PRIMARY_ACTION } from '@/components/actions'
+import { Stamp } from '@/components/stamp'
+import { CARD } from '@/components/surfaces'
 import type { ScenarioChoice } from './queries'
 
 type ScenarioCardProps = {
@@ -19,36 +22,32 @@ export function ScenarioCard({ scenario, starting, disabled, onStart }: Scenario
   const { t } = useTranslation('characters')
 
   return (
-    <article className="rounded-lg border border-border-strong bg-surface-1 p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="min-w-0 font-serif text-[1.375rem] leading-tight text-text">
+    <article className={`${CARD} flex flex-col gap-2.5 p-4`}>
+      <div className="flex flex-wrap items-start justify-between gap-2.5">
+        <h3 className="min-w-0 font-serif text-lg leading-snug font-semibold text-text">
           {scenario.title}
         </h3>
         <div className="flex shrink-0 flex-wrap justify-end gap-2">
           {scenario.status === 'draft' && (
-            <span className="inline-flex items-center rounded-sm border border-border-strong bg-surface-2 px-2 py-0.5 text-meta text-muted uppercase">
-              {t('scenarioStatus.draft', { ns: 'enums' })}
-            </span>
+            <Stamp tone="neutral">{t('scenarioStatus.draft', { ns: 'enums' })}</Stamp>
           )}
-          {scenario.failed && (
-            <span className="inline-flex items-center rounded-sm border border-danger/50 bg-danger/10 px-2 py-0.5 text-meta text-danger uppercase">
-              {t('scenarios.failed')}
-            </span>
-          )}
+          {scenario.failed && <Stamp tone="failure">{t('scenarios.failed')}</Stamp>}
         </div>
       </div>
 
-      <p className="mt-3 font-serif text-body text-text">{scenario.synopsis}</p>
+      <p className="font-serif text-[0.90625rem] leading-relaxed text-muted">{scenario.synopsis}</p>
 
-      <button
-        type="button"
-        onClick={onStart}
-        disabled={disabled}
-        aria-busy={starting}
-        className="mt-5 h-10 rounded-lg bg-accent px-4 text-body font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-70"
-      >
-        {starting ? t('scenarios.starting') : t('scenarios.play')}
-      </button>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onStart}
+          disabled={disabled}
+          aria-busy={starting}
+          className={PRIMARY_ACTION}
+        >
+          {starting ? t('scenarios.starting') : t('scenarios.play')}
+        </button>
+      </div>
     </article>
   )
 }
