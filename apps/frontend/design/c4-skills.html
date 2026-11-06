@@ -1,0 +1,61 @@
+<!doctype html>
+<!DOCTYPE html>
+<html lang="en" data-theme="light"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wanderlore screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&amp;display=swap">
+<link rel="stylesheet" href="table.css">
+</head>
+<body><svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></symbol>
+<symbol id="i-next" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></symbol>
+<symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"></path><path d="M15.5 8.5a5 5 0 010 7"></path><path d="M18.5 5.5a9 9 0 010 13"></path></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0014 0"></path><path d="M12 18v3"></path></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 018 0v4"></path></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"></path></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"></path></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"></path></symbol>
+<symbol id="i-reroll" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-3-6.7L21 8"></path><path d="M21 3v5h-5"></path></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M2 5h7a3 3 0 013 3v12a2 2 0 00-2-2H2z"></path><path d="M22 5h-7a3 3 0 00-3 3v12a2 2 0 012-2h8z"></path></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></symbol>
+<symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></symbol>
+</svg>
+<div id="app"><div class="app"><div class="createwrap section" style="gap:22px">
+  <a class="back" href="#"><svg class="i" aria-hidden="true"><use href="#i-back"></use></svg>My characters</a>
+  <header><h1 class="h1">Create a character</h1><p class="lede">The Three Musketeers</p></header>
+  <div>
+    <nav class="steps" aria-label="Steps of the creation"><span class="step done"><span class="n"><svg class="i" aria-hidden="true"><use href="#i-check"></use></svg></span><span class="t">Dice</span></span><span class="step done"><span class="n"><svg class="i" aria-hidden="true"><use href="#i-check"></use></svg></span><span class="t">Characteristics</span></span><span class="step done"><span class="n"><svg class="i" aria-hidden="true"><use href="#i-check"></use></svg></span><span class="t">Profession</span></span><span class="step now"><span class="n">4</span><span class="t">Skills</span></span><span class="step"><span class="n">5</span><span class="t">Identity</span></span></nav>
+    <section class="sheet creation"><p class="intro">Spend the professional points on the skills of the profession, the personal points on any skill.</p>
+  <div class="skillsplit">
+    <div class="block">
+      <div class="pools">
+        <div class="card pool"><span class="label">Professional points</span><div class="big"><span class="counters "><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="spent"></i><i class="spent"></i><i class="spent"></i><i class="spent"></i><i class="spent"></i></span><b>150</b></div><small>150 left of 300</small></div>
+        <div class="card pool"><span class="label">Personal points</span><div class="big"><span class="counters pers"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="spent"></i><i class="spent"></i></span><b>125</b></div><small>125 left of 150</small></div>
+      </div>
+      <p class="subtle" style="font-size:13px">No skill may go above 75% at creation.</p>
+    </div>
+    <div class="block" style="gap:22px">
+      <div><span class="label">Skills of the profession</span>
+        <div class="sk"><span class="nm"><b>Swordsmanship</b><small>Base 25%</small></span><span class="steps2"><span class="stepper"><span>Prof.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>30</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span><span class="stepper"><span>Pers.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>0</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span></span><span class="tot">55%</span></div><div class="sk"><span class="nm"><b>Athletics</b><small>Base 25%</small></span><span class="steps2"><span class="stepper"><span>Prof.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>20</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span><span class="stepper"><span>Pers.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>0</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span></span><span class="tot">45%</span></div><div class="sk"><span class="nm"><b>Dodge</b><small>Base DEX ×2</small></span><span class="steps2"><span class="stepper"><span>Prof.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>10</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span><span class="stepper"><span>Pers.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>0</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span></span><span class="tot">42%</span></div>
+        <div class="sk"><span class="nm"><b>Persuasion</b><small>Base 15%</small></span><span class="steps2"><span class="stepper"><span>Prof.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>20</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span><span class="stepper"><span>Pers.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>10</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span></span><span class="tot">45%</span></div><div class="sk"><span class="nm"><b>Deception</b><small>Base 5%</small></span><span class="steps2"><span class="stepper"><span>Prof.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>20</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span><span class="stepper"><span>Pers.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>0</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span></span><span class="tot">25%</span></div><div class="sk"><span class="nm"><b>Etiquette</b><small>Base 5%</small></span><span class="steps2"><span class="stepper"><span>Prof.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>30</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span><span class="stepper"><span>Pers.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>0</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span></span><span class="tot">35%</span></div><div class="sk"><span class="nm"><b>Stealth</b><small>Base 10%</small></span><span class="steps2"><span class="stepper"><span>Prof.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>20</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span><span class="stepper"><span>Pers.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>0</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span></span><span class="tot">30%</span></div></div>
+      <div><span class="label">Combat</span><div class="sk"><span class="nm"><b>Marksmanship</b><small>Base 30%</small></span><span class="steps2"><span class="stepper"><span>Pers.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>0</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span></span><span class="tot">30%</span></div></div>
+      <div><span class="label">Manipulation</span><div class="sk"><span class="nm"><b>First Aid</b><small>Base 30%</small></span><span class="steps2"><span class="stepper"><span>Pers.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>0</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span></span><span class="tot">30%</span></div></div>
+      <div><span class="label">Perception</span><div class="sk"><span class="nm"><b>Observation</b><small>Base 25%</small></span><span class="steps2"><span class="stepper"><span>Pers.</span><button aria-label="Fewer"><svg class="i" aria-hidden="true"><use href="#i-minus"></use></svg></button><output>15</output><button aria-label="More"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg></button></span></span><span class="tot">40%</span></div></div>
+      <p class="muted" style="font-size:13.5px">275 points unspent: you can still go on.</p>
+    </div>
+  </div>
+      <div class="foot"><button class="btn outline">Back</button><button class="btn primary">Next</button></div>
+    </section>
+  </div>
+</div></div></div>
+
+
+
+<script>document.querySelectorAll("[data-bottom]").forEach((s)=>{s.scrollTop=s.scrollHeight})</script></body></html>

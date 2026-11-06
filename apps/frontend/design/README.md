@@ -1,66 +1,82 @@
-# Maquettes Phase 2
+# Maquettes — « La table de jeu »
 
-Maquettes des écrans du front joueur, générées avec Google Stitch à partir de la section 10
-du cahier des charges front (`doc/cahier-des-charges-front-mj-virtuel.md`). Ticket : KAN-20.
+Maquettes du front joueur après la refonte visuelle (epic KAN-160), validées par le product
+owner le 2026-11-05. Elles remplacent les maquettes Stitch de la Phase 2 (KAN-20), qui restent
+dans l'historique git.
 
-**Référence visuelle, pas code à reprendre.** Chaque écran est livré en deux fichiers au même
-nom : l'export HTML de Stitch (couleurs, espacements, tailles, structure) et une capture PNG
-(rendu attendu). À l'intégration, les règles du cahier des charges priment sur les maquettes :
-tout ce qui contredit la section 1 est retiré, même présent ici.
+**Direction** : les éléments du jeu sont des objets posés sur une table. Le récit est écrit sur
+une feuille de papier, chaque jet tombe sur une petite carte tamponnée, les points de vie sont
+des pastilles, les dés reposent dans un plateau creusé, le personnage est une pile de fiches à
+onglets, le lieu une étiquette de papier. Le détail est dans la section 8 du cahier des charges
+du front (`doc/cahier-des-charges-front-mj-virtuel.md`).
+
+**Référence visuelle, pas code à reprendre.** À l'intégration, les règles du cahier des charges
+priment : tout ce qui contredit la section 1 est retiré, même présent ici.
+
+## Fichiers
+
+- **`table.css`** : la feuille de styles commune à tous les écrans — jetons de couleur des deux
+  thèmes, typographie, composants. C'est la source des jetons du socle Tailwind.
+- **`<écran>.html`** : chaque écran en page statique. Une seule page sert le mobile et le
+  desktop (la mise en page bascule à 1024 px) : ouvrir dans un navigateur et redimensionner.
+- **`<écran>-mobile.webp`** et **`<écran>-desktop.webp`** : les captures du rendu attendu, en
+  390 px (densité 2x, page entière pour les écrans qui défilent) et en 1440 × 900.
+- **`src/`** : les sources des maquettes. `screen.html#<écran>` rend un écran,
+  `#<écran>-dark` le rend de nuit ; `screens.js` construit tous les écrans avec les mêmes
+  fonctions (un objet est identique d'un écran à l'autre) ; `review.html` est la page de revue
+  (tous les écrans côte à côte, bascule jour / nuit). Pour modifier une maquette, modifier
+  `src/` puis régénérer les exports.
 
 ## Écrans
 
-| Écran | Mobile | Desktop |
-|---|---|---|
-| S1 — Connexion | `s1-login-mobile` | `s1-login-desktop` |
-| S2 — Mes parties | `s2-games-mobile` | `s2-games-desktop` |
-| S3 — Partie, état normal | — | `s3-game-desktop` |
-| S4 — Partie, état normal | `s4-game-mobile` | — |
-| S4 — Partie, fiche ouverte | `s4-game-sheet-mobile` | — |
-| S5 — Tour en cours | `s5-turn-pending-mobile` | — |
-| S6 — Tour échoué | `s6-turn-failed-mobile` | — |
-| S7 — Partie neuve | `s7-game-new-mobile` | — |
+| Écran | Fichier |
+|---|---|
+| Partie | `g1-game` |
+| Partie, la table la nuit (thème sombre) | `g1-game-dark` |
+| Jet en direct | `g2-live-roll` |
+| Jet révélé | `g3-roll-revealed` |
+| Fiche — Personnage / Inventaire / Quêtes | `g4-sheet-character`, `g4b-sheet-inventory`, `g4c-sheet-quests` |
+| Tour en cours | `g5-turn-pending` |
+| Tour échoué | `g6-turn-failed` |
+| Nouvelle partie | `g7-game-new` |
+| Partie terminée | `g8-game-over` |
+| Connexion | `s1-login` |
+| Accueil | `s2-home` |
+| Page d'un personnage (hors partie) | `s3-character` |
+| Abandon d'une partie | `s3b-abandon` |
+| Création — 1 Dés … 5 Identité | `c1-dice`, `c2-characteristics`, `c3-profession`, `c4-skills`, `c5-identity` |
+| Préférences, puis animations réduites par l'appareil | `s4-preferences`, `s4b-preferences-reduced-motion` |
+| Menu du compte | `s5-account-menu` |
+| Page introuvable | `s6-not-found` |
+| Erreur inattendue | `s7-error` |
 
-Les captures mobiles sont à 780 px de large (390 px en densité 2x), les captures desktop à
-2560 px (1440 px en densité ~1,8x). Les dimensions dans le HTML sont les vraies.
+Un seul thème sombre est exporté (`g1-game-dark`). Les jetons de `table.css` donnent la nuit
+pour tous les écrans (`src/screen.html#<écran>-dark`).
 
-## Source
+## Relecture contre la section 1 du cahier des charges
 
-- Projet Stitch « Wanderlore » (`16269902839264571239`), design system « Literary Lamplight »
-  généré par Stitch à partir du préambule de style de la section 10.
-- Les jetons de couleur, typographie et espacement sont dans la configuration Tailwind en tête
-  de chaque HTML (`tailwind.config`). Ils alimentent la configuration Tailwind du socle.
+Les sept principes sont tenus : rien n'est calculé à l'écran, enums et contenus restent
+distincts, chaque jet du personnage est montré en entier, le récit occupe le centre, l'habillage
+ne choisit aucun univers, le mobile est le format de départ. Les textes viennent des fichiers de
+traduction du front (`src/i18n/locales/en/`) et du contenu des Trois Mousquetaires
+(`apps/backend/database/content/`). Restent ces écarts, à traiter à l'intégration :
 
-## Écarts à corriger à l'intégration
-
-Relevés à la relecture de chaque maquette contre le cahier des charges. Les maquettes sont
-conservées telles que Stitch les a produites ; c'est l'intégration qui corrige.
-
-### Communs à plusieurs écrans
-
-- **Icônes Material Symbols** (`favorite`, `casino`, `location_on`…) : à remplacer par Lucide
-  (section 8).
-- **Espacement des mots serré** dans la narration mobile (S4, S6) : l'export applique un
-  `letter-spacing: -0.01em` à la narration, à ne pas reproduire (section 8 : 16 px / 26 px,
-  sans espacement négatif).
-- **Puces de jet** : en pilule sur S4 mobile, à 4 px de rayon sur S3 et S5. Retenir 4 px,
-  conformément au design system.
-- **Séparation entre les tours** : un filet court sur S5, rien ailleurs. Retenir une règle
-  unique.
-
-### Par écran
-
-- **S1** — Placeholder d'e-mail `chronicler@wanderlore.io` inventé ; champs pré-remplis sur
-  desktop.
-- **S2 mobile** — Commentaire HTML périmé `<!-- Card 2: Evelyn Vance -->`, sans effet visuel.
-  Filet de séparation interne aux cartes absent de la version desktop.
-- **S3** — **Barres de points de vie en vert sauge** (header et fiche) : elles doivent être en
-  rouge brique, comme sur S4. Colonne de lecture légèrement décalée à gauche au lieu d'être
-  centrée. Actions du joueur marquées d'un filet ambré plutôt que d'un fond légèrement teinté.
-- **S4 fiche ouverte** — La capture s'arrête au début du bloc « Situation » (la feuille défile) ;
-  le lieu et la quête sont dans le HTML. Icône de compte dans le header grisé derrière la
-  feuille, à retirer. Sous-titre « Character Sheet » ajouté par Stitch.
-- **S5** — Texte de l'action du joueur en serif : il doit être en sans-serif (S3, S4, S6).
-  Libellé « YOU » et points d'attente en ambré : l'accent est réservé aux actions, les passer
-  en couleur neutre. Bandes sombres en haut et en bas de la capture : artefact du cadre mobile.
-- **S7** — Résumé de la quête en sans-serif, alors qu'il est en serif dans la fiche (S3, S4).
+- **Libellé nouveau** : « Chance » devant le total de la carte du jet en direct (`g2`, `g3`).
+  Il demande une clé de traduction.
+- **Points de vie d'un personnage hors partie** (`s3`, `s3b` : « Hit points 23 ») : le front ne
+  les calcule pas. Le total doit venir de l'API du personnage ; s'il n'y est pas, l'ajouter côté
+  backend ou retirer la ligne (principe 1).
+- **Lien de retour** sur desktop et dans la fiche mobile : la maquette affiche le nom du
+  personnage (« ‹ Armand de Lisle »), le front actuel « Character page ». Le nom vient du
+  contenu ; garder « Character page » comme libellé accessible.
+- **Ton de l'univers** des Trois Mousquetaires (`s2`) : phrase d'exemple, le vrai ton vient de
+  la base.
+- **Sur mobile, le tampon d'un jet passe sous la ligne du jet**, pour qu'elle garde sa largeur ;
+  sur desktop, il est à droite.
+- **Sur desktop, les points de vie sont aussi dans la barre du haut**, pour rester visibles
+  quel que soit l'onglet ouvert de la fiche.
+- **Icônes** : dessinées à la main dans `src/screens.js` (sprite SVG), dans le style de Lucide.
+  À remplacer par Lucide (section 8). Les dés (d10, d6) ne sont pas des icônes : ils se
+  dessinent en SVG, comme dans la maquette.
+- **Formulaire de connexion pré-rempli** (`s1`) : pour la maquette seulement.
+- **Page introuvable** (`s6`) : deux d10 sur 00 et 0, le pire jet (100). Décor seulement.
