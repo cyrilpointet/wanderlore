@@ -43,6 +43,7 @@ export default tseslint.config(
               'className',
               'size',
               'variant',
+              'tone',
               'style',
               'type',
               'key',

@@ -38,7 +38,10 @@ describe('CharacterCard', () => {
     const html = render(FREE)
 
     expect(html).toContain('d&#x27;Artagnan')
-    expect(html).toContain('Musketeer · The Three Musketeers')
+    expect(html).toContain('Musketeer')
+    // The world is written on the card's tab, not repeated under the name.
+    expect(html).toContain('The Three Musketeers')
+    expect(html).not.toContain('Musketeer · The Three Musketeers')
     expect(html).toContain('href="/characters/character-1"')
     expect(html).not.toContain('Continue')
   })
@@ -46,11 +49,18 @@ describe('CharacterCard', () => {
   test('shows the game an engaged character plays, with a way straight back to it', () => {
     const html = render(ENGAGED)
 
-    for (const text of ['A Gascon in Paris', 'The Road to Paris', '8 / 26', 'In progress']) {
+    for (const text of ['Playing', 'A Gascon in Paris', 'The Road to Paris', '8 / 26']) {
       expect(html).toContain(text)
     }
     expect(html).toContain('href="/games/game-7"')
     expect(html).toContain('Continue')
+  })
+
+  test('says so when the game is paused', () => {
+    const html = render({ ...ENGAGED, game: { ...ENGAGED.game!, status: 'paused' } })
+
+    expect(html).toContain('Paused')
+    expect(render(ENGAGED)).not.toContain('Paused')
   })
 
   test('leaves the hit points out when the game has none yet', () => {

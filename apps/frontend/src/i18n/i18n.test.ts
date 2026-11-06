@@ -37,6 +37,7 @@ describe('i18n', () => {
     ['defenseOutcome', DEFENSE_OUTCOMES],
     ['specialEffect', SPECIAL_EFFECTS],
     ['characteristic', CHARACTERISTICS],
+    ['characteristicShort', CHARACTERISTICS],
     ['skillCategory', SKILL_CATEGORIES],
     ['itemChange', ITEM_CHANGES],
     ['scenarioStatus', SCENARIO_STATUSES],

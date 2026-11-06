@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest'
 
 import '@/i18n'
 import type { Game } from './queries'
-import { SceneBar } from './scene_bar'
+import { SceneTag } from './scene_tag'
 
 const GAME: Game = {
   id: 'game-1',
@@ -39,25 +39,30 @@ function textOf(markup: string): string {
     .trim()
 }
 
-describe('SceneBar', () => {
+describe('SceneTag', () => {
   test('tells where and when the scene is, and nothing finer', () => {
-    const text = textOf(renderToStaticMarkup(<SceneBar game={GAME} />))
+    const text = textOf(renderToStaticMarkup(<SceneTag game={GAME} />))
 
     expect(text).toContain('Meung-sur-Loire')
     expect(text).toContain('Dusk')
     expect(text).not.toMatch(/\d{1,2}:\d{2}/)
   })
 
-  test('names each part for screen readers, the icons hidden', () => {
-    const markup = renderToStaticMarkup(<SceneBar game={GAME} />)
+  test('names each part for screen readers', () => {
+    const markup = renderToStaticMarkup(<SceneTag game={GAME} />)
 
-    expect(markup).toContain('<dt class="sr-only">Location</dt>')
-    expect(markup).toContain('<dt class="sr-only">Time of day</dt>')
-    expect(markup.match(/<svg[^>]*aria-hidden="true"/g)).toHaveLength(2)
+    expect(markup).toContain('<span class="sr-only">Location: </span>')
+    expect(markup).toContain('<span class="sr-only">, Time of day: </span>')
+  })
+
+  test('then says which world and which scenario', () => {
+    const text = textOf(renderToStaticMarkup(<SceneTag game={GAME} />))
+
+    expect(text).toContain('The Three Musketeers · A Gascon in Paris')
   })
 
   test('an unknown place is said so', () => {
-    const text = textOf(renderToStaticMarkup(<SceneBar game={{ ...GAME, location: null }} />))
+    const text = textOf(renderToStaticMarkup(<SceneTag game={{ ...GAME, location: null }} />))
 
     expect(text).toContain('Unknown')
   })

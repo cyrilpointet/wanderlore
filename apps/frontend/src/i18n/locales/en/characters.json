@@ -65,7 +65,6 @@
     "unknown": "—",
     "percent": "{{value, number}}%",
     "list": "{{items, list}}",
-    "hitPoints": "Hit points: {{value, number}}",
     "back": "Back",
     "next": "Next",
     "create": "Create",
@@ -122,7 +121,9 @@
       "professionalShort": "Prof.",
       "personalShort": "Pers.",
       "professionalFor": "Professional points on {{skill}}",
-      "personalFor": "Personal points on {{skill}}"
+      "personalFor": "Personal points on {{skill}}",
+      "fewer": "{{count, number}} fewer: {{field}}",
+      "more": "{{count, number}} more: {{field}}"
     },
     "identity": {
       "name": "Name",

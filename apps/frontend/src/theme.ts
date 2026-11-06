@@ -1,9 +1,9 @@
 import { preferences } from './preferences'
 
 /**
- * Dark by default, light available, and the system's preference followed as
- * long as the player has not chosen (front spec, section 7). The choice is a
- * preference like the others (`preferences.ts`).
+ * Light by default, dark available — "the table at night" — and the system's
+ * preference followed when the player chooses so (front spec, section 7). The
+ * choice is a preference like the others (`preferences.ts`).
  *
  * The first paint is handled by the inline script of `index.html`, which must
  * stay in step with `resolveTheme()` and the theme's storage key.

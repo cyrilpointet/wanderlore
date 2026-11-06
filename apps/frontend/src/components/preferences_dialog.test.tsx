@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest'
 
 import '@/i18n'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/preferences'
-import { PreferencesPanel } from './preferences_dialog'
+import { PreferencesHeader, PreferencesPanel } from './preferences_dialog'
 
 function render(
   preferences: Preferences = DEFAULT_PREFERENCES,
@@ -32,7 +32,7 @@ describe('Preferences', () => {
       theme: 'light',
       narrationVoice: false,
       autoRoll: true,
-      animations: { dice: true, narration: false, hitPoints: true },
+      animations: { dice: true, narration: false, hitPoints: true, transitions: false },
     })
 
     expect(markup).toMatch(/checked="" value="light"/)
@@ -42,10 +42,23 @@ describe('Preferences', () => {
     expect(switchFor(markup, 'Rolling dice')).toContain('aria-checked="true"')
     expect(switchFor(markup, 'Story fading in')).toContain('aria-checked="false"')
     expect(switchFor(markup, 'Hit point gauge')).toContain('aria-checked="true"')
+    expect(switchFor(markup, 'Panels and pages')).toContain('aria-checked="false"')
   })
 
   test('says the choices stay in this browser', () => {
-    expect(render()).toContain('Kept in this browser only.')
+    const markup = renderToStaticMarkup(
+      <PreferencesHeader headingId="heading" onClose={() => {}} />
+    )
+
+    expect(markup).toContain('Kept in this browser only.')
+    expect(markup).toContain('aria-label="Close"')
+  })
+
+  test('offers the themes in the order Light, Dark, System', () => {
+    const markup = render()
+
+    expect(markup.indexOf('Light')).toBeLessThan(markup.indexOf('Dark'))
+    expect(markup.indexOf('Dark')).toBeLessThan(markup.indexOf('System'))
   })
 
   test('the system asking for less motion turns the animations off and locks them', () => {

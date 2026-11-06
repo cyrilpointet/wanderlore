@@ -1,6 +1,10 @@
 import { useEffect, useId, useRef } from 'react'
 import { CircleAlert } from 'lucide-react'
 
+import { useAnimates } from '@/preferences'
+import { DANGER_ACTION, SECONDARY_ACTION } from './actions'
+import { LIFTED } from './surfaces'
+
 /**
  * Asks before something that cannot be undone. A native modal `<dialog>`,
  * which brings focus trapping, Escape and an inert page behind it; focus
@@ -37,6 +41,8 @@ export function ConfirmDialog({
   const dialog = useRef<HTMLDialogElement>(null)
   const headingId = useId()
   const bodyId = useId()
+  // Lifted above the table and put back down, unless the player or the system turned it off.
+  const moves = useAnimates('transitions')
 
   useEffect(() => {
     const element = dialog.current
@@ -56,13 +62,17 @@ export function ConfirmDialog({
       onCancel={(event) => pending && event.preventDefault()}
       // A click on the backdrop lands on the dialog itself, never on its content.
       onClick={(event) => event.target === dialog.current && !pending && onClose()}
-      className="fixed inset-0 m-auto h-fit w-[calc(100%-2rem)] max-w-sm rounded-lg border border-border-strong bg-surface-3 p-0 text-text shadow-[0_12px_40px_rgb(0_0_0/0.35)] backdrop:bg-black/60"
+      // A card lifted above the dimmed table (front spec, section 8).
+      className={`${LIFTED} fixed inset-0 m-auto h-fit w-[min(440px,calc(100%-2rem))] max-w-none p-0 text-text backdrop:bg-dim ${moves ? 'dialog-lift' : ''}`}
     >
-      <div className="flex flex-col gap-4 p-5">
-        <h2 id={headingId} className="font-serif text-xl font-medium text-text">
+      <div className="flex flex-col gap-3 px-[22px] pt-[22px] pb-5">
+        <h2
+          id={headingId}
+          className="font-serif text-xl leading-tight font-semibold text-balance text-text"
+        >
           {title}
         </h2>
-        <p id={bodyId} className="text-body text-muted">
+        <p id={bodyId} className="text-[0.90625rem] leading-[1.55] text-muted">
           {body}
         </p>
         {error && (
@@ -71,22 +81,17 @@ export function ConfirmDialog({
             {error}
           </p>
         )}
-        <div className="mt-2 flex justify-end gap-3">
+        <div className="mt-2 flex flex-wrap justify-end gap-2.5">
           <button
             type="button"
             autoFocus
             onClick={onClose}
             disabled={pending}
-            className="h-10 rounded-lg border border-border-strong px-4 text-body text-text transition-colors hover:bg-surface-2 disabled:opacity-70"
+            className={SECONDARY_ACTION}
           >
             {cancelLabel}
           </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={pending}
-            className="h-10 rounded-lg border border-danger/60 bg-danger/10 px-4 text-body font-medium text-danger transition-colors hover:bg-danger/20 disabled:opacity-70"
-          >
+          <button type="button" onClick={onConfirm} disabled={pending} className={DANGER_ACTION}>
             {pending ? pendingLabel : confirmLabel}
           </button>
         </div>

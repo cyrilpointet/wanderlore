@@ -27,9 +27,6 @@ describe('Narration | fading in', () => {
           narration: 'The door creaks.',
         }}
         reveal={initialRevealState}
-        onThrow={() => {}}
-        onDiceStopped={() => {}}
-        onFolded={() => {}}
         onRetry={() => {}}
         onEdit={() => {}}
       />

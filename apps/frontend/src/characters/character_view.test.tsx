@@ -93,7 +93,8 @@ describe('CharacterView', () => {
 
     for (const text of [
       'Anne de Breuil',
-      'Spy · Female · The Three Musketeers',
+      'Spy · Female',
+      'The Three Musketeers',
       'Charisma',
       'Persuade',
       '65%',
@@ -124,6 +125,11 @@ describe('CharacterView', () => {
     expect(html).toContain('Paused')
     expect(html).not.toContain('>Play<')
     expect(html).not.toContain('Delete this character')
+  })
+
+  test('shows no hit points outside a game: they belong to the current game', () => {
+    expect(render(FREE)).not.toContain('Hit points')
+    expect(render(ENGAGED)).toContain('Hit points: 20 of 22')
   })
 
   test('lists the games played, each read again, only the failed one deletable', () => {

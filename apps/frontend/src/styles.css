@@ -5,89 +5,155 @@
 @import '@fontsource-variable/literata/opsz-italic.css';
 
 /*
- * Visual direction: front spec, section 8. The dark theme is the default and
- * its values are the validated ones; the light theme was not mocked up in
- * Phase 2 and is a first proposal (paper background, ink text), checked for
- * WCAG AA contrast.
+ * Visual direction: front spec, section 8 — "the game table". The elements
+ * of play are objects lying on a table: the story on a sheet of paper, rolls
+ * on small stamped cards, hit points as pips, the dice in a recessed tray,
+ * the character as a stack of tabbed cards. The light theme is the default;
+ * the dark one is "the table at night". Values from the validated mockups,
+ * `apps/frontend/design/table.css`.
  *
- * Components only ever use the semantic tokens below (`bg-surface-1`,
- * `text-muted`, `text-accent`…), never a raw colour: switching theme is then
+ * Components only ever use the semantic tokens below (`bg-paper`,
+ * `text-muted`, `shadow-card`…), never a raw colour: switching theme is then
  * nothing more than swapping these variables.
  */
 :root,
-:root[data-theme='dark'] {
-  color-scheme: dark;
-  --wl-bg: #15130f;
-  --wl-surface-1: #1e1b16;
-  --wl-surface-2: #28241e;
-  --wl-surface-3: #332e27;
-  --wl-border: #2e2922;
-  --wl-border-strong: #3a342c;
-  --wl-text: #ede6d6;
-  --wl-text-muted: #a89f91;
-  --wl-text-subtle: #787063;
-  --wl-accent: #d49b44;
-  --wl-accent-hover: #c88d37;
-  --wl-on-accent: #15130f;
-  --wl-success: #7a9a7b;
-  --wl-danger: #b85c50;
-  /* The background's texture: a candlelight glow on the page, darker edges, a fine grain. */
-  --wl-glow: rgb(196 140 80 / 0.07);
-  --wl-edge: rgb(0 0 0 / 0.45);
-  --wl-grain: #ede6d6;
-  --wl-grain-opacity: 0.05;
-}
-
 :root[data-theme='light'] {
   color-scheme: light;
-  --wl-bg: #f6f1e7;
-  --wl-surface-1: #fbf8f1;
-  --wl-surface-2: #ede5d6;
-  --wl-surface-3: #fffdf9;
-  --wl-border: #e4dac8;
-  --wl-border-strong: #d3c6b0;
-  --wl-text: #2a241c;
-  --wl-text-muted: #5c5244;
-  --wl-text-subtle: #6e6456;
-  --wl-accent: #8a5a12;
-  --wl-accent-hover: #744b0e;
-  --wl-on-accent: #fbf8f1;
-  --wl-success: #4a6e4c;
-  --wl-danger: #a0453a;
-  /* Old paper: a lighter middle, edges gone slightly yellow, the grain of its fibre. */
-  --wl-glow: rgb(255 254 251 / 1);
-  /* No darker: the subtle text would fall below WCAG AA in the corners. */
-  --wl-edge: rgb(138 90 18 / 0.1);
+  /* The table and the paper lying on it */
+  --wl-bg: #efe9de;
+  --wl-paper: #faf6ee;
+  --wl-card: #fdfbf7;
+  --wl-card-under: #f2ece1;
+  --wl-tray: #e5dfd3;
+  --wl-border: #e4dbcb;
+  --wl-border-strong: #d2c6b4;
+  --wl-leader: #cfc4b2;
+  /* Ink. The subtle one stays AA on the table and in the tray. */
+  --wl-text: #1c1917;
+  --wl-text-muted: #57534e;
+  --wl-text-subtle: #655d55;
+  /* One accent, for actions only */
+  --wl-accent: #1f3a5f;
+  --wl-accent-hover: #162a45;
+  --wl-on-accent: #ffffff;
+  --wl-accent-soft: #e6ecf3;
+  /* Hit points, never green; results stamped */
+  --wl-hp: #b83a2e;
+  --wl-on-hp: #ffffff;
+  --wl-success: #2d6a4f;
+  --wl-success-soft: #e8f3ed;
+  --wl-danger: #99382c;
+  --wl-danger-soft: #f8ebea;
+  /* Dice: ivory in both themes */
+  --wl-die: #fbf8f1;
+  --wl-die-side: #ece4d3;
+  --wl-die-dark: #d9cdb6;
+  --wl-die-line: #a0927a;
+  --wl-die-ink: #1c1917;
+  /* Depth: paper on paper */
+  --wl-shadow-sheet: 0 14px 30px -6px rgb(50 38 20 / 0.14), 0 2px 4px rgb(50 38 20 / 0.05);
+  --wl-shadow-card: 0 6px 14px -4px rgb(50 38 20 / 0.13), 0 1px 2px rgb(50 38 20 / 0.06);
+  --wl-shadow-lift: 0 28px 60px -12px rgb(30 22 10 / 0.35), 0 4px 10px rgb(30 22 10 / 0.08);
+  --wl-shadow-tray: inset 0 3px 9px rgb(60 48 30 / 0.16), inset 0 -1px 0 rgb(255 255 255 / 0.45);
+  --wl-shadow-die: 0 3px 2px rgb(60 45 25 / 0.22);
+  --wl-dim: rgb(46 36 22 / 0.42);
+  /* The table's texture: a lighter middle, edges a touch darker, a fine grain. */
+  --wl-glow: rgb(255 253 248 / 0.85);
+  --wl-edge: rgb(120 92 50 / 0.1);
   --wl-grain: #5c4a30;
-  --wl-grain-opacity: 0.07;
+  --wl-grain-opacity: 0.06;
+}
+
+/* The table at night. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --wl-bg: #191612;
+  --wl-paper: #2a2620;
+  --wl-card: #322d26;
+  --wl-card-under: #2c2721;
+  --wl-tray: #120f0c;
+  --wl-border: #3e372e;
+  --wl-border-strong: #4a4237;
+  --wl-leader: #554c40;
+  --wl-text: #ede6d6;
+  --wl-text-muted: #b5ab9b;
+  --wl-text-subtle: #958b7b;
+  --wl-accent: #8fb3e0;
+  --wl-accent-hover: #a9c6ea;
+  --wl-on-accent: #10131a;
+  --wl-accent-soft: #25303d;
+  --wl-hp: #e0705f;
+  --wl-on-hp: #1a0f0c;
+  --wl-success: #7fbf9a;
+  --wl-success-soft: #1e2d25;
+  --wl-danger: #e58a7c;
+  --wl-danger-soft: #3a2320;
+  --wl-die: #e6ddcb;
+  --wl-die-side: #cfc4ae;
+  --wl-die-dark: #b4a78e;
+  --wl-die-line: #7e715c;
+  --wl-die-ink: #1c1917;
+  --wl-shadow-sheet: 0 18px 36px -8px rgb(0 0 0 / 0.6), 0 2px 4px rgb(0 0 0 / 0.3);
+  --wl-shadow-card: 0 8px 18px -6px rgb(0 0 0 / 0.55), 0 1px 2px rgb(0 0 0 / 0.3);
+  --wl-shadow-lift: 0 30px 70px -10px rgb(0 0 0 / 0.75);
+  --wl-shadow-tray: inset 0 3px 9px rgb(0 0 0 / 0.65), inset 0 -1px 0 rgb(255 240 215 / 0.05);
+  --wl-shadow-die: 0 3px 3px rgb(0 0 0 / 0.5);
+  --wl-dim: rgb(5 4 3 / 0.62);
+  /* Lamplight on the table at night. */
+  --wl-glow: rgb(214 160 92 / 0.11);
+  --wl-edge: rgb(0 0 0 / 0.5);
+  --wl-grain: #ede6d6;
+  --wl-grain-opacity: 0.04;
 }
 
 @theme inline {
   --color-bg: var(--wl-bg);
-  --color-surface-1: var(--wl-surface-1);
-  --color-surface-2: var(--wl-surface-2);
-  --color-surface-3: var(--wl-surface-3);
+  --color-paper: var(--wl-paper);
+  --color-card: var(--wl-card);
+  --color-card-under: var(--wl-card-under);
+  --color-tray: var(--wl-tray);
+  /* The older names, kept on the objects that replaced them. */
+  --color-surface-1: var(--wl-paper);
+  --color-surface-2: var(--wl-card-under);
+  --color-surface-3: var(--wl-card);
   --color-border: var(--wl-border);
   --color-border-strong: var(--wl-border-strong);
+  --color-leader: var(--wl-leader);
   --color-text: var(--wl-text);
   --color-muted: var(--wl-text-muted);
   --color-subtle: var(--wl-text-subtle);
   --color-accent: var(--wl-accent);
   --color-accent-hover: var(--wl-accent-hover);
   --color-on-accent: var(--wl-on-accent);
+  --color-accent-soft: var(--wl-accent-soft);
+  --color-hp: var(--wl-hp);
+  --color-on-hp: var(--wl-on-hp);
   --color-success: var(--wl-success);
+  --color-success-soft: var(--wl-success-soft);
   --color-danger: var(--wl-danger);
+  --color-danger-soft: var(--wl-danger-soft);
+  --color-die: var(--wl-die);
+  --color-die-side: var(--wl-die-side);
+  --color-die-dark: var(--wl-die-dark);
+  --color-die-line: var(--wl-die-line);
+  --color-die-ink: var(--wl-die-ink);
+  --color-dim: var(--wl-dim);
+  --shadow-sheet: var(--wl-shadow-sheet);
+  --shadow-card: var(--wl-shadow-card);
+  --shadow-lift: var(--wl-shadow-lift);
+  --shadow-tray: var(--wl-shadow-tray);
+  --drop-shadow-die: var(--wl-shadow-die);
 }
 
 @theme {
   --font-serif: 'Literata Variable', Georgia, serif;
   --font-sans: 'Inter Variable', system-ui, sans-serif;
 
-  /* Narration: 16/26 on mobile, 18/29 from `lg`, never negative tracking. */
-  --text-narration: 1rem;
-  --text-narration--line-height: 1.625rem;
+  /* Narration: 16.5/1.68 on mobile, 18/1.7 from `lg`, never negative tracking. */
+  --text-narration: 1.03125rem;
+  --text-narration--line-height: 1.68;
   --text-narration-lg: 1.125rem;
-  --text-narration-lg--line-height: 1.8125rem;
+  --text-narration-lg--line-height: 1.7;
 
   /* Interface: body 15 px, labels 13 px, metadata 11 px (spaced capitals). */
   --text-body: 0.9375rem;
@@ -108,6 +174,8 @@
   /* The die a result sets aside greys out once it has landed; its delay is set where it is drawn. */
   --animate-dice-set-aside: dice-set-aside 350ms ease-out both;
   --animate-shake: shake 400ms ease-in-out;
+  /* Between two pages: a fade, short enough never to hold the player back. */
+  --animate-page-in: fade-in 220ms ease-out both;
 
   @keyframes fade-in {
     from {
@@ -136,6 +204,101 @@
     }
     75% {
       transform: translateX(3px);
+    }
+  }
+}
+
+/*
+ * Dialogs lifted above the table and put back down (front spec, section 8),
+ * when the player keeps the "Panels and pages" animation. Native `<dialog>`
+ * elements: `@starting-style` gives the opening its first frame, and
+ * `allow-discrete` keeps a closing dialog — and its backdrop — on screen
+ * until it has faded. Where a browser knows neither, the dialog simply
+ * appears. `prefers-reduced-motion` stops them all (below).
+ */
+@layer components {
+  /* A card lifted in the middle of the table: it fades in, barely growing. */
+  .dialog-lift {
+    transition:
+      opacity 180ms ease-out,
+      scale 200ms ease-out,
+      display 200ms allow-discrete,
+      overlay 200ms allow-discrete;
+  }
+
+  .dialog-lift:not([open]) {
+    opacity: 0;
+    scale: 0.97;
+  }
+
+  @starting-style {
+    .dialog-lift[open] {
+      opacity: 0;
+      scale: 0.97;
+    }
+  }
+
+  /* A sheet rising from the bottom of the screen. */
+  .dialog-rise {
+    transition:
+      translate 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      display 260ms allow-discrete,
+      overlay 260ms allow-discrete;
+  }
+
+  .dialog-rise:not([open]) {
+    translate: 0 100%;
+  }
+
+  @starting-style {
+    .dialog-rise[open] {
+      translate: 0 100%;
+    }
+  }
+
+  /* Rising on a phone, lifted from `lg`: the preferences. */
+  @media (width >= 64rem) {
+    .dialog-rise.lg-lift {
+      transition:
+        opacity 180ms ease-out,
+        scale 200ms ease-out,
+        display 200ms allow-discrete,
+        overlay 200ms allow-discrete;
+    }
+
+    .dialog-rise.lg-lift:not([open]) {
+      translate: none;
+      opacity: 0;
+      scale: 0.97;
+    }
+
+    @starting-style {
+      .dialog-rise.lg-lift[open] {
+        translate: none;
+        opacity: 0;
+        scale: 0.97;
+      }
+    }
+  }
+
+  /* The table darkening behind either. */
+  .dialog-lift::backdrop,
+  .dialog-rise::backdrop {
+    transition:
+      opacity 220ms ease-out,
+      display 220ms allow-discrete,
+      overlay 220ms allow-discrete;
+  }
+
+  .dialog-lift:not([open])::backdrop,
+  .dialog-rise:not([open])::backdrop {
+    opacity: 0;
+  }
+
+  @starting-style {
+    .dialog-lift[open]::backdrop,
+    .dialog-rise[open]::backdrop {
+      opacity: 0;
     }
   }
 }

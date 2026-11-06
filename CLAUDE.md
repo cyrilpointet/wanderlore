@@ -464,6 +464,21 @@ architecture 8bis ; cahier du front 5.6) :
 
 Lots suivants de la Phase 12 : conditions de fin de partie, progression, pause et reprise.
 
+**Refonte visuelle du front joueur — « la table de jeu »** — maquettes epic KAN-160, intégration
+epic KAN-167, hors roadmap, front seul, sans changement d'API (détail : cahier du front, sections
+5 et 8 ; maquettes et écarts dans `apps/frontend/design/`) :
+- les éléments du jeu sont des **objets posés sur une table** : le récit sur une feuille, chaque
+  jet sur une carte tamponnée, les points de vie en pastilles, les dés (de vrais d10 et d6
+  dessinés) dans un plateau creusé qui porte la saisie, le personnage en pile de fiches à
+  onglets, le lieu sur une étiquette épinglée à la feuille ; hors partie, ni barre d'application
+  ni barre d'onglets ;
+- **thème clair par défaut**, le sombre devient « la table la nuit », *System* reste un choix
+  (stocké comme tel) ;
+- le **jet en direct se joue dans le plateau de dés**, puis rejoint la feuille en carte ; le
+  plateau garde le dernier jet au repos ;
+- **pas de points de vie sur la fiche d'un personnage hors partie** : ils n'existent que dans
+  une partie.
+
 Décision non tranchée, sans urgence : choix de l'hébergeur pour la phase de test — piste
 privilégiée Railway (backend, PostgreSQL et SPA statiques sur une même plateforme ; pas de
 serverless pour le backend).
@@ -683,6 +698,9 @@ serverless pour le backend).
   ou `animates()` : `prefers-reduced-motion` est un plancher qu'aucune préférence ne lève. Les
   indicateurs d'état (points d'attente, chargement) n'en ont pas.
 - **Couleurs par jetons sémantiques uniquement** (`src/styles.css`) — jamais une valeur brute.
+- **Les objets de la table se dessinent par les primitives partagées** : `src/components/surfaces.ts`
+  (feuille, carte, plateau, onglet), `actions.ts` (boutons), `stamp.tsx`, `place_tag.tsx`,
+  `dice.tsx` (d10, d6), `hit_points.tsx` (pastilles) — jamais redessinés à la main dans un écran.
 - **Un composant se teste rendu en HTML statique** (`*.test.tsx`, `renderToStaticMarkup`,
   sous Node) — jamais dans un DOM : la suite Vitest reste sans navigateur.
 - En développement, Vite proxifie `/api` et `/__transmit` vers le backend (même origine).

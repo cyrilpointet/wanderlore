@@ -1,30 +1,38 @@
 import { useEffect, useId, useRef } from 'react'
-import { X } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 
+import { useAnimates } from '@/preferences'
 import { CharacterSheet } from './character_sheet'
+import type { SheetTab } from './sheet_tabs'
 import type { Game } from './queries'
 
 /** From here on, the sheet is a column of its own and the panel has no reason to be. */
 const WIDE = '(min-width: 64rem)'
 
 /**
- * The sheet on phones and tablets: a panel rising over two thirds of the
- * screen. A native modal `<dialog>`, which brings focus trapping, Escape and
- * an inert page behind it.
+ * The sheet on phones and tablets: the stack of cards lifted above the
+ * darkened table, almost to the top of the screen (front spec, section 8). A
+ * native modal `<dialog>`, which brings focus trapping, Escape and an inert
+ * page behind it.
  */
 export function SheetDialog({
   game,
   open,
+  tab,
+  opening,
   onClose,
 }: {
   game: Game
   open: boolean
+  /** The card the sheet opens on — still shown while it is put back down. */
+  tab: SheetTab
+  /** Counts the openings: each one starts afresh on the card asked for. */
+  opening: number
   onClose: () => void
 }) {
-  const { t } = useTranslation('game')
   const dialog = useRef<HTMLDialogElement>(null)
   const headingId = useId()
+  // Rising from the bottom and sliding back down, unless the player or the system turned it off.
+  const moves = useAnimates('transitions')
 
   useEffect(() => {
     const element = dialog.current
@@ -50,23 +58,15 @@ export function SheetDialog({
       onClose={onClose}
       // A click on the backdrop lands on the dialog itself, never on its content.
       onClick={(event) => event.target === dialog.current && onClose()}
-      className="fixed inset-x-0 top-auto bottom-0 m-0 h-[67dvh] max-h-none w-full max-w-none rounded-t-xl border-t border-border-strong bg-surface-3 p-0 text-text shadow-[0_-12px_40px_rgb(0_0_0/0.35)] backdrop:bg-black/60 lg:hidden"
+      className={`fixed inset-x-2 top-16 bottom-0 m-0 h-auto max-h-none w-auto max-w-none bg-transparent p-0 text-text backdrop:bg-dim lg:hidden ${moves ? 'dialog-rise' : ''}`}
     >
-      <div className="flex h-full flex-col">
-        <div className="flex shrink-0 justify-end px-3 pt-3">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('closeSheet')}
-            className="grid size-9 place-items-center rounded-full text-muted transition-colors hover:text-text"
-          >
-            <X aria-hidden className="size-5" />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8">
-          <CharacterSheet game={game} headingId={headingId} />
-        </div>
-      </div>
+      <CharacterSheet
+        key={opening}
+        game={game}
+        headingId={headingId}
+        initialTab={tab}
+        onClose={onClose}
+      />
     </dialog>
   )
 }

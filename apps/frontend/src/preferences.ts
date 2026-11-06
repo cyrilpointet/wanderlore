@@ -11,7 +11,7 @@ import type { ThemeChoice } from './theme'
  */
 
 /** The animations a player can turn off, one by one. */
-export const ANIMATIONS = ['dice', 'narration', 'hitPoints'] as const
+export const ANIMATIONS = ['dice', 'narration', 'hitPoints', 'transitions'] as const
 export type Animation = (typeof ANIMATIONS)[number]
 
 export type Preferences = {
@@ -24,10 +24,10 @@ export type Preferences = {
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
-  theme: 'system',
+  theme: 'light',
   narrationVoice: true,
   autoRoll: false,
-  animations: { dice: true, narration: true, hitPoints: true },
+  animations: { dice: true, narration: true, hitPoints: true, transitions: true },
 }
 
 /** What the store needs of `localStorage`, so it can be tested without a browser. */
@@ -36,7 +36,9 @@ export type KeyValueStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'
 /**
  * One key per setting. The theme is read before the first paint by the
  * inline script of `index.html`, and the voice predates this module: both
- * keep their key and values, so no player loses a choice already made.
+ * keep their key and values, so no player loses a choice already made. A
+ * theme never chosen is the light one, the default since the game table
+ * (front spec, section 7); following the system is a choice, stored as such.
  */
 const THEME_KEY = 'wanderlore.theme'
 const VOICE_KEY = 'wanderlore.narrationVoice'
@@ -58,7 +60,10 @@ export function readPreferences(storage: KeyValueStorage | null): Preferences {
 
   const theme = read(THEME_KEY)
   return {
-    theme: theme === 'dark' || theme === 'light' ? theme : DEFAULT_PREFERENCES.theme,
+    theme:
+      theme === 'dark' || theme === 'light' || theme === 'system'
+        ? theme
+        : DEFAULT_PREFERENCES.theme,
     narrationVoice: flag(read(VOICE_KEY), DEFAULT_PREFERENCES.narrationVoice),
     autoRoll: flag(read(AUTO_ROLL_KEY), DEFAULT_PREFERENCES.autoRoll),
     animations: Object.fromEntries(
@@ -99,9 +104,7 @@ export class PreferenceStore {
   }
 
   setTheme(theme: ThemeChoice) {
-    // `system` is the absence of a choice, as the script of `index.html` expects.
-    if (theme === 'system') this.#remove(THEME_KEY)
-    else this.#write(THEME_KEY, theme)
+    this.#write(THEME_KEY, theme)
     this.#update({ ...this.get(), theme })
   }
 
@@ -131,14 +134,6 @@ export class PreferenceStore {
       this.storage()?.setItem(key, value)
     } catch {
       // Blocked storage: the choice then lasts as long as the visit.
-    }
-  }
-
-  #remove(key: string) {
-    try {
-      this.storage()?.removeItem(key)
-    } catch {
-      // Same as above.
     }
   }
 }

@@ -1,16 +1,21 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { LogOut, SlidersHorizontal } from 'lucide-react'
+import { LogOut, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { closeTransmit } from '@/api/transmit'
 import { currentUserQuery, signOut } from '@/auth/session'
 import { failureMessage } from '@/i18n/errors'
 import { PreferencesDialog } from './preferences_dialog'
+import { LIFTED } from './surfaces'
+
+const ITEM =
+  'flex w-full items-center gap-2.5 rounded-[4px] p-2.5 text-left text-[0.90625rem] leading-none font-medium text-text transition-colors hover:bg-card-under disabled:opacity-60'
 
 /**
- * The player's initials, opening their name, **Preferences** and **Sign out**.
+ * The player's initials as a token lying on the table, opening a small card
+ * lifted under it: who is signed in, **Preferences** and **Sign out**.
  *
  * A disclosure rather than an ARIA menu: two plain elements do not need the
  * arrow-key contract a `role="menu"` would promise.
@@ -68,7 +73,8 @@ export function AccountMenu() {
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
-        className="grid size-9 place-items-center rounded-full border border-border-strong bg-surface-2 text-label font-medium text-muted transition-colors hover:text-text"
+        // A token: card fill, a double ring, its own shadow on the table.
+        className="grid size-9 place-items-center rounded-full border border-border-strong bg-card text-[0.71875rem] leading-none font-bold tracking-[0.04em] text-muted shadow-[inset_0_0_0_3px_var(--wl-card),inset_0_0_0_4px_var(--wl-leader),var(--wl-shadow-card)] transition-colors hover:text-text"
       >
         {user.initials}
       </button>
@@ -76,13 +82,14 @@ export function AccountMenu() {
       {open && (
         <div
           id={panelId}
-          className="absolute right-0 z-20 mt-2 w-64 rounded-lg border border-border-strong bg-surface-3 p-1"
+          className={`${LIFTED} absolute top-[46px] right-0 z-40 flex w-60 flex-col p-1.5`}
         >
-          <div className="px-3 py-2">
-            <p className="truncate text-body text-text">{user.fullName ?? user.email}</p>
-            {user.fullName && <p className="truncate text-label text-muted">{user.email}</p>}
+          <div className="mb-1 border-b border-border p-2.5">
+            {user.fullName && (
+              <p className="truncate text-label font-medium text-text">{user.fullName}</p>
+            )}
+            <p className="truncate text-label text-subtle">{user.email}</p>
           </div>
-          <div className="my-1 border-t border-border-strong" />
           <button
             type="button"
             aria-haspopup="dialog"
@@ -90,22 +97,22 @@ export function AccountMenu() {
               setOpen(false)
               setPreferencesOpen(true)
             }}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-body text-text transition-colors hover:bg-surface-2"
+            className={ITEM}
           >
-            <SlidersHorizontal aria-hidden className="size-4 text-muted" />
+            <Settings aria-hidden className="size-[18px] text-muted" />
             {t('open', { ns: 'preferences' })}
           </button>
           <button
             type="button"
             onClick={() => signOutMutation.mutate()}
             disabled={signOutMutation.isPending}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-body text-text transition-colors hover:bg-surface-2 disabled:opacity-60"
+            className={ITEM}
           >
-            <LogOut aria-hidden className="size-4 text-muted" />
+            <LogOut aria-hidden className="size-[18px] text-muted" />
             {t('signOut')}
           </button>
           {signOutMutation.error && (
-            <p role="alert" className="px-3 py-2 text-label text-danger">
+            <p role="alert" className="p-2.5 text-label text-danger">
               {failureMessage(signOutMutation.error)}
             </p>
           )}

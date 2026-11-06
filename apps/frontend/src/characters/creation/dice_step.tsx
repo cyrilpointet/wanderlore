@@ -1,7 +1,8 @@
-import { Dice5 } from 'lucide-react'
+import { Dice5, RotateCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { PRIMARY_ACTION, SECONDARY_ACTION } from '@/components/actions'
+import { TRAY } from '@/components/surfaces'
 import type { CharacteristicRoll } from '../queries'
 
 /** The faces of a d6. */
@@ -11,8 +12,8 @@ const TURNS = 2
 /** The first die settles after this; each die after it a little later, read one by one. */
 const FIRST_MS = 600
 const STAGGER_MS = 90
-/** The height of a face, in rem: the column is moved by whole faces. */
-const FACE_REM = 2.25
+/** The height of a face, in rem (30 px): the column is moved by whole faces. */
+const FACE_REM = 1.875
 
 /**
  * Where the pips sit on a 3 × 3 grid, cell by cell (0 to 8, row by row): a
@@ -56,32 +57,34 @@ export function DiceStep({
   const { t } = useTranslation('characters')
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <p className="text-body text-muted">{t('creation.dice.intro')}</p>
+    <>
+      <p className="font-serif text-[0.9375rem] leading-relaxed text-muted">
+        {t('creation.dice.intro')}
+      </p>
 
       {/* The results are read out once, in full, rather than die by die. */}
       <p aria-live="polite" className="sr-only">
         {roll ? t('creation.dice.results', { values: roll.values.map(String) }) : ''}
       </p>
 
-      <ul aria-hidden className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+      {/* The tray the dice lie in: four d6 a row, the one set aside greyed out, then the total. */}
+      <ul
+        aria-hidden
+        className={`${TRAY} grid grid-cols-1 gap-2.5 p-3.5 lg:grid-cols-2 lg:gap-x-10 lg:px-[26px] lg:py-5`}
+      >
         {Array.from({ length: 7 }, (_, index) => (
-          <li
-            key={roll ? `${roll.id}-${index}` : index}
-            className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 p-3"
-          >
-            <div className="flex gap-1">
-              {DICE.map((die) => (
-                <Die
-                  key={die}
-                  face={roll?.dice[index]?.faces[die] ?? null}
-                  setAside={roll?.dice[index]?.dropped === die}
-                  animated={animated}
-                  ms={FIRST_MS + (index * DICE.length + die) * STAGGER_MS}
-                />
-              ))}
-            </div>
-            <span className="min-w-8 text-end text-xl font-medium text-text tabular-nums">
+          <li key={roll ? `${roll.id}-${index}` : index} className="flex items-center gap-2">
+            {DICE.map((die) => (
+              <Die
+                key={die}
+                face={roll?.dice[index]?.faces[die] ?? null}
+                setAside={roll?.dice[index]?.dropped === die}
+                animated={animated}
+                ms={FIRST_MS + (index * DICE.length + die) * STAGGER_MS}
+              />
+            ))}
+            <span className="ms-auto min-w-11 text-end font-serif text-xl leading-none font-semibold text-text tabular-nums">
+              <small className="me-1.5 font-sans text-xs font-normal text-subtle">=</small>
               {roll?.values[index] ?? t('creation.unknown')}
             </span>
           </li>
@@ -94,29 +97,38 @@ export function DiceStep({
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={onRoll}
-        disabled={rolling}
-        aria-busy={rolling}
-        className={roll ? SECONDARY_ACTION : PRIMARY_ACTION}
-      >
-        <Dice5 aria-hidden className="size-4" />
-        {rolling
-          ? t('creation.dice.rolling')
-          : roll
-            ? t('creation.dice.reroll')
-            : t('creation.dice.roll')}
-      </button>
-      {roll && <p className="-mt-3 text-label text-subtle">{t('creation.dice.rerollHint')}</p>}
-    </div>
+      <div className="flex flex-col items-start gap-1.5">
+        <button
+          type="button"
+          onClick={onRoll}
+          disabled={rolling}
+          aria-busy={rolling}
+          className={roll ? SECONDARY_ACTION : PRIMARY_ACTION}
+        >
+          {roll ? (
+            <RotateCw aria-hidden className="size-[18px]" />
+          ) : (
+            <Dice5 aria-hidden className="size-[18px]" />
+          )}
+          {rolling
+            ? t('creation.dice.rolling')
+            : roll
+              ? t('creation.dice.reroll')
+              : t('creation.dice.roll')}
+        </button>
+        {roll && <p className="text-xs text-subtle">{t('creation.dice.rerollHint')}</p>}
+      </div>
+    </>
   )
 }
 
+/** An ivory d6, as the table draws its dice (`D6` of `@/components/dice`), here able to roll. */
 const TILE =
-  'box-content size-9 overflow-hidden rounded-md border border-border-strong bg-surface-2 text-text shadow-[inset_0_-2px_0_var(--color-border)]'
-/** The die set aside: greyed out, it no longer counts. */
-const SET_ASIDE = 'opacity-35 grayscale'
+  'box-content size-[30px] shrink-0 overflow-hidden rounded-md border border-die-line bg-die text-die-ink'
+/** A die that counts: its lower edge and a soft shadow on the tray. */
+const KEPT = 'shadow-[inset_0_-2px_0_var(--color-die-side),0_2px_3px_rgb(60_45_25/0.2)]'
+/** The die set aside: greyed out and dropped a little, it no longer counts. */
+const SET_ASIDE = 'translate-y-1 opacity-40 grayscale'
 
 /**
  * One d6: a column of faces that runs past and stops on the face drawn, or
@@ -135,14 +147,14 @@ function Die({
   ms: number
 }) {
   if (face === null || !PIPS[face]) {
-    return <div className={TILE} />
+    return <div className={`${TILE} ${KEPT}`} />
   }
 
   if (!animated) {
     return (
       <div
         data-set-aside={setAside || undefined}
-        className={setAside ? `${TILE} ${SET_ASIDE}` : TILE}
+        className={`${TILE} ${setAside ? SET_ASIDE : KEPT}`}
       >
         <Face value={face} />
       </div>
@@ -155,7 +167,7 @@ function Die({
   return (
     <div
       data-set-aside={setAside || undefined}
-      className={setAside ? `${TILE} ${SET_ASIDE} animate-dice-set-aside` : TILE}
+      className={`${TILE} ${setAside ? `${SET_ASIDE} animate-dice-set-aside` : KEPT}`}
       style={setAside ? { animationDelay: `${ms}ms` } : undefined}
     >
       <div
@@ -175,10 +187,10 @@ function Face({ value }: { value: number }) {
   const pips = PIPS[value] ?? []
 
   return (
-    <div data-face={value} className="grid size-9 grid-cols-3 grid-rows-3 p-1.5">
+    <div data-face={value} className="grid size-[30px] grid-cols-3 grid-rows-3 p-1">
       {Array.from({ length: 9 }, (_, cell) => (
         <span key={cell} className="grid place-items-center">
-          {pips.includes(cell) && <span className="size-1.5 rounded-full bg-current" />}
+          {pips.includes(cell) && <span className="size-[5px] rounded-full bg-current" />}
         </span>
       ))}
     </div>

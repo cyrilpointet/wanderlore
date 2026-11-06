@@ -1,12 +1,14 @@
 import { describe, expect, test } from 'vitest'
 
 import {
-  gaugePercent,
+  filledPips,
   groupSkills,
   paragraphs,
   percentileDice,
+  restingRoll,
   showsQuantity,
 } from './presentation'
+import type { Roll } from './queries'
 
 describe('groupSkills', () => {
   test('puts each skill under its BRP category, in the order of the categories', () => {
@@ -42,15 +44,15 @@ describe('paragraphs', () => {
   })
 })
 
-describe('gaugePercent', () => {
+describe('filledPips', () => {
   test.each([
-    [8, 10, 80],
+    [8, 10, 8],
     [0, 10, 0],
-    [12, 10, 100],
+    [12, 10, 10],
     [-2, 10, 0],
     [3, 0, 0],
-  ])('%i / %i fills %i%%', (current, max, percent) => {
-    expect(gaugePercent(current, max)).toBe(percent)
+  ])('%i / %i fills %i pips', (current, max, pips) => {
+    expect(filledPips(current, max)).toBe(pips)
   })
 })
 
@@ -72,5 +74,21 @@ describe('percentileDice', () => {
 
   test('reads a hundred as 00 and 0, as on the table', () => {
     expect(percentileDice(100)).toEqual({ tens: 0, units: 0 })
+  })
+})
+
+describe('restingRoll', () => {
+  const roll = (value: number) => ({ roll: value }) as Roll
+
+  test("the turn in flight's last roll comes first", () => {
+    expect(restingRoll([{ rolls: [roll(10)] }], [roll(20), roll(30)])).toEqual(roll(30))
+  })
+
+  test('else the last roll of the latest turn that had one', () => {
+    expect(restingRoll([{ rolls: [roll(10), roll(11)] }, { rolls: [] }], [])).toEqual(roll(11))
+  })
+
+  test('none before the first roll', () => {
+    expect(restingRoll([{ rolls: [] }], null)).toBeNull()
   })
 })
