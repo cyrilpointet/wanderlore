@@ -195,6 +195,21 @@ test.group('Schema constraints', (group) => {
     assert.equal(error.code, PG_CHECK_VIOLATION)
   })
 
+  test('only a place hides an item', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    const characterId = await characterOf(sessionId)
+    const locationInstanceId = await createLocationInstance(sessionId)
+
+    const carried = await expectDbError(() =>
+      createInventoryItem(sessionId, { characterId }, { hidden: true })
+    )
+
+    assert.equal(carried.code, PG_CHECK_VIOLATION)
+    assert.isString(
+      await createInventoryItem(sessionId, { locationInstanceId }, { hidden: true, handle: 'x_1' })
+    )
+  })
+
   test('an item that exists counts at least one', async ({ assert }) => {
     const sessionId = await createSession(await createUser())
     const characterId = await characterOf(sessionId)

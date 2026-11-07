@@ -67,6 +67,7 @@ export function extracted(
     items_unequipped?: string[]
     passages_discovered?: string[]
     passages_unlocked?: string[]
+    items_discovered?: string[]
   } = {}
 ) {
   const { movement = null, ...rest } = answer
@@ -99,6 +100,7 @@ export function extracted(
     items_unequipped: [],
     passages_discovered: [],
     passages_unlocked: [],
+    items_discovered: [],
     ...rest,
   }
 }

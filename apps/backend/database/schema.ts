@@ -133,7 +133,7 @@ export class EventStateSchema extends BaseModel {
 }
 
 export class InventoryItemSchema extends BaseModel {
-  static $columns = ['characterId', 'createdAt', 'definitionReference', 'descriptor', 'handle', 'id', 'locationInstanceId', 'npcInstanceId', 'quantity', 'sessionId', 'state', 'updatedAt'] as const
+  static $columns = ['characterId', 'createdAt', 'definitionReference', 'descriptor', 'handle', 'hidden', 'id', 'locationInstanceId', 'npcInstanceId', 'quantity', 'sessionId', 'state', 'updatedAt'] as const
   $columns = InventoryItemSchema.$columns
   @column()
   declare characterId: string | null
@@ -145,6 +145,8 @@ export class InventoryItemSchema extends BaseModel {
   declare descriptor: string | null
   @column()
   declare handle: string | null
+  @column()
+  declare hidden: boolean
   @column({ isPrimary: true })
   declare id: string
   @column()
@@ -162,7 +164,7 @@ export class InventoryItemSchema extends BaseModel {
 }
 
 export class ItemDefinitionSchema extends BaseModel {
-  static $columns = ['armor', 'createdAt', 'description', 'equippable', 'generic', 'id', 'initialHolder', 'kind', 'labels', 'modifiers', 'reference', 'scenarioId', 'stackable', 'updatedAt', 'weapon', 'worldId'] as const
+  static $columns = ['armor', 'createdAt', 'description', 'equippable', 'generic', 'hidden', 'id', 'initialHolder', 'kind', 'labels', 'modifiers', 'reference', 'scenarioId', 'stackable', 'updatedAt', 'weapon', 'worldId'] as const
   $columns = ItemDefinitionSchema.$columns
   @column()
   declare armor: number
@@ -174,6 +176,8 @@ export class ItemDefinitionSchema extends BaseModel {
   declare equippable: boolean
   @column()
   declare generic: boolean
+  @column()
+  declare hidden: boolean
   @column({ isPrimary: true })
   declare id: string
   @column()

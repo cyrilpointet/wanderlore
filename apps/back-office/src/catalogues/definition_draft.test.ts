@@ -43,6 +43,7 @@ const STUDS: ItemDefinition = {
   weapon: null,
   armor: 0,
   initialHolder: { holder: 'npc', reference: 'buckingham' },
+  hidden: false,
 }
 
 describe('definition draft', () => {
@@ -145,6 +146,28 @@ describe('definition draft', () => {
       definitionPayloadOf('items', { ...definitionDraftOf(coat), armor: '' }, { creating: false })
         .payload
     ).toMatchObject({ armor: 0 })
+  })
+
+  test('an item hidden in a place stays hidden, and only a place hides', () => {
+    const seal: ItemDefinition = {
+      ...STUDS,
+      reference: 'seal',
+      initialHolder: { holder: 'location', reference: 'palais_cardinal' },
+      hidden: true,
+    }
+    const draft = definitionDraftOf(seal)
+
+    expect(draft.hidden).toBe(true)
+    expect(definitionPayloadOf('items', draft, { creating: false }).payload).toMatchObject({
+      hidden: true,
+    })
+    expect(
+      definitionPayloadOf(
+        'items',
+        { ...draft, initialHolder: 'npc:buckingham' },
+        { creating: false }
+      ).payload
+    ).toMatchObject({ hidden: false })
   })
 
   test('names JSON that does not parse, and sends nothing', () => {

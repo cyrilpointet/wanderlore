@@ -61,6 +61,7 @@ export function DefinitionForm({
     weapon: set('weapon'),
     armor: set('armor'),
     initialHolder: set('initialHolder'),
+    hidden: set('hidden'),
   }
   const id = (field: string) => `${idPrefix}-${field}`
   const unique = draft.kind === 'unique'
@@ -332,6 +333,15 @@ export function DefinitionForm({
                 </optgroup>
               </select>
             </Field>
+          )}
+          {unique && draft.initialHolder.startsWith('location:') && (
+            <Checkbox
+              id={id('hidden')}
+              label={t('hidden')}
+              checked={draft.hidden}
+              onChange={on.hidden}
+              error={errors.hidden}
+            />
           )}
           <Field
             id={id('modifiers')}

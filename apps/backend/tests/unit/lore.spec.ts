@@ -86,7 +86,7 @@ test.group('Lore | what the scene holds', () => {
       items: {
         character: [held('letter_to_treville')],
         npcs: [{ handle: 'royal_guard_1', items: [held('musket')] }],
-        location: [held('rope')],
+        location: [{ ...held('rope'), hidden: false }],
       },
     })
 

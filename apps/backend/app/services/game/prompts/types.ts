@@ -92,6 +92,8 @@ export type TurnEffects = {
    */
   passages_discovered: string[]
   passages_unlocked: string[]
+  /** Hidden items of the place the scene began in that the narration shows found, by handle. */
+  items_discovered: string[]
 }
 
 /**
@@ -129,6 +131,8 @@ export type AppliedItems = {
   destroyed: { item: string; definition: string; quantity: number; holder: AppliedHolder }[]
   equipped: { item: string; definition: string }[]
   unequipped: { item: string; definition: string }[]
+  /** Hidden items found where they lay. Absent from turns played before hidden items. */
+  discovered?: { item: string; definition: string }[]
 }
 
 /**

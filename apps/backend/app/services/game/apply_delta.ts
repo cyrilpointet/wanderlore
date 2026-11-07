@@ -14,6 +14,7 @@ import {
   type Holder,
   createItem,
   destroyItem,
+  discoverItem,
   equipItem,
   transferItem,
   unequipItem,
@@ -58,8 +59,8 @@ export type DeltaTarget = {
  * 4. entrances — a unique character met for the first time, like a unique
  *    place first visited, brings the items they hold from the start;
  * 5. names learnt and dispositions;
- * 6. items: creations, hand-overs, destructions, then what is drawn or put
- *    away. "The location" is the place the turn began in, whatever the
+ * 6. items: hidden ones found, creations, hand-overs, destructions, then what
+ *    is drawn or put away. "The location" is the place the turn began in, whatever the
  *    movement: it is the only place whose items extraction was shown.
  *
  * Returns what actually changed, which can be less than what was proposed: a
@@ -181,6 +182,7 @@ async function applyItems(
     destroyed: [],
     equipped: [],
     unequipped: [],
+    discovered: [],
   }
   const holders = new Map<string, { holder: Holder; applied: AppliedHolder }>()
 
@@ -250,6 +252,17 @@ async function applyItems(
       .where('definitionReference', item)
       .whereNull('handle')
       .firstOrFail()
+  }
+
+  /** Found first: what is found may be picked up in the same turn. */
+  for (const handle of effects.items_discovered) {
+    const item = await InventoryItem.query({ client: trx })
+      .where('sessionId', target.sessionId)
+      .where('handle', handle)
+      .firstOrFail()
+
+    await discoverItem(item)
+    applied.discovered!.push({ item: handle, definition: item.definitionReference })
   }
 
   for (const entry of effects.items_created) {

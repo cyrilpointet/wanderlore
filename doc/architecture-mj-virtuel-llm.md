@@ -123,9 +123,9 @@ Pertinent seulement pour des lores massifs (corpus de type encyclopédie) où le
 
 | Étape | Lore | State | Mémoire narrative |
 |---|---|---|---|
-| A+B+C | Fragments `rule` et `fact`, secrets compris, sans tag ou tagués de la scène | Scène courante : PNJ présents, lieu et sa description avec ses notes (`place_notes`, Phase 11), sorties du lieu avec leur état (bloquées comprises, avec leur raison), lieux atteignables, période de la journée, objets en scène (personnage, PNJ présents, lieu) ; événements tombés que nul résumé ne couvre encore (`world_events`), événements prévisibles et PNJ connus qu'on peut attendre (`foreseeable_events`, `awaitable_npcs`) | Résumés (`story_so_far`) + buffer court (2 derniers tours) |
-| D | Fragments `ambiance` et `fact` non secrets, sans tag ou tagués de la scène (pas les règles) | Scène complète + résultat de résolution, noms des PNJ marqués connus ou non du personnage (`known`), description et sorties du lieu (cachées comprises, marquées ; le lieu où mène une sortie, seulement s'il a été visité), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) ; depuis la Phase 11, les événements dont le personnage est témoin (`world_events`, `now` ou `earlier`), ce qui a écourté l'action (`interrupted`) ou ce qu'on attendait (`awaited`), les PNJ qui arrivent ou s'en vont, l'activité des PNJ en scène, les notes du lieu en fin de tour | Résumés (`story_so_far`) + tous les tours qu'ils ne couvrent pas (4 au moins), pour la continuité de ton |
-| E | Aucun | Handles présents, objets en scène, destinations permises, sorties cachées et verrouillées du lieu, flags du catalogue pas encore posés (Phase 11), schéma des champs modifiables (pas les valeurs actuelles) — jamais la description du lieu, ses notes, le temps ni les événements | Aucun (le texte narré suffit) |
+| A+B+C | Fragments `rule` et `fact`, secrets compris, sans tag ou tagués de la scène | Scène courante : PNJ présents, lieu et sa description avec ses notes (`place_notes`, Phase 11), sorties du lieu avec leur état (bloquées comprises, avec leur raison), lieux atteignables, période de la journée, objets en scène (personnage, PNJ présents, lieu — un objet caché du lieu marqué) ; événements tombés que nul résumé ne couvre encore (`world_events`), événements prévisibles et PNJ connus qu'on peut attendre (`foreseeable_events`, `awaitable_npcs`) | Résumés (`story_so_far`) + buffer court (2 derniers tours) |
+| D | Fragments `ambiance` et `fact` non secrets, sans tag ou tagués de la scène (pas les règles) | Scène complète + résultat de résolution, noms des PNJ marqués connus ou non du personnage (`known`), description et sorties du lieu (cachées comprises, marquées ; le lieu où mène une sortie, seulement s'il a été visité), objets en scène (un objet caché du lieu marqué, retiré dans un aparté), chemin d'un déplacement, PNJ qui attendent à la destination, temps du tour (périodes, heure au quart d'heure, jour, date) ; depuis la Phase 11, les événements dont le personnage est témoin (`world_events`, `now` ou `earlier`), ce qui a écourté l'action (`interrupted`) ou ce qu'on attendait (`awaited`), les PNJ qui arrivent ou s'en vont, l'activité des PNJ en scène, les notes du lieu en fin de tour | Résumés (`story_so_far`) + tous les tours qu'ils ne couvrent pas (4 au moins), pour la continuité de ton |
+| E | Aucun | Handles présents, objets en scène, objets cachés du lieu à part, destinations permises, sorties cachées et verrouillées du lieu, flags du catalogue pas encore posés (Phase 11), schéma des champs modifiables (pas les valeurs actuelles) — jamais la description du lieu, ses notes, le temps ni les événements | Aucun (le texte narré suffit) |
 | Job résumé (async) | Aucun | Aucun | Résumés précédents + entrées du joueur et narrations à condenser (jamais la sortie d'arbitrage) ; pour le repli, le `global` précédent + les `scene` à absorber |
 
 **Le personnage** (Phase 12) : l'arbitrage reçoit son nom et sa profession (libellé anglais et description d'une ligne), pour juger de la plausibilité d'une action (un médecin qui soigne, un mousquetaire reçu chez Tréville) ; la narration, son nom, son genre (`female`, `male`, `neutral`, pour les pronoms et les accords) et sa profession ; l'extraction, rien de plus. Ses valeurs de compétence ne partent toujours à aucune étape.
@@ -709,6 +709,34 @@ fil de la partie.
   par lui (règles, section 8).
 - **Le front n'affiche que l'inventaire du personnage.** Ce que détiennent les PNJ et les lieux,
   le joueur l'apprend par la narration.
+
+### Objets cachés
+
+Ajouté hors phase (novembre 2026), sur le modèle des sorties cachées (section 6quater).
+
+- **Déclaré au contenu** : un objet **unique** dont le détenteur de départ est un **lieu** peut
+  être caché (`item_definitions.hidden`). Jamais un archétype, jamais chez un PNJ : seul un lieu
+  cache, et qui détient un objet sait qu'il l'a. Refusé au formulaire comme à l'import
+  (`kind_mismatch`, `hidden_out_of_place`, `catalogue_checks`), et par une contrainte de base.
+- **État par partie** : `inventory_items.hidden`, posé au placement initial (première visite du
+  lieu), levé par une découverte (`discoverItem`) ou par tout transfert — qui déplace un objet
+  sait où il est. Le service d'inventaire seul l'écrit.
+- **Ce que voit chaque étape** : l'arbitrage reçoit l'objet parmi ceux du lieu, marqué
+  `hidden`, avec la consigne qu'une fouille peut le trouver (un jet s'il est bien caché) et qu'il
+  ne se prend ni ne s'utilise avant ; la narration le reçoit marqué, avec la consigne de ne
+  jamais le mentionner sauf si le personnage fouille et que l'issue lui donne de quoi le trouver
+  — retiré dans un aparté ; l'extraction le reçoit **à part** (`hidden_items`), hors des objets
+  du lieu, et propose `items_discovered` en liste fermée. Un objet caché n'appelle **pas son
+  lore** tant qu'il n'est pas trouvé.
+- **Validation** : un transfert ou une destruction d'un objet caché non trouvé, dans cette
+  narration ou avant, est rejeté (`hidden_item`), comme un passage par une sortie cachée.
+- **Application** : les découvertes passent en premier parmi les objets, avant les créations
+  et les transferts — un objet trouvé se ramasse dans le même tour. Trace dans
+  `applied_effects.items.discovered`. Le front n'en voit rien de plus : l'objet ramassé rejoint
+  l'inventaire du personnage comme tout autre.
+- **Contenu** : la description d'un lieu ne nomme pas un objet qui y est caché.
+- Hors périmètre : un événement qui cache un objet (`item_placed` en caché), un objet caché chez
+  un PNJ, un piège (voir la roadmap, points ouverts).
 
 ---
 

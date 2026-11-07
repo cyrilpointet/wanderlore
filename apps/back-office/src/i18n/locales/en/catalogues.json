@@ -42,6 +42,7 @@
   "scheduleHint": "JSON list, empty for none. Each entry sends the person to a named place (location) at some periods of the day (periods: dawn, morning, midday, afternoon, dusk, evening, night — each in one entry at most), with what they do there in one line of English (activity, or null), whether they leave the character's company to keep to it (leavesScene), and whether their arrival where the character is cuts a long action short (interrupts). A period no entry covers leaves them where they are; someone with a schedule is placed by it rather than by where they wait from the start.",
   "initialHolder": "Held when the game starts by",
   "initialHolderHint": "A named person or place; the item comes into being with them.",
+  "hidden": "Hidden there: out of sight until a search finds it, like a hidden exit",
   "people": "People",
   "places": "Places",
   "modifiers": "Modifiers",

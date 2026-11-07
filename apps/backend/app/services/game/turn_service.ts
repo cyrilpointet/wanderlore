@@ -168,6 +168,7 @@ const NO_CHANGE: TurnEffects = {
   items_unequipped: [],
   passages_discovered: [],
   passages_unlocked: [],
+  items_discovered: [],
 }
 
 /**
@@ -503,6 +504,9 @@ export class TurnService {
         .map(({ reference }) => reference),
       itemsInScene: itemReferencesOf(scene.items),
       sceneItems: sceneItemsOf(scene.items),
+      hiddenItems: scene.items.location
+        .filter(({ hidden, handle }) => hidden && handle !== null)
+        .map(({ handle }) => handle!),
       creatableItems: scene.creatableItems,
       itemKinds: world.items.map((item) => ({
         reference: item.reference,

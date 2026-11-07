@@ -9,6 +9,7 @@ import {
   UnknownItemError,
   createItem,
   destroyItem,
+  discoverItem,
   equipItem,
   itemsInScene,
   leaveItemsInPlace,
@@ -328,6 +329,53 @@ test.group('Inventory | where items start, and where they fall', (group) => {
     assert.equal(seal.characterId, character)
   })
 
+  test('an item the content hides lies hidden where it starts, until found', async ({ assert }) => {
+    const hiding = {
+      ...world,
+      items: world.items.map((item) =>
+        item.reference === 'cardinal_seal' && item.kind === 'unique'
+          ? { ...item, hidden: true }
+          : item
+      ),
+    }
+    const sessionId = await createSession(await createUser())
+    const character = await characterOf(sessionId)
+
+    const palace = await visitUniqueLocation(hiding, sessionId, 'palais_cardinal')
+    const seal = await InventoryItem.query()
+      .where('sessionId', sessionId)
+      .where('handle', 'cardinal_seal')
+      .firstOrFail()
+    assert.isTrue(seal.hidden)
+
+    const inScene = await itemsInScene(sessionId, {
+      characterId: character,
+      locationInstanceId: palace.id,
+    })
+    assert.deepEqual(
+      inScene.location.map(({ handle, hidden }) => ({ handle, hidden })),
+      [{ handle: 'cardinal_seal', hidden: true }]
+    )
+
+    await discoverItem(seal)
+    await seal.refresh()
+    assert.isFalse(seal.hidden)
+    assert.equal(seal.locationInstanceId, palace.id)
+  })
+
+  test('an item handed over is hidden no more', async ({ assert }) => {
+    const { sessionId, character, location } = await scene()
+    const seal = await createItem(world, sessionId, one('cardinal_seal'), location)
+    seal.hidden = true
+    await seal.save()
+
+    await transferItem(world, seal, character, 1)
+    await transferItem(world, seal, location, 1)
+
+    await seal.refresh()
+    assert.isFalse(seal.hidden)
+  })
+
   test('an archetype or a place without items brings nothing', async ({ assert }) => {
     const sessionId = await createSession(await createUser())
 
@@ -420,7 +468,14 @@ test.group('Inventory | the items of the scene', (group) => {
         },
       ],
       location: [
-        { handle: 'rope_1', definition: 'rope', descriptor: null, quantity: 1, equipped: false },
+        {
+          handle: 'rope_1',
+          definition: 'rope',
+          descriptor: null,
+          quantity: 1,
+          equipped: false,
+          hidden: false,
+        },
       ],
     })
   })

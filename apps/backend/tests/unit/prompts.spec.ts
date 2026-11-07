@@ -92,6 +92,7 @@ const ITEMS: ItemsInScene = {
       descriptor: 'a three-legged stool',
       quantity: 1,
       equipped: false,
+      hidden: false,
     },
   ],
 }
@@ -708,6 +709,7 @@ test.group('Extraction | contract', () => {
       'items_unequipped',
       'passages_discovered',
       'passages_unlocked',
+      'items_discovered',
     ])
     assert.deepEqual(EXTRACTION_SCHEMA.properties.movement.required, [
       'location',
@@ -1448,3 +1450,73 @@ function femaleGuard() {
     hit_points_max: 10,
   }
 }
+
+test.group('Prompts | hidden items', () => {
+  /** The queen's studs lie hidden in the courtyard, by the stool in sight. */
+  const STUDS = {
+    handle: 'queens_diamond_studs',
+    definition: 'queens_diamond_studs',
+    descriptor: null,
+    quantity: 1,
+    equipped: false,
+    hidden: true,
+  }
+  const WITH_STUDS: ItemsInScene = { ...ITEMS, location: [...ITEMS.location, STUDS] }
+  const scene = { ...turnContext().scene, items: WITH_STUDS }
+  const LABEL = "The Queen's diamond studs"
+
+  test('arbitration knows a hidden item is there, marked as not found', ({ assert }) => {
+    const { items_in_scene: items } = payloadOf(
+      buildArbitrationMessage(arbitrationContext({ scene }))
+    )
+
+    assert.deepEqual(items.location, [
+      { reference: 'improvised_weapon', label: 'Improvised weapon' },
+      { reference: 'queens_diamond_studs', label: LABEL, hidden: true },
+    ])
+    assert.include(
+      ARBITRATION_SYSTEM_PROMPT,
+      'An item of the place marked hidden has not been found'
+    )
+  })
+
+  test('the narrator has it marked, and never mentions it unless it is found', ({ assert }) => {
+    const { items_in_scene: items } = payloadOf(buildNarrationMessage(narrationRequest({ scene })))
+
+    assert.deepEqual(items.location, [
+      { name: 'Improvised weapon', description: 'a three-legged stool' },
+      { name: LABEL, description: null, hidden: true },
+    ])
+    assert.include(NARRATION_SYSTEM_PROMPT, 'never mention it, unless the character searches')
+  })
+
+  test('an aside never finds it', ({ assert }) => {
+    const { items_in_scene: items } = payloadOf(
+      buildNarrationMessage(narrationRequest({ scene, aside: true }))
+    )
+
+    assert.deepEqual(items.location, [
+      { name: 'Improvised weapon', description: 'a three-legged stool' },
+    ])
+  })
+
+  test('extraction may only find it, apart from what lies in sight', ({ assert }) => {
+    const payload = payloadOf(
+      buildExtractionMessage({
+        ...turnContext({ scene }),
+        narration: 'Under a loose flagstone, a glint of diamonds.',
+        creatable_items: [],
+        enterable_npcs: [],
+        flags: [],
+        movement: FREE_MOVEMENT,
+      })
+    )
+
+    assert.deepEqual(payload.items_in_scene.location, [
+      { item: 'improvised_weapon_1', label: 'Improvised weapon', quantity: 1 },
+    ])
+    assert.deepEqual(payload.hidden_items, [{ item: 'queens_diamond_studs', label: LABEL }])
+    assert.include(EXTRACTION_SYSTEM_PROMPT, 'items_discovered lists the hidden items')
+    assert.include(EXTRACTION_SCHEMA.required, 'items_discovered')
+  })
+})

@@ -17,14 +17,23 @@ export type CatalogueLevel = { worldId: string | null; scenarioId: string | null
 /**
  * What only one kind of definition may have: a unique is neither generic nor
  * stackable, an archetype has no parent, initial holder or place, schedule,
- * exit nor entrance.
+ * exit nor entrance, and is never hidden. A hidden unique item lies in a
+ * place from the start: only a place hides.
  */
 export function refuseKindMismatch(definition: Record<string, unknown>, path = '') {
   const unique = definition.kind === 'unique'
   const mismatch = unique
     ? (['generic', 'stackable'] as const).find((field) => definition[field] === true)
     : (
-        ['parent', 'initialHolder', 'initialLocation', 'schedule', 'exits', 'entrance'] as const
+        [
+          'parent',
+          'initialHolder',
+          'initialLocation',
+          'schedule',
+          'exits',
+          'entrance',
+          'hidden',
+        ] as const
       ).find((field) => {
         const value = definition[field]
 
@@ -43,6 +52,16 @@ export function refuseKindMismatch(definition: Record<string, unknown>, path = '
       { field: `${path}${mismatch}` }
     )
   }
+
+  const holder = definition.initialHolder as { holder?: string } | null | undefined
+  if (unique && definition.hidden === true && holder?.holder !== 'location') {
+    throw new Refusal(
+      422,
+      'hidden_out_of_place',
+      'Only an item lying in a place from the start can be hidden.',
+      { field: `${path}hidden` }
+    )
+  }
 }
 
 const ARCHETYPE_LACKS = {
@@ -52,6 +71,7 @@ const ARCHETYPE_LACKS = {
   schedule: 'schedule',
   exits: 'exit',
   entrance: 'entrance',
+  hidden: 'hiding place',
 }
 
 export type LorePayload = { kind: string; tags?: string[]; secret?: boolean }

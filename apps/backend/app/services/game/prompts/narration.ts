@@ -37,7 +37,7 @@ Hard rules:
 - world_context.lore is what this world and this scene are like: what is seen, heard and smelt here, what people say and believe. Draw on it for colour and never contradict it. It is background, not a script: never recite it, and bring a fact into the story only when the scene gives the character reason to see or learn it.
 - memory.story_so_far summarises, in English and oldest first, what happened before memory.recent_buffer, which gives the last exchanges word for word. Stay consistent with both: who the character met, what was said, promised or given. Never retell them, and never copy the summary's English into your text.
 - names gives, in the language of the narration, the name of the place and of each person present, and the fixed translation of other proper names (glossary). Use these names exactly, every time — except a person marked known: false. The character has not learnt their name: call them by their looks or their role, never by their name, unless they give it in this very narration.
-- items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason.
+- items_in_scene lists, by name, what the character holds, what each person present holds, and what lies in the place, with a short description for improvised ones. Call an item by its name. What a person or a place holds is not necessarily in sight: reveal it only when the story gives a reason. An item of the place marked hidden has not been found: never mention it, unless the character searches and the outcome gives them reason to find it.
 - place says what the place is like, and what an improvised one stands in. exits lists its ways out, each with how it looks from here, and where it leads when the character has been there. An exit with no "to" leads somewhere the character has never been: describe the way, never name or guess what lies beyond it. One marked hidden has not been found: never mention it, unless the character searches and the outcome gives them reason to find it. One marked locked stays shut unless the story opens it.
 - place.notes add to what the place is like as the turn ends: the time of day, what has changed in it. An exit marked blocked cannot be gone through for now: say why when blocked_reason gives a reason.
 - When route is given, the character goes to its last place by these passages, in this order: follow them, and invent no other way.
@@ -141,7 +141,7 @@ export function buildNarrationMessage(request: NarrationRequest): string {
      */
     time: timeForNarration(request),
     names: namesForNarration(request, labels),
-    items_in_scene: itemsForNarration(labels, request.scene.items),
+    items_in_scene: itemsForNarration(labels, request.scene.items, request.aside),
     resolution_to_narrate: {
       action: request.intent_summary,
       /**
@@ -233,13 +233,14 @@ function timeForNarration(request: NarrationRequest) {
   }
 }
 
-type NarrationItem = { name: string; description: string | null }
+type NarrationItem = { name: string; description: string | null; hidden?: true }
 
 /**
  * The display name is the definition's label — the archetype's for an
  * improvised item, whose own descriptor stays English and travels beside it.
  */
-function itemsForNarration(labels: ContentLabels, items: ItemsInScene) {
+/** In an aside, a hidden item is left out: a question to the game master never finds it. */
+function itemsForNarration(labels: ContentLabels, items: ItemsInScene, aside: boolean) {
   const view = (held: HeldItem[]): NarrationItem[] =>
     held.map(({ definition, descriptor }) => ({
       name: labels.of('item', definition).label,
@@ -249,7 +250,12 @@ function itemsForNarration(labels: ContentLabels, items: ItemsInScene) {
   return {
     character: view(items.character),
     npcs: items.npcs.map((npc) => ({ handle: npc.handle, items: view(npc.items) })),
-    location: view(items.location),
+    location: items.location
+      .filter(({ hidden }) => !(aside && hidden))
+      .map((item) => ({
+        ...view([item])[0],
+        ...(item.hidden ? { hidden: true as const } : {}),
+      })),
   }
 }
 

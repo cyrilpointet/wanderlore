@@ -162,7 +162,12 @@ export type ItemDefinition = DescribedEntry & {
   /** Stopped of every blow while worn; 0 for anything that is no armour. */
   armor: number
 } & (
-    | { kind: 'unique'; initialHolder: ItemHolderReference | null }
+    | {
+        kind: 'unique'
+        initialHolder: ItemHolderReference | null
+        /** Out of sight in the place it lies in from the start, until found. */
+        hidden: boolean
+      }
     | { kind: 'archetype'; generic: boolean; stackable: boolean }
   )
 

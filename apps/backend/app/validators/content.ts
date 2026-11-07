@@ -188,6 +188,8 @@ const catalogueFields = {
     weapon: weapon().nullable(),
     armor: armor(),
     initialHolder: initialHolder().nullable(),
+    /** A unique item lying in a place from the start, out of sight until found. */
+    hidden: vine.boolean(),
   },
 }
 
@@ -234,7 +236,14 @@ const importedCatalogues = () => ({
     .distinct('reference')
     .optional(),
   items: vine
-    .array(vine.object({ reference: reference(), ...definitionBase, ...catalogueFields.items }))
+    .array(
+      vine.object({
+        reference: reference(),
+        ...definitionBase,
+        ...catalogueFields.items,
+        hidden: catalogueFields.items.hidden.optional(),
+      })
+    )
     .distinct('reference')
     .optional(),
   lore: vine
@@ -597,7 +606,13 @@ export const definitionValidators = {
     update: vine.create(optional({ ...definitionBase, ...catalogueFields.locations })),
   },
   items: {
-    create: vine.create({ reference: reference(), ...definitionBase, ...catalogueFields.items }),
+    /** Hidden may be left out: an item in sight. */
+    create: vine.create({
+      reference: reference(),
+      ...definitionBase,
+      ...catalogueFields.items,
+      hidden: catalogueFields.items.hidden.optional(),
+    }),
     update: vine.create(optional({ ...definitionBase, ...catalogueFields.items })),
   },
   /** Tags and secrecy may be left out: a fragment sent with every turn, to every step its kind serves. */

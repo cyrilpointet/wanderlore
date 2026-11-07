@@ -293,6 +293,11 @@ export type ItemDefinitionContent = DefinitionContent & {
    */
   armor: number
   initialHolder: ItemHolderReference | null
+  /**
+   * A unique item lying in a place from the start, out of sight: found by
+   * searching, like a hidden exit. Absent: in sight.
+   */
+  hidden?: boolean
 }
 
 /**

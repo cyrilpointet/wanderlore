@@ -521,6 +521,26 @@ Tranchées le 2026-10-28, ajustées à la livraison :
 
 ---
 
+## Complément de la Phase 7 — Objets cachés
+
+**Objectif** : qu'un scénario puisse cacher un objet dans un lieu — le sceau sous une dalle, la lettre derrière un tableau — et que seule une fouille le trouve, comme une sortie cachée. Ajouté hors phase, novembre 2026, en réponse à une question de conception sur les coffres piégés (le piège lui-même reste un point ouvert, voir la fin de ce document).
+
+### Décisions de cadrage
+
+- **Généralisation des sorties cachées aux objets**, même circuit : l'objet est connu de l'arbitrage et de la narration, marqué caché ; la narration ne le mentionne qu'après une fouille dont l'issue le justifie ; l'extraction propose sa découverte en liste fermée ; le backend l'applique.
+- **Seul un lieu cache, et seulement un unique au départ** : `item_definitions.hidden`, réservé à un objet unique dont le détenteur initial est un lieu (CHECK en base, refus `kind_mismatch` pour un archétype et `hidden_out_of_place` pour un objet détenu par un PNJ, au formulaire comme à l'import). Qui détient un objet sait qu'il l'a.
+- **État par partie** : `inventory_items.hidden`, posé au placement initial, levé par une découverte (`items_discovered` de l'extraction) ou par tout transfert — qui déplace un objet sait où il est.
+- **Un objet caché ne se prend ni ne se détruit avant d'être trouvé**, dans la même narration ou avant (rejet `hidden_item`, renvoyé une fois comme toute sortie rejetée) ; trouvé, il se ramasse dans le même tour : les découvertes s'appliquent avant les transferts.
+- **Ce que reçoit chaque étape** : l'arbitrage, l'objet marqué parmi ceux du lieu ; la narration, l'objet marqué, retiré dans un aparté ; l'extraction, les objets cachés à part (`hidden_items`). Un objet caché n'appelle pas son lore avant d'être trouvé. Le front ne voit rien de plus.
+- **Contenu** : la description d'un lieu ne nomme pas un objet qui y est caché.
+- **Hors périmètre** : un événement qui cache un objet, un objet caché sur un PNJ (une arme dissimulée), un piège.
+
+### Critère de sortie
+
+- Un objet caché dans un lieu n'apparaît pas dans le récit tant que le personnage n'a pas fouillé avec succès ; trouvé, il se ramasse aussitôt.
+
+---
+
 ## Phase 8 — Lore étendu et RAG
 
 **Objectif** : dépasser les limites de la connaissance native du LLM sur un univers, ou construire un lore original détaillé.

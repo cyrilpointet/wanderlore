@@ -119,6 +119,11 @@ function itemOf(item: ItemDefinitionContent): ItemDefinition {
   }
 
   return item.kind === 'unique'
-    ? { ...shared, kind: 'unique', initialHolder: item.initialHolder }
+    ? {
+        ...shared,
+        kind: 'unique',
+        initialHolder: item.initialHolder,
+        hidden: item.hidden ?? false,
+      }
     : { ...shared, kind: 'archetype', generic: item.generic, stackable: item.stackable }
 }

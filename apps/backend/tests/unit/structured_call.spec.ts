@@ -29,6 +29,7 @@ const META = {
   npcArchetypes: ['royal_guard', 'commoner'],
   itemsInScene: [],
   sceneItems: [],
+  hiddenItems: [],
   creatableItems: [],
   itemKinds: [],
   hasLocation: true,

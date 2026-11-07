@@ -109,9 +109,12 @@ export function loreSceneOf(
   return {
     places: [...here.slice(0, 1), ...there.slice(0, 1), ...here.slice(1), ...there.slice(1)],
     npcs: [...Object.values(scene.npc_definitions), ...(arrival?.npcs ?? [])],
-    items: [...character, ...npcs.flatMap(({ items }) => items), ...location].map(
-      ({ definition }) => definition
-    ),
+    /** A hidden item calls for its lore only once found: nothing gives it away before. */
+    items: [
+      ...character,
+      ...npcs.flatMap(({ items }) => items),
+      ...location.filter(({ hidden }) => !hidden),
+    ].map(({ definition }) => definition),
   }
 }
 

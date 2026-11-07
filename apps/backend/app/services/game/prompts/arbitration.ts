@@ -79,6 +79,7 @@ Memory:
 
 Items:
 - items_in_scene lists what the character holds, what each person present holds, and what lies in the place. The character can only use what they hold. Taking, asking for or stealing what someone else holds, or picking up what lies in the place, is an action like any other.
+- An item of the place marked hidden has not been found: the character does not know it is there, but searching the place may find it — a roll when it is well hidden. It cannot be taken or used before it is found.
 - An item is never a contextual modifier, and you never weigh what an item is worth: the backend counts the items the character holds. Holding an item only decides whether the action is possible.
 - Do not narrate the outcome and do not describe its consequences: a separate step stages it once the outcome is settled.
 
@@ -344,7 +345,7 @@ function professionOf(world: WorldDefinition, reference: string) {
   return { label: profession.label, description: profession.description }
 }
 
-type ArbitrationItem = { reference: string; label: string }
+type ArbitrationItem = { reference: string; label: string; hidden?: true }
 
 function itemsForArbitration(world: WorldDefinition, items: ItemsInScene) {
   const labels = new ContentLabels(world)
@@ -354,7 +355,10 @@ function itemsForArbitration(world: WorldDefinition, items: ItemsInScene) {
   return {
     character: view(items.character),
     npcs: items.npcs.map((npc) => ({ handle: npc.handle, items: view(npc.items) })),
-    location: view(items.location),
+    location: items.location.map(({ definition, hidden }) => ({
+      ...labels.of('item', definition),
+      ...(hidden ? { hidden: true as const } : {}),
+    })),
   }
 }
 

@@ -350,6 +350,7 @@ export async function createInventoryItem(
     definitionReference: string
     quantity: number
     state: string
+    hidden: boolean
   }> = {}
 ): Promise<string> {
   const now = new Date()
@@ -363,6 +364,7 @@ export async function createInventoryItem(
       handle: overrides.handle === undefined ? 'rapier_1' : overrides.handle,
       definition_reference: overrides.definitionReference ?? 'rapier',
       ...(overrides.quantity === undefined ? {} : { quantity: overrides.quantity }),
+      ...(overrides.hidden === undefined ? {} : { hidden: overrides.hidden }),
       ...(overrides.state ? { state: overrides.state } : {}),
       created_at: now,
       updated_at: now,

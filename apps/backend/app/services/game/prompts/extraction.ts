@@ -48,6 +48,7 @@ Items:
 - items_destroyed lists the items used up or destroyed: a shot fired, food eaten, a letter burnt, with its holder and the quantity.
 - items_equipped and items_unequipped list the identifiers of the character's own items they draw or wear, or put away.
 - An item merely described, seen or mentioned does not change hands and does not come into being.
+- items_discovered lists the hidden items the narration shows the character finding, each by its "item" from hidden_items. A hidden item can be taken, moved or destroyed only once found, in this narration or before: name it then by the same identifier, held by the location. One merely searched for and not found is not discovered.
 
 Other changes:
 - scenario_flags lists the flags of flags the narration makes true, each by its reference, as its description tells: never one that is not listed. Leave it empty when none is.
@@ -161,6 +162,7 @@ export const EXTRACTION_SCHEMA = {
     items_unequipped: handleList,
     passages_discovered: handleList,
     passages_unlocked: handleList,
+    items_discovered: handleList,
   },
   required: [
     'movement',
@@ -178,6 +180,7 @@ export const EXTRACTION_SCHEMA = {
     'items_unequipped',
     'passages_discovered',
     'passages_unlocked',
+    'items_discovered',
   ],
 } as const satisfies Record<string, unknown>
 
@@ -221,6 +224,8 @@ export function buildExtractionMessage(request: ExtractionRequest): string {
      * copy by handle, a stack by definition. No modifier, ever.
      */
     items_in_scene: itemsForExtraction(request),
+    /** Lying unseen in the place the scene began in: the only items it may find. */
+    hidden_items: hiddenItemsForExtraction(request),
     /** The only flags it may set: the scenario's, not set yet. */
     flags: request.flags.map(({ reference, description }) => ({ flag: reference, description })),
     /** The only definitions an item may come into being from. */
@@ -245,6 +250,18 @@ function itemsForExtraction(request: ExtractionRequest) {
   return {
     character: view(items.character),
     npcs: items.npcs.map((npc) => ({ handle: npc.handle, items: view(npc.items) })),
-    location: view(items.location),
+    /** Those hidden there go apart, in hidden_items: found first, then moved. */
+    location: view(items.location.filter(({ hidden }) => !hidden)),
   }
+}
+
+function hiddenItemsForExtraction(request: ExtractionRequest) {
+  const labels = new ContentLabels(request.world)
+
+  return request.scene.items.location
+    .filter(({ hidden }) => hidden)
+    .map(({ handle, definition }) => ({
+      item: handle ?? definition,
+      label: labels.of('item', definition).label,
+    }))
 }

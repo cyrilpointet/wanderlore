@@ -339,6 +339,13 @@ Phase 7 » ; architecture §6ter et §6quater), sur le modèle du détenteur ini
   village des environs de La Rochelle, 1627) et *The Drowned Anchor* (une auberge bretonne),
   en JSON dans `test-worlds/`, hors dépôt.
 
+**Hors roadmap : objets cachés** (novembre 2026, détail : roadmap, « Complément de la Phase 7 —
+Objets cachés » ; architecture §6bis), sur le modèle des sorties cachées : un unique détenu au
+départ par un lieu peut être caché (`item_definitions.hidden`), l'état vit dans
+`inventory_items.hidden` ; arbitrage et narration le reçoivent marqué, l'extraction à part
+(`hidden_items`) et propose `items_discovered` ; pris ou détruit avant d'être trouvé, rejet
+`hidden_item` ; pas de lore avant la découverte.
+
 **Hors roadmap : suppression d'une partie par le joueur**, depuis *My games*, avec
 confirmation. Suppression douce (`sessions.deleted_at`) : la partie et ses tours restent en
 base, mais toute route de jeu y répond comme à une partie inexistante.
@@ -575,7 +582,8 @@ serverless pour le backend).
   lui-même (`melee_combat`, `ranged_combat`, `first_aid`, `dodge`) vivent dans
   `#services/game/system_references`.
 - **Tout changement d'objet passe par le service d'inventaire** (`#services/game/inventory`) :
-  création, transfert, destruction, équipement, placement initial. Jamais d'écriture directe
+  création, transfert, destruction, équipement, placement initial, découverte d'un objet caché
+  (`discoverItem`). Jamais d'écriture directe
   dans `inventory_items` : les règles d'unicité, d'empilement et de détenteur y vivent.
 - **Tout tirage aléatoire passe par `import dice from '#services/dice'`** — jamais
   `Math.random()` dans le code métier, sinon le moteur de règles n'est plus testable.

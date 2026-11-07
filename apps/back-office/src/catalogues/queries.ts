@@ -61,6 +61,8 @@ export type ItemDefinition = DefinitionBase & {
   /** Stopped of every blow while worn; 0 for anything that is no armour. */
   armor: number
   initialHolder: ItemHolder | null
+  /** A unique item lying in a place from the start, out of sight until found. */
+  hidden: boolean
 }
 
 export type Definition = NpcDefinition | LocationDefinition | ItemDefinition

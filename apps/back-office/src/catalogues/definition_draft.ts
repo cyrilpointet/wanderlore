@@ -45,6 +45,8 @@ export type DefinitionDraft = {
   armor: string
   /** `npc:athos`, `location:paris`, or empty for none. */
   initialHolder: string
+  /** Only for a unique item a place holds from the start. */
+  hidden: boolean
 }
 
 const NEW_COMBAT = { skills: {}, hitPointsMax: 12, weapon: null, damageModifier: null, armor: 0 }
@@ -70,6 +72,7 @@ export function emptyDefinitionDraft(): DefinitionDraft {
     weapon: '',
     armor: '0',
     initialHolder: '',
+    hidden: false,
   }
 }
 
@@ -101,6 +104,7 @@ export function definitionDraftOf(definition: Definition): DefinitionDraft {
     initialHolder: item.initialHolder
       ? `${item.initialHolder.holder}:${item.initialHolder.reference}`
       : '',
+    hidden: item.hidden ?? false,
   }
 }
 
@@ -168,6 +172,8 @@ export function definitionPayloadOf(
             ? draft.armor
             : Number(draft.armor),
       initialHolder: unique ? holderOf(draft.initialHolder) : null,
+      /** Only a place hides: dropped with the place it lay in. */
+      hidden: unique && holderOf(draft.initialHolder)?.holder === 'location' && draft.hidden,
     })
   }
 

@@ -785,6 +785,52 @@ test.group('Content API | kinds', (group) => {
     }
   })
 
+  test('only a unique item lying in a place from the start is hidden', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+    const worldId = await createWorld()
+    const item = {
+      labels: { en: 'Seal' },
+      description: 'A seal of red wax and gold.',
+      kind: 'unique',
+      generic: false,
+      stackable: false,
+      equippable: false,
+      modifiers: [],
+      weapon: null,
+      armor: 0,
+      hidden: true,
+    }
+
+    const kept = await as(client, user).post(`/worlds/${worldId}/items`, {
+      ...item,
+      reference: 'hidden_seal',
+      initialHolder: { holder: 'location', reference: 'paris' },
+    })
+    const archetype = await as(client, user).post(`/worlds/${worldId}/items`, {
+      ...item,
+      reference: 'hidden_coin',
+      kind: 'archetype',
+      initialHolder: null,
+    })
+    const carried = await as(client, user).post(`/worlds/${worldId}/items`, {
+      ...item,
+      reference: 'carried_seal',
+      initialHolder: { holder: 'npc', reference: 'rochefort' },
+    })
+
+    kept.assertStatus(201)
+    assert.isTrue(bodyOf(kept).data.hidden)
+    archetype.assertStatus(422)
+    assert.equal(bodyOf(archetype).error.code, 'kind_mismatch')
+    assert.equal(bodyOf(archetype).error.details.field, 'hidden')
+    carried.assertStatus(422)
+    assert.equal(bodyOf(carried).error.code, 'hidden_out_of_place')
+    assert.equal(bodyOf(carried).error.details.field, 'hidden')
+  })
+
   test('checks the definition as edited, not only what is sent', async ({ client, assert }) => {
     const user = await gameMaster()
     const worldId = await createWorld()

@@ -137,7 +137,14 @@ export async function storeCatalogues(
 ): Promise<void> {
   await storeDefinitions(NpcDefinition, worldId, scenarioId, catalogues.npcs, trx)
   await storeDefinitions(LocationDefinition, worldId, scenarioId, catalogues.locations, trx)
-  await storeDefinitions(ItemDefinition, worldId, scenarioId, catalogues.items, trx)
+  await storeDefinitions(
+    ItemDefinition,
+    worldId,
+    scenarioId,
+    /** Written either way, so an item no longer hidden is shown again. */
+    catalogues.items.map((item) => ({ ...item, hidden: item.hidden ?? false })),
+    trx
+  )
   await storeDefinitions(LoreFragment, worldId, scenarioId, catalogues.lore, trx)
 }
 
@@ -325,6 +332,7 @@ export async function readCatalogues(
       weapon: item.weapon,
       armor: item.armor,
       initialHolder: item.initialHolder,
+      ...(item.hidden ? { hidden: true } : {}),
     })),
     lore: lore.map(loreFragmentOf),
   }

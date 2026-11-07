@@ -101,6 +101,11 @@ export type ValidationMeta = {
   itemsInScene: string[]
   /** The items of the scene extraction may move, destroy or equip, and who holds them. */
   sceneItems: SceneItem[]
+  /**
+   * Closed list: the items hidden in the place the scene began in, by handle —
+   * to be found before they are taken, moved or destroyed.
+   */
+  hiddenItems: string[]
   /** Closed list: the definitions an item may come into being from. */
   creatableItems: string[]
   /** What the rules of the inventory need to know of each definition. */
@@ -319,6 +324,11 @@ const extractionValidator = vine.withMetaData<ValidationMeta>().create({
     .optional(),
   passages_unlocked: vine
     .array(vine.enum((field) => limitsOf(field).lockedExits))
+    .distinct()
+    .optional(),
+  /** Hidden items of the place the scene began in, by handle. Optional on the wire: none. */
+  items_discovered: vine
+    .array(vine.enum((field) => limitsOf(field).hiddenItems))
     .distinct()
     .optional(),
 })
@@ -618,10 +628,12 @@ export async function validateExtraction(
     discovered: output.passages_discovered ?? [],
     unlocked: output.passages_unlocked ?? [],
   }
+  const discovered = output.items_discovered ?? []
   const reasons = [
     ...movementReasons(output.movement),
     ...wayReasons(output.movement, passages, meta),
     ...effectReasons(output, meta),
+    ...hiddenItemReasons(output, discovered, meta),
     ...items.reasons,
   ]
 
@@ -634,6 +646,7 @@ export async function validateExtraction(
     ...items.effects,
     passages_discovered: passages.discovered,
     passages_unlocked: passages.unlocked,
+    items_discovered: discovered,
     movement: toMovement(output.movement),
     npcs_entered: output.npcs_entered.map((entry) => ({ ...entry, name: entry.name ?? null })),
   }
@@ -677,12 +690,49 @@ function wayReasons(
   ]
 }
 
+/**
+ * A hidden item is taken, moved or destroyed only once found — in this
+ * narration or before — as a hidden exit is gone through.
+ */
+function hiddenItemReasons(
+  output: Pick<RawExtraction, 'items_transferred' | 'items_destroyed'>,
+  discovered: string[],
+  meta: ValidationMeta
+): RejectionReason[] {
+  const unseen = (item: string) => meta.hiddenItems.includes(item) && !discovered.includes(item)
+  const refuse = (field: string, item: string) =>
+    reason(
+      field,
+      'hidden_item',
+      `"${item}" lies hidden: it has to be found first, in items_discovered.`
+    )
+
+  return [
+    ...output.items_transferred.flatMap((entry, index) =>
+      entry.from.holder === 'location' && unseen(entry.item)
+        ? [refuse(`items_transferred.${index}.item`, entry.item)]
+        : []
+    ),
+    ...output.items_destroyed.flatMap((entry, index) =>
+      entry.holder.holder === 'location' && unseen(entry.item)
+        ? [refuse(`items_destroyed.${index}.item`, entry.item)]
+        : []
+    ),
+  ]
+}
+
 type RawExtraction = Omit<
   TurnEffects,
-  'movement' | 'npcs_entered' | 'passages_discovered' | 'passages_unlocked' | ItemFields
+  | 'movement'
+  | 'npcs_entered'
+  | 'passages_discovered'
+  | 'passages_unlocked'
+  | 'items_discovered'
+  | ItemFields
 > & {
   passages_discovered?: string[]
   passages_unlocked?: string[]
+  items_discovered?: string[]
   movement: FlatMovement | null
   npcs_entered: { definition: string; descriptor: string | null; name?: string | null }[]
   items_created: (Omit<TurnEffects['items_created'][number], 'holder'> & {

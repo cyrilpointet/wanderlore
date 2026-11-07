@@ -37,6 +37,12 @@ export type HeldItem = {
 }
 
 /**
+ * An item lying in a place: in sight, or hidden there until someone finds it
+ * — only a place hides, whoever holds an item knows it is there.
+ */
+export type PlacedItem = HeldItem & { hidden: boolean }
+
+/**
  * The items a turn can see and move: the character's, those of the people
  * present, and those left in the place the game stands in. Anything else
  * follows its holder out of the scene.
@@ -45,7 +51,7 @@ export type ItemsInScene = {
   character: HeldItem[]
   /** Only the people present who hold something, in the order they came in. */
   npcs: { handle: string; items: HeldItem[] }[]
-  location: HeldItem[]
+  location: PlacedItem[]
 }
 
 /**
@@ -197,8 +203,9 @@ export async function transferItem(
     return item
   }
 
+  /** Handed over, an item is no longer hidden: whoever moved it knows where it is. */
   if (!isStackable(definition)) {
-    item.merge({ ...holderColumns(to), state: 'carried' })
+    item.merge({ ...holderColumns(to), state: 'carried', hidden: false })
     await item.save()
 
     return item
@@ -207,7 +214,7 @@ export async function transferItem(
   const target = await findStack(item.sessionId, to, item.definitionReference, client)
 
   if (target === null && quantity === item.quantity) {
-    item.merge({ ...holderColumns(to), state: 'carried' })
+    item.merge({ ...holderColumns(to), state: 'carried', hidden: false })
     await item.save()
 
     return item
@@ -310,7 +317,7 @@ export async function unequipItem(item: InventoryItem): Promise<void> {
  * Brings into the game the unique items a character or a place holds from
  * the start, the first time the game meets them. Safe to call on every
  * meeting: a unique item that already exists — wherever it went since — is
- * never created again.
+ * never created again. One the content hides lies hidden in its place.
  */
 export async function placeInitialItems(
   world: WorldDefinition,
@@ -337,15 +344,20 @@ export async function placeInitialItems(
       .first()
 
     if (existing === null) {
-      placed.push(
-        await createItem(
-          world,
-          sessionId,
-          { definition: definition.reference, descriptor: null, quantity: 1 },
-          holder,
-          client
-        )
+      const item = await createItem(
+        world,
+        sessionId,
+        { definition: definition.reference, descriptor: null, quantity: 1 },
+        holder,
+        client
       )
+
+      if (definition.hidden && holder.type === 'location') {
+        item.hidden = true
+        await item.save()
+      }
+
+      placed.push(item)
     }
   }
 
@@ -427,8 +439,21 @@ export async function itemsInScene(
         (item) =>
           scene.locationInstanceId !== null && item.locationInstanceId === scene.locationInstanceId
       )
-      .map(heldItemOf),
+      .map((item) => ({ ...heldItemOf(item), hidden: item.hidden })),
   }
+}
+
+/**
+ * A hidden item found: in sight from now on, where it lies. The only way it
+ * comes out of hiding without moving.
+ */
+export async function discoverItem(item: InventoryItem): Promise<void> {
+  if (!item.hidden) {
+    return
+  }
+
+  item.hidden = false
+  await item.save()
 }
 
 /**

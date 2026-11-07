@@ -32,6 +32,7 @@ const OWN: Record<string, string[]> = {
     'weapon',
     'armor',
     'initialHolder',
+    'hidden',
   ],
   lore_fragments: ['kind', 'content', 'tags', 'secret'],
 }

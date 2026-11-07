@@ -39,6 +39,7 @@ const META: ValidationMeta = {
     },
     { item: 'rope_1', definition: 'rope', holder: { holder: 'location' }, quantity: 1 },
   ],
+  hiddenItems: [],
   creatableItems: [
     'improvised_weapon',
     'common_sword',
@@ -1002,6 +1003,84 @@ test.group('Turn validator | exits and the ways they open', () => {
 
     assert.deepEqual(output.passages_discovered, [])
     assert.deepEqual(output.passages_unlocked, [])
+  })
+})
+
+test.group('Turn validator | hidden items', () => {
+  /** The queen's studs lie hidden in the room, where the rope lies in sight. */
+  const STUDS_HIDDEN: ValidationMeta = {
+    ...META,
+    sceneItems: [
+      ...META.sceneItems,
+      {
+        item: 'queens_diamond_studs',
+        definition: 'queens_diamond_studs',
+        holder: { holder: 'location' },
+        quantity: 1,
+      },
+    ],
+    hiddenItems: ['queens_diamond_studs'],
+  }
+  const takeTheStuds = {
+    item: 'queens_diamond_studs',
+    from: { holder: 'location' as const, handle: null },
+    to: { holder: 'character' as const, handle: null },
+    quantity: 1,
+  }
+
+  test('a hidden item found and picked up in the same narration', async ({ assert }) => {
+    const output = await validateExtraction(
+      extraction({
+        items_discovered: ['queens_diamond_studs'],
+        items_transferred: [takeTheStuds],
+      }),
+      STUDS_HIDDEN
+    )
+
+    assert.deepEqual(output.items_discovered, ['queens_diamond_studs'])
+    assert.lengthOf(output.items_transferred, 1)
+  })
+
+  test('rejects taking or destroying a hidden item not found', async ({ assert }) => {
+    const taken = await reject(() =>
+      validateExtraction(extraction({ items_transferred: [takeTheStuds] }), STUDS_HIDDEN)
+    )
+    const destroyed = await reject(() =>
+      validateExtraction(
+        extraction({
+          items_destroyed: [
+            {
+              item: 'queens_diamond_studs',
+              holder: { holder: 'location', handle: null },
+              quantity: 1,
+            },
+          ],
+        }),
+        STUDS_HIDDEN
+      )
+    )
+
+    assert.deepEqual(fields(taken), ['items_transferred.0.item'])
+    assert.deepEqual(fields(destroyed), ['items_destroyed.0.item'])
+    assert.equal(taken.reasons[0].rule, 'hidden_item')
+    assert.equal(destroyed.reasons[0].rule, 'hidden_item')
+  })
+
+  test('only a hidden item of the place is found', async ({ assert }) => {
+    const error = await reject(() =>
+      validateExtraction(extraction({ items_discovered: ['rope_1'] }), STUDS_HIDDEN)
+    )
+
+    assert.deepEqual(fields(error), ['items_discovered.0'])
+  })
+
+  test('none sent is none', async ({ assert }) => {
+    const answer: Record<string, unknown> = extraction()
+    delete answer.items_discovered
+
+    const output = await validateExtraction(answer, STUDS_HIDDEN)
+
+    assert.deepEqual(output.items_discovered, [])
   })
 })
 

@@ -34,6 +34,7 @@ function delta(overrides: Partial<TurnEffects> = {}): TurnEffects {
     items_unequipped: [],
     passages_discovered: [],
     passages_unlocked: [],
+    items_discovered: [],
     ...overrides,
   }
 }
@@ -378,6 +379,51 @@ test.group('Applying a delta | items', (group) => {
     assert.deepEqual(applied.items.equipped, [
       { item: 'improvised_weapon_1', definition: 'improvised_weapon' },
     ])
+  })
+
+  test('a hidden item found and picked up in the same turn', async ({ assert }) => {
+    const scene = await arrangeScene()
+    const seal = await createItem(
+      THREE_MUSKETEERS,
+      scene.sessionId,
+      { definition: 'cardinal_seal', descriptor: null, quantity: 1 },
+      { type: 'location', id: scene.paris.id }
+    )
+    seal.hidden = true
+    await seal.save()
+
+    const applied = await apply(
+      scene,
+      delta({
+        items_discovered: ['cardinal_seal'],
+        items_transferred: [{ item: 'cardinal_seal', from: location, to: character, quantity: 1 }],
+      })
+    )
+
+    await seal.refresh()
+    assert.isFalse(seal.hidden)
+    assert.equal(seal.characterId, scene.character.id)
+    assert.deepEqual(applied.items.discovered, [
+      { item: 'cardinal_seal', definition: 'cardinal_seal' },
+    ])
+  })
+
+  test('found, a hidden item stays where it lay', async ({ assert }) => {
+    const scene = await arrangeScene()
+    const seal = await createItem(
+      THREE_MUSKETEERS,
+      scene.sessionId,
+      { definition: 'cardinal_seal', descriptor: null, quantity: 1 },
+      { type: 'location', id: scene.paris.id }
+    )
+    seal.hidden = true
+    await seal.save()
+
+    await apply(scene, delta({ items_discovered: ['cardinal_seal'] }))
+
+    await seal.refresh()
+    assert.isFalse(seal.hidden)
+    assert.equal(seal.locationInstanceId, scene.paris.id)
   })
 
   test('someone takes the letter, leaves with it, and comes back with it', async ({ assert }) => {

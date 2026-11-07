@@ -30,6 +30,7 @@
   "invalid_json": "This is not valid JSON.",
   "content_in_use_detail": "Games are played with: {{references}}.",
   "kind_mismatch": "This only belongs to the other kind of definition.",
+  "hidden_out_of_place": "Only an item a place holds when the game starts can be hidden.",
   "unknown_tag": "A tag names no place, person or item of this world.",
   "secret_ambiance": "An ambiance goes to the narrator only: it cannot be secret.",
   "account_suspended": "This account is suspended.",

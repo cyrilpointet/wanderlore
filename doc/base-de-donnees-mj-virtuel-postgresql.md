@@ -150,7 +150,7 @@ Colonnes propres à chaque catalogue :
 |---|---|
 | `npc_definitions` | `generic` (archétype servant aux PNJ improvisés), `default_disposition` (enum `npc_disposition`), `combat` (jsonb : `skills` en pourcentage, `hitPointsMax`, `weapon` — référence d'objet ou null —, et depuis la Phase 10 `damageModifier` — dés comme `+1D4`, ou null — et `armor`, l'armure ordinaire), `initial_location` (référence du lieu unique où un PNJ unique attend au début de la partie ; null sinon, et toujours pour un archétype — CHECK) ; depuis la Phase 11, `schedule` (jsonb, `[]` par défaut : `[{ periods, location, activity, leavesScene, interrupts }]`, chaque période relevant d'une entrée au plus — `schedule_overlap` —, vide pour un archétype — CHECK `npc_definitions_schedule_unique_only`) |
 | `location_definitions` | `parent` (lieu unique englobant ; null pour un archétype, qui reçoit son parent par instance) ; depuis la Phase 7, `exits` (jsonb, `[]` par défaut : `to`, `passage`, `backPassage`, `hidden`, `requires`, `oneWay`, `duration` — voir architecture, section 6quater) et `entrance` (booléen) ; depuis la Phase 11, `period_notes` (jsonb, `[]` par défaut : `[{ periods, note }]`, une ligne d'anglais ajoutée à la description à ces périodes), et sur une sortie `blockedDuring` (périodes où le passage ne se franchit pas) et `blockedReason` |
-| `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `weapon` (jsonb, nullable depuis la Phase 6 : `kind` `melee` / `thrown` / `projectile` — à la place de `skill` depuis la Phase 10, la compétence venant de la catégorie d'action —, `damage` en dés comme `1D6+1`, `damageModifier` `full` / `half` / `none`, `special`), `armor` (int ≥ 0, Phase 10 : ce que l'objet arrête de chaque coup quand il est porté ; 0 pour ce qui n'est pas une armure), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement) |
+| `item_definitions` | `generic`, `stackable`, `equippable`, `modifiers` (jsonb, voir `inventory_items`), `weapon` (jsonb, nullable depuis la Phase 6 : `kind` `melee` / `thrown` / `projectile` — à la place de `skill` depuis la Phase 10, la compétence venant de la catégorie d'action —, `damage` en dés comme `1D6+1`, `damageModifier` `full` / `half` / `none`, `special`), `armor` (int ≥ 0, Phase 10 : ce que l'objet arrête de chaque coup quand il est porté ; 0 pour ce qui n'est pas une armure), `initial_holder` (jsonb `{ holder: npc \| location, reference }`, pour un unique seulement), `hidden` (bool, hors phase, novembre 2026 : un unique détenu au départ par un lieu, hors de vue jusqu'à ce qu'une fouille le trouve — CHECK : seulement un unique au détenteur de départ `location`) |
 
 - Unicité de la référence parmi les définitions de l'univers, et parmi celles de chaque
   scénario (index uniques partiels) : une définition de scénario peut reprendre la référence
@@ -351,6 +351,7 @@ lieux ; en base depuis la Phase 5 (`item_definitions`, section 2). Chaque défin
 | `equippable` | peut passer `equipped` |
 | `modifiers` | modificateurs fixes, chacun ciblant une compétence ou les dégâts, avec une condition |
 | `initial_holder` | pour un unique seulement, facultatif : le PNJ unique ou le lieu unique qui le détient au départ |
+| `hidden` | hors phase (novembre 2026) : un unique qu'un lieu détient au départ, caché là jusqu'à ce qu'on le trouve |
 
 **Schéma de la table** (tranché à l'ouverture de la Phase 4) :
 
@@ -366,6 +367,7 @@ lieux ; en base depuis la Phase 5 (`item_definitions`, section 2). Chaque défin
 | `descriptor` | text, nullable | description courte en anglais d'un objet improvisé, réservée au narrateur, jamais traduite ni affichée |
 | `quantity` | int | ≥ 1 tant que l'objet existe, toujours 1 pour un exemplaire non empilable ; 0 une fois `gone` (CHECK) |
 | `state` | enum `item_state` | `carried` / `equipped` / `gone` |
+| `hidden` | bool | hors phase (novembre 2026) : caché dans le lieu qui le détient, pas encore trouvé — posé au placement initial d'une définition cachée, levé par une découverte ou un transfert ; CHECK : seulement avec un lieu pour détenteur |
 | `created_at` / `updated_at` | timestamptz | — |
 
 - **Exactement un détenteur** (CHECK), sauf pour un objet `gone`. Trois vraies clés étrangères
