@@ -828,6 +828,25 @@ Tranchés pendant l'implémentation du premier lot (epic `KAN-151`) :
 - **Le seeder de contenu ne supprime pas une profession qu'un personnage suit** : il réécrit les autres, idempotent par référence comme le reste du contenu.
 - **Pas de trace du contexte de chaque étape dans `turn_log`** : le journal n'en garde toujours que les sorties, et nom, genre et profession se relisent sur la fiche.
 
+### Décisions de cadrage — conditions de fin de partie
+
+Tranchées à l'ouverture du deuxième lot (2026-11-06).
+
+- **Victoire et défaite sont des effets d'événement du scénario**, sur le modèle de la Phase 11 : un nouvel effet (`game_ended`, `outcome` : `completed` ou `failed`) clôt la partie — gagnée (la princesse est sauvée) ou échouée (la princesse est dévorée par l'ogre). Tout le reste fonctionne comme pour les autres événements : déclenchement par le backend, jamais proposé par le LLM, une fois au plus, `unless`, délai, chaîne d'événements d'état. Toutes les formes de déclenchement restent permises :
+  - **échéance** (`at`) — « survivre jusqu'au troisième jour » ;
+  - **conditions d'état** — « arriver à la sortie du labyrinthe » (`location_visited`), « remettre la lettre à son destinataire » (`item_held_by`).
+- **Chaque scénario a au moins un événement de victoire** (un effet `game_ended` à `completed`), vérifié par `checkScenario` — à la publication comme au lancement de chaque partie. Un événement de défaite est facultatif.
+- **Mort du personnage** : un personnage à 0 PV ou moins meurt, et la partie passe en échec (`failed`). **Révise la Phase 10**, où il revenait à 1 PV, hors de combat pour une heure. Quelle que soit la source des PV perdus (riposte, maladresse, blessure hors combat lue par l'extraction), et **sur le coup** : ni état mourant ni premiers soins pour le personnage, contrairement aux PNJ.
+- **Raison de la fin** : `sessions.end_reason` — `victory`, `defeat` (événement de défaite), `death`, `abandoned` (l'abandon du premier lot). `completed` va avec `victory`, `failed` avec les trois autres.
+- **Une fin par tour, par priorité** : la mort, puis la défaite, puis la victoire. Une fois la partie close, plus rien ne s'applique dans le tour — ni les passes suivantes de la chaîne d'événements, ni les emplois du temps.
+- **Un appel d'épilogue** raconte la fin : la plupart des victoires viennent d'un événement d'état, évalué après l'extraction, quand la narration du tour est déjà diffusée et ne peut plus la raconter.
+  - **Pour toute fin sauf l'abandon**, et la narration du tour ne reçoit jamais la fin, même quand elle la connaîtrait déjà (mort dans le round, échéance) : une seule règle, un appel par partie.
+  - **Ce qu'il reçoit** : la description de l'événement de fin (ou la mort), la raison de la fin, le personnage, `story_so_far` et les derniers tours, la langue du joueur — rien de mécanique.
+  - **Dans le tour final** : appelé après le commit, en streaming comme la narration, dans le budget de 3 minutes du tour.
+  - **Son échec n'annule pas la fin** : la partie reste close, l'écran de fin s'affiche sans récit. Ni nouvelle tentative ni retry.
+  - **Stocké sur le tour final**, à côté de sa narration, pour que le journal le relise naturellement.
+  - **Une étape à part** (`epilogue`), avec son system prompt statique, son coût compté par tour comme les autres étapes.
+
 ### Contenu
 
 - Progression du personnage : tests d'expérience et jets d'amélioration du BRP, en fin de scénario.
