@@ -1,5 +1,5 @@
 import { SKILL_CATEGORIES, type SkillCategory } from '@/api/enums'
-import type { Character, InventoryItem, LabelledValue } from './queries'
+import type { Character, InventoryItem, LabelledValue, Turn } from './queries'
 
 /**
  * Purely visual derivations — layout, never game logic (front spec,
@@ -31,6 +31,15 @@ export function paragraphs(narration: string): string[] {
     .split(/\n+/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean)
+}
+
+/**
+ * What the game master told in a turn, as it is read aloud and announced:
+ * the narration, then — on the turn that ended the game — the epilogue.
+ */
+export function toldText(turn: Pick<Turn, 'narration' | 'gameEnd'>): string | null {
+  const told = [turn.narration, turn.gameEnd?.epilogue].filter(Boolean).join('\n\n')
+  return told || null
 }
 
 /** How many hit-point pips are drawn filled: the points left, within the pips there are. */

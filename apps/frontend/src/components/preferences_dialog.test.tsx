@@ -32,7 +32,13 @@ describe('Preferences', () => {
       theme: 'light',
       narrationVoice: false,
       autoRoll: true,
-      animations: { dice: true, narration: false, hitPoints: true, transitions: false },
+      animations: {
+        dice: true,
+        narration: false,
+        hitPoints: true,
+        ending: false,
+        transitions: false,
+      },
     })
 
     expect(markup).toMatch(/checked="" value="light"/)
@@ -42,6 +48,7 @@ describe('Preferences', () => {
     expect(switchFor(markup, 'Rolling dice')).toContain('aria-checked="true"')
     expect(switchFor(markup, 'Story fading in')).toContain('aria-checked="false"')
     expect(switchFor(markup, 'Hit point gauge')).toContain('aria-checked="true"')
+    expect(switchFor(markup, 'End of a game stamped')).toContain('aria-checked="false"')
     expect(switchFor(markup, 'Panels and pages')).toContain('aria-checked="false"')
   })
 

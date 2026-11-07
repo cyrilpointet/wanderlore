@@ -4,10 +4,16 @@
  * namespace (front spec, principle 2). Content references (skills, locations…)
  * are not here — their labels come from the backend.
  */
-/** A game ends `completed` or `failed` — abandoned, for now — and is then only read. */
+/** A game ends `completed` or `failed`, and is then only read. */
 export const GAME_STATUSES = ['in_progress', 'paused', 'completed', 'failed'] as const
+/**
+ * Why a game ended: won (`completed`), or lost by an event of the scenario,
+ * by the character's death or by giving it up (`failed`).
+ */
+export const END_REASONS = ['victory', 'defeat', 'death', 'abandoned'] as const
 export const TURN_STATUSES = ['pending', 'completed', 'failed'] as const
-export const STEPS = ['arbitration', 'narration'] as const
+/** The epilogue only on the turn that ends the game, after its narration. */
+export const STEPS = ['arbitration', 'narration', 'epilogue'] as const
 export const RESULTS = ['success', 'failure'] as const
 /** The five degrees of a BRP roll. */
 export const DEGREES = ['critical', 'special', 'success', 'failure', 'fumble'] as const
@@ -70,6 +76,9 @@ export const PERIODS = [
 ] as const
 
 export type GameStatus = (typeof GAME_STATUSES)[number]
+export type EndReason = (typeof END_REASONS)[number]
+/** How a turn can end a game: giving up is no turn. */
+export type GameEndReason = Exclude<EndReason, 'abandoned'>
 export type Gender = (typeof GENDERS)[number]
 export type ScenarioStatus = (typeof SCENARIO_STATUSES)[number]
 export type TurnStatus = (typeof TURN_STATUSES)[number]

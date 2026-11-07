@@ -1,4 +1,4 @@
-import type { Period } from '@/api/enums'
+import { isOver, type GameEndReason, type Period } from '@/api/enums'
 import type { ContentLabel } from '@/api/types'
 import type { Character, Game } from './queries'
 
@@ -21,4 +21,18 @@ export function withCompletedTurn(
     period: period ?? game.period,
     pendingTurn: null,
   }
+}
+
+/**
+ * The game as the turn that ended it leaves it: closed, for the reason the
+ * turn gave, until the game read again brings the rest — status and end date
+ * — from the backend.
+ */
+export function withGameEnd(game: Game, reason: GameEndReason): Game {
+  return { ...game, endReason: reason, pendingTurn: null }
+}
+
+/** Whether the game is over: then read, never played. */
+export function isClosed(game: Pick<Game, 'status' | 'endReason'>): boolean {
+  return isOver(game.status) || game.endReason !== null
 }

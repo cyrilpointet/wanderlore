@@ -11,7 +11,7 @@ import type { ThemeChoice } from './theme'
  */
 
 /** The animations a player can turn off, one by one. */
-export const ANIMATIONS = ['dice', 'narration', 'hitPoints', 'transitions'] as const
+export const ANIMATIONS = ['dice', 'narration', 'hitPoints', 'ending', 'transitions'] as const
 export type Animation = (typeof ANIMATIONS)[number]
 
 export type Preferences = {
@@ -27,7 +27,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   theme: 'light',
   narrationVoice: true,
   autoRoll: false,
-  animations: { dice: true, narration: true, hitPoints: true, transitions: true },
+  animations: { dice: true, narration: true, hitPoints: true, ending: true, transitions: true },
 }
 
 /** What the store needs of `localStorage`, so it can be tested without a browser. */

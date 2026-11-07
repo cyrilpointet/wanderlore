@@ -46,12 +46,14 @@ const FREE: CharacterDetail = {
       id: 'game-3',
       status: 'failed',
       endedAt: '2026-10-10T10:00:00Z',
+      endReason: 'death',
       scenario: { id: 'scenario-1', title: 'The Golden Lion' },
     },
     {
       id: 'game-2',
       status: 'completed',
       endedAt: '2026-10-05T10:00:00Z',
+      endReason: 'victory',
       scenario: { id: 'scenario-9', title: 'The Grain Road' },
     },
   ],
@@ -138,9 +140,43 @@ describe('CharacterView', () => {
     expect(html).toContain('Past games')
     expect(html).toContain('href="/games/game-3"')
     expect(html).toContain('href="/games/game-2"')
-    expect(html).toContain('Completed')
     expect(html).toContain('Delete the game of The Golden Lion')
     expect(html).not.toContain('Delete the game of The Grain Road')
+  })
+
+  test.each([
+    ['victory', 'completed', 'Victory', 'text-success'],
+    ['defeat', 'failed', 'Defeat', 'text-danger'],
+    ['death', 'failed', 'Death', 'text-danger'],
+    ['abandoned', 'failed', 'Abandoned', 'text-danger'],
+  ] as const)(
+    'a past game ended by %s is stamped with its reason',
+    (reason, status, stamp, tone) => {
+      const html = render({
+        ...FREE,
+        pastGames: [{ ...FREE.pastGames[0]!, status, endReason: reason }],
+      })
+
+      expect(html).toMatch(new RegExp(`<span class="[^"]*${tone}[^"]*">${stamp}</span>`))
+      expect(html).not.toContain('Failed<')
+      expect(html).not.toContain('Completed<')
+    }
+  )
+
+  test('a past game without a reason keeps its outcome', () => {
+    const html = render({
+      ...FREE,
+      pastGames: [{ ...FREE.pastGames[0]!, status: 'failed', endReason: null }],
+    })
+
+    expect(html).toContain('>Failed</span>')
+  })
+
+  test('a scenario won is no longer offered: the page reads well with none left', () => {
+    const html = render({ ...FREE, scenarios: [] })
+
+    expect(html).toContain('No scenario left to play in this world.')
+    expect(html).toContain('Victory')
   })
 
   test('says why a game could not start', () => {

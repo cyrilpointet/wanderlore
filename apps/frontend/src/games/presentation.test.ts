@@ -1,6 +1,13 @@
 import { describe, expect, test } from 'vitest'
 
-import { filledPips, groupSkills, paragraphs, percentileDice, showsQuantity } from './presentation'
+import {
+  filledPips,
+  groupSkills,
+  paragraphs,
+  percentileDice,
+  showsQuantity,
+  toldText,
+} from './presentation'
 
 describe('groupSkills', () => {
   test('puts each skill under its BRP category, in the order of the categories', () => {
@@ -66,5 +73,28 @@ describe('percentileDice', () => {
 
   test('reads a hundred as 00 and 0, as on the table', () => {
     expect(percentileDice(100)).toEqual({ tens: 0, units: 0 })
+  })
+})
+
+describe('toldText', () => {
+  test('the narration of an ordinary turn', () => {
+    expect(toldText({ narration: 'He nods.', gameEnd: null })).toBe('He nods.')
+    expect(toldText({ narration: null, gameEnd: null })).toBeNull()
+  })
+
+  test('the narration, then the epilogue of the turn that ended the game, a paragraph apart', () => {
+    const told = toldText({
+      narration: 'He nods.',
+      gameEnd: { reason: 'victory', epilogue: 'Years later…' },
+    })
+
+    expect(told).toBe('He nods.\n\nYears later…')
+    expect(paragraphs(told!)).toEqual(['He nods.', 'Years later…'])
+  })
+
+  test('the narration alone when the epilogue could not be told', () => {
+    expect(toldText({ narration: 'He nods.', gameEnd: { reason: 'death', epilogue: null } })).toBe(
+      'He nods.'
+    )
   })
 })

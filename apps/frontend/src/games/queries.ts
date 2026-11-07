@@ -9,6 +9,8 @@ import type {
   DefenseOutcome,
   Degree,
   Difficulty,
+  EndReason,
+  GameEndReason,
   GameStatus,
   Gender,
   ItemChange,
@@ -30,6 +32,8 @@ type GameHeader = {
   lastActivityAt: string
   /** Set once the game is over, `failed` or `completed`. */
   endedAt: string | null
+  /** Why it ended, set with `endedAt`: `victory` goes with `completed`, the others with `failed`. */
+  endReason: EndReason | null
   /** The character who plays it: the game screen leads back to their page. */
   characterId: string
   world: ContentLabel
@@ -161,6 +165,18 @@ export type Turn = {
     items: ItemChangeEffect[]
   } | null
   failure: { code: string; message: string } | null
+  /**
+   * Set on the completed turn that ended the game, and only there: why, and
+   * the epilogue that tells the end — null when it could not be told, the end
+   * standing all the same.
+   */
+  gameEnd: GameEnd | null
+}
+
+/** How a turn ended the game. Giving a game up is no turn: it has no epilogue. */
+export type GameEnd = {
+  reason: GameEndReason
+  epilogue: string | null
 }
 
 export const gameQuery = (gameId: string) =>

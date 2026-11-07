@@ -65,6 +65,7 @@ const TOLD: Extract<TurnState, { status: 'in_progress' }> = {
   step: 'narration',
   rolls: [ROLL],
   narration: NARRATION,
+  epilogue: null,
 }
 
 const COMPLETED: Turn = {
@@ -76,6 +77,7 @@ const COMPLETED: Turn = {
   narration: NARRATION,
   effects: { hitPointsDelta: 0, movement: null, items: [] },
   failure: null,
+  gameEnd: null,
 }
 
 function reveal(...actions: RevealAction[]): RevealState {
@@ -236,5 +238,53 @@ describe('live roll | a round of combat', () => {
 
     expect(waitsForDice(reveal(BOTH, ...thrown), completion)).toBe(true)
     expect(waitsForDice(reveal(BOTH, ...thrown, ...thrown), completion)).toBe(false)
+  })
+})
+
+describe('live roll | the turn that ends the game', () => {
+  const EPILOGUE = 'Years later, Paris still tells of the Gascon who saved the queen.'
+  const ENDING: Extract<TurnState, { status: 'in_progress' }> = {
+    ...TOLD,
+    step: 'epilogue',
+    epilogue: EPILOGUE,
+  }
+  const completion: Completion = {
+    turn: { ...COMPLETED, gameEnd: { reason: 'victory', epilogue: EPILOGUE } },
+  }
+
+  test('its epilogue, written while the dice wait, is kept back with the narration', () => {
+    const markup = render(ENDING, STAGED)
+
+    expect(markup).toContain('Roll the dice')
+    expect(markup).not.toContain(NARRATION)
+    expect(markup).not.toContain(EPILOGUE)
+    expect(markup).not.toContain('The end of the story')
+    expect(markup).not.toContain('how it ends')
+  })
+
+  test('over before its dice, it waits for them: neither the end nor the epilogue is told', () => {
+    expect(waitsForDice(STAGED, completion)).toBe(true)
+    expect(waitsForDice(reveal(received(), { type: 'throw' }), completion)).toBe(true)
+
+    const markup = render(heldInFlight(completion), STAGED)
+    expect(markup).not.toContain(EPILOGUE)
+    expect(markup).not.toContain('Victory')
+    expect(markup).not.toContain('The end of the story')
+  })
+
+  test('the dice thrown, the epilogue follows the narration — the stamp comes with the turn as persisted', () => {
+    const markup = render(ENDING, REVEALED)
+
+    expect(markup.indexOf(NARRATION)).toBeLessThan(markup.indexOf(EPILOGUE))
+    expect(markup).toContain('The end of the story')
+    expect(markup).not.toContain('Victory')
+    expect(waitsForDice(REVEALED, completion)).toBe(false)
+  })
+
+  test('the epilogue announced, nothing written yet: the game master tells how it ends', () => {
+    const markup = render({ ...ENDING, epilogue: '' }, initialRevealState)
+
+    expect(markup).toContain(NARRATION)
+    expect(markup).toContain('The game master tells how it ends')
   })
 })

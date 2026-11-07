@@ -8,7 +8,7 @@ import type { Character, Roll, Turn } from './queries'
  * ```
  * idle ──submit──▶ submitting ──202──▶ in_progress ──turn_completed──▶ idle
  *                     │                   │   ▲
- *                     │                   │   └─ step_started / roll_resolved / narration_chunk
+ *                     │                   │   └─ step_started / roll_resolved / narration_chunk / epilogue_chunk
  *                     │                   └──turn_failed──▶ failed ──retry──▶ submitting
  *                     └──network / 4xx / 5xx──▶ submit_failed ──retry──▶ submitting
  * ```
@@ -47,6 +47,13 @@ export type TurnState =
        * than the waiting message.
        */
       narration: string | null
+      /**
+       * The epilogue of a turn that ends the game, written after its
+       * narration and provisional like it, until `turn_completed` brings the
+       * persisted one in `gameEnd`. `null` while none is being written, or
+       * when the narration is not followed live: same reason, same rule.
+       */
+      epilogue: string | null
     }
   | { status: 'failed'; submission: Submission; rolls: Roll[]; failure: Failure }
   | {
@@ -68,6 +75,11 @@ export type TurnMessage = { turnId: string; idempotencyKey: string | null } & (
   | ({ event: 'roll_resolved' } & Roll)
   /** A fragment of the narration as it is written, to append to what came before. */
   | { event: 'narration_chunk'; text: string }
+  /**
+   * A fragment of the epilogue, once the turn that ended the game is told —
+   * after its narration, and never followed by `turn_failed`.
+   */
+  | { event: 'epilogue_chunk'; text: string }
   /** The turn as persisted, the sheet, and where the game now stands. */
   | {
       event: 'turn_completed'
@@ -116,7 +128,13 @@ export function isBusy(state: TurnState): boolean {
 /** Changes whenever the turn in flight shows something new: the journal follows it. */
 export function progressKey(state: TurnState): string {
   if (state.status !== 'in_progress') return state.status
-  return [state.status, state.step, state.rolls.length, state.narration?.length].join(':')
+  return [
+    state.status,
+    state.step,
+    state.rolls.length,
+    state.narration?.length,
+    state.epilogue?.length,
+  ].join(':')
 }
 
 /**
@@ -175,6 +193,7 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
             step: null,
             rolls: [],
             narration: '',
+            epilogue: null,
           },
           action.turn
         )
@@ -210,6 +229,7 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
         step: null,
         rolls: action.turn.rolls,
         narration: null,
+        epilogue: null,
       }
 
     case 'ended':
@@ -233,11 +253,12 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
           step: null,
           rolls: action.turn.rolls,
           narration: null,
+          epilogue: null,
         }
       }
       if (state.status === 'in_progress' && state.submission.turnId === action.turn.id) {
         // Read back because events may have been lost: the fragments seen so far may have holes.
-        return settle({ ...state, narration: null }, action.turn)
+        return settle({ ...state, narration: null, epilogue: null }, action.turn)
       }
       return state
 
@@ -262,10 +283,15 @@ function onMessage(state: TurnState, message: TurnMessage): TurnState {
           step: null,
           rolls: [],
           narration: '',
+          epilogue: null,
         }
 
   switch (message.event) {
     case 'step_started':
+      if (message.step === 'epilogue') {
+        // Followed live only when the narration was: a text with holes is worse than none.
+        return { ...current, step: message.step, epilogue: current.narration === null ? null : '' }
+      }
       return { ...current, step: message.step }
     case 'roll_resolved':
       // Up to two in a turn, in the order they were made: each joins the ones before.
@@ -291,6 +317,9 @@ function onMessage(state: TurnState, message: TurnMessage): TurnState {
     case 'narration_chunk':
       if (current.narration === null) return current
       return { ...current, narration: current.narration + message.text }
+    case 'epilogue_chunk':
+      if (current.narration === null) return current
+      return { ...current, epilogue: (current.epilogue ?? '') + message.text }
     case 'turn_completed':
       return initialTurnState
     case 'turn_failed':

@@ -1,7 +1,14 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
-import type { Characteristic, GameStatus, Gender, ScenarioStatus, SkillCategory } from '@/api/enums'
+import type {
+  Characteristic,
+  EndReason,
+  GameStatus,
+  Gender,
+  ScenarioStatus,
+  SkillCategory,
+} from '@/api/enums'
 import type { ContentLabel } from '@/api/types'
 import type { Game, LabelledValue } from '@/games/queries'
 
@@ -55,6 +62,8 @@ export type PastGame = {
   id: string
   status: Extract<GameStatus, 'failed' | 'completed'>
   endedAt: string | null
+  /** Won (`victory`), or failed by defeat, death or abandon. */
+  endReason: EndReason | null
   scenario: { id: string; title: string }
 }
 

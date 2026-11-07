@@ -19,7 +19,8 @@ export type Completion = {
  * Whether a finished turn must wait for its dice before it is recorded — all
  * of them, up to the last roll of the round. The turn can be over before the
  * player has thrown them (front spec, section 5.3.7): recorded at once, its narration would be read aloud and its hit
- * points shown in the header, giving the outcome away before the dice.
+ * points shown in the header, giving the outcome away before the dice — and,
+ * on the turn that ends the game, its epilogue and the end itself.
  */
 export function waitsForDice(reveal: RevealState, completion: Completion): boolean {
   return holdsNarration(reveal, completion.turn.id)
@@ -34,8 +35,9 @@ export function heldInFlight({ turn }: Completion): Extract<TurnState, { status:
   return {
     status: 'in_progress',
     submission: { playerInput: turn.playerInput, idempotencyKey: null, turnId: turn.id },
-    step: 'narration',
+    step: turn.gameEnd ? 'epilogue' : 'narration',
     rolls: turn.rolls,
     narration: turn.narration,
+    epilogue: turn.gameEnd?.epilogue ?? null,
   }
 }

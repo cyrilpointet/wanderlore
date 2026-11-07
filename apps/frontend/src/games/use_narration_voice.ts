@@ -10,7 +10,8 @@ export const voiceSupported = typeof window !== 'undefined' && 'speechSynthesis'
 
 /**
  * Reads each new narration aloud with the browser's own speech synthesis —
- * nothing is sent anywhere. The player can mute it, from the game header or
+ * nothing is sent anywhere. On the turn that ends the game, the epilogue is
+ * read right after it, like the narration it follows. The player can mute it, from the game header or
  * the preferences: one preference, two ways to it.
  *
  * `narration` changes only when a new turn is recorded: the story already in

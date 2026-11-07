@@ -11,6 +11,7 @@ const GAME: Game = {
   status: 'in_progress',
   lastActivityAt: '2026-10-11T10:00:00Z',
   endedAt: null,
+  endReason: null,
   characterId: 'character-1',
   world: { reference: 'three_musketeers', label: 'The Three Musketeers' },
   scenario: { id: 'scenario-1', title: 'A Gascon in Paris' },
@@ -41,6 +42,7 @@ const TURN: Turn = {
   narration: 'He nods back.',
   effects: null,
   failure: null,
+  gameEnd: null,
 }
 
 const IDLE: EarlierTurns = { remain: true, load: () => {}, loading: false, error: null }
@@ -125,6 +127,74 @@ describe('Journal | a round of combat read back', () => {
     expect(markup).toContain('>Failure · Blow taken</span>')
     expect(markup.indexOf('rolled 23')).toBeLessThan(markup.indexOf('rolled 90'))
     expect(markup).not.toContain('Roll the dice')
+  })
+})
+
+describe('Journal | the turn that ended the game', () => {
+  const EPILOGUE = 'Years later, Paris still tells of the Gascon who saved the queen.'
+
+  test.each([
+    ['victory', 'Victory', 'text-success'],
+    ['defeat', 'Defeat', 'text-danger'],
+    ['death', 'Death', 'text-danger'],
+  ] as const)(
+    'ended by %s: the epilogue after the narration, then the stamp',
+    (reason, stamp, tone) => {
+      const markup = renderToStaticMarkup(
+        <Journal
+          game={{
+            ...GAME,
+            status: reason === 'victory' ? 'completed' : 'failed',
+            endReason: reason,
+          }}
+          turns={[{ ...TURN, gameEnd: { reason, epilogue: EPILOGUE } }]}
+        />
+      )
+
+      expect(markup).toContain('aria-label="The end of the story"')
+      expect(markup.indexOf('He nods back.')).toBeLessThan(markup.indexOf(EPILOGUE))
+      expect(markup.indexOf(EPILOGUE)).toBeLessThan(markup.indexOf(`>${stamp}</span>`))
+      expect(markup).toMatch(new RegExp(`<span class="[^"]*${tone}[^"]*">${stamp}</span>`))
+    }
+  )
+
+  test('without an epilogue — it could not be told — the stamp alone', () => {
+    const markup = renderToStaticMarkup(
+      <Journal
+        game={{ ...GAME, status: 'failed', endReason: 'death' }}
+        turns={[{ ...TURN, gameEnd: { reason: 'death', epilogue: null } }]}
+      />
+    )
+
+    expect(markup).toContain('aria-label="The end of the story"')
+    expect(markup).toContain('>Death</span>')
+    expect(markup).toContain('He nods back.')
+  })
+
+  test('an ordinary turn tells no end', () => {
+    const markup = renderToStaticMarkup(<Journal game={GAME} turns={[TURN]} />)
+
+    expect(markup).not.toContain('The end of the story')
+  })
+
+  test('the end is pressed onto the sheet only when it came while the screen was open', () => {
+    const turns = [{ ...TURN, gameEnd: { reason: 'victory' as const, epilogue: EPILOGUE } }]
+
+    expect(
+      renderToStaticMarkup(<Journal game={GAME} turns={turns} endedTurnId={TURN.id} />)
+    ).toContain('animate-stamp-press')
+    expect(renderToStaticMarkup(<Journal game={GAME} turns={turns} />)).not.toContain(
+      'animate-stamp-press'
+    )
+  })
+
+  test('held for its dice, the epilogue fades in with the narration once they are thrown', () => {
+    const turns = [{ ...TURN, gameEnd: { reason: 'victory' as const, epilogue: EPILOGUE } }]
+    const markup = renderToStaticMarkup(
+      <Journal game={GAME} turns={turns} revealedTurnId={TURN.id} />
+    )
+
+    expect(markup.match(/animate-fade-in/g)).toHaveLength(2)
   })
 })
 

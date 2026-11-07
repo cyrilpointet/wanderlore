@@ -13,6 +13,7 @@ function turn(turnNumber: number): Turn {
     narration: `Narration ${turnNumber}`,
     effects: null,
     failure: null,
+    gameEnd: null,
   }
 }
 

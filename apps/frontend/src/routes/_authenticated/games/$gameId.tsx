@@ -4,12 +4,12 @@ import { createFileRoute, notFound } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { ApiError } from '@/api/client'
-import { isOver } from '@/api/enums'
 import { errorMessage } from '@/i18n/errors'
 import { NotFoundMessage } from '@/components/system_pages'
 import { SHEET } from '@/components/surfaces'
 import { CharacterSheet } from '@/games/character_sheet'
 import { DiceTray } from '@/games/dice_tray'
+import { isClosed } from '@/games/game_cache'
 import { GameHeader } from '@/games/game_header'
 import { Journal } from '@/games/journal'
 import { gameQuery, turnsQuery } from '@/games/queries'
@@ -107,6 +107,7 @@ function GameScreen() {
             }}
             progress={`${progressKey(shown ?? state)}:${reveal.status}`}
             revealedTurnId={turn.released}
+            endedTurnId={turn.ended}
             inFlight={
               shown && (
                 <TurnInFlight state={shown} reveal={reveal} onRetry={turn.retry} onEdit={edit} />
@@ -137,8 +138,12 @@ function GameScreen() {
         onDiceStopped={turn.diceStopped}
         onFolded={turn.folded}
       >
-        {isOver(game.status) ? (
-          <GameOver characterId={game.characterId} name={game.character.name} />
+        {isClosed(game) ? (
+          <GameOver
+            characterId={game.characterId}
+            name={game.character.name}
+            endReason={game.endReason}
+          />
         ) : (
           <Composer
             value={draft}

@@ -6,8 +6,9 @@ import { animates, preferences, systemReducesMotion } from '@/preferences'
 import { CHARACTERS_KEY } from '@/characters/queries'
 import { gameQuery, turnsQuery, type Game, type Turn } from './queries'
 import { channelOf, readTurn, submitTurn } from './turn_api'
-import { withCompletedTurn } from './game_cache'
+import { withCompletedTurn, withGameEnd } from './game_cache'
 import { withTurn } from './journal_pages'
+import { toldText } from './presentation'
 import { waitsForDice, type Completion } from './held_turn'
 import {
   holdsNarration,
@@ -49,7 +50,8 @@ function revealOptions(): RevealOptions {
  * The rolls received live are played out by the reveal machine, one after
  * the other. A turn finished before its dice were all thrown is held —
  * neither in the journal nor on the sheet, nor read aloud — and recorded
- * once they are.
+ * once they are. So is the end of the game, when that turn brought it: the
+ * game closes, and its epilogue is told, only then.
  */
 export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) {
   const queryClient = useQueryClient()
@@ -61,6 +63,8 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
   const [held, setHeld] = useState<Completion | null>(null)
   /** The last turn recorded once its dice were thrown: its narration appears then. */
   const [released, setReleased] = useState<string | null>(null)
+  /** The turn that ended the game while the screen was open: its end is stamped on the sheet. */
+  const [ended, setEnded] = useState<string | null>(null)
   const gameId = game.id
 
   /**
@@ -101,9 +105,20 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
         void queryClient.invalidateQueries({ queryKey: gameQuery(gameId).queryKey, exact: true })
       }
 
+      if (turn.gameEnd) {
+        // Closed at once, the input giving way to the end; the rest is read again.
+        const { reason } = turn.gameEnd
+        queryClient.setQueryData(gameQuery(gameId).queryKey, (current) =>
+          current ? withGameEnd(current, reason) : current
+        )
+        void queryClient.invalidateQueries({ queryKey: gameQuery(gameId).queryKey, exact: true })
+        setEnded(turn.id)
+      }
+
       // The character's card and page show how the game stands.
       void queryClient.invalidateQueries({ queryKey: CHARACTERS_KEY })
-      setNarrated(turn.narration)
+      // The epilogue is told after the narration, as it is written on the sheet.
+      setNarrated(toldText(turn))
     },
     [queryClient, gameId]
   )
@@ -307,6 +322,7 @@ export function useTurn(game: Game, { onAccepted }: { onAccepted: () => void }) 
     reveal,
     held,
     released,
+    ended,
     throwDice,
     diceStopped,
     folded,

@@ -4,7 +4,7 @@ import { PRIMARY_ACTION, SECONDARY_ACTION, SMALL } from '@/components/actions'
 import { CARD } from '@/components/surfaces'
 import { errorMessage } from '@/i18n/errors'
 import { useAnimates } from '@/preferences'
-import { Narration, PlayerAction, RollChips } from './journal'
+import { Ending, Narration, PlayerAction, RollChips } from './journal'
 import { liveRollOf, type RevealState } from './roll_reveal'
 import { emphasisOf } from './turn_errors'
 import type { Failure, TurnState } from './turn_machine'
@@ -20,6 +20,10 @@ import { waitingText } from './waiting'
  * narration kept back here until the dice are thrown — those of every roll of
  * the turn, one after the other (front spec, section 5.3.7). Each roll joins
  * the sheet as a card once its dice have landed.
+ *
+ * On the turn that ends the game, the epilogue follows the narration as it
+ * is written — kept back with it while the dice wait, so the end is never
+ * told before them.
  */
 export function TurnInFlight({
   state,
@@ -58,6 +62,20 @@ export function TurnInFlight({
         !liveRoll &&
         (state.narration ? (
           <Narration text={state.narration} provisional fadeIn={fadeIn} />
+        ) : (
+          <Waiting text={waitingText(state, t)} />
+        ))}
+
+      {state.status === 'in_progress' &&
+        !liveRoll &&
+        state.narration &&
+        state.step === 'epilogue' &&
+        (state.epilogue ? (
+          <Ending
+            gameEnd={{ reason: null, epilogue: state.epilogue }}
+            provisional
+            fadeIn={fadeIn}
+          />
         ) : (
           <Waiting text={waitingText(state, t)} />
         ))}

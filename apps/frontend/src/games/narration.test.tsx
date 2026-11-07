@@ -25,6 +25,7 @@ describe('Narration | fading in', () => {
           step: 'narration',
           rolls: [],
           narration: 'The door creaks.',
+          epilogue: null,
         }}
         reveal={initialRevealState}
         onRetry={() => {}}

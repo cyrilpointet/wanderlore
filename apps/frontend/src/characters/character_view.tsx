@@ -14,6 +14,7 @@ import { Stamp } from '@/components/stamp'
 import { CARD } from '@/components/surfaces'
 import { relativeTime } from '@/format/relative_time'
 import { CharacterStats } from '@/games/character_sheet'
+import { EndStamp } from '@/games/game_over'
 import { IdentityLine, OngoingGame, TabbedCard } from './character_card'
 import type { CharacterDetail, PastGame } from './queries'
 import { ScenarioCard } from './scenario_card'
@@ -145,7 +146,10 @@ export function CharacterView({
   )
 }
 
-/** A game over, stamped with its outcome: read again, and — failed — taken off the page. */
+/**
+ * A game over, stamped with why it ended — won, or failed by defeat, death or
+ * abandon: read again, and — failed — taken off the page.
+ */
 function PastGameRow({ game, onDelete }: { game: PastGame; onDelete: () => void }) {
   const { t } = useTranslation('characters')
   const ended = game.endedAt ? relativeTime(new Date(game.endedAt)) : null
@@ -165,9 +169,13 @@ function PastGameRow({ game, onDelete }: { game: PastGame; onDelete: () => void 
           </time>
         )}
       </div>
-      <Stamp tone={game.status === 'failed' ? 'failure' : 'success'}>
-        {t(`gameStatus.${game.status}`, { ns: 'enums' })}
-      </Stamp>
+      {game.endReason ? (
+        <EndStamp reason={game.endReason} />
+      ) : (
+        <Stamp tone={game.status === 'failed' ? 'failure' : 'success'}>
+          {t(`gameStatus.${game.status}`, { ns: 'enums' })}
+        </Stamp>
+      )}
       <div className="flex items-center gap-2">
         <Link
           to="/games/$gameId"

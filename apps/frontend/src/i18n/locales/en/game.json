@@ -92,6 +92,13 @@
   },
   "over": {
     "message": "This game is over.",
+    "victory": "{{name}} saw the story through.",
+    "defeat": "The story ends in defeat for {{name}}.",
+    "death": "{{name}} is dead. The story ends here.",
+    "abandoned": "You abandoned this story.",
     "back": "Back to {{name}}"
+  },
+  "ending": {
+    "label": "The end of the story"
   }
 }

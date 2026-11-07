@@ -5,6 +5,12 @@
     "completed": "Completed",
     "failed": "Failed"
   },
+  "endReason": {
+    "victory": "Victory",
+    "defeat": "Defeat",
+    "death": "Death",
+    "abandoned": "Abandoned"
+  },
   "gender": {
     "female": "Female",
     "male": "Male",
@@ -17,7 +23,8 @@
   },
   "step": {
     "arbitration": "The game master weighs your action",
-    "narration": "The game master tells what happens"
+    "narration": "The game master tells what happens",
+    "epilogue": "The game master tells how it ends"
   },
   "result": {
     "success": "Success",

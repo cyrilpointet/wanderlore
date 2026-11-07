@@ -39,7 +39,7 @@ describe('preferences | reading', () => {
       theme: 'light',
       narrationVoice: true,
       autoRoll: false,
-      animations: { dice: true, narration: true, hitPoints: true, transitions: true },
+      animations: { dice: true, narration: true, hitPoints: true, ending: true, transitions: true },
     })
   })
 
@@ -60,7 +60,13 @@ describe('preferences | reading', () => {
       theme: 'dark',
       narrationVoice: false,
       autoRoll: true,
-      animations: { dice: false, narration: true, hitPoints: true, transitions: true },
+      animations: {
+        dice: false,
+        narration: true,
+        hitPoints: true,
+        ending: true,
+        transitions: true,
+      },
     })
   })
 
@@ -140,7 +146,13 @@ describe('preferences | the store', () => {
 describe('preferences | animations', () => {
   const allOff = {
     ...DEFAULT_PREFERENCES,
-    animations: { dice: false, narration: false, hitPoints: false, transitions: false },
+    animations: {
+      dice: false,
+      narration: false,
+      hitPoints: false,
+      ending: false,
+      transitions: false,
+    },
   }
 
   test('play as the player chose while the system says nothing', () => {

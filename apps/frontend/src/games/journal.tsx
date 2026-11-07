@@ -6,8 +6,9 @@ import { Stamp } from '@/components/stamp'
 import { CARD, LABEL } from '@/components/surfaces'
 import { failureMessage } from '@/i18n/errors'
 import { useAnimates } from '@/preferences'
+import { EndStamp } from './game_over'
 import { paragraphs } from './presentation'
-import type { Game, ItemChangeEffect, Roll, Turn } from './queries'
+import type { Game, GameEnd, ItemChangeEffect, Roll, Turn } from './queries'
 import { cardLine, damageLine, rollText, stampText } from './roll_text'
 import { useStickToBottom } from './use_stick_to_bottom'
 
@@ -34,6 +35,7 @@ export function Journal({
   inFlight,
   progress,
   revealedTurnId,
+  endedTurnId,
 }: {
   game: Game
   turns: Turn[]
@@ -47,9 +49,12 @@ export function Journal({
    * narration appears there, and fades in as any narration does.
    */
   revealedTurnId?: string | null
+  /** The turn that ended the game while the screen was open: its end is pressed onto the sheet. */
+  endedTurnId?: string | null
 }) {
   const { t } = useTranslation('game')
   const fades = useAnimates('narration')
+  const presses = useAnimates('ending')
   // Keyed on the last turn: a page put in front is not news.
   const { ref, hasNew, scrollToBottom } = useStickToBottom<HTMLDivElement>(
     `${turns.at(-1)?.id ?? ''}:${progress ?? ''}`
@@ -95,7 +100,11 @@ export function Journal({
               <ol aria-label={t('journal.label')} className="flex flex-col gap-8">
                 {turns.map((turn) => (
                   <li key={turn.id}>
-                    <TurnEntry turn={turn} fadeIn={fades && turn.id === revealedTurnId} />
+                    <TurnEntry
+                      turn={turn}
+                      fadeIn={fades && turn.id === revealedTurnId}
+                      pressed={presses && turn.id === endedTurnId}
+                    />
                   </li>
                 ))}
                 {inFlight && <li>{inFlight}</li>}
@@ -153,14 +162,51 @@ export function LoadEarlier({
   )
 }
 
-function TurnEntry({ turn, fadeIn }: { turn: Turn; fadeIn: boolean }) {
+function TurnEntry({ turn, fadeIn, pressed }: { turn: Turn; fadeIn: boolean; pressed: boolean }) {
   return (
     <article className="flex flex-col gap-3.5">
       <PlayerAction text={turn.playerInput} />
       <RollChips rolls={turn.rolls} />
       {turn.narration && <Narration text={turn.narration} fadeIn={fadeIn} />}
       {turn.effects && <Effects effects={turn.effects} />}
+      {turn.gameEnd && <Ending gameEnd={turn.gameEnd} fadeIn={fadeIn} pressed={pressed} />}
     </article>
+  )
+}
+
+/**
+ * The end of the story, at the foot of the turn that brought it: the
+ * epilogue in the narration's serif, then why the game ended, stamped across
+ * the sheet. Without an epilogue — it could not be told — the stamp alone.
+ *
+ * While the epilogue is still being written, the reason is not known yet
+ * (`gameEnd.reason` null): the stamp comes with the turn as persisted.
+ */
+export function Ending({
+  gameEnd,
+  provisional = false,
+  fadeIn = false,
+  pressed = false,
+}: {
+  gameEnd: { reason: GameEnd['reason'] | null; epilogue: string | null }
+  provisional?: boolean
+  fadeIn?: boolean
+  pressed?: boolean
+}) {
+  const { t } = useTranslation('game')
+
+  return (
+    <section aria-label={t('ending.label')} className="mt-2 flex flex-col items-center gap-5">
+      <span aria-hidden className="h-0.5 w-[46px] bg-hp" />
+      {gameEnd.epilogue && (
+        <div className="self-stretch">
+          <Narration text={gameEnd.epilogue} provisional={provisional} fadeIn={fadeIn} />
+        </div>
+      )}
+      {gameEnd.reason && (
+        <EndStamp reason={gameEnd.reason} size="large" pressed={pressed} className="-rotate-3" />
+      )}
+    </section>
   )
 }
 

@@ -43,6 +43,7 @@ function turn(overrides: Partial<Turn> = {}): Turn {
     narration: null,
     effects: null,
     failure: null,
+    gameEnd: null,
     ...overrides,
   }
 }
@@ -289,8 +290,9 @@ describe('turn machine — refusals of the submission', () => {
       submission: { playerInput: 'Someone else’s action.', idempotencyKey: null, turnId: 'turn-7' },
       step: null,
       rolls: [],
-      // Picked up halfway: its narration is not followed live.
+      // Picked up halfway: neither its narration nor its epilogue is followed live.
       narration: null,
+      epilogue: null,
     })
   })
 
@@ -466,5 +468,113 @@ describe('turn machine — narration as it is written', () => {
     )
 
     expect(state).toMatchObject({ status: 'in_progress', narration: null })
+  })
+})
+
+describe('turn machine — the turn that ends the game', () => {
+  const narrated = [
+    submit,
+    accepted,
+    on(message({ event: 'step_started', step: 'narration' })),
+    on(message({ event: 'narration_chunk', text: 'The cardinal bows.' })),
+  ]
+  const completed = (gameEnd: Turn['gameEnd']) =>
+    on(
+      message({
+        event: 'turn_completed',
+        turn: turn({ status: 'completed', narration: 'The cardinal bows.', gameEnd }),
+        character: CHARACTER,
+        location: null,
+        period: 'evening',
+      })
+    )
+
+  test('the epilogue starts after the narration, which stays', () => {
+    const state = run(...narrated, on(message({ event: 'step_started', step: 'epilogue' })))
+
+    expect(state).toMatchObject({
+      status: 'in_progress',
+      step: 'epilogue',
+      narration: 'The cardinal bows.',
+      epilogue: '',
+    })
+    expect(isBusy(state)).toBe(true)
+  })
+
+  test('its fragments add up, in order, and the journal follows them', () => {
+    const started = run(...narrated, on(message({ event: 'step_started', step: 'epilogue' })))
+    const state = [
+      on(message({ event: 'epilogue_chunk', text: 'Years later, ' })),
+      on(message({ event: 'epilogue_chunk', text: 'Paris still tells of it.' })),
+    ].reduce(turnReducer, started)
+
+    expect(state).toMatchObject({
+      narration: 'The cardinal bows.',
+      epilogue: 'Years later, Paris still tells of it.',
+    })
+    expect(progressKey(state)).not.toBe(progressKey(started))
+  })
+
+  test('completion hands over to the turn as persisted, its epilogue in `gameEnd`', () => {
+    const state = run(
+      ...narrated,
+      on(message({ event: 'step_started', step: 'epilogue' })),
+      on(message({ event: 'epilogue_chunk', text: 'A provisional end.' })),
+      completed({ reason: 'victory', epilogue: 'Years later, Paris still tells of it.' })
+    )
+
+    expect(state).toEqual(initialTurnState)
+  })
+
+  test('completion without an epilogue — it could not be told — ends the wait all the same', () => {
+    const state = run(
+      ...narrated,
+      on(message({ event: 'step_started', step: 'epilogue' })),
+      completed({ reason: 'death', epilogue: null })
+    )
+
+    expect(state).toEqual(initialTurnState)
+  })
+
+  test('an ordinary turn has no epilogue', () => {
+    expect(run(...narrated)).toMatchObject({ epilogue: null })
+    expect(run(...narrated, completed(null))).toEqual(initialTurnState)
+  })
+
+  test('fragments of another turn are ignored', () => {
+    const state = run(
+      ...narrated,
+      on(message({ event: 'step_started', step: 'epilogue' })),
+      on(
+        message(
+          { event: 'epilogue_chunk', text: 'Someone else’s end.' },
+          { turnId: 'turn-9', idempotencyKey: 'key-9' }
+        )
+      )
+    )
+
+    expect(state).toMatchObject({ epilogue: '' })
+  })
+
+  test('not followed live when the narration is not: read back, the epilogue stops too', () => {
+    const state = run(
+      ...narrated,
+      on(message({ event: 'step_started', step: 'epilogue' })),
+      on(message({ event: 'epilogue_chunk', text: 'Years later, ' })),
+      { type: 'read', turn: turn() },
+      on(message({ event: 'epilogue_chunk', text: 'Paris still tells of it.' }))
+    )
+
+    expect(state).toMatchObject({ status: 'in_progress', narration: null, epilogue: null })
+  })
+
+  test('a turn found pending on reopening the screen has no epilogue live', () => {
+    const state = run(
+      { type: 'read', turn: turn() },
+      on(message({ event: 'step_started', step: 'epilogue' })),
+      on(message({ event: 'epilogue_chunk', text: 'halfway through' }))
+    )
+
+    expect(state).toMatchObject({ status: 'in_progress', step: 'epilogue', epilogue: null })
   })
 })

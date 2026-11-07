@@ -10,6 +10,7 @@ const GAME: Game = {
   status: 'in_progress',
   lastActivityAt: '2026-10-11T10:00:00Z',
   endedAt: null,
+  endReason: null,
   characterId: 'character-1',
   world: { reference: 'three_musketeers', label: 'The Three Musketeers' },
   scenario: { id: 'scenario-1', title: 'A Gascon in Paris' },
