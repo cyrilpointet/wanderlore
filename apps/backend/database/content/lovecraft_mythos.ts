@@ -953,8 +953,27 @@ export const LOVECRAFT_MYTHOS_CONTENT: WorldContent = {
         /** The great-uncle who left the house, and the attorney whose letter announced it. */
         knownNpcs: ['silas_ward', 'ephraim_crane'],
       },
-      flags: [],
-      events: [],
+      flags: [
+        {
+          reference: 'rite_broken',
+          description:
+            'The circle of the rite of Azathoth beneath Ward House has been closed or broken: the calling is undone.',
+        },
+      ],
+      /** The inheritance is settled once the rite Silas began is undone. */
+      events: [
+        {
+          reference: 'calling_undone',
+          when: { at: null, conditions: [{ type: 'flag', flag: 'rite_broken' }], delay: null },
+          unless: [],
+          place: null,
+          description:
+            'The piping beneath Ward House falls silent: the rite of Azathoth is undone, and the house settles back into the world.',
+          effects: [{ type: 'game_ended', outcome: 'completed' }],
+          interrupts: false,
+          foreseeable: null,
+        },
+      ],
       /** An autumn afternoon: night falls on the house a few turns in. */
       startTime: '16:00',
       startDate: '1927-10-28',

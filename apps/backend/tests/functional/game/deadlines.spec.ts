@@ -8,6 +8,7 @@ import NpcDefinition from '#models/npc_definition'
 import NpcInstance from '#models/npc_instance'
 import PlaceNote from '#models/place_note'
 import Scenario from '#models/scenario'
+import Session from '#models/session'
 import WorldState from '#models/world_state'
 import { DiceService } from '#services/dice'
 import { LlmGateway } from '#services/llm/gateway'
@@ -55,16 +56,18 @@ function ruling(duration: Record<string, unknown>, intent: Record<string, unknow
 
 function buildService(answers: unknown[], faces: number[] = [30]) {
   const provider = new FakeLlmProvider({ jsonSequence: answers })
+  const events = new RecordingTurnEvents()
   const service = new TurnService(
     new LlmGateway(provider, { requestTimeoutMs: 1000 }),
     new RulesEngine(new DiceService(FakeRandomSource.fromFaces(faces))),
     new MemoryQueue(),
-    new RecordingTurnEvents(),
+    events,
     new FakeClock()
   )
 
   return {
     provider,
+    events,
     play: playerOf(service),
     messageOf: (step: string) => provider.requests.find((request) => request.step === step)!,
   }
@@ -777,5 +780,224 @@ test.group('Deadlines | an event hurts the character', (group) => {
     ])
     const state = await stateOf(sessionId)
     assert.equal(state.hitPoints, 20)
+  })
+})
+
+test.group('Deadlines | the end of a game', (group) => {
+  useTransaction(group)
+
+  const wins = (
+    reference: string,
+    when: Partial<ScenarioEvent['when']>,
+    rest: Partial<ScenarioEvent> = {}
+  ) =>
+    event(reference, {
+      when: { at: null, conditions: [], delay: null, ...when },
+      effects: [{ type: 'game_ended', outcome: 'completed' }],
+      ...rest,
+    })
+  const loses = (
+    reference: string,
+    when: Partial<ScenarioEvent['when']>,
+    rest: Partial<ScenarioEvent> = {}
+  ) =>
+    event(reference, {
+      when: { at: null, conditions: [], delay: null, ...when },
+      effects: [{ type: 'game_ended', outcome: 'failed' }],
+      ...rest,
+    })
+  const RAISED = { type: 'flag' as const, flag: 'alarm_raised' }
+
+  function gameOf(sessionId: string) {
+    return Session.findOrFail(sessionId)
+  }
+
+  test('an event of the state wins the game, and no turn is played after', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHouse({
+      events: [wins('saved', { conditions: [RAISED] })],
+    })
+    const { play } = buildService([
+      ruling({ label: 'moment' }),
+      streamed('You ring the bell.'),
+      extracted({ scenario_flags: ['alarm_raised'] }),
+    ])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I ring the bell.' })
+
+    const game = await gameOf(sessionId)
+    assert.deepEqual([game.status, game.endReason], ['completed', 'victory'])
+    assert.deepEqual(turn.gameEnd, { reason: 'victory', event: 'saved', discarded: [] })
+    await assert.rejects(() => play({ sessionId, userId, playerInput: 'I wait.' }))
+  })
+
+  test('a deadline loses the game, and the narration never tells it', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHouse({
+      events: [
+        loses(
+          'eaten',
+          { at: { day: 1, period: null, time: '22:00' } },
+          {
+            description: 'The ogre eats the princess.',
+          }
+        ),
+        /** After the end, nothing falls. */
+        event('dawn_bells', {
+          when: { at: { day: 1, period: null, time: '22:30' }, conditions: [], delay: null },
+          effects: [{ type: 'flag_set', flag: 'raid_over' }],
+        }),
+      ],
+    })
+    const { play, messageOf } = buildService([
+      ruling({ label: 'hours', count: 2 }),
+      streamed('The hours drag on.'),
+      extracted(),
+    ])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I wait.' })
+
+    const game = await gameOf(sessionId)
+    assert.deepEqual([game.status, game.endReason], ['failed', 'defeat'])
+    assert.deepEqual(
+      turn.eventsFired?.timed.map(({ event: reference }) => reference),
+      ['eaten']
+    )
+    assert.notInclude(messageOf('narration').userMessage, 'The ogre eats the princess')
+  })
+
+  test('a wound read outside a fight kills the character', async ({ assert }) => {
+    const { userId, sessionId, character } = await arrangeHouse()
+    await CharacterState.query().where('characterId', character.id).update({ hitPoints: 3 })
+    const { play } = buildService([
+      ruling({ label: 'moment' }),
+      streamed('You fall down the stairs.'),
+      extracted({ hit_points_delta: -5 }),
+    ])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I run down the stairs.' })
+
+    const game = await gameOf(sessionId)
+    assert.deepEqual([game.status, game.endReason], ['failed', 'death'])
+    assert.deepEqual(turn.gameEnd, { reason: 'death', event: null, discarded: [] })
+  })
+
+  test('death before a victory the clock brought the same turn', async ({ assert }) => {
+    const { userId, sessionId, character } = await arrangeHouse({
+      events: [wins('dawn_reached', { at: { day: 1, period: null, time: '22:00' } })],
+    })
+    await CharacterState.query().where('characterId', character.id).update({ hitPoints: 3 })
+    const { play } = buildService([
+      ruling({ label: 'hours', count: 2 }),
+      streamed('You bleed out as the hours pass.'),
+      extracted({ hit_points_delta: -5 }),
+    ])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I wait.' })
+
+    const game = await gameOf(sessionId)
+    assert.equal(game.endReason, 'death')
+    assert.deepEqual(turn.gameEnd, {
+      reason: 'death',
+      event: null,
+      discarded: [{ reason: 'victory', event: 'dawn_reached' }],
+    })
+  })
+
+  test('an end stops the chain of events with it', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHouse({
+      events: [
+        loses('caught', { conditions: [RAISED] }),
+        event('guards_search', {
+          when: { at: null, conditions: [RAISED], delay: null },
+          effects: [{ type: 'flag_set', flag: 'raid_over' }],
+        }),
+      ],
+    })
+    const { play } = buildService([
+      ruling({ label: 'moment' }),
+      streamed('You ring the bell.'),
+      extracted({ scenario_flags: ['alarm_raised'] }),
+    ])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I ring the bell.' })
+
+    assert.deepEqual(
+      turn.eventsFired?.state.map(({ event: reference }) => reference),
+      ['caught']
+    )
+    const state = await WorldState.findByOrFail('sessionId', sessionId)
+    assert.notProperty(state.narrativeFlags, 'raid_over')
+  })
+})
+
+test.group('Deadlines | the epilogue', (group) => {
+  useTransaction(group)
+
+  const SAVED = event('princess_saved', {
+    when: { at: null, conditions: [{ type: 'flag', flag: 'alarm_raised' }], delay: null },
+    description: 'The princess is free, and the house rings with the alarm.',
+    effects: [{ type: 'game_ended', outcome: 'completed' }],
+  })
+  const ringTheBell = (...epilogue: (string | Error)[]) => [
+    ruling({ label: 'moment' }),
+    streamed('You ring the bell.'),
+    extracted({ scenario_flags: ['alarm_raised'] }),
+    streamed(...epilogue),
+  ]
+
+  test('told once the end is committed, streamed, kept with the turn', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHouse({ events: [SAVED] })
+    const { play, events, messageOf } = buildService(
+      ringTheBell('The princess walks free ', 'into the morning.')
+    )
+
+    const turn = await play({ sessionId, userId, playerInput: 'I ring the bell.' })
+
+    assert.equal(turn.epilogue, 'The princess walks free into the morning.')
+    assert.deepEqual(events.sequenceOf(turn.id), [
+      'step_started:arbitration',
+      'step_started:narration',
+      'narration_chunk',
+      'step_started:epilogue',
+      'epilogue_chunk',
+      'epilogue_chunk',
+      'turn_completed',
+    ])
+    /** Told what ended the story, and never a number. */
+    const message = messageOf('epilogue').userMessage
+    assert.include(message, '"reason":"victory"')
+    assert.include(message, 'The princess is free')
+    assert.notInclude(message, 'hit_points')
+    /** Its cost counts with the turn's. */
+    assert.include(
+      (turn.llmUsage ?? []).map(({ step }) => step),
+      'epilogue'
+    )
+  })
+
+  test('failing, it leaves the end standing, untold', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHouse({ events: [SAVED] })
+    const { play, events } = buildService(ringTheBell('The princess', new Error('cut')))
+
+    const turn = await play({ sessionId, userId, playerInput: 'I ring the bell.' })
+
+    assert.equal(turn.status, 'completed')
+    assert.isNull(turn.epilogue)
+    assert.equal(events.sequenceOf(turn.id).at(-1), 'turn_completed')
+    const game = await Session.findOrFail(sessionId)
+    assert.equal(game.endReason, 'victory')
+  })
+
+  test('no end, no epilogue', async ({ assert }) => {
+    const { userId, sessionId } = await arrangeHouse()
+    const { play, events } = buildService([
+      ruling({ label: 'moment' }),
+      streamed('You wait.'),
+      extracted(),
+    ])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I wait.' })
+
+    assert.notInclude(events.sequenceOf(turn.id), 'step_started:epilogue')
+    assert.isNull(turn.epilogue)
   })
 })

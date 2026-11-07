@@ -9,7 +9,7 @@
  * Pipeline step a call belongs to. Used for logging and per-turn cost tracking,
  * and later to select a different model per step (see roadmap, Phase 3).
  */
-export type LlmStep = 'arbitration' | 'narration' | 'extraction' | 'summary'
+export type LlmStep = 'arbitration' | 'narration' | 'extraction' | 'summary' | 'epilogue'
 
 /**
  * Token accounting for a single call. Persisted per turn so the real cost of a

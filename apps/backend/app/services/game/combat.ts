@@ -41,9 +41,9 @@ import type { CombatEngagement } from './prompts/types.js'
 export const ROUND_SECONDS = 12
 
 /**
- * A character brought down is out of the fight for an hour — the book's
- * unconsciousness after a serious wound — captured, left for dead or helped,
- * as the narration has it.
+ * A character down at 2 hit points or fewer, yet alive, is out of the fight
+ * for an hour — the book's unconsciousness after a serious wound. At 0 or
+ * fewer, they die (Phase 12): the game ends with the round.
  */
 export const DOWN_SECONDS = 60 * 60
 
@@ -160,7 +160,10 @@ export type Round = {
     bleeding: boolean
     /** Down at 2 hit points or fewer: out of the fight. */
     down: boolean
-    /** Brought to 0 or below: never killed — back at 1, captured, left for dead or helped. */
+    /**
+     * Brought to 0 or below: dead (Phase 12, revising Phase 10, where they
+     * came back at 1). The narration tells the fall, the epilogue the death.
+     */
     out: boolean
   }
   opponentAfter: {
@@ -384,7 +387,7 @@ export function playRound(rules: RulesEngine, input: RoundInput): Round {
     opponentCaughtUnaware: caughtUnaware,
     opponentOutOfReach: opponentStands && !caughtUnaware && !engagement.riposte_possible,
     character: {
-      hitPoints: out ? 1 : characterHp,
+      hitPoints: Math.max(0, characterHp),
       damage: input.character.hitPoints - characterHp,
       bleeding: characterBleeding,
       down: characterHp <= DOWN_AT,
@@ -606,7 +609,7 @@ export type NarratedRound = {
   /** They could not reach the character this round: out of reach, or out of their line of fire. */
   opponent_out_of_reach: boolean
   opponent_state: CombatantState
-  /** `out`: brought down for good this round — captured, left for dead or helped, never killed. */
+  /** `out`: struck down for good this round — the narration tells the fall, and stops there. */
   character_state: 'fighting' | 'down' | 'out'
   character_bleeding: boolean
   opponent_bleeding: boolean

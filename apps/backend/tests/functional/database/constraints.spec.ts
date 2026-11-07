@@ -1,4 +1,5 @@
 import { test } from '@japa/runner'
+import db from '@adonisjs/lucid/services/db'
 
 import {
   PG_CHECK_VIOLATION,
@@ -193,6 +194,33 @@ test.group('Schema constraints', (group) => {
     )
 
     assert.equal(error.code, PG_CHECK_VIOLATION)
+  })
+
+  test('a game over says why, and only a victory completes it', async ({ assert }) => {
+    const sessionId = await createSession(await createUser())
+    const close = (fields: Record<string, unknown>) =>
+      expectDbError(() => db.from('sessions').where('id', sessionId).update(fields))
+
+    const noReason = await close({ status: 'failed', ended_at: new Date() })
+    const noEnd = await close({ end_reason: 'death' })
+    const wonButFailed = await close({
+      status: 'failed',
+      ended_at: new Date(),
+      end_reason: 'victory',
+    })
+    const lostButCompleted = await close({
+      status: 'completed',
+      ended_at: new Date(),
+      end_reason: 'death',
+    })
+
+    for (const error of [noReason, noEnd, wonButFailed, lostButCompleted]) {
+      assert.equal(error.code, PG_CHECK_VIOLATION)
+    }
+    await db
+      .from('sessions')
+      .where('id', sessionId)
+      .update({ status: 'completed', ended_at: new Date(), end_reason: 'victory' })
   })
 
   test('only a place hides an item', async ({ assert }) => {

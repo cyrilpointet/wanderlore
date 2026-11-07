@@ -7,6 +7,7 @@ import {
   DEFINITION_KINDS,
   EVENT_CONDITION_TYPES,
   EVENT_EFFECT_TYPES,
+  GAME_OUTCOMES,
   ITEM_CONDITIONS,
   LORE_FRAGMENT_KINDS,
   NPC_DISPOSITIONS,
@@ -493,6 +494,7 @@ const effect = () =>
       typed('item_gone', { item: reference() }),
       typed('flag_set', { flag: reference() }),
       typed('character_harmed', { damage: vine.string().trim().maxLength(40).use(isHarm()) }),
+      typed('game_ended', { outcome: vine.enum(GAME_OUTCOMES) }),
     ])
     .otherwise(unknownType(EVENT_EFFECT_TYPES))
 

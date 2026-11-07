@@ -71,6 +71,8 @@ export type CoherenceIssueCode =
   | 'schedule_overlap'
   | 'event_without_trigger'
   | 'event_cycle'
+  | 'no_victory_event'
+  | 'game_ended_twice'
 
 /**
  * One thing that does not hold. `location` is the path of the faulty field
@@ -607,6 +609,8 @@ function checkEvents(scenario: ScenarioContent, known: EventCatalogues, report: 
       case 'character_harmed':
         /** Nothing to look up: its dice were checked with the shape. */
         return
+      case 'game_ended':
+        return
     }
   }
 
@@ -626,6 +630,19 @@ function checkEvents(scenario: ScenarioContent, known: EventCatalogues, report: 
       checkCondition(`${path}.foreseeable.${index}`, condition)
     )
     event.effects.forEach((effect, index) => checkEffect(`${path}.effects.${index}`, effect))
+
+    /** One event ends the game one way: won and lost at once means nothing. */
+    if (event.effects.filter(({ type }) => type === 'game_ended').length > 1) {
+      report('game_ended_twice', `${path}.effects`, event.reference)
+    }
+  }
+
+  /** A story that cannot be won is no story to play (roadmap, Phase 12). */
+  const wins = (scenario.events ?? []).some((event) =>
+    event.effects.some((effect) => effect.type === 'game_ended' && effect.outcome === 'completed')
+  )
+  if (!wins) {
+    report('no_victory_event', 'events')
   }
 
   for (const reference of eventCycle(scenario.events ?? [])) {

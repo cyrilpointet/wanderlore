@@ -479,6 +479,17 @@ export type EventEffect =
    * the backend, less the armour they wear.
    */
   | { type: 'character_harmed'; damage: string }
+  /**
+   * The game ends (roadmap, Phase 12): won — the princess saved — or lost —
+   * the princess eaten by the ogre. A scenario has at least one event that
+   * wins it.
+   */
+  | { type: 'game_ended'; outcome: GameOutcome }
+
+/** How an event ends a game: the statuses of a game over, but for being given up or dying. */
+export const GAME_OUTCOMES = ['completed', 'failed'] as const
+
+export type GameOutcome = (typeof GAME_OUTCOMES)[number]
 
 export const EVENT_EFFECT_TYPES = [
   'npc_moved',
@@ -497,6 +508,7 @@ export const EVENT_EFFECT_TYPES = [
   'item_gone',
   'flag_set',
   'character_harmed',
+  'game_ended',
 ] as const
 
 /** How long after its conditions first hold an event falls: a fixed span, or days. */

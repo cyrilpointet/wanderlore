@@ -585,6 +585,42 @@ test.group('Coherence | schedules and events', () => {
     )
   })
 
+  test('a scenario can be won: at least one event wins it', ({ assert }) => {
+    const loses = {
+      reference: 'seal_lost',
+      when: { at: { day: 2, period: null, time: null }, conditions: [], delay: null },
+      unless: [],
+      place: null,
+      description: 'Dawn comes, and the seal is still in the house.',
+      effects: [{ type: 'game_ended' as const, outcome: 'failed' as const }],
+      interrupts: false,
+      foreseeable: null,
+    }
+
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        scenario.events = [loses]
+      }),
+      [['no_victory_event', 'events', undefined]]
+    )
+    /** A defeat besides a victory is no fault. */
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        scenario.events.push(loses)
+      }),
+      []
+    )
+  })
+
+  test('an event ends the game one way only', ({ assert }) => {
+    assert.deepEqual(
+      issuesAfter((_world, scenario) => {
+        scenario.events[0].effects.push({ type: 'game_ended', outcome: 'failed' })
+      }),
+      [['game_ended_twice', 'events.seal_recovered.effects', 'seal_recovered']]
+    )
+  })
+
   test('no chain of events sets itself off again', ({ assert }) => {
     const chained = (reference: string, needs: string, sets: string) => ({
       reference,

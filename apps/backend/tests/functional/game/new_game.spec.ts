@@ -11,7 +11,7 @@ import ItemDefinition from '#models/item_definition'
 import NpcDefinition from '#models/npc_definition'
 import NpcInstance from '#models/npc_instance'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
-import { seedMusketeers } from '#tests/helpers/content'
+import { WON_AT_DAWN, seedMusketeers } from '#tests/helpers/content'
 import { createScenario, createUser, useTransaction } from '#tests/helpers/database'
 import { GASCON } from '#tests/helpers/worlds'
 
@@ -65,6 +65,7 @@ async function draftOf(worldId: string, playable: boolean): Promise<string> {
         chapters: JSON.stringify(published.chapters),
         quests: JSON.stringify(published.quests),
         initial_state: JSON.stringify({ ...published.initialState, location: 'hotel_de_treville' }),
+        events: JSON.stringify([WON_AT_DAWN]),
       })
   }
 
@@ -289,6 +290,21 @@ test.group('New game | starting', (group) => {
     const response = await start(client, master, await characterOf(master, worldId), draft)
 
     response.assertStatus(201)
+  })
+
+  test('a scenario that can no longer be won cannot be started', async ({ client, assert }) => {
+    const { worldId } = await seedMusketeers()
+    const draft = await draftOf(worldId, true)
+    await db
+      .from('scenarios')
+      .where('id', draft)
+      .update({ events: JSON.stringify([]) })
+    const master = await userWith('game_master')
+
+    const response = await start(client, master, await characterOf(master, worldId), draft)
+
+    response.assertStatus(422)
+    assert.equal((response.body() as any).error.code, 'scenario_not_playable')
   })
 
   test('a draft without its starting state cannot be played yet', async ({ client, assert }) => {

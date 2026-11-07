@@ -124,6 +124,18 @@ export type TracedEvents = {
   deferred: string[]
 }
 
+/**
+ * How a turn ended the game (roadmap, Phase 12): the end kept by priority —
+ * death, then defeat, then victory — with the event that set it off, and the
+ * ends it set aside.
+ */
+export type TracedGameEnd = {
+  reason: 'victory' | 'defeat' | 'death'
+  /** The event of the scenario that ended it; null for a death. */
+  event: string | null
+  discarded: { reason: 'victory' | 'defeat' | 'death'; event: string | null }[]
+}
+
 export type TurnTrace = {
   arbitration: ArbitrationOutput | null
   roll: TracedRoll | null
@@ -133,6 +145,10 @@ export type TurnTrace = {
   events: TracedEvents | null
   narration: string | null
   extraction: Record<string, unknown> | null
+  /** Null on every turn but the one that ended the game. */
+  gameEnd: TracedGameEnd | null
+  /** Told once the game is over; null until then, or when it failed. */
+  epilogue: string | null
   lore: TracedLore
   rejectedAttempts: RejectedAttempt[]
   calls: TracedCall[]
@@ -164,6 +180,8 @@ export function emptyTrace(): TurnTrace {
     events: null,
     narration: null,
     extraction: null,
+    gameEnd: null,
+    epilogue: null,
     lore: { arbitration: null, narration: null },
     rejectedAttempts: [],
     calls: [],
@@ -192,6 +210,7 @@ export function traceColumns(trace: TurnTrace) {
     eventsFired: trace.events,
     narratedText: trace.narration,
     extractionOutput: trace.extraction,
+    gameEnd: trace.gameEnd,
     loreSent: trace.lore.arbitration === null ? null : trace.lore,
     rejectedAttempts:
       trace.rejectedAttempts.length > 0

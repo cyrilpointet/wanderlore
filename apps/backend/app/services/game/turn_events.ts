@@ -18,7 +18,7 @@ import TurnTransformer, { type RollCombat, presentRoll } from '#transformers/tur
  * code itself, never derived from the job queue's own events.
  */
 export type TurnEvent =
-  | { type: 'step_started'; step: 'arbitration' | 'narration' }
+  | { type: 'step_started'; step: 'arbitration' | 'narration' | 'epilogue' }
   /**
    * A roll of the character in full: the player sees its detail, as at the
    * table — one event per roll, the attack then the defence in a round of
@@ -39,6 +39,12 @@ export type TurnEvent =
    * fragments are never stored.
    */
   | { type: 'narration_chunk'; text: string }
+  /**
+   * A fragment of the epilogue (Phase 12), once the turn that ended the game
+   * is committed and before `turn_completed`, which carries it whole — or
+   * without it, when it failed: the end stands either way.
+   */
+  | { type: 'epilogue_chunk'; text: string }
   /**
    * Everything the journal, the sheet and the place badge need, so the front
    * makes no further request. There is no milestone for extraction: the
@@ -102,6 +108,7 @@ export function toMessage(ref: TurnRef, event: TurnEvent) {
       return { ...header, ...presentRoll(event.resolution, event.labels, event.combat) }
 
     case 'narration_chunk':
+    case 'epilogue_chunk':
       return { ...header, text: event.text }
 
     case 'turn_completed':

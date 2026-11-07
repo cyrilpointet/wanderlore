@@ -36,6 +36,15 @@ export default class TurnTransformer extends BaseTransformer<TurnLog> {
       playerInput: turn.playerInput,
       rolls: this.#rolls(),
       narration: turn.status === 'completed' ? turn.narratedText : null,
+      /**
+       * The turn that ended the game says how — victory, defeat or death —
+       * never which event; the epilogue tells the end, null until told or
+       * when it failed. Null on every other turn.
+       */
+      gameEnd:
+        turn.status === 'completed' && turn.gameEnd
+          ? { reason: turn.gameEnd.reason, epilogue: turn.epilogue ?? null }
+          : null,
       effects:
         turn.appliedEffects === null
           ? null

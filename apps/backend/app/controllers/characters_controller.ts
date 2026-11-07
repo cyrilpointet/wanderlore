@@ -109,6 +109,7 @@ export default class CharactersController {
             id: game.id,
             status: game.status,
             endedAt: game.endedAt,
+            endReason: game.endReason ?? null,
             scenario: { id: game.scenarioId, title: inLanguage(game.scenario.labels, 'en') },
           })),
       },

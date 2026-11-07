@@ -41,7 +41,7 @@
     "flagsHint": "The closed list of notable turns of the story extraction may record, written as JSON: each with its reference and one line of English telling when the narration sets it. Events read them; extraction never sets a flag that is not listed.",
     "flagsJson": "Flags (JSON)",
     "events": "Events",
-    "eventsHint": "What happens in the story without the player, written as JSON, each once at most. when: a deadline (at: day from 1, and a period or a time of day), conditions on the state (flag, item_held_by, item_gone, npc_dead, npc_disposition, npc_at, location_visited), and a delay after they first hold. unless: conditions that cancel it as it falls due. place: the named place it happens in, or null for everywhere. description: one line of English for the model. effects: npc_moved, npc_left, npc_entered, npc_disposition, schedule_stopped, passage_blocked, passage_cleared, passage_discovered, passage_unlocked, place_note_set, place_note_cleared, item_placed, item_transferred, item_gone, flag_set, character_harmed (damage: dice such as 12D6, 6 or 2D4+8, less the armour worn — only if the character is where it happens, or it happens everywhere). interrupts: it cuts a long action short when the character sees it. foreseeable: the conditions under which the character knows it is coming and may wait for it — an empty list for always, null for never.",
+    "eventsHint": "What happens in the story without the player, written as JSON, each once at most. when: a deadline (at: day from 1, and a period or a time of day), conditions on the state (flag, item_held_by, item_gone, npc_dead, npc_disposition, npc_at, location_visited), and a delay after they first hold. unless: conditions that cancel it as it falls due. place: the named place it happens in, or null for everywhere. description: one line of English for the model. effects: npc_moved, npc_left, npc_entered, npc_disposition, schedule_stopped, passage_blocked, passage_cleared, passage_discovered, passage_unlocked, place_note_set, place_note_cleared, item_placed, item_transferred, item_gone, flag_set, character_harmed (damage: dice such as 12D6, 6 or 2D4+8, less the armour worn — only if the character is where it happens, or it happens everywhere), game_ended (outcome: completed to win the story, failed to lose it; a scenario needs at least one event that wins it). interrupts: it cuts a long action short when the character sees it. foreseeable: the conditions under which the character knows it is coming and may wait for it — an empty list for always, null for never.",
     "eventsJson": "Events (JSON)",
     "start": "Where the story starts",
     "startHint": "Picked from the named places of the world and the scenario, and from this scenario's chapters and quests.",
@@ -107,7 +107,9 @@
     "unknown_passage": "No passage joins these two places ({{reference}}).",
     "schedule_overlap": "The period “{{reference}}” is in more than one entry of this schedule.",
     "event_without_trigger": "The event “{{reference}}” has neither a deadline nor conditions: nothing sets it off.",
-    "event_cycle": "The event “{{reference}}” is part of a chain that sets itself off again."
+    "event_cycle": "The event “{{reference}}” is part of a chain that sets itself off again.",
+    "no_victory_event": "No event wins the story: add one whose effects end the game as completed.",
+    "game_ended_twice": "The event “{{reference}}” ends the game more than once: keep one game_ended."
   },
   "importHint": "A scenario as written in the game content. Its places, people, items and lore are created with it."
 }

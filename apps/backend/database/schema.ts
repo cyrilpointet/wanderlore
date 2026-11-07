@@ -8,7 +8,7 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 import type { Characteristics, CharacterGender, ItemHolderReference, DefinitionKind, Labels, ItemModifier, WeaponProfile, LocationExit, PeriodNote, LoreFragmentKind, CombatProfile, NpcDisposition, ScheduleEntry, StartingItem, Characteristic, LabelledEntry, ScenarioEvent, ScenarioFlag, GlossaryEntry, InitialState, StartingKit, ScenarioStatus, PowerLevel, SkillEntry } from '#services/game/content/types'
 import type { Duration } from '#services/game/game_time'
-import type { TracedEvents, TracedLore } from '#services/game/turn_trace'
+import type { TracedEvents, TracedGameEnd, TracedLore } from '#services/game/turn_trace'
 import type { PendingEffect } from '#services/game/pending_effects'
 
 export class AuthAccessTokenSchema extends BaseModel {
@@ -502,7 +502,7 @@ export class ScenarioSchema extends BaseModel {
 }
 
 export class SessionSchema extends BaseModel {
-  static $columns = ['characterId', 'createdAt', 'currentChapter', 'deletedAt', 'endedAt', 'id', 'lastActivityAt', 'scenarioId', 'status', 'userId', 'worldId'] as const
+  static $columns = ['characterId', 'createdAt', 'currentChapter', 'deletedAt', 'endReason', 'endedAt', 'id', 'lastActivityAt', 'scenarioId', 'status', 'userId', 'worldId'] as const
   $columns = SessionSchema.$columns
   @column()
   declare characterId: string
@@ -512,6 +512,8 @@ export class SessionSchema extends BaseModel {
   declare currentChapter: string | null
   @column.dateTime()
   declare deletedAt: DateTime | null
+  @column()
+  declare endReason: 'victory' | 'defeat' | 'death' | 'abandoned' | null
   @column.dateTime()
   declare endedAt: DateTime | null
   @column({ isPrimary: true })
@@ -529,7 +531,7 @@ export class SessionSchema extends BaseModel {
 }
 
 export class TurnLogSchema extends BaseModel {
-  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'combatResult', 'createdAt', 'duration', 'eventsFired', 'extractionOutput', 'failure', 'firstAid', 'gameTimeAfter', 'gameTimeBefore', 'id', 'idempotencyKey', 'language', 'llmUsage', 'loreSent', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
+  static $columns = ['alerts', 'appliedEffects', 'arbitrationOutput', 'combatResult', 'createdAt', 'duration', 'epilogue', 'eventsFired', 'extractionOutput', 'failure', 'firstAid', 'gameEnd', 'gameTimeAfter', 'gameTimeBefore', 'id', 'idempotencyKey', 'language', 'llmUsage', 'loreSent', 'narratedText', 'playerInput', 'rejectedAttempts', 'rollResult', 'sessionId', 'status', 'turnNumber'] as const
   $columns = TurnLogSchema.$columns
   @column({ prepare: (value)=>value === null || value === undefined ? value : JSON.stringify(value) })
   declare alerts: Record<string, unknown>[] | null
@@ -544,6 +546,8 @@ export class TurnLogSchema extends BaseModel {
   @column()
   declare duration: Duration | null
   @column()
+  declare epilogue: string | null
+  @column()
   declare eventsFired: TracedEvents | null
   @column()
   declare extractionOutput: Record<string, unknown> | null
@@ -551,6 +555,8 @@ export class TurnLogSchema extends BaseModel {
   declare failure: Record<string, unknown> | null
   @column()
   declare firstAid: Record<string, unknown> | null
+  @column()
+  declare gameEnd: TracedGameEnd | null
   @column()
   declare gameTimeAfter: number | null
   @column()

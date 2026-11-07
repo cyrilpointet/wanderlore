@@ -226,6 +226,21 @@ export function stateEventsDue(
  * in the place they stand in or in one that contains it. `around` is that
  * place's reference, then its parents'.
  */
+/** Whether an event wins or loses the game (roadmap, Phase 12). */
+export function endsTheGame(event: ScenarioEvent): boolean {
+  return event.effects.some(({ type }) => type === 'game_ended')
+}
+
+/**
+ * The timed events of a turn, up to the first that ends the game: nothing
+ * falls after the end. Pure.
+ */
+export function untilTheEnd(due: DueEvent[]): DueEvent[] {
+  const end = due.findIndex(({ event, outcome }) => outcome === 'fired' && endsTheGame(event))
+
+  return end === -1 ? due : due.slice(0, end + 1)
+}
+
 export function witnesses(event: ScenarioEvent, around: string[]): boolean {
   return event.place === null || around.includes(event.place)
 }

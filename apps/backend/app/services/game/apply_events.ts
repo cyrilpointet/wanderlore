@@ -23,7 +23,12 @@ import { addPending, dropPendingMoves, pendingNpcs } from './pending_effects.js'
 import { entryAt, scheduledNpcs } from './schedules.js'
 import { EVENT_CHAIN_DEPTH, stateEventsDue, witnesses } from './events.js'
 import { loadProgress, loadSnapshot, progressReader } from './game_events.js'
-import type { EventEffect, ItemHolderReference, ScenarioEvent } from './content/types.js'
+import type {
+  EventEffect,
+  GameOutcome,
+  ItemHolderReference,
+  ScenarioEvent,
+} from './content/types.js'
 import type { WorldDefinition } from './world.js'
 import type { SettledStateEvent, TracedHarm } from './turn_trace.js'
 
@@ -202,8 +207,19 @@ export async function applyEffect(
     case 'character_harmed':
       /** Dealt by `applyEvent`, which knows whether the character is there. */
       return
+
+    case 'game_ended':
+      /** Proposed by `applyEvent` to the turn, which keeps one end by priority. */
+      return
   }
 }
+
+/**
+ * What applying an event did that the turn has to know: what it dealt the
+ * character, and whether it ended the game — proposed, the turn keeps one
+ * end by priority.
+ */
+export type AppliedEvent = { harm: TracedHarm[]; ended: GameOutcome | null }
 
 /**
  * Every effect of an event, in the order the content lists them. A harm
@@ -215,10 +231,16 @@ export async function applyEvent(
   event: ScenarioEvent,
   witnessed: boolean,
   client?: QueryClientContract
-): Promise<TracedHarm[]> {
+): Promise<AppliedEvent> {
   const harm: TracedHarm[] = []
+  let ended: GameOutcome | null = null
 
   for (const effect of event.effects) {
+    if (effect.type === 'game_ended') {
+      ended = effect.outcome
+      continue
+    }
+
     if (effect.type === 'character_harmed') {
       const dealt = witnessed ? await harmCharacter(target, effect.damage, client) : null
       if (dealt !== null) harm.push(dealt)
@@ -228,7 +250,7 @@ export async function applyEvent(
     await applyEffect(target, effect, event.reference, client)
   }
 
-  return harm
+  return { harm, ended }
 }
 
 /**
@@ -296,12 +318,19 @@ export async function markTold(
  * one may set off another — up to `EVENT_CHAIN_DEPTH`. Past it, what is still
  * due waits for the end of the next turn, its conditions still holding: the
  * turn never fails for it. Those set off are told on the next turn.
+ *
+ * An event that ends the game ends the chain with it: nothing else falls in
+ * a game over (roadmap, Phase 12).
  */
 export async function settleStateEvents(
   target: EffectTarget & { worldState: WorldState },
   turn: { gameTime: number; turnNumber: number; around: () => Promise<string[]> },
   client?: QueryClientContract
-): Promise<{ settled: SettledStateEvent[]; deferred: string[] }> {
+): Promise<{
+  settled: SettledStateEvent[]
+  deferred: string[]
+  ended: { outcome: GameOutcome; event: string } | null
+}> {
   const settled: SettledStateEvent[] = []
 
   for (let pass = 0; ; pass++) {
@@ -311,13 +340,14 @@ export async function settleStateEvents(
     const count = due.fire.length + due.arm.length + due.cancel.length
 
     if (count === 0) {
-      return { settled, deferred: [] }
+      return { settled, deferred: [], ended: null }
     }
 
     if (pass >= EVENT_CHAIN_DEPTH) {
       return {
         settled,
         deferred: [...due.fire, ...due.arm, ...due.cancel].map(({ reference }) => reference),
+        ended: null,
       }
     }
 
@@ -345,13 +375,17 @@ export async function settleStateEvents(
         { firedAt: turn.gameTime, turnNumber: turn.turnNumber, witnessed, told: false },
         client
       )
-      const harm = await applyEvent(target, event, witnessed, client)
+      const { harm, ended } = await applyEvent(target, event, witnessed, client)
       settled.push({
         event: event.reference,
         outcome: 'fired',
         witnessed,
         ...(harm.length > 0 ? { harm } : {}),
       })
+
+      if (ended !== null) {
+        return { settled, deferred: [], ended: { outcome: ended, event: event.reference } }
+      }
     }
   }
 }

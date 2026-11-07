@@ -5,6 +5,23 @@ import ItemDefinition from '#models/item_definition'
 import LocationDefinition from '#models/location_definition'
 import NpcDefinition from '#models/npc_definition'
 import { HOUSE_PLACES, IRON_KEY, STEWARD } from '#tests/helpers/places'
+import type { ScenarioEvent } from '#services/game/content/types'
+
+/**
+ * A victory any scenario can hold, naming nothing of a world: the story is
+ * won at dawn on the second day. A scenario is published or played only with
+ * one (roadmap, Phase 12).
+ */
+export const WON_AT_DAWN: ScenarioEvent = {
+  reference: 'won_at_dawn',
+  when: { at: { day: 2, period: 'dawn', time: null }, conditions: [], delay: null },
+  unless: [],
+  place: null,
+  description: 'Dawn comes, and the story is won.',
+  effects: [{ type: 'game_ended', outcome: 'completed' }],
+  interrupts: false,
+  foreseeable: null,
+}
 
 /**
  * Writes the game content a game reads — worlds, scenarios, catalogues and

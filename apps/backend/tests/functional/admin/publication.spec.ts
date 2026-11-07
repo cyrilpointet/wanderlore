@@ -4,7 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
 import Character from '#models/character'
 import { THREE_MUSKETEERS_CONTENT } from '#database/content/three_musketeers'
-import { seedMusketeers } from '#tests/helpers/content'
+import { WON_AT_DAWN, seedMusketeers } from '#tests/helpers/content'
 import {
   createCharacter,
   createScenario,
@@ -56,7 +56,7 @@ test.group('Publication', (group) => {
     assert.equal(bodyOf(response).error.code, 'scenario_incoherent')
     assert.deepEqual(
       bodyOf(response).error.details.issues.map(({ code }: { code: string }) => code),
-      ['missing_initial_state']
+      ['no_victory_event', 'missing_initial_state']
     )
     const row = await db.from('scenarios').where('id', draft).firstOrFail()
     assert.equal(row.status, 'draft')
@@ -77,6 +77,7 @@ test.group('Publication', (group) => {
         starting_kit: JSON.stringify(PUBLISHED.startingKit),
         /** The draft has none of the published scenario's own places: it opens in one of the world. */
         initial_state: JSON.stringify({ ...PUBLISHED.initialState, location: 'hotel_de_treville' }),
+        events: JSON.stringify([WON_AT_DAWN]),
       })
 
     const response = await client

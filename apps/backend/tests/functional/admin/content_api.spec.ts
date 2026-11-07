@@ -1110,6 +1110,33 @@ test.group('Content API | deadlines and events', (group) => {
     assert.include(fields, 'events.0.effects.1.damage')
   })
 
+  test('an event wins or loses the game, and nothing else', async ({ client, assert }) => {
+    const user = await gameMaster()
+    const { scenario } = await scenarioOf(client, user)
+    const ends = (outcome: string) => ({
+      ...WATSON_ARRIVES,
+      unless: [],
+      effects: [{ type: 'game_ended', outcome }],
+    })
+
+    const kept = await as(client, user).patch(`/scenarios/${scenario.id}`, {
+      events: [ends('completed'), { ...ends('failed'), reference: 'watson_lost' }],
+    })
+    const refused = await as(client, user).patch(`/scenarios/${scenario.id}`, {
+      events: [ends('a draw')],
+    })
+
+    kept.assertStatus(200)
+    assert.deepEqual(bodyOf(kept).data.events[1].effects, [
+      { type: 'game_ended', outcome: 'failed' },
+    ])
+    refused.assertStatus(422)
+    assert.include(
+      bodyOf(refused).errors.map((error: { field: string }) => error.field),
+      'events.0.effects.0.outcome'
+    )
+  })
+
   test('a schedule is for a named person only', async ({ client, assert }) => {
     const user = await gameMaster()
     const worldId = await createWorld()

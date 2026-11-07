@@ -67,6 +67,8 @@ export default class SessionTransformer extends BaseTransformer<Session> {
       status: this.resource.status,
       lastActivityAt: this.resource.lastActivityAt,
       endedAt: this.resource.endedAt,
+      /** Why it ended: victory, defeat, death or abandoned; null while it is played. */
+      endReason: this.resource.endReason ?? null,
       characterId: this.resource.characterId,
       world: this.#labels.world(),
       /** Names in English until the player can pick a language (Phase 14). */

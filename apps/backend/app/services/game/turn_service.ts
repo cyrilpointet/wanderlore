@@ -8,7 +8,14 @@ import TurnLog from '#models/turn_log'
 import Session from '#models/session'
 import type Character from '#models/character'
 import type CharacterState from '#models/character_state'
-import { GameEndedError, isOngoing, lockOwnGame } from '#services/game/game_lifecycle'
+import {
+  GameEndedError,
+  type ProposedEnd,
+  closing,
+  gameEndOf,
+  isOngoing,
+  lockOwnGame,
+} from '#services/game/game_lifecycle'
 import type WorldState from '#models/world_state'
 import LocationInstance from '#models/location_instance'
 import NpcInstance from '#models/npc_instance'
@@ -55,8 +62,10 @@ import {
   type DueEvent,
   type WorldSnapshot,
   awaitedTimeOf,
+  endsTheGame,
   foreseeableEvents,
   timedEventsDue,
+  untilTheEnd,
   witnesses,
 } from './events.js'
 import {
@@ -83,7 +92,7 @@ import {
   nextArrivalIn,
   scheduledNpcs,
 } from './schedules.js'
-import type { ScenarioEvent } from './content/types.js'
+import type { GameOutcome, ScenarioEvent } from './content/types.js'
 import { passageStates } from './passages.js'
 import {
   type Route,
@@ -121,6 +130,7 @@ import {
   buildArbitrationMessage,
 } from './prompts/arbitration.js'
 import { NARRATION_SYSTEM_PROMPT, buildNarrationMessage } from './prompts/narration.js'
+import { EPILOGUE_SYSTEM_PROMPT, buildEpilogueMessage } from './prompts/epilogue.js'
 import {
   EXTRACTION_SCHEMA,
   EXTRACTION_SYSTEM_PROMPT,
@@ -400,6 +410,9 @@ export class TurnService {
       throw error
     }
 
+    /** The end of the game, told once it is committed; failing, it leaves the end untold. */
+    await this.#tellTheEnd(turn, scene, trace, budget)
+
     /** After the commit: the player is never told of a turn that could still roll back. */
     const labels = new ContentLabels(scene.world, turn.language)
     this.#events.emit(refOf(turn), {
@@ -422,6 +435,69 @@ export class TurnService {
     await this.#requestSummary(scene, turn.turnNumber!)
 
     return turn
+  }
+
+  /**
+   * The epilogue (roadmap, Phase 12): the end of the game, told once the turn
+   * that ended it is committed, streamed as it is written, within what is left
+   * of the turn's budget. For a victory, a defeat or a death — never a game
+   * given up, which no turn ends.
+   *
+   * The end stands whatever happens here: an epilogue that fails — the model
+   * unreachable, the budget spent, nothing written — is left out, with no
+   * second attempt, and the game reads as over without it.
+   */
+  async #tellTheEnd(
+    turn: TurnLog,
+    scene: LoadedScene,
+    trace: TurnTrace,
+    budget: TurnBudget
+  ): Promise<void> {
+    const end = trace.gameEnd
+
+    if (end === null) {
+      return
+    }
+
+    this.#events.emit(refOf(turn), { type: 'step_started', step: 'epilogue' })
+
+    try {
+      const context = buildContext(scene, turn.playerInput, turn.language)
+      const stream = this.#llm.streamText('epilogue', {
+        systemPrompt: EPILOGUE_SYSTEM_PROMPT,
+        userMessage: buildEpilogueMessage({
+          ...context,
+          end: {
+            reason: end.reason,
+            what_happened:
+              end.event === null
+                ? null
+                : (scene.world.events.find(({ reference }) => reference === end.event)
+                    ?.description ?? null),
+          },
+          narration: trace.narration ?? '',
+        }),
+        signal: budget.signalFor('epilogue', this.#llm.provider),
+      })
+
+      let epilogue = ''
+      let next = await stream.next()
+
+      while (!next.done) {
+        epilogue += next.value
+        this.#events.emit(refOf(turn), { type: 'epilogue_chunk', text: next.value })
+        next = await stream.next()
+      }
+
+      recordCall(trace, next.value)
+      trace.epilogue = epilogue.trim() === '' ? null : epilogue.trim()
+    } catch {
+      trace.epilogue = null
+    }
+
+    /** Its cost counts with the turn's, written or not. */
+    turn.merge({ epilogue: trace.epilogue, llmUsage: traceColumns(trace).llmUsage })
+    await turn.save()
   }
 
   /**
@@ -627,8 +703,14 @@ export class TurnService {
         ),
         world_events: [
           ...scene.untold.map(({ description }) => ({ description, when: 'earlier' as const })),
+          /** Never the end of the game: the epilogue tells it. */
           ...timing.due
-            .filter((due) => due.outcome === 'fired' && witnesses(due.event, timing.around))
+            .filter(
+              (due) =>
+                due.outcome === 'fired' &&
+                witnesses(due.event, timing.around) &&
+                !endsTheGame(due.event)
+            )
             .map(({ event }) => ({ description: event.description, when: 'now' as const })),
         ],
         interrupted: interruptionText(world, timing),
@@ -1252,12 +1334,15 @@ export class TurnService {
           harm: { rules: this.#rules, characterState: scene.characterState },
         }
 
+        /** The ends of the game the turn's events propose; death is read from the hit points. */
+        const ends: ProposedEnd[] = []
+
         /**
          * What the clock brought, in the order it fell — before the delta,
          * whose extraction already saw whoever it brought in.
          */
         if (!aside && trace.events !== null) {
-          await this.#settleTimedEvents(events, trace.events, turnNumber, trx)
+          ends.push(...(await this.#settleTimedEvents(events, trace.events, turnNumber, trx)))
         }
 
         const applied = await applyDelta(
@@ -1287,11 +1372,26 @@ export class TurnService {
           )
 
           if (trace.events !== null) {
-            await this.#settleTheWorld(scene, events, trace.events, turnNumber, trx)
+            /** An end already proposed, death included, stops the world: nothing more falls. */
+            const over = ends.length > 0 || scene.characterState.hitPoints <= 0
+            const ended = await this.#settleTheWorld(
+              scene,
+              events,
+              trace.events,
+              turnNumber,
+              over,
+              trx
+            )
+            if (ended !== null) ends.push(ended)
           }
         }
 
+        /** One end kept, by priority: death, then defeat, then victory. */
+        trace.gameEnd = gameEndOf(scene.characterState.hitPoints, ends)
         scene.session.lastActivityAt = DateTime.now()
+        if (trace.gameEnd !== null) {
+          scene.session.merge(closing(trace.gameEnd.reason, scene.session.lastActivityAt))
+        }
         await scene.session.useTransaction(trx).save()
 
         turn.merge({
@@ -1329,7 +1429,9 @@ export class TurnService {
     events: TracedEvents,
     turnNumber: number,
     trx: TransactionClientContract
-  ): Promise<void> {
+  ): Promise<ProposedEnd[]> {
+    const ends: ProposedEnd[] = []
+
     for (const timed of events.timed) {
       const event = target.world.events.find(({ reference }) => reference === timed.event)
 
@@ -1359,35 +1461,54 @@ export class TurnService {
         },
         trx
       )
-      const harm = await applyEvent(target, event, timed.witnessed, trx)
+      const { harm, ended } = await applyEvent(target, event, timed.witnessed, trx)
       if (harm.length > 0) timed.harm = harm
+      if (ended !== null) ends.push(proposedEnd(ended, event.reference))
     }
+
+    return ends
   }
 
   /**
    * The world once the turn applied: what the state now sets off, then where
    * the schedules put people — whoever ends where the character stands is
    * there to meet them. The events told this turn are told for good.
+   *
+   * A game already over — an end proposed earlier in the turn — sets nothing
+   * off and moves nobody; the chain stops at an event that ends it, and
+   * returns that end.
    */
   async #settleTheWorld(
     scene: LoadedScene,
     target: EventsTarget,
     events: TracedEvents,
     turnNumber: number,
+    over: boolean,
     trx: TransactionClientContract
-  ): Promise<void> {
+  ): Promise<ProposedEnd | null> {
     const { world, worldState } = scene
     const placeId = worldState.currentLocationId
     const place = placeId === null ? null : await LocationInstance.find(placeId, { client: trx })
     const around = placesAround(world, place)
+    let end: ProposedEnd | null = null
 
-    const { settled, deferred } = await settleStateEvents(
-      { ...target, placeId },
-      { gameTime: worldState.gameTime, turnNumber, around: async () => around },
-      trx
-    )
-    events.state = settled
-    events.deferred = deferred
+    if (!over) {
+      const { settled, deferred, ended } = await settleStateEvents(
+        { ...target, placeId },
+        { gameTime: worldState.gameTime, turnNumber, around: async () => around },
+        trx
+      )
+      events.state = settled
+      events.deferred = deferred
+      end = ended === null ? null : proposedEnd(ended.outcome, ended.event)
+    }
+
+    if (over || end !== null) {
+      await markTold(scene.session.id, events.told, trx)
+      await worldState.useTransaction(trx).save()
+
+      return end
+    }
 
     await followSchedules(
       {
@@ -1407,7 +1528,14 @@ export class TurnService {
 
     await markTold(scene.session.id, events.told, trx)
     await worldState.useTransaction(trx).save()
+
+    return null
   }
+}
+
+/** An event's outcome, as an end of the game it proposes. */
+function proposedEnd(outcome: GameOutcome, event: string): ProposedEnd {
+  return { reason: outcome === 'completed' ? 'victory' : 'defeat', event }
 }
 
 type EventsTarget = {
@@ -1590,8 +1718,11 @@ function planTime(
   let awaited: TracedEvents['awaited'] = null
 
   if (round !== null) {
-    /** A round lasts its twelve seconds; a character brought down is out for an hour. */
-    end = before + ROUND_SECONDS + (round.character.down ? DOWN_SECONDS : 0)
+    /**
+     * A round lasts its twelve seconds; a character down is out for an hour —
+     * unless they died, which ends the game with the round.
+     */
+    end = before + ROUND_SECONDS + (round.character.down && !round.character.out ? DOWN_SECONDS : 0)
   } else if (duration.label === 'until_event' || duration.label === 'until_npc') {
     const limit = walkEnd + MAX_DAYS * DAY
     let at: number | null = null
@@ -1691,7 +1822,8 @@ function planTime(
 
   return {
     time: { before, after: end, duration },
-    due: timedEventsDue(world.events, progressOf, snapshot, end),
+    /** Nothing falls once the game has ended. */
+    due: untilTheEnd(timedEventsDue(world.events, progressOf, snapshot, end)),
     place,
     around,
     arrivals: arrivalsWithin(before, end).map(({ npc, at, entry }) => ({
@@ -1714,7 +1846,10 @@ function interruptionText(world: WorldDefinition, timing: TurnTiming): string | 
   }
 
   if ('event' in cut) {
-    return world.events.find(({ reference }) => reference === cut.event)?.description ?? null
+    const event = world.events.find(({ reference }) => reference === cut.event)
+
+    /** An end cuts the action short unsaid: the epilogue tells it. */
+    return event === undefined || endsTheGame(event) ? null : event.description
   }
 
   return `${cut.npc} arrives.`

@@ -205,6 +205,10 @@ export default {
           tsType: "'in_progress' | 'paused' | 'completed' | 'failed'",
           decorators: column,
         },
+        end_reason: {
+          tsType: "'victory' | 'defeat' | 'death' | 'abandoned'",
+          decorators: column,
+        },
       },
     },
 
@@ -282,6 +286,11 @@ export default {
           tsType: 'TracedEvents',
           decorators: column,
           imports: [{ source: '#services/game/turn_trace', typeImports: ['TracedEvents'] }],
+        },
+        game_end: {
+          tsType: 'TracedGameEnd',
+          decorators: column,
+          imports: [{ source: '#services/game/turn_trace', typeImports: ['TracedGameEnd'] }],
         },
         duration: {
           tsType: 'Duration',

@@ -125,6 +125,7 @@ test.group('A character’s games | giving up', (group) => {
     response.assertStatus(200)
     assert.equal(bodyOf(response).data.status, 'failed')
     assert.isNotNull(bodyOf(response).data.endedAt)
+    assert.equal(bodyOf(response).data.endReason, 'abandoned')
     /** Closed, it still reads. */
     assert.equal(await statusOf(client.get(`/api/v1/sessions/${game.id}`).loginAs(player)), 200)
   })

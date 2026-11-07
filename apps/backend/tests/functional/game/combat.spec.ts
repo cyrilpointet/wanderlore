@@ -3,6 +3,7 @@ import { playAs } from '#tests/helpers/characters'
 import db from '@adonisjs/lucid/services/db'
 
 import CharacterState from '#models/character_state'
+import Session from '#models/session'
 import NpcInstance from '#models/npc_instance'
 import WorldState from '#models/world_state'
 import { DiceService } from '#services/dice'
@@ -329,9 +330,7 @@ test.group('Combat | a round', (group) => {
     assert.isFalse(guard.firstAidAvailable)
   })
 
-  test('brought to 0, the character is never killed: back at 1, an hour later', async ({
-    assert,
-  }) => {
+  test('brought to 0, the character dies: the game fails with the round', async ({ assert }) => {
     const { userId, sessionId, characterId } = await arrangeDuel()
     await CharacterState.query().where('characterId', characterId).update({ hitPoints: 3 })
     const attacked = {
@@ -344,14 +343,21 @@ test.group('Combat | a round', (group) => {
       },
     }
     /** No attack of their own; the guard's riposte 20, nothing to meet it with, the rapier 6. */
-    const { play } = buildService([attacked, ...STAGED], [20, 6])
+    const { play, provider } = buildService([attacked, ...STAGED], [20, 6])
 
     const turn = await play({ sessionId, userId, playerInput: 'I stand there.' })
 
     const character = await CharacterState.findByOrFail('characterId', characterId)
-    assert.equal(character.hitPoints, 1)
-    assert.isTrue(character.firstAidAvailable)
-    assert.equal(turn.gameTimeAfter! - turn.gameTimeBefore!, 12 + 3600)
+    const game = await Session.findOrFail(sessionId)
+    assert.equal(character.hitPoints, 0)
+    assert.deepEqual([game.status, game.endReason], ['failed', 'death'])
+    assert.isNotNull(game.endedAt)
+    assert.deepEqual(turn.gameEnd, { reason: 'death', event: null, discarded: [] })
+    /** Twelve seconds: no hour out of the fight for the dead. */
+    assert.equal(turn.gameTimeAfter! - turn.gameTimeBefore!, 12)
+    /** The narrator tells the fall, never the death. */
+    const narration = provider.requests.find(({ step }) => step === 'narration')!
+    assert.include(narration.userMessage, '"character_state":"out"')
   })
 
   test('a shot at a guard who never sees it coming: no defence, no riposte', async ({ assert }) => {

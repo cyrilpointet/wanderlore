@@ -216,7 +216,7 @@ function divide(totals: Totals, count: number): Totals {
 }
 
 /** In pipeline order, then any other step the log holds. */
-const STEP_ORDER = ['arbitration', 'narration', 'extraction', 'summary']
+const STEP_ORDER = ['arbitration', 'narration', 'extraction', 'epilogue', 'summary']
 
 function stepsOf(calls: Call[], pricing: Pricing | null): StepReport[] {
   const steps = [...new Set(calls.map((call) => call.step))].sort(

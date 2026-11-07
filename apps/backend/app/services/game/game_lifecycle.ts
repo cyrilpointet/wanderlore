@@ -4,6 +4,7 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import Session from '#models/session'
 import { Refusal } from '#exceptions/refusal'
+import type { TracedGameEnd } from '#services/game/turn_trace'
 
 /**
  * How a game ends, and what an ended game still allows (roadmap, Phase 12).
@@ -16,6 +17,48 @@ export const ONGOING_STATUSES = ['in_progress', 'paused'] as const
 
 export function isOngoing(session: Pick<Session, 'status'>): boolean {
   return (ONGOING_STATUSES as readonly string[]).includes(session.status)
+}
+
+/**
+ * Why a game ended: won or lost by an event of the scenario, lost by the
+ * character's death, or given up. Only a victory completes a game.
+ */
+export const END_REASONS = ['victory', 'defeat', 'death', 'abandoned'] as const
+
+export type EndReason = (typeof END_REASONS)[number]
+
+/** An end a turn proposed: an event of the scenario that wins or loses the game. */
+export type ProposedEnd = { reason: 'victory' | 'defeat'; event: string }
+
+const PRIORITY = ['death', 'defeat', 'victory'] as const
+
+/**
+ * The one end a turn keeps (roadmap, Phase 12): death first — at 0 hit points
+ * or fewer, the character dies — then a defeat, then a victory; within one
+ * reason, the first proposed. Null when nothing ended the game. Pure.
+ */
+export function gameEndOf(hitPoints: number, proposed: ProposedEnd[]): TracedGameEnd | null {
+  const ends: TracedGameEnd['discarded'] = [
+    ...(hitPoints <= 0 ? [{ reason: 'death' as const, event: null }] : []),
+    ...proposed,
+  ]
+
+  if (ends.length === 0) {
+    return null
+  }
+
+  const kept = [...ends].sort((a, b) => PRIORITY.indexOf(a.reason) - PRIORITY.indexOf(b.reason))[0]
+
+  return { ...kept, discarded: ends.filter((end) => end !== kept) }
+}
+
+/** What closing a game writes on it: its status, when, and why. */
+export function closing(reason: EndReason, at: DateTime) {
+  return {
+    status: reason === 'victory' ? ('completed' as const) : ('failed' as const),
+    endedAt: at,
+    endReason: reason,
+  }
 }
 
 /** A turn sent to a game that ended: it reads on, but plays no more. */
@@ -79,7 +122,7 @@ export async function abandonGame(sessionId: string, userId: string): Promise<Se
       )
     }
 
-    session.merge({ status: 'failed', endedAt: DateTime.now() })
+    session.merge(closing('abandoned', DateTime.now()))
     await session.useTransaction(trx).save()
 
     return session

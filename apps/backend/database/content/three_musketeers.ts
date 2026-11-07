@@ -1392,8 +1392,33 @@ export const THREE_MUSKETEERS_CONTENT: WorldContent = {
           description:
             "D'Artagnan and Jussac have crossed swords tonight, or one has called the other out.",
         },
+        {
+          reference: 'seal_brought_out',
+          description:
+            "D'Artagnan has come back out of the Hôtel de Laffemas into the street, Monsieur de Tréville's seal on him.",
+        },
       ],
-      events: [],
+      /** The night is won once the seal is out of the house, in hand. */
+      events: [
+        {
+          reference: 'seal_recovered',
+          when: {
+            at: null,
+            conditions: [
+              { type: 'flag', flag: 'seal_brought_out' },
+              { type: 'item_held_by', item: 'treville_seal', holder: { holder: 'character' } },
+            ],
+            delay: null,
+          },
+          unless: [],
+          place: null,
+          description:
+            "Monsieur de Tréville's seal is out of the Cardinal's Guards' house, safe in d'Artagnan's hands: the night's work is done.",
+          effects: [{ type: 'game_ended', outcome: 'completed' }],
+          interrupts: false,
+          foreseeable: null,
+        },
+      ],
       /** Late at night: most of the guards are asleep, the post is not. */
       startTime: '23:00',
       startDate: '1625-06-02',
