@@ -468,6 +468,12 @@ export type EventEffect =
   /** A unique item is destroyed. */
   | { type: 'item_gone'; item: string }
   | { type: 'flag_set'; flag: string }
+  /**
+   * The character is hurt — a trap, an explosion — if they are where it
+   * happens: `damage` is a dice expression (`12D6`, `6`, `2D4+8`), rolled by
+   * the backend, less the armour they wear.
+   */
+  | { type: 'character_harmed'; damage: string }
 
 export const EVENT_EFFECT_TYPES = [
   'npc_moved',
@@ -485,6 +491,7 @@ export const EVENT_EFFECT_TYPES = [
   'item_transferred',
   'item_gone',
   'flag_set',
+  'character_harmed',
 ] as const
 
 /** How long after its conditions first hold an event falls: a fixed span, or days. */

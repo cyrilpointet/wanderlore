@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 import { playAs } from '#tests/helpers/characters'
 
+import CharacterState from '#models/character_state'
 import EventState from '#models/event_state'
 import InventoryItem from '#models/inventory_item'
 import NpcDefinition from '#models/npc_definition'
@@ -52,11 +53,11 @@ function ruling(duration: Record<string, unknown>, intent: Record<string, unknow
   }
 }
 
-function buildService(answers: unknown[]) {
+function buildService(answers: unknown[], faces: number[] = [30]) {
   const provider = new FakeLlmProvider({ jsonSequence: answers })
   const service = new TurnService(
     new LlmGateway(provider, { requestTimeoutMs: 1000 }),
-    new RulesEngine(new DiceService(FakeRandomSource.fromFaces([30]))),
+    new RulesEngine(new DiceService(FakeRandomSource.fromFaces(faces))),
     new MemoryQueue(),
     new RecordingTurnEvents(),
     new FakeClock()
@@ -679,5 +680,102 @@ test.group('Deadlines | waiting for something', (group) => {
     ])
 
     await assert.rejects(() => play({ sessionId, userId, playerInput: 'I wait for the visitor.' }))
+  })
+})
+
+test.group('Deadlines | an event hurts the character', (group) => {
+  useTransaction(group)
+
+  /** A lever pulled in the hall sets off an explosion there. */
+  const EXPLOSION = event('hall_explosion', {
+    when: { at: null, conditions: [{ type: 'flag', flag: 'alarm_raised' }], delay: null },
+    place: 'house_hall',
+    description: 'The lever sets off an explosion that tears through the hall.',
+    effects: [{ type: 'character_harmed', damage: '3D6' }],
+  })
+
+  const pullTheLever = () => [
+    ruling({ label: 'moment' }, { type: 'manipulate' }),
+    streamed('You pull the lever.'),
+    extracted({ scenario_flags: ['alarm_raised'] }),
+  ]
+
+  async function wearBuffCoat(sessionId: string, characterId: string) {
+    await InventoryItem.create({
+      sessionId,
+      characterId,
+      definitionReference: 'buff_coat',
+      handle: 'buff_coat_1',
+      quantity: 1,
+      state: 'equipped',
+    })
+  }
+
+  function stateOf(sessionId: string) {
+    return CharacterState.query().where('sessionId', sessionId).firstOrFail()
+  }
+
+  test('a trap where the character stands hurts them, through their armour', async ({ assert }) => {
+    const { userId, sessionId, character } = await arrangeHouse({ events: [EXPLOSION] })
+    await wearBuffCoat(sessionId, character.id)
+    const { play } = buildService(pullTheLever(), [6, 6, 6])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I pull the lever.' })
+
+    assert.deepEqual(turn.eventsFired?.state, [
+      {
+        event: 'hall_explosion',
+        outcome: 'fired',
+        witnessed: true,
+        harm: [{ damage: '3D6', rolled: 18, armor: 1, total: 17 }],
+      },
+    ])
+    const state = await stateOf(sessionId)
+    assert.equal(state.hitPoints, 9)
+    assert.isTrue(state.firstAidAvailable)
+    assert.isNotNull(state.healingSince)
+    /** The player is shown every hit point the turn moved, the trap's included. */
+    assert.equal(turn.appliedEffects?.hit_points_delta, -17)
+  })
+
+  test('elsewhere, the trap hurts no one, and no die is rolled', async ({ assert }) => {
+    const elsewhere = { ...EXPLOSION, place: 'house_kitchen' }
+    const { userId, sessionId } = await arrangeHouse({ events: [elsewhere] })
+    const { play } = buildService(pullTheLever(), [])
+
+    const turn = await play({ sessionId, userId, playerInput: 'I pull the lever.' })
+
+    assert.deepEqual(turn.eventsFired?.state, [
+      { event: 'hall_explosion', outcome: 'fired', witnessed: false },
+    ])
+    const state = await stateOf(sessionId)
+    assert.equal(state.hitPoints, 26)
+  })
+
+  test('a harm felt everywhere at a set hour, fixed as written', async ({ assert }) => {
+    const plague = event('plague_strikes', {
+      when: { at: { day: 1, period: null, time: '22:00' }, conditions: [], delay: null },
+      description: 'A fever comes over the whole house.',
+      effects: [{ type: 'character_harmed', damage: '6' }],
+    })
+    const { userId, sessionId } = await arrangeHouse({ events: [plague] })
+    const { play } = buildService(
+      [ruling({ label: 'hours', count: 2 }), streamed('The hours drag on.'), extracted()],
+      []
+    )
+
+    const turn = await play({ sessionId, userId, playerInput: 'I wait.' })
+
+    assert.deepEqual(turn.eventsFired?.timed, [
+      {
+        event: 'plague_strikes',
+        at: 22 * HOUR,
+        outcome: 'fired',
+        witnessed: true,
+        harm: [{ damage: '6', rolled: 6, armor: 0, total: 6 }],
+      },
+    ])
+    const state = await stateOf(sessionId)
+    assert.equal(state.hitPoints, 20)
   })
 })

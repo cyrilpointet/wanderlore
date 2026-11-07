@@ -120,7 +120,7 @@ export async function bringPending(
 
   for (const entry of due) {
     await applyEffect(
-      { world, sessionId, worldState: null, characterId: null, placeId: null },
+      { world, sessionId, worldState: null, characterId: null, placeId: null, harm: null },
       entry.effect,
       entry.event,
       client

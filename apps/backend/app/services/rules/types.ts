@@ -246,6 +246,17 @@ export type DamageResolution = {
   total: number
 }
 
+/**
+ * What a harm of the story deals — a trap, an explosion, written by the
+ * author as dice — part by part, for the log.
+ */
+export type HarmResolution = {
+  rolled: number
+  /** What the armour actually stopped. */
+  armor: number
+  total: number
+}
+
 /** A blow that landed, as the round needs it. */
 export type HitRequest = {
   weapon: Weapon

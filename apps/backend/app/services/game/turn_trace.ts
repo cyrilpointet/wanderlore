@@ -80,11 +80,21 @@ export type TracedFirstAid = {
   saved: boolean
 }
 
+/** What an event's harm did to the character, one per `character_harmed` that reached them. */
+export type TracedHarm = {
+  damage: string
+  rolled: number
+  armor: number
+  total: number
+}
+
 /** An event of the state as the end of a turn settled it. */
 export type SettledStateEvent = {
   event: string
   outcome: 'fired' | 'armed' | 'cancelled'
   witnessed: boolean
+  /** Present only when the event hurt the character. */
+  harm?: TracedHarm[]
 }
 
 /**
@@ -94,7 +104,14 @@ export type SettledStateEvent = {
  */
 export type TracedEvents = {
   /** The timed events the turn's clock brought, in the order they fell. */
-  timed: { event: string; at: number; outcome: 'fired' | 'cancelled'; witnessed: boolean }[]
+  timed: {
+    event: string
+    at: number
+    outcome: 'fired' | 'cancelled'
+    witnessed: boolean
+    /** Present only when the event hurt the character. */
+    harm?: TracedHarm[]
+  }[]
   /** The events the state set off, armed or cancelled once the turn applied. */
   state: SettledStateEvent[]
   /** Events of an earlier turn this narration told. */

@@ -1,4 +1,4 @@
-import type { QueryClientContract } from '@adonisjs/lucid/types/database'
+import type { QueryClientContract, TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import EventState from '#models/event_state'
 import InventoryItem from '#models/inventory_item'
@@ -6,8 +6,11 @@ import LocationInstance from '#models/location_instance'
 import NpcInstance from '#models/npc_instance'
 import PlaceNote from '#models/place_note'
 import type WorldState from '#models/world_state'
+import type CharacterState from '#models/character_state'
+import type { RulesEngine } from '#services/rules/engine'
 
-import { type Holder, createItem, destroyItem, transferItem } from './inventory.js'
+import { type Holder, characterItems, createItem, destroyItem, transferItem } from './inventory.js'
+import { armorOf } from './combat.js'
 import { expectedPlaceOf, placeNpc } from './npcs.js'
 import {
   blockPassage,
@@ -22,7 +25,7 @@ import { EVENT_CHAIN_DEPTH, stateEventsDue, witnesses } from './events.js'
 import { loadProgress, loadSnapshot, progressReader } from './game_events.js'
 import type { EventEffect, ItemHolderReference, ScenarioEvent } from './content/types.js'
 import type { WorldDefinition } from './world.js'
-import type { SettledStateEvent } from './turn_trace.js'
+import type { SettledStateEvent, TracedHarm } from './turn_trace.js'
 
 /**
  * The events of a scenario, applied to a game (roadmap, Phase 11). Every
@@ -41,6 +44,11 @@ export type EffectTarget = {
   characterId: string | null
   /** Where the character stands: whoever an event brings there is present. Null: they wait, absent. */
   placeId: string | null
+  /**
+   * What an event can hurt: the character's state in this game, and the rules
+   * that roll the harm. Null where no one can be hurt.
+   */
+  harm: { rules: RulesEngine; characterState: CharacterState } | null
 }
 
 /**
@@ -190,18 +198,69 @@ export async function applyEffect(
         }
       }
       return
+
+    case 'character_harmed':
+      /** Dealt by `applyEvent`, which knows whether the character is there. */
+      return
   }
 }
 
-/** Every effect of an event, in the order the content lists them. */
+/**
+ * Every effect of an event, in the order the content lists them. A harm
+ * reaches the character only if they witness the event — there where it
+ * happens, or it happens everywhere; what it dealt comes back for the trace.
+ */
 export async function applyEvent(
   target: EffectTarget,
   event: ScenarioEvent,
+  witnessed: boolean,
   client?: QueryClientContract
-): Promise<void> {
+): Promise<TracedHarm[]> {
+  const harm: TracedHarm[] = []
+
   for (const effect of event.effects) {
+    if (effect.type === 'character_harmed') {
+      const dealt = witnessed ? await harmCharacter(target, effect.damage, client) : null
+      if (dealt !== null) harm.push(dealt)
+      continue
+    }
+
     await applyEffect(target, effect, event.reference, client)
   }
+
+  return harm
+}
+
+/**
+ * The author's dice, less the best armour the character wears, never below
+ * zero hit points. Hurt, they may be tended, and begin to heal — as after a
+ * blow.
+ */
+async function harmCharacter(
+  target: EffectTarget,
+  damage: string,
+  client?: QueryClientContract
+): Promise<TracedHarm | null> {
+  if (target.harm === null || target.characterId === null) {
+    return null
+  }
+
+  const { rules, characterState: state } = target.harm
+  const held = await characterItems(target.sessionId, target.characterId, client)
+  const worn = held.filter(({ equipped }) => equipped)
+  const dealt = rules.harm(damage, armorOf(target.world, worn))
+
+  if (dealt.total > 0) {
+    state.hitPoints = Math.max(0, state.hitPoints - dealt.total)
+    state.firstAidAvailable = true
+    if (state.healingSince === null && target.worldState !== null) {
+      state.healingSince = target.worldState.gameTime
+    }
+    if (client?.isTransaction) state.useTransaction(client as TransactionClientContract)
+    await state.save()
+  }
+
+  return { damage, ...dealt }
 }
 
 /** What became of an event, written once per game: armed, then set off or cancelled. */
@@ -286,8 +345,13 @@ export async function settleStateEvents(
         { firedAt: turn.gameTime, turnNumber: turn.turnNumber, witnessed, told: false },
         client
       )
-      await applyEvent(target, event, client)
-      settled.push({ event: event.reference, outcome: 'fired', witnessed })
+      const harm = await applyEvent(target, event, witnessed, client)
+      settled.push({
+        event: event.reference,
+        outcome: 'fired',
+        witnessed,
+        ...(harm.length > 0 ? { harm } : {}),
+      })
     }
   }
 }

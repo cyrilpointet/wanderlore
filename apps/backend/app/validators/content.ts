@@ -15,7 +15,7 @@ import {
   SPECIAL_EFFECTS,
   WEAPON_KINDS,
 } from '#services/game/content/types'
-import { isDiceExpression } from '#services/rules/dice_expression'
+import { isDiceExpression, maximumOf, parseDice } from '#services/rules/dice_expression'
 import { FIXED_DURATIONS, MAX_DAYS, PERIODS } from '#services/game/game_time'
 
 /**
@@ -76,6 +76,17 @@ const baseChance = () =>
 const isDice = vine.createRule((value: unknown, _options: undefined, field: FieldContext) => {
   if (typeof value === 'string' && !isDiceExpression(value)) {
     field.report('The {{ field }} field must be a dice expression such as 1D6+1', 'dice', field)
+  }
+})
+
+/** A harm of the story: a dice expression that can deal at least one point — `12D6`, `6`, `2D4+8`. */
+const isHarm = vine.createRule((value: unknown, _options: undefined, field: FieldContext) => {
+  if (typeof value !== 'string') return
+
+  if (!isDiceExpression(value)) {
+    field.report('The {{ field }} field must be a dice expression such as 2D4+8', 'dice', field)
+  } else if (maximumOf(parseDice(value)) < 1) {
+    field.report('The {{ field }} field must be able to deal at least 1 point', 'harm', field)
   }
 })
 
@@ -472,6 +483,7 @@ const effect = () =>
       typed('item_transferred', { item: reference(), holder: eventHolder() }),
       typed('item_gone', { item: reference() }),
       typed('flag_set', { flag: reference() }),
+      typed('character_harmed', { damage: vine.string().trim().maxLength(40).use(isHarm()) }),
     ])
     .otherwise(unknownType(EVENT_EFFECT_TYPES))
 

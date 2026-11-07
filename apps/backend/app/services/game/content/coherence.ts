@@ -604,6 +604,9 @@ function checkEvents(scenario: ScenarioContent, known: EventCatalogues, report: 
         return item(`${path}.item`, effect.item)
       case 'flag_set':
         return flag(`${path}.flag`, effect.flag)
+      case 'character_harmed':
+        /** Nothing to look up: its dice were checked with the shape. */
+        return
     }
   }
 

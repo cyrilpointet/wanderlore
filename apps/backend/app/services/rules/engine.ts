@@ -12,6 +12,7 @@ import {
   type Degree,
   type Difficulty,
   type Fumble,
+  type HarmResolution,
   type HitDegree,
   type HitRequest,
   type HitResolution,
@@ -299,6 +300,18 @@ export class RulesEngine {
   /** A fumbler's own blow: the weapon's dice, without the modifier, less their armour. */
   selfInjury(weapon: Weapon, armor: number): number {
     return Math.max(0, this.#rollModifier(weapon.damage) - armor)
+  }
+
+  /**
+   * A harm of the story, as the author wrote it — `12D6`, `6`, `2D4+8` —
+   * rolled as it is, less the armour worn, never below zero. No damage
+   * modifier and no critical: nobody struck the blow.
+   */
+  harm(damage: string, armor: number): HarmResolution {
+    const rolled = Math.max(0, this.#rollModifier(damage))
+    const stopped = Math.min(armor, rolled)
+
+    return { rolled, armor: stopped, total: rolled - stopped }
   }
 
   /**

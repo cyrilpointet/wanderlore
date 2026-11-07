@@ -1076,7 +1076,19 @@ par le LLM :
 - effets : `npc_moved`, `npc_left`, `npc_entered`, `npc_disposition`, `schedule_stopped` ;
   `passage_blocked`, `passage_cleared`, `passage_discovered`, `passage_unlocked` ;
   `place_note_set`, `place_note_cleared` ; `item_placed`, `item_transferred`, `item_gone` ;
-  `flag_set` — appliqués par les services existants (PNJ, passages, inventaire).
+  `flag_set` ; `character_harmed` — appliqués par les services existants (PNJ, passages,
+  inventaire, moteur de règles).
+
+`character_harmed` (ajouté hors phase, novembre 2026 : un piège, une explosion) porte une
+formule de dégâts écrite par l'auteur — des dés (`12D6`), un nombre fixe (`6`) ou les deux
+(`2D4+8`), qui doit pouvoir infliger au moins 1 point. Le backend la tire (`RulesEngine.harm`),
+sans modificateur de dégâts ni critique, moins la meilleure armure que porte le personnage, et
+ne l'applique que si le personnage est **témoin** de l'événement — dans son lieu, ou partout
+pour un événement sans lieu ; un événement d'ailleurs ne blesse personne et ne tire aucun dé.
+Les PV ne descendent pas sous 0 ; la blessure ouvre les premiers soins et la guérison, comme
+un coup. Ce qui a été tiré, arrêté et infligé va dans `turn_log.events_fired` (`harm`, sur
+l'événement), jamais au LLM : la narration ne reçoit que la description de l'événement, et le
+joueur la variation de ses PV. Jamais en attente : il ne vise que le personnage.
 
 Un effet sur un lieu jamais visité ou sur un unique jamais rencontré **attend**
 (`world_states.pending_place_effects`) : en créer l'instance le marquerait visité ou rencontré.

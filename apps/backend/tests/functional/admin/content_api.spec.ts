@@ -1028,6 +1028,42 @@ test.group('Content API | deadlines and events', (group) => {
     assert.include(fields, 'events.0.effects.0')
   })
 
+  test('an event hurts the character with dice, a fixed harm or both', async ({
+    client,
+    assert,
+  }) => {
+    const user = await gameMaster()
+    const { scenario } = await scenarioOf(client, user)
+    const harmed = (damage: string) => ({ type: 'character_harmed', damage })
+
+    const kept = await as(client, user).patch(`/scenarios/${scenario.id}`, {
+      flags: [{ reference: 'watson_home', description: 'Watson is back at Baker Street.' }],
+      events: [
+        {
+          ...WATSON_ARRIVES,
+          unless: [],
+          effects: [harmed('12D6'), harmed('6'), harmed('2D4+8')],
+        },
+      ],
+    })
+
+    kept.assertStatus(200)
+    assert.deepEqual(bodyOf(kept).data.events[0].effects, [
+      harmed('12D6'),
+      harmed('6'),
+      harmed('2D4+8'),
+    ])
+
+    const refused = await as(client, user).patch(`/scenarios/${scenario.id}`, {
+      events: [{ ...WATSON_ARRIVES, unless: [], effects: [harmed('a lot'), harmed('-1D4')] }],
+    })
+
+    refused.assertStatus(422)
+    const fields = bodyOf(refused).errors.map((error: { field: string }) => error.field)
+    assert.include(fields, 'events.0.effects.0.damage')
+    assert.include(fields, 'events.0.effects.1.damage')
+  })
+
   test('a schedule is for a named person only', async ({ client, assert }) => {
     const user = await gameMaster()
     const worldId = await createWorld()

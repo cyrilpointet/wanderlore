@@ -1245,6 +1245,7 @@ export class TurnService {
           worldState: scene.worldState,
           characterId: scene.character.id,
           placeId: scene.worldState.currentLocationId,
+          harm: { rules: this.#rules, characterState: scene.characterState },
         }
 
         /**
@@ -1354,7 +1355,8 @@ export class TurnService {
         },
         trx
       )
-      await applyEvent(target, event, trx)
+      const harm = await applyEvent(target, event, timed.witnessed, trx)
+      if (harm.length > 0) timed.harm = harm
     }
   }
 
@@ -1410,6 +1412,7 @@ type EventsTarget = {
   worldState: WorldState
   characterId: string
   placeId: string | null
+  harm: { rules: RulesEngine; characterState: CharacterState }
 }
 
 type LoadedScene = {

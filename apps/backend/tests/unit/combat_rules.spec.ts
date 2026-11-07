@@ -242,6 +242,22 @@ test.group('Combat | fumbles', () => {
   })
 })
 
+test.group('Combat | harm of the story', () => {
+  test('dice as written, less the armour worn', ({ assert }) => {
+    assert.deepEqual(buildEngine([6, 6, 1]).harm('3D6', 2), { rolled: 13, armor: 2, total: 11 })
+  })
+
+  test('a fixed harm, and dice plus a fixed part', ({ assert }) => {
+    assert.deepEqual(buildEngine([]).harm('6', 0), { rolled: 6, armor: 0, total: 6 })
+    assert.deepEqual(buildEngine([1, 4]).harm('2D4+8', 1), { rolled: 13, armor: 1, total: 12 })
+  })
+
+  test('the armour stops no more than was dealt, and nothing goes below zero', ({ assert }) => {
+    assert.deepEqual(buildEngine([2]).harm('1D6', 5), { rolled: 2, armor: 2, total: 0 })
+    assert.deepEqual(buildEngine([1]).harm('1D4-3', 0), { rolled: 0, armor: 0, total: 0 })
+  })
+})
+
 test.group('Combat | who strikes back', () => {
   test('one of several, on a die of as many faces', ({ assert }) => {
     const source = FakeRandomSource.fromFaces([3])
