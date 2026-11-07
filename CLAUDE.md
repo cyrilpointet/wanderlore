@@ -339,6 +339,11 @@ Phase 7 » ; architecture §6ter et §6quater), sur le modèle du détenteur ini
   village des environs de La Rochelle, 1627) et *The Drowned Anchor* (une auberge bretonne),
   en JSON dans `test-worlds/`, hors dépôt.
 
+**Hors roadmap : un événement blesse le personnage** (novembre 2026, détail : architecture
+§6sexies) : effet `character_harmed`, une formule de dés de l'auteur (`12D6`, `6`, `2D4+8`) tirée
+par le backend (`RulesEngine.harm`), moins la meilleure armure portée, infligée au seul
+personnage témoin de l'événement ; tirage tracé dans `events_fired`, jamais au LLM.
+
 **Hors roadmap : objets cachés** (novembre 2026, détail : roadmap, « Complément de la Phase 7 —
 Objets cachés » ; architecture §6bis), sur le modèle des sorties cachées : un unique détenu au
 départ par un lieu peut être caché (`item_definitions.hidden`), l'état vit dans
@@ -469,7 +474,27 @@ architecture 8bis ; cahier du front 5.6) :
   bandeau d'une partie close ; **back-office** : niveau de puissance, onglet *Professions*,
   équipement de départ du scénario.
 
-Lots suivants de la Phase 12 : conditions de fin de partie, progression, pause et reprise.
+**Phase 12, deuxième lot (conditions de fin de partie) terminé** — epic Jira `KAN-175`. Ses choix
+restent en vigueur (détail : roadmap Phase 12, « Décisions de cadrage — conditions de fin de
+partie » et ce qui a été tranché à l'implémentation ; architecture §6sexies « Fin de partie » et
+§8bis ; base de données, `sessions.end_reason`, `turn_log.game_end` et `epilogue`) :
+- **victoire et défaite sont des effets d'événement** (`game_ended`, `outcome` `completed` /
+  `failed`), déclenchés comme tout événement ; **au moins une victoire par scénario**
+  (`no_victory_event`), à la publication et au lancement ;
+- **le personnage meurt à 0 PV**, quelle qu'en soit la source, sur le coup (révise la Phase 10) ;
+  vivant à 2 PV ou moins, il reste hors de combat une heure ;
+- **une fin par tour**, mort puis défaite puis victoire (`gameEndOf`) ; une fin proposée arrête
+  échéances suivantes, événements d'état et emplois du temps ; clôture dans la transaction
+  (`closing()` : `status`, `ended_at`, `end_reason` — `victory`, `defeat`, `death`, `abandoned`) ;
+- **la narration ne reçoit jamais la fin** : elle raconte la chute, l'**épilogue** (étape LLM
+  `epilogue`, après le commit, streamée, pour toute fin sauf l'abandon) raconte la fin ; son
+  échec laisse la fin intacte, sans épilogue ; c'est la seule autre étape à écrire dans la langue
+  du joueur ;
+- **contrat** : `step_started(epilogue)`, `epilogue_chunk`, puis `turn_completed` ; `gameEnd` sur le
+  tour lu, `endReason` sur la partie ; écrans de fin au front ;
+- démonstration : *The Three Levers* dans `test-worlds/` (Trois Mousquetaires, trois issues).
+
+Lots suivants de la Phase 12 : progression, pause et reprise.
 
 **Refonte visuelle du front joueur — « la table de jeu »** — maquettes epic KAN-160, intégration
 epic KAN-167, hors roadmap, front seul, sans changement d'API (détail : cahier du front, sections
@@ -576,6 +601,10 @@ serverless pour le backend).
   `world_states.pending_place_effects`. Un nouvel effet ou une nouvelle condition = une entrée
   dans `EVENT_EFFECT_TYPES` / `EVENT_CONDITION_TYPES`, son validateur, sa vérification dans
   `checkScenario`.
+- **Une fin de partie se décide par `gameEndOf`** et s'écrit par `closing()`
+  (`#services/game/game_lifecycle`), dans la transaction du tour : jamais un `status` ni un
+  `end_reason` écrit à la main. Un événement propose une fin (`applyEvent` renvoie `ended`), le
+  tour en garde une. L'épilogue passe par `#services/game/prompts/epilogue`, après le commit.
 - **Un round de combat se joue par `playRound`** (`#services/game/combat`), pur, sur le moteur de
   règles, et s'applique par `#services/game/apply_combat` dans la transaction du tour — avant le
   delta de l'extraction, qui ne chiffre jamais un coup. Les références que le backend lit pour

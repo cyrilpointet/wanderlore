@@ -293,15 +293,19 @@ Une partie : un personnage engagé dans un scénario.
 | `character_id` | uuid, non null | personnage engagé (Phase 12) ; clé étrangère composite `(character_id, world_id)` → `characters(id, world_id)`, sans action : supprimer un joueur emporte ses parties et ses personnages dans la même instruction, dans n'importe quel ordre |
 | `status` | enum `session_status` | `in_progress` / `paused` / `completed` (réussie) / `failed` (Phase 12) |
 | `ended_at` | timestamptz, nullable | fin de la partie (`completed` ou `failed`) |
+| `end_reason` | enum `end_reason`, nullable | Phase 12, deuxième lot : pourquoi elle a fini — `victory` (un événement de victoire), `defeat` (un événement de défaite), `death` (le personnage à 0 PV), `abandoned` (le joueur). CHECK : renseignée si et seulement si `ended_at` l'est, `victory` avec `completed`, les autres avec `failed` |
 | `current_chapter` | varchar, nullable | référence du chapitre courant, parmi `scenarios.chapters` |
 | `created_at` / `last_activity_at` | timestamptz | — |
 | `deleted_at` | timestamptz, nullable | moment où le joueur a retiré la partie de sa liste ; null tant qu'elle y figure |
 
 - **Une partie à la fois par personnage** : index unique partiel sur `character_id` pour les
   parties `in_progress` ou `paused` ; un second lancement est refusé (`character_engaged`).
-- **Abandon** : la partie passe `failed` (avec `ended_at`), refusé pendant un tour en cours. Une
-  partie `failed` est close : son journal se relit, aucun tour ne s'y soumet plus. La raison
-  d'une fin (abandon, mort, victoire) arrive avec les conditions de fin de partie.
+- **Abandon** : la partie passe `failed` (avec `ended_at`, `end_reason = abandoned`), refusé
+  pendant un tour en cours. Une partie `failed` est close : son journal se relit, aucun tour ne
+  s'y soumet plus.
+- **Fin par le jeu** (Phase 12, deuxième lot) : le tour qui la termine écrit `status`,
+  `ended_at` et `end_reason` dans sa transaction — un événement `game_ended` du scénario
+  (`victory` ou `defeat`), ou le personnage à 0 PV (`death`).
 - **Rejouer** un scénario `failed` crée une partie neuve, une nouvelle tentative ; un scénario
   qu'un personnage a réussi (`completed`) ne se relance pas pour lui.
 - **Suppression douce** : seulement une partie `failed` (Phase 12). Elle reste en base avec ses
@@ -605,6 +609,8 @@ Log complet de chaque tour, table à plus forte volumétrie du système. Indispe
 | `combat_result` | jsonb, nullable | le round de combat joué (Phase 10) : chaque coup, chaque défense et chaque jet — ceux des PNJ compris, que le joueur ne voit jamais —, dégâts, effets, maladresses, armes perdues, état des deux camps, et l'archétype instancié pour l'occasion |
 | `first_aid` | jsonb, nullable | les premiers soins donnés (Phase 10) : cible, degré, s'il restait une blessure à soigner, PV rendus, mourant sauvé |
 | `events_fired` | jsonb, nullable | les événements du tour (Phase 11) : `timed` (ceux que l'horloge a amenés, instant, issue, témoin ou non), `state` (ceux que l'état a déclenchés, armés ou annulés, et la passe de la chaîne) — sur chacun, `harm` quand il a blessé le personnage (formule, tirage, armure, PV perdus ; hors phase, novembre 2026), `told` (ceux d'un tour précédent que la narration a racontés), `interrupted` (l'événement ou l'arrivée qui a écourté l'action), `awaited` (ce qu'on attendait, et s'il est venu), `deferred` (encore dus quand la chaîne a atteint sa profondeur, repris au tour suivant) |
+| `game_end` | jsonb, nullable | Phase 12 : sur le tour qui a terminé la partie, la fin gardée (`reason` : `victory`, `defeat` ou `death` ; `event`, l'événement qui l'a déclenchée, null pour une mort) et les fins écartées par priorité (`discarded`) ; null sur tout autre tour |
+| `epilogue` | text, nullable | Phase 12 : l'épilogue raconté après la fin, dans la langue du tour ; null s'il a échoué, et sur tout autre tour (CHECK : seulement avec `game_end`) |
 | `created_at` | timestamp | — |
 
 **Pourquoi tracer `language` à côté de `llm_usage`** : le coût réel d'un tour varie

@@ -327,12 +327,17 @@ flowchart TD
     P --> Q[Noms appris, dispositions]
     Q --> R[Objets : placement initial,<br/>créations, transferts entre<br/>détenteurs, destructions, équipement<br/>unique jamais dupliqué<br/>stackable : quantité]
     R --> S[Flags, points de vie, horloge]
-    S --> T[Attribuer le numéro de tour<br/>unicité session_id + turn_number]
+    S --> FE{Fin de partie ?<br/>mort à 0 PV, défaite, victoire<br/>une seule, par priorité}
+    FE -->|oui| FC[(sessions : status, ended_at,<br/>end_reason · turn_log.game_end)]
+    FE -->|non| T
+    FC --> T[Attribuer le numéro de tour<br/>unicité session_id + turn_number]
     T --> U[(turn_log : applied_effects,<br/>status = completed)]
     U --> V[Commit]
-    V -.-> W[/turn_completed<br/>tour relu + fiche + lieu libellés<br/>+ période de la journée/]
-    V --> Z{Fin de partie ?<br/>mort, victoire<br/>à trancher en Phase 12}
-    Z --> J([Seuil de résumé ? — §9])
+    V --> EP{Partie terminée ?}
+    EP -->|oui| EPL{{Épilogue — LLM streamé<br/>epilogue_chunk<br/>échec : sans épilogue}}
+    EPL --> W
+    EP -->|non| W[/turn_completed<br/>tour relu + fiche + lieu libellés<br/>+ période de la journée<br/>+ gameEnd sur le tour final/]
+    W --> J([Seuil de résumé ? — §9])
 ```
 
 - **Ordre d'application déterministe** : passages, déplacement, puis sorties, puis entrées —
@@ -343,6 +348,10 @@ flowchart TD
   langue de la partie [archi §8bis, CLAUDE.md].
 - **Tout ou rien** : un échec à n'importe quel point de la transaction l'annule ; rien n'est
   appliqué et le tour passe `failed`.
+- **Fin de partie** (Phase 12) : une fin par tour, la mort avant la défaite, la défaite avant la
+  victoire ; une fin proposée arrête événements d'état et emplois du temps. L'épilogue vient
+  après le commit, avant `turn_completed` ; son échec laisse la fin intacte [archi §6sexies,
+  §8bis].
 
 ---
 

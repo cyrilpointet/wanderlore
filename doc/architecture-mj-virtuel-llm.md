@@ -53,6 +53,7 @@ Le lore, le scénario, le state et les system prompts restent **exclusivement en
 | D | Narration | LLM (texte libre) | JSON avec champ texte |
 | E | Extraction des effets sur le state | LLM | JSON structuré |
 | — | Validation + persistance | Backend déterministe | — |
+| — | Épilogue (Phase 12, seulement au tour qui termine la partie) | LLM (texte libre, après le commit) | Texte streamé |
 | — | Résumé narratif périodique | LLM (job asynchrone) | Texte condensé |
 
 ### Pourquoi fusionner A + B + C
@@ -1171,6 +1172,37 @@ conditions, témoin, attente ; entrée d'un emploi du temps, arrivées et dépar
 `#services/game/apply_events` pour l'écriture (effets, `event_states`, notes, emplois du temps
 suivis) ; `#services/game/pending_effects` pour ce qui attend. Trace : `turn_log.events_fired`.
 
+### Fin de partie (Phase 12, deuxième lot)
+
+- **Victoire et défaite sont des effets d'événement** : `game_ended` (`outcome` : `completed` ou
+  `failed`), déclenché comme tout événement — échéance ou conditions, `unless`, délai, chaîne.
+  `checkScenario` exige au moins un événement de victoire (`no_victory_event`) et refuse deux
+  `game_ended` dans un même événement (`game_ended_twice`).
+- **Mort du personnage** : à 0 PV ou moins, quelle qu'en soit la source — un coup dans le round,
+  une maladresse, une blessure lue par l'extraction, un `character_harmed` —, sur le coup, sans
+  état mourant. Le round ne le ramène plus à 1 PV ; vivant à 2 PV ou moins, il reste hors de
+  combat une heure.
+- **Une fin par tour** : la transaction recueille les fins proposées (`ProposedEnd`, par
+  `applyEvent` et `settleStateEvents`), lit la mort sur les PV, et garde la plus prioritaire —
+  mort, puis défaite, puis victoire (`gameEndOf`, `#services/game/game_lifecycle`, pur). Les
+  échéances du tour s'arrêtent à la première qui termine la partie (`untilTheEnd`) ; une fin
+  proposée, ou une mort, empêche les événements d'état et les emplois du temps ; la chaîne
+  s'arrête à l'événement qui termine. Ce qui a été appliqué avant reste appliqué.
+- **Clôture** dans la transaction : `status` (`completed` pour une victoire, `failed` sinon),
+  `ended_at`, `end_reason` (`victory`, `defeat`, `death`, `abandoned` pour l'abandon), par
+  `closing()`. Trace : `turn_log.game_end` (raison gardée, événement, fins écartées).
+- **La narration ne reçoit jamais la fin** : une échéance qui termine n'est pas parmi les
+  événements dont le personnage est témoin, ni le texte d'une interruption ; un personnage mort
+  dans le round est narré qui tombe (`character_state: out`), sans dire ce qu'il devient.
+- **Épilogue** : une étape LLM à part (`epilogue`, `#services/game/prompts/epilogue`), appelée
+  après le commit, pour toute fin sauf l'abandon, en streaming, dans le budget restant du tour.
+  Elle reçoit la raison, la description de l'événement de fin (rien pour une mort), le
+  personnage (nom, genre, profession traduite), `story_so_far`, les tours non couverts, le
+  dernier tour (entrée et narration), le glossaire traduit et la langue — rien de mécanique. Le
+  nom et l'entrée du joueur sont des données de jeu. Son échec (transport, budget, texte vide)
+  n'annule rien : `turn_log.epilogue` reste null, ni nouvelle tentative ni retry. Son coût entre
+  dans `turn_log.llm_usage` du tour final ; le résumé ne le lit pas.
+
 ---
 
 ## 7. Principes de sécurité et de robustesse des prompts
@@ -1317,8 +1349,8 @@ GET    /characters                     ses personnages, les engagés d'abord, av
 GET    /characters/:id                 la fiche, la partie en cours, les parties passées, les scénarios disponibles (chacun marqué `failed` s'il a déjà échoué)
 DELETE /characters/:id                 suppression douce, refusée s'il est engagé (character_engaged)
 POST   /characters/:id/sessions        lance une partie sur un scénario de son univers (character_engaged, scenario_completed)
-GET    /sessions/:id                   une partie, close comprise : en-tête (`status`, `endedAt`, `characterId`, `scenario`), personnage, tour en attente
-POST   /sessions/:id/abandon           la partie passe failed, refusé pendant un tour en cours (turn_already_in_progress) ou si elle est close (game_ended)
+GET    /sessions/:id                   une partie, close comprise : en-tête (`status`, `endedAt`, `endReason`, `characterId`, `scenario`), personnage, tour en attente
+POST   /sessions/:id/abandon           la partie passe failed (`endReason: abandoned`), refusé pendant un tour en cours (turn_already_in_progress) ou si elle est close (game_ended)
 DELETE /sessions/:id                   suppression douce, d'une partie failed seulement (game_not_failed)
 ```
 
@@ -1328,6 +1360,19 @@ DELETE /sessions/:id                   suppression douce, d'une partie failed se
 - **Back-office** : `GET|POST /admin/worlds/:worldId/professions`, `PATCH|DELETE /admin/professions/:professionId` (`content_in_use` si un personnage la suit) ; `powerLevel` sur l'univers, `startingKit` sur le scénario.
 - **Une partie `failed` se relit** (`GET /sessions/:id`, son journal) mais n'accepte plus de tour (`game_ended`).
 - `GET /sessions/:id` porte le personnage (fiche durable et état de la partie) sous la même forme que `turn_completed.character`.
+
+### Fin de partie (Phase 12, deuxième lot)
+
+- **Le tour qui termine la partie** : après les `narration_chunk`, `step_started(epilogue)`, des
+  `epilogue_chunk` (`{ event, turnId, idempotencyKey, text }`, comme la narration), puis le seul
+  `turn_completed`. L'épilogue est provisoire jusqu'à `turn_completed`, qui le remplace par la
+  version gardée — ou ne le porte pas, s'il a échoué. Jamais de `turn_failed` après un épilogue :
+  le tour est déjà commité.
+- **Un tour lu** (`turn_completed.turn`, `GET /sessions/:id/turns`) porte `gameEnd` :
+  `{ reason: victory | defeat | death, epilogue: string | null }` sur le tour qui a terminé la
+  partie, null sur les autres — jamais l'événement.
+- **Une partie close** porte `endReason` (en-tête de `GET /sessions/:id`, réponse de l'abandon),
+  et chaque partie passée de `GET /characters/:id` aussi.
 
 ---
 

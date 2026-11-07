@@ -867,6 +867,18 @@ Tranchées à l'ouverture du deuxième lot (2026-11-06).
   - **Stocké sur le tour final**, à côté de sa narration, pour que le journal le relise naturellement.
   - **Une étape à part** (`epilogue`), avec son system prompt statique, son coût compté par tour comme les autres étapes.
 
+Tranchés pendant l'implémentation du deuxième lot (epic `KAN-175`) :
+
+- **Codes de cohérence** : `no_victory_event` (aucun événement ne gagne le scénario) et `game_ended_twice` (deux `game_ended` dans un même événement), à la publication comme au lancement. Un brouillon sans victoire s'enregistre et s'importe.
+- **Parties déjà closes** : la migration leur donne une raison — `abandoned` pour une partie `failed` (seule fin possible jusque-là), `victory` pour une partie `completed` —, et une date de fin, la dernière activité, à celles qui n'en avaient pas.
+- **Une fin proposée arrête le monde** : après une échéance qui termine, les échéances suivantes du tour ne tombent pas (`untilTheEnd`) ; une fin proposée ou la mort empêche les événements d'état et les emplois du temps ; la chaîne s'arrête à l'événement qui termine. Ce qui a été appliqué avant reste.
+- **La mort n'ajoute pas l'heure hors de combat** : le round dure ses 12 secondes. Vivant à 2 PV ou moins, le personnage reste hors de combat une heure, comme en Phase 10.
+- **La narration raconte la chute, jamais la mort** (`character_state: out`) ; une échéance qui termine n'est ni un événement dont le personnage est témoin, ni le texte d'une interruption.
+- **Trace** : `turn_log.game_end` (raison gardée, événement, fins écartées) et `turn_log.epilogue`.
+- **Contrat** : `step_started(epilogue)` et `epilogue_chunk` entre la narration et `turn_completed` ; `gameEnd: { reason, epilogue }` sur le tour lu ; `endReason` sur la partie et les parties passées. L'épilogue reçoit aussi le glossaire traduit, comme la narration.
+- **Un scénario de démonstration à trois issues** dans les Trois Mousquetaires (`test-worlds/`, *The Three Levers*) : le personnage enfermé dans une cave face à trois leviers — le premier ouvre la porte (victoire), le deuxième scelle la cave (défaite), le troisième fait sauter la poudre (`character_harmed` à `12D6` puis victoire : mort presque sûre, victoire si le personnage survit). Chaque scénario de `test-worlds/` a reçu un événement de victoire.
+
+
 ### Contenu
 
 - Progression du personnage : tests d'expérience et jets d'amélioration du BRP, en fin de scénario.

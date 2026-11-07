@@ -545,10 +545,29 @@ points de vie — et les refus par champ. C'est le même calcul que la création
 - **Supprimer le personnage**, avec confirmation, seulement s'il n'est engagé dans aucune
   partie.
 
-**Écran de jeu d'une partie close** (`failed`, et plus tard `completed`) : le journal se relit,
-la zone de saisie laisse place, dans le plateau de dés, à une carte (*« This game is over. »*) et
-un retour à la page du personnage. La carte du personnage de l'écran de jeu mène à la page du
-personnage plutôt qu'à **My games**.
+**Écran de jeu d'une partie close** (`failed` ou `completed`) : le journal se relit,
+la zone de saisie laisse place, dans le plateau de dés, à une carte tamponnée de la raison de la
+fin (`endReason` : *Victory* en vert, *Defeat*, *Death* ou *Abandoned* en rouge — le mot dit
+lequel, la couleur ne fait que le doubler), avec une phrase par raison (*« … saw the story
+through. »*, *« The story ends in defeat for … »*, *« … is dead. The story ends here. »*,
+*« You abandoned this story. »* ; *« This game is over. »* sans raison) et un retour à la page du
+personnage. La carte du personnage de l'écran de jeu mène à la page du personnage plutôt qu'à
+**My games**.
+
+**Fin de partie (Phase 12, deuxième lot)** :
+- **L'épilogue s'écrit en direct** : après la narration du tour final, `step_started(epilogue)`
+  (*« The game master tells how it ends »*) puis des `epilogue_chunk`, provisoires jusqu'à
+  `turn_completed`, qui apporte l'épilogue gardé dans `gameEnd` (`turnReducer`). Suivi en direct
+  seulement si la narration l'a été.
+- **Au pied du tour final**, sur la feuille : après la narration et les effets, un filet,
+  l'épilogue dans la police du récit, puis un grand tampon de la raison, légèrement de biais ;
+  sans épilogue (échec), le tampon seul. Le tampon descend sur la feuille
+  (`animate-stamp-press`) pour une partie terminée sous les yeux du joueur, sous la préférence
+  *End of a game stamped* (`ending`).
+- **Jet en direct** : un tour final retenu avant le lancer ne montre ni l'épilogue, ni le
+  tampon, ni la carte de fin avant la révélation.
+- **Lecture à voix haute** : l'épilogue est lu à la suite de la narration.
+- **Page d'un personnage** : chaque partie passée porte le tampon de sa raison.
 
 **Fiche (5.3.4)** : profession et genre s'ajoutent à l'identité.
 
@@ -868,7 +887,8 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
 - **Phase 12 — Progression et cycle de vie.** Accueil par personnages et création de
   personnage guidée, page d'un personnage avec ses parties, abandon d'un scénario (5.6) — le
   prétiré et l'écran **New game** disparaissent ; puis progression du personnage en fin de
-  scénario ; mise en pause et reprise ; écrans de fin (victoire, mort du personnage, abandon).
+  scénario ; mise en pause et reprise. Écrans de fin (victoire, défaite, mort, abandon) et
+  épilogue livrés au deuxième lot (5.6, « Fin de partie »).
 - **Phase 13 — Règles optionnelles par univers.** Santé mentale, passions et réputation
   sur la fiche, pour les seuls univers qui les emploient ; un jet caché n'affiche pas son
   détail.
