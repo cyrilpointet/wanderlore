@@ -293,7 +293,7 @@ Voir le document de roadmap, section « Stratégie de test », pour le détail p
 - Modération de contenu au-delà du prompt injection (thèmes sensibles, classification d'âge).
 - Versionning des prompts et des règles de résolution en cas de modification en cours de vie du produit.
 - Outillage de création de contenu au-delà d'un back-office CRUD basique (assistance LLM au tagging). L'import JSON d'un univers clé en main ou d'un scénario complet existe depuis la Phase 8.
-- Cycle de vie détaillé de la partie : conditions de fin, progression, reprise après pause longue (la création guidée et les parties d'un personnage sont cadrées à l'ouverture de la Phase 12).
+- Cycle de vie de la partie : création guidée, parties d'un personnage et conditions de fin livrées en Phase 12 ; la progression du personnage (après la mise en production du beta test) et la reprise après pause longue sont renvoyées aux points ouverts de la roadmap.
 - Rythme de travail indicatif à se fixer (jalon par mois, volume d'heures hebdomadaire) — évoqué en section 2 mais non encore formalisé concrètement.
 - Hébergement et canal de distribution définitifs (au-delà des solutions légères envisagées pour la phase de test — voir section 4) — non abordés pour une éventuelle montée en charge.
 - **Choix du modèle de monétisation** — la démarche pour y parvenir est actée (voir section 4 : mesure du coût réel puis validation de l'appétence en beta test), mais aucune piste n'est encore sélectionnée.
@@ -317,7 +317,9 @@ Depuis la Phase 6, le Basic Roleplaying de Chaosium (édition 2023, licence ORC)
 
 **Phase 11 (échéances et événements) terminée** (epic `KAN-143`) : le monde avance avec l'horloge de jeu, sans le joueur — échéances, événements déclenchés par l'état et chaînés, emplois du temps des PNJ uniques, passages bloqués et notes de lieu, par période ou par un événement ; une longue action s'interrompt, et le joueur peut attendre un événement prévisible ou un PNJ connu. Tout est évalué par le backend, sans appel LLM de plus.
 
-**Phase suivante : Phase 12 (progression du personnage et cycle de vie complet de la partie).** Voir la roadmap.
+**Phase 12 (cycle de vie de la partie) terminée** (epics `KAN-151` et `KAN-175`) : création du personnage selon le BRP, parties d'un personnage, conditions de fin (victoire et défaite par événement, mort à 0 PV, abandon) et épilogue ; progression, pause et reprise renvoyées aux points ouverts.
+
+**Phase suivante : Phase 13 (règles optionnelles par univers).** Voir la roadmap.
 
 ---
 

@@ -249,7 +249,7 @@ prétiré du scénario ; ce qui ne dure qu'une partie vit désormais dans `chara
 | `gender` | enum `character_gender` | `female` / `male` / `neutral` : pronoms et accords de la narration |
 | `characteristics` | jsonb | les sept caractéristiques du BRP (`STR`, `CON`, `SIZ`, `INT`, `POW`, `DEX`, `CHA`), placées par le joueur depuis sa série tirée |
 | `skills` | jsonb | compétences entraînées, en pourcentage (chance de base + points de création) ; une compétence absente vaut sa chance de base |
-| `progression` | jsonb | expérience, pour le lot de la progression |
+| `progression` | jsonb | expérience, pour la progression du personnage — renvoyée après le beta test ; vide en attendant |
 | `created_at` / `updated_at` | timestamptz | — |
 | `deleted_at` | timestamptz, nullable | suppression douce par le joueur, possible seulement s'il n'est engagé dans aucune partie |
 
@@ -258,7 +258,7 @@ prétiré du scénario ; ce qui ne dure qu'une partie vit désormais dans `chara
 
 - **Lu sans copie par la partie** : caractéristiques et compétences se lisent sur la fiche à
   chaque tour. Un personnage n'étant engagé que dans une partie à la fois, rien ne peut
-  diverger ; la progression écrira sur la fiche à la fin d'un scénario.
+  diverger ; la progression, renvoyée après le beta test, écrira sur la fiche à la fin d'un scénario.
 - **Le personnage ne garde rien d'une partie à l'autre** (pour l'instant) : points de vie,
   ressources et inventaire repartent à neuf à chaque lancement.
 - Un personnage supprimé disparaît des routes du joueur avec ses parties, qui restent en base

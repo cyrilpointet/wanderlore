@@ -494,7 +494,8 @@ partie » et ce qui a été tranché à l'implémentation ; architecture §6sexi
   tour lu, `endReason` sur la partie ; écrans de fin au front ;
 - démonstration : *The Three Levers* dans `test-worlds/` (Trois Mousquetaires, trois issues).
 
-Lots suivants de la Phase 12 : progression, pause et reprise.
+**La Phase 12 est close avec ces deux lots** : la progression du personnage (après la mise en
+production du beta test) et la pause et la reprise sont renvoyées aux points ouverts de la roadmap.
 
 **Refonte visuelle du front joueur — « la table de jeu »** — maquettes epic KAN-160, intégration
 epic KAN-167, hors roadmap, front seul, sans changement d'API (détail : cahier du front, sections
@@ -671,7 +672,7 @@ serverless pour le backend).
 - **Le personnage d'une partie se lit en deux morceaux** : la fiche durable (`Character` :
   caractéristiques, compétences, profession, genre), jamais copiée, et l'état de la partie
   (`CharacterState` : PV, blessures, ressources). Tout ce qui ne dure qu'une partie s'écrit sur
-  `character_states`, jamais sur `characters` — la progression seule écrira sur la fiche. Les
+  `character_states`, jamais sur `characters` — la progression seule écrira sur la fiche (renvoyée après le beta test). Les
   objets ont pour détenteur `character_states.character_id`, dans la partie.
 - **Une partie se lance par `startGame`** (`#services/game/new_game`) et se clôt par
   `#services/game/game_lifecycle` (`lockOwnGame`, `abandonGame`) : l'abandon et la soumission

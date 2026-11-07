@@ -799,7 +799,7 @@ Tranchés pendant l'implémentation et la recette :
 
 **Objectif** : faire progresser le personnage et mener une partie de sa création à sa fin.
 
-La phase se mène en lots : d'abord la création du personnage et les parties d'un personnage, puis les conditions de fin de partie, puis la progression, puis la pause et la reprise.
+La phase se mène en lots : d'abord la création du personnage et les parties d'un personnage, puis les conditions de fin de partie. La progression (troisième lot prévu) et la pause et la reprise (quatrième) sont renvoyées aux points ouverts (décision du 2026-11-07, voir la fin de ce document) : la progression viendra après la mise en production du beta test. **La phase est close avec ses deux premiers lots.**
 
 ### Décisions de cadrage — création du personnage et parties d'un personnage
 
@@ -881,22 +881,22 @@ Tranchés pendant l'implémentation du deuxième lot (epic `KAN-175`) :
 
 ### Contenu
 
-- Progression du personnage : tests d'expérience et jets d'amélioration du BRP, en fin de scénario.
+- ~~Progression du personnage : tests d'expérience et jets d'amélioration du BRP, en fin de scénario~~ — renvoyée aux points ouverts, après le beta test.
 - Cycle de vie complet de la partie :
   - création de personnage guidée (au-delà d'un simple formulaire technique),
   - conditions de fin de partie (victoire, mort du personnage, abandon volontaire),
-  - gestion de la reprise après une pause longue (régénération du résumé avant reprise si nécessaire).
+  - ~~gestion de la reprise après une pause longue~~ — renvoyée aux points ouverts.
 
 ### Critère de sortie de phase
 
-- Le personnage améliore ses compétences d'après l'expérience acquise au cours d'un scénario.
-- Une partie peut être créée, mise en pause, reprise et menée jusqu'à une fin définie.
+- ~~Le personnage améliore ses compétences d'après l'expérience acquise au cours d'un scénario~~ — renvoyé avec la progression.
+- Une partie peut être créée et menée jusqu'à une fin définie. (La pause et la reprise ne font plus partie du critère : renvoyées aux points ouverts.)
 
 ---
 
 ## Phase 13 — Règles optionnelles par univers
 
-**Objectif** : activer, univers par univers, les règles optionnelles du BRP qui font le genre — sans toucher au moteur commun. Placée après la Phase 12, dont elle réutilise la progression (une passion s'améliore comme une compétence).
+**Objectif** : activer, univers par univers, les règles optionnelles du BRP qui font le genre — sans toucher au moteur commun. Placée après la Phase 12. Elle devait réutiliser la progression (une passion s'améliore comme une compétence) : la progression étant renvoyée après le beta test, l'amélioration des passions l'attendra.
 
 ### Contenu
 
@@ -1004,7 +1004,7 @@ Pouvoirs et espèces non humaines, qui emploient les mêmes drapeaux par univers
 | 9 | Mémoire long terme | — |
 | 10 | Combat | — |
 | 11 | Échéances et événements déclenchés par le temps | — |
-| 12 | Progression du personnage, cycle de vie complet de la partie | — |
+| 12 | Cycle de vie de la partie : création du personnage, parties d'un personnage, conditions de fin (progression, pause et reprise renvoyées aux points ouverts) | — |
 | 13 | Règles optionnelles par univers | — |
 | 13bis | Pouvoirs et espèces non humaines | — |
 | 14 | Production-ready | — |
@@ -1127,6 +1127,8 @@ finit toujours par être ignoré.
 - Décision sur la nécessité future d'un cumul de rôles (un MJ qui voudrait aussi jouer).
 - Nom d'un objet unique avant qu'il soit identifié (« The office key », le Necronomicon) : le narrateur et le front le nomment d'emblée, comme un PNJ inconnu avant la connaissance des noms (lot entre les Phases 7 et 8).
 - **Pièges** (relevé en novembre 2026, à propos d'un coffre piégé) : un piège armé sur un objet ou un passage, qui se repère par un jet (fouille), se désamorce par un autre jet d'une autre compétence, et se déclenche sur une action (ouvrir, franchir) s'il ne l'est pas — dégâts par la formule de `character_harmed`, contenu détruit ou non. Les briques actuelles ne suffisent pas : le repérage peut reprendre le circuit des objets cachés (connu de la narration, tu jusqu'à une fouille réussie), mais **le déclenchement doit se résoudre avant la narration**, comme un round de combat — un événement d'état, évalué après l'extraction, ne serait raconté qu'au tour suivant, et la narration du tour où l'on ouvre le coffre en décrirait peut-être le contenu. Piste : l'arbitrage désigne l'action et sa cible, le backend voit le piège armé, tire les jets et applique les conséquences, la narration reçoit ce qui s'est passé ; une maladresse au désamorçage le déclenche sans passer par le récit. Lot de conception à part entière.
+- **Progression du personnage** (renvoyée de la Phase 12 le 2026-11-07, où elle formait le troisième lot ; **après la mise en production du beta test**) : tests d'expérience et jets d'amélioration du BRP en fin de scénario, écrits sur la fiche durable (`characters.progression` existe déjà, vide). À trancher : ce qui coche une compétence, le jet et le gain d'après le livre, à quelle fin de partie (victoire seulement, ou toute fin), ce que voit le joueur, les caractéristiques. L'amélioration des passions (Phase 13) en dépend.
+- **Pause et reprise d'une partie** (renvoyées de la Phase 12 le 2026-11-07, où elles formaient le quatrième lot) : qui met en pause (le joueur, ou l'inactivité), ce qu'une pause bloque, ce qui déclenche la reprise, le seuil d'une pause « longue » et ce que la reprise régénère (un résumé « précédemment » pour le joueur, une narration de reprise). Le statut `paused` existe déjà et compte comme engagé (une partie à la fois par personnage) ; rien ne le pose aujourd'hui.
 - Carte des lieux visités dans le front joueur, si le besoin se confirme après la Phase 7 (qui n'affiche pas les sorties).
 - Choix définitif entre pgvector intégré et vector store externe si la Phase 8 est activée (dépend du volume de lore réellement atteint).
 - Réintroduction éventuelle d'un retry automatique limité (Phase 14), une fois le comportement réel des erreurs observé en usage — restreint aux erreurs transitoires (timeout, 5xx). Les sorties rejetées ont leur nouvelle tentative unique depuis la Phase 3 ; un taux de rejet élevé reste le signe d'un prompt à corriger plutôt qu'à retenter.

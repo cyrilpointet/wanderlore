@@ -343,7 +343,7 @@ Pour que ce système fonctionne de façon fiable avec le LLM :
   |---|---|
   | Matrice attaque / défense, parade, esquive, dégâts branchés, armure, blessures grave et mortelle, effets spéciaux, maladresses ; points de vie totaux du personnage, premiers soins, guérison naturelle | Phase 10 |
   | Jets opposés hors combat (Discrétion contre Perception…), table de résistance | Lot à part, à cadrer (écartés de la Phase 10) |
-  | ~~Création guidée (niveau de puissance, professions, réserves de points)~~ — cadrée à l'ouverture de la Phase 12 (section 3bis) ; expérience et progression | Phase 12 |
+  | ~~Création guidée (niveau de puissance, professions, réserves de points)~~ — cadrée à l'ouverture de la Phase 12 (section 3bis) ; expérience et progression renvoyées après le beta test (roadmap, points ouverts) | Phase 12 / après la beta |
   | Règles optionnelles par univers : Santé mentale (Mythe), Passions et Réputation (Mousquetaires), jets cachés | Phase 13 |
   | Pouvoirs (magie, sorcellerie, psychisme), avec la table de résistance si elle n'est pas encore posée ; espèces non humaines (*Non-human Characters*) | Phase 13bis |
   | Dangers (chute, feu, noyade, poison), soins autres que les premiers soins (médecine, remèdes), poursuites | Au cas par cas, quand un scénario le demande |

@@ -94,7 +94,7 @@ Ces principes découlent des invariants du projet. Ils s'appliquent à toutes le
 | 9 | Rien de visible (mémoire long terme côté backend) |
 | 10 | Combat en rounds : jusqu'à deux jets du personnage par tour, dégâts infligés en détail |
 | 11 | Rien de visible en propre : les échéances et les emplois du temps des PNJ passent par le récit |
-| 12 | Accueil par personnages, création de personnage guidée, page d'un personnage et ses parties, abandon (5.6) ; puis progression du personnage, pause / reprise, écrans de fin |
+| 12 | Accueil par personnages, création de personnage guidée, page d'un personnage et ses parties, abandon (5.6) ; puis écrans de fin (progression du personnage et pause / reprise renvoyées à plus tard) |
 | 13 | Santé mentale, passions et réputation sur la fiche, selon l'univers |
 | 14 | Inscription, mot de passe oublié, choix de la langue, paramètres du compte |
 
@@ -886,8 +886,8 @@ Décrites pour que la structure les accueille ; **aucune ne s'implémente en Pha
   que l'horloge déclenche passe par le récit, comme le temps lui-même (Phase 7).
 - **Phase 12 — Progression et cycle de vie.** Accueil par personnages et création de
   personnage guidée, page d'un personnage avec ses parties, abandon d'un scénario (5.6) — le
-  prétiré et l'écran **New game** disparaissent ; puis progression du personnage en fin de
-  scénario ; mise en pause et reprise. Écrans de fin (victoire, défaite, mort, abandon) et
+  prétiré et l'écran **New game** disparaissent (progression du personnage, pause et reprise
+  renvoyées à plus tard). Écrans de fin (victoire, défaite, mort, abandon) et
   épilogue livrés au deuxième lot (5.6, « Fin de partie »).
 - **Phase 13 — Règles optionnelles par univers.** Santé mentale, passions et réputation
   sur la fiche, pour les seuls univers qui les emploient ; un jet caché n'affiche pas son
